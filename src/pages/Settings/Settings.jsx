@@ -16,14 +16,15 @@ const createDefaultModules = () => ({
   'Alarm System': true,
   'LT Panel': true,
   Transformer: true,
-  'Fire Pumps': true,
+  'Fire': true,
   Ticketing: true,
   Maintenance: true,
   'Service History': true,
   'Daily DPR': true,
   'Energy Metering': true,
   'VRV': true,
-  'AQI Sensor': true
+  'AQI Sensor': true,
+  'HVAC': true
 });
 
 const Settings = () => {
@@ -46,14 +47,15 @@ const Settings = () => {
           showAlarms: 'Alarm System',
           showLTPanel: 'LT Panel',
           showTransformers: 'Transformer',
-          showFirePumps: 'Fire Pumps',
+          showFirePumps: 'Fire',
           showTicketing: 'Ticketing',
           showMaintenance: 'Maintenance',
           showServiceHistory: 'Service History',
           showDailyDPR: 'Daily DPR',
           showEnergyMetering: 'Energy Metering',
           showVRV: 'VRV',
-          showAQISensor: 'AQI Sensor'
+          showAQISensor: 'AQI Sensor',
+          showHVAC: 'HVAC'
         };
 
         const sidebarModules = {};
@@ -95,14 +97,15 @@ const Settings = () => {
         'Alarm System': 'showAlarms',
         'LT Panel': 'showLTPanel',
         Transformer: 'showTransformers',
-        'Fire Pumps': 'showFirePumps',
+        'Fire': 'showFirePumps',
         Ticketing: 'showTicketing',
         Maintenance: 'showMaintenance',
         'Service History': 'showServiceHistory',
         'Daily DPR': 'showDailyDPR',
         'Energy Metering': 'showEnergyMetering',
         'VRV': 'showVRV',
-        'AQI Sensor': 'showAQISensor'
+        'AQI Sensor': 'showAQISensor',
+        'HVAC': 'showHVAC'
       };
 
       const backendConfig = {};

@@ -134,17 +134,9 @@ const AQIOverview = () => {
           </div>
           <h2 className="text-white fw-bold mb-1 d-flex align-items-center text-uppercase tracking-wide">
             <Leaf className="me-2 text-success" size={28} />
-            Air Quality <span className="text-secondary ms-2 fw-light">Overview</span>
+            Air Quality 
           </h2>
           <p className="text-secondary fs-8 mb-0 uppercase tracking-widest">Facility-wide particulate & gas monitoring</p>
-        </div>
-        <div className="d-flex gap-3">
-          <button className="btn btn-dark d-flex align-items-center gap-2 px-4 rounded-pill fs-9 fw-bold uppercase tracking-widest border border-secondary border-opacity-25" style={{ background: 'rgba(255,255,255,0.03)' }}>
-            <RefreshCw size={14} /> Sync
-          </button>
-          <button className="btn btn-success d-flex align-items-center gap-2 px-4 rounded-pill fs-9 fw-bold uppercase tracking-widest" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>
-            <Download size={14} /> Export Report
-          </button>
         </div>
       </div>
 

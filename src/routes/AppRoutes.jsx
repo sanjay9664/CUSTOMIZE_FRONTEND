@@ -33,6 +33,25 @@ import VRVTempHumidity from '../pages/VRV/TempHumidity';
 // AQI Sensor
 import AQIOverview from '../pages/AQISensor/Overview';
 
+// LT Panel
+import LTRoom1 from '../pages/LTPanel/LTRoom1';
+import LTRoom2 from '../pages/LTPanel/LTRoom2';
+import LTRoom3 from '../pages/LTPanel/LTRoom3';
+import LTOverview from '../pages/LTPanel/Overview';
+import IncomingOutgoing from '../pages/LTPanel/IncomingOutgoing';
+import BreakerStatus from '../pages/LTPanel/BreakerStatus';
+
+// HVAC
+import Chiller from '../pages/HVAC/Chiller';
+import AHU from '../pages/HVAC/AHU';
+import CoolingTower from '../pages/HVAC/CoolingTower';
+
+// Fire Pumps
+import FireOverview from '../pages/FirePumps/Overview';
+import PumpStatus from '../pages/FirePumps/PumpStatus';
+import HeaderPressure from '../pages/FirePumps/HeaderPressure';
+import JockeyMain from '../pages/FirePumps/JockeyMain';
+
 // Fallback for other routes until customized
 const PlaceholderPage = ({ title }) => (
   <div className="fade-in">
@@ -114,6 +133,15 @@ const AppRoutes = () => {
       <Route path="/alarm-system/history" element={<PlaceholderPage title="Alarm History" />} />
       <Route path="/alarm-system/report" element={<PlaceholderPage title="Alarm PDF Reports" />} />
 
+      {/* LT Panel */}
+      <Route path="/lt-panel/overview" element={<LTOverview />} />
+      <Route path="/lt-panel/room1" element={<LTRoom1 />} />
+      <Route path="/lt-panel/room2" element={<LTRoom2 />} />
+      <Route path="/lt-panel/room3" element={<LTRoom3 />} />
+      <Route path="/lt-panel/io" element={<IncomingOutgoing />} />
+      <Route path="/lt-panel/breaker" element={<BreakerStatus />} />
+      <Route path="/lt-panel/report" element={<PlaceholderPage title="LT Panel PDF Reports" />} />
+
       {/* Transformer */}
       <Route path="/transformer/overview" element={<TransformerOverview />} />
       <Route path="/transformer/t1" element={<PlaceholderPage title="Transformer-1" />} />
@@ -153,6 +181,19 @@ const AppRoutes = () => {
       {/* AQI Sensor */}
       <Route path="/aqi-sensor/overview" element={<AQIOverview />} />
       <Route path="/aqi-sensor/temp-humidity" element={<VRVTempHumidity />} />
+
+      {/* HVAC */}
+      <Route path="/hvac/chiller" element={<Chiller />} />
+      <Route path="/hvac/ahu" element={<AHU />} />
+      <Route path="/hvac/cooling-tower" element={<CoolingTower />} />
+      <Route path="/hvac/report" element={<PlaceholderPage title="HVAC PDF Reports" />} />
+
+      {/* Fire */}
+      <Route path="/fire-pumps/overview" element={<FireOverview />} />
+      <Route path="/fire-pumps/status" element={<PumpStatus />} />
+      <Route path="/fire-pumps/pressure" element={<HeaderPressure />} />
+      <Route path="/fire-pumps/jockey" element={<JockeyMain />} />
+      <Route path="/fire-pumps/report" element={<PlaceholderPage title="Fire Pumps PDF Reports" />} />
 
       {/* Catch-all */}
       <Route path="*" element={<PlaceholderPage title="Module Under Calibration" />} />
