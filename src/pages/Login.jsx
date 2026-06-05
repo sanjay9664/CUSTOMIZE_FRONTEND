@@ -45,7 +45,7 @@ const Login = () => {
           "Alarm System": data.config.showAlarms ?? true,
           "LT Panel": data.config.showLTPanel ?? true,
           "Transformer": data.config.showTransformers ?? true,
-          "Fire Pumps": data.config.showFirePumps ?? true,
+          "Fire": data.config.showFirePumps ?? true,
           "Ticketing": data.config.showTicketing ?? true,
           "Maintenance": data.config.showMaintenance ?? true,
           "Service History": data.config.showServiceHistory ?? true,

@@ -36,7 +36,7 @@ const MainLayout = ({ children }) => {
             "Alarm System": globalConfig.showAlarms,
             "LT Panel": globalConfig.showLTPanel,
             "Transformer": globalConfig.showTransformers,
-            "Fire Pumps": globalConfig.showFirePumps,
+            "Fire": globalConfig.showFirePumps,
             "Ticketing": globalConfig.showTicketing,
             "Maintenance": globalConfig.showMaintenance,
             "Service History": globalConfig.showServiceHistory,

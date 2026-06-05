@@ -5,7 +5,7 @@ import {
   Search, Filter, RefreshCcw, CheckCircle2, XCircle, ChevronRight,
   LayoutDashboard, Settings, Bell, Zap, Droplets, Activity, Database,
   ShieldAlert, ClipboardList, PenTool, History, Gauge, Lock, Users,
-  Building2, UserPlus, Trash2, Edit, ExternalLink, Sliders
+  Building2, UserPlus, Trash2, Edit, ExternalLink, Sliders, Thermometer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PremiumLoader from '../../components/PremiumLoader';
@@ -21,7 +21,8 @@ const defaultSubmoduleVisibility = {
   showMaintenance: { Scheduled: true, 'Pending Tasks': true, 'PDF Report': true },
   showServiceHistory: { 'Equipment-wise': true, 'Service Records': true, 'PDF Report': true },
   showDailyDPR: { 'Data Aggregation': true, 'Daily Logs': true, 'PDF Report': true },
-  showEnergyMetering: { Overview: true, 'Main Meter': true, 'Sub Meters': true, 'PDF Report': true }
+  showEnergyMetering: { Overview: true, 'Main Meter': true, 'Sub Meters': true, 'PDF Report': true },
+  showHVAC: { 'Chiller': true, 'AHU': true, 'Cooling Tower': true, 'PDF Report': true }
 };
 
 const defaultConfig = {
@@ -39,6 +40,7 @@ const defaultConfig = {
   showServiceHistory: true,
   showDailyDPR: true,
   showEnergyMetering: true,
+  showHVAC: true,
   submoduleVisibility: defaultSubmoduleVisibility
 };
 
@@ -51,12 +53,13 @@ const moduleDetails = {
   showAlarms: { label: 'Alarm System', icon: <Bell size={18} />, subItems: ['Overview', 'Active Alarms', 'Inactive Alarms', 'ACK (Acknowledge)', 'Alarm History', 'PDF Report'] },
   showLTPanel: { label: 'LT Panel', icon: <LayoutDashboard size={18} />, subItems: ['Overview', 'LT Room-1', 'LT Room-2', 'LT Room-3', 'Incoming / Outgoing', 'Breaker Status', 'PDF Report'] },
   showTransformers: { label: 'Transformer', icon: <Zap size={18} />, subItems: ['Overview', 'Transformer-1', 'Transformer-2', 'Load / Temp', 'PDF Report'] },
-  showFirePumps: { label: 'Fire Pumps', icon: <ShieldAlert size={18} />, subItems: ['Overview', 'Pump Status', 'Header Pressure', 'Jockey / Main', 'PDF Report'] },
+  showFirePumps: { label: 'Fire', icon: <ShieldAlert size={18} />, subItems: ['Overview', 'Pump Status', 'Header Pressure', 'Jockey / Main', 'PDF Report'] },
   showTicketing: { label: 'Ticketing', icon: <ClipboardList size={18} />, subItems: [] },
   showMaintenance: { label: 'Maintenance', icon: <PenTool size={18} />, subItems: ['Scheduled', 'Pending Tasks', 'PDF Report'] },
   showServiceHistory: { label: 'Service History', icon: <History size={18} />, subItems: ['Equipment-wise', 'Service Records', 'PDF Report'] },
   showDailyDPR: { label: 'Daily DPR', icon: <Gauge size={18} />, subItems: ['Data Aggregation', 'Daily Logs', 'PDF Report'] },
-  showEnergyMetering: { label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'PDF Report'] }
+  showEnergyMetering: { label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'PDF Report'] },
+  showHVAC: { label: 'HVAC', icon: <Thermometer size={18} />, subItems: ['Chiller', 'AHU', 'Cooling Tower', 'PDF Report'] }
 };
 
 const mergeConfig = (rawConfig = {}) => ({
@@ -280,12 +283,13 @@ const SuperAdminConfig = () => {
         "Alarm System": tenantConfig.showAlarms,
         "LT Panel": tenantConfig.showLTPanel,
         "Transformer": tenantConfig.showTransformers,
-        "Fire Pumps": tenantConfig.showFirePumps,
+        "Fire": tenantConfig.showFirePumps,
         "Ticketing": tenantConfig.showTicketing,
         "Maintenance": tenantConfig.showMaintenance,
         "Service History": tenantConfig.showServiceHistory,
         "Daily DPR": tenantConfig.showDailyDPR,
         "Energy Metering": tenantConfig.showEnergyMetering,
+        "HVAC": tenantConfig.showHVAC,
       };
 
       localStorage.setItem('scada_modules_config', JSON.stringify(sidebarMapping));
@@ -325,12 +329,13 @@ const SuperAdminConfig = () => {
         "Alarm System": tenantConfig.showAlarms,
         "LT Panel": tenantConfig.showLTPanel,
         "Transformer": tenantConfig.showTransformers,
-        "Fire Pumps": tenantConfig.showFirePumps,
+        "Fire": tenantConfig.showFirePumps,
         "Ticketing": tenantConfig.showTicketing,
         "Maintenance": tenantConfig.showMaintenance,
         "Service History": tenantConfig.showServiceHistory,
         "Daily DPR": tenantConfig.showDailyDPR,
         "Energy Metering": tenantConfig.showEnergyMetering,
+        "HVAC": tenantConfig.showHVAC,
       };
 
       localStorage.setItem('scada_modules_config', JSON.stringify(sidebarMapping));

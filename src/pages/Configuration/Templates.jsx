@@ -2022,14 +2022,15 @@ const ConfigTemplates = () => {
     'Alarm System': ['Overview', 'Active Alarms', 'Alarm History'],
     'LT Panel': ['Overview', 'LT Room-1', 'Incoming/Outgoing', 'Breaker Status'],
     'Transformer': ['Overview', 'Transformer-1', 'Transformer-2', 'Load/Temp'],
-    'Fire Pumps': ['Overview', 'Pump Status', 'Header Pressure', 'Jockey / Main'],
+    'Fire': ['Overview', 'Pump Status', 'Header Pressure', 'Jockey / Main'],
     'Ticketing': ['Index'],
     'Maintenance': ['Scheduled', 'Pending Tasks'],
     'Service History': ['Records'],
     'Daily DPR': ['Data Aggregation', 'Daily Logs'],
     'Energy Metering': ['Overview', 'Main Meter', 'Sub Meters'],
     'VRV': ['Overview', 'Control Panel', 'Schedule', 'Human Sensor'],
-    'AQI Sensor': ['Temp & Humidity']
+    'AQI Sensor': ['Overview', 'Temp & Humidity'],
+    'HVAC': ['Chiller', 'AHU', 'Cooling Tower']
   };
 
   const locations = dynamicOptions.locations;

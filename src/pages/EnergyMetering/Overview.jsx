@@ -24,6 +24,7 @@ import { io } from 'socket.io-client';
 import PdfButton from '../../components/PdfButton';
 import StatusBadge from '../../components/StatusBadge';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
+import SolarDashboard from './SolarDashboard';
 
 const GROUP_EVENT_NAME = 'energy-meter-groups-updated';
 const GROUP_COLORS = ['#38bdf8', '#22c55e', '#f59e0b', '#f97316', '#a78bfa', '#f43f5e'];
@@ -697,7 +698,9 @@ const EnergyMeteringOverview = () => {
 
   return (
     <div className="fade-in energy-overview-page pb-5">
-      <div className="page-header energy-hero d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+      <SolarDashboard />
+      
+      <div className="page-header energy-hero d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4 mt-5 pt-4 border-top" style={{ borderColor: '#2e3238' }}>
         <div>
           <div className="d-flex align-items-center gap-3 flex-wrap">
             <h2 className="mb-0 text-white fw-black d-flex align-items-center gap-2">

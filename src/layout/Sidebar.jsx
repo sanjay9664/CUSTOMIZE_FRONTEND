@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Droplets, Activity, Zap, Bell, Battery, ShieldAlert,
   Settings, ClipboardList, PenTool, History, LayoutDashboard,
-  ChevronRight, Gauge, Database, Lock, User, Wind, Leaf
+  ChevronRight, Gauge, Database, Lock, User, Wind, Leaf, Thermometer
 } from 'lucide-react';
 import { Accordion } from 'react-bootstrap';
 import logo from "../assets/logo.png";
@@ -40,14 +40,15 @@ const Sidebar = ({ collapsed }) => {
             showAlarms: 'Alarm System',
             showLTPanel: 'LT Panel',
             showTransformers: 'Transformer',
-            showFirePumps: 'Fire Pumps',
+            showFirePumps: 'Fire',
             showTicketing: 'Ticketing',
             showMaintenance: 'Maintenance',
             showServiceHistory: 'Service History',
             showDailyDPR: 'Daily DPR',
             showEnergyMetering: 'Energy Metering',
             showVRV: 'VRV',
-            showAQISensor: 'AQI Sensor'
+            showAQISensor: 'AQI Sensor',
+            showHVAC: 'HVAC'
           };
 
           const sidebarModules = {};
@@ -187,9 +188,9 @@ const Sidebar = ({ collapsed }) => {
       ].filter((subItem) => submodulesConfig.showTransformers?.[subItem.title] ?? true)
     },
     {
-      title: "Fire Pumps",
+      title: "Fire",
       icon: <ShieldAlert size={20} />,
-      disabled: modulesConfig ? !modulesConfig["Fire Pumps"] : false,
+      disabled: modulesConfig ? !modulesConfig["Fire"] : false,
       subItems: [
         { title: "Overview", path: "/fire-pumps/overview" },
         { title: "Pump Status", path: "/fire-pumps/status" },
@@ -264,6 +265,17 @@ const Sidebar = ({ collapsed }) => {
         { title: "Overview", path: "/aqi-sensor/overview" },
         { title: "Temp & Humidity", path: "/aqi-sensor/temp-humidity" }
       ].filter((subItem) => submodulesConfig.showAQISensor?.[subItem.title] ?? true)
+    },
+    {
+      title: "HVAC",
+      icon: <Thermometer size={20} />,
+      disabled: modulesConfig ? !modulesConfig["HVAC"] : false,
+      subItems: [
+        { title: "Chiller", path: "/hvac/chiller" },
+        { title: "AHU", path: "/hvac/ahu" },
+        { title: "Cooling Tower", path: "/hvac/cooling-tower" },
+        { title: "PDF Report", path: "/hvac/report" }
+      ].filter((subItem) => submodulesConfig.showHVAC?.[subItem.title] ?? true)
     }
   ];
 

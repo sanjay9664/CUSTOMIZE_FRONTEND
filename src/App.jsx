@@ -10,6 +10,43 @@ function App() {
     localStorage.getItem('isAuthenticated') === 'true'
   );
 
+  // Auto-login from URL parameters (useful for iframe embedding)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    const urlRole = urlParams.get('role');
+    
+    if (urlToken) {
+      localStorage.setItem('token', urlToken);
+      localStorage.setItem('isAuthenticated', 'true');
+      if (urlRole) localStorage.setItem('userRole', urlRole);
+      
+      // Default sidebar config for bypass
+      const sidebarMapping = {
+        "Dashboard": true,
+        "Water Management": true,
+        "Motors": true,
+        "DG Set": true,
+        "Setting Templates": true,
+        "Alarm System": true,
+        "LT Panel": true,
+        "Transformer": true,
+        "Fire": true,
+        "Ticketing": true,
+        "Maintenance": true,
+        "Service History": true,
+        "Daily DPR": true,
+        "Energy Metering": true
+      };
+      localStorage.setItem('scada_modules_config', JSON.stringify(sidebarMapping));
+      
+      setIsAuthenticated(true);
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   // Listen for storage changes (for login/logout across tabs if needed)
   useEffect(() => {
     const checkAuth = () => {
