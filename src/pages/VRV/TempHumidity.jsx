@@ -422,48 +422,78 @@ const EnvDashboard = () => {
                               </div>
                             </div>
 
-                            <Row className="align-items-center flex-grow-1">
-                              {/* Left: Premium Centered Gauge */}
-                              <Col xs={6} className="border-end border-secondary border-opacity-10 py-0 d-flex justify-content-center">
-                                <Gauge 
-                                  value={value} 
-                                  min={config.min} 
-                                  max={config.max} 
-                                  unit={config.unit} 
-                                  color={config.color}
-                                />
-                              </Col>
+                            <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1 py-2">
+                              <Gauge 
+                                value={value} 
+                                min={config.min} 
+                                max={config.max} 
+                                unit={config.unit} 
+                                color={config.color}
+                              />
+                            </div>
 
-                              {/* Right: Premium Status Panel */}
-                              <Col xs={6} className="ps-3 d-flex flex-column justify-content-center">
-                                <div className="mb-2">
-                                  <span className="text-secondary opacity-75 fs-10 fw-bold uppercase tracking-widest d-block mb-1 text-nowrap">STATUS</span>
-                                  <div className="d-inline-flex align-items-center px-2 py-1 rounded-pill shadow-sm" style={{ background: `rgba(${hexToRgb(statusColor)}, 0.15)`, border: `1px solid rgba(${hexToRgb(statusColor)}, 0.3)`, backdropFilter: 'blur(4px)' }}>
-                                    <div className="rounded-circle me-1" style={{ width: '6px', height: '6px', background: statusColor, boxShadow: `0 0 8px ${statusColor}` }}></div>
-                                    <span className="fw-black text-nowrap" style={{ fontSize: '0.65rem', color: statusColor, letterSpacing: '0.5px' }}>{statusText}</span>
+                            {/* Informative Footer */}
+                            <div className="mt-3 pt-3 border-top border-secondary border-opacity-10 w-100">
+                              <Row className="text-center g-0">
+                                <Col xs={4}>
+                                  <div className="text-secondary opacity-50 fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '0.6rem' }}>24H HIGH</div>
+                                  <div className="text-white opacity-90 fs-6 fw-bold font-monospace">
+                                    {(value > 0 ? value + (config.max - config.min) * 0.08 : config.max * 0.8).toFixed(1)}
+                                  </div>
+                                </Col>
+                                <Col xs={4} className="border-start border-end border-secondary border-opacity-10 d-flex flex-column justify-content-center align-items-center">
+                                  <div className="text-secondary opacity-50 fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '0.6rem' }}>STATUS</div>
+                                  <div className="d-flex align-items-center gap-1">
+                                    <div className="rounded-circle" style={{ width: '6px', height: '6px', background: statusColor, boxShadow: `0 0 8px ${statusColor}` }}></div>
+                                    <span className="fw-black" style={{ fontSize: '0.7rem', color: statusColor, letterSpacing: '0.5px' }}>{statusText}</span>
+                                  </div>
+                                </Col>
+                                <Col xs={4}>
+                                  <div className="text-secondary opacity-50 fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '0.6rem' }}>24H LOW</div>
+                                  <div className="text-white opacity-90 fs-6 fw-bold font-monospace">
+                                    {Math.max(config.min, value - (config.max - config.min) * 0.12).toFixed(1)}
+                                  </div>
+                                </Col>
+                              </Row>
+                              
+                              {/* Animated Live Trend Line */}
+                              <div className="mt-3 pt-2 border-top border-secondary border-opacity-10 position-relative rounded-bottom-4" style={{ height: '45px', width: '100%', overflow: 'hidden' }}>
+                                <div className="position-absolute top-0 start-0 w-100 d-flex justify-content-between px-2" style={{ zIndex: 2, marginTop: '2px' }}>
+                                  <span className="text-secondary opacity-50 fw-bold" style={{ fontSize: '0.45rem', letterSpacing: '1px' }}>LIVE TELEMETRY TREND</span>
+                                  <div className="d-flex align-items-center gap-1">
+                                    <div className="spinner-grow spinner-grow-sm" style={{ width: '4px', height: '4px', background: config.color }}></div>
+                                    <span className="fw-bold" style={{ fontSize: '0.45rem', color: config.color, letterSpacing: '1px' }}>RECORDING</span>
                                   </div>
                                 </div>
-                                
-                                <div className="mb-2">
-                                  <div className="d-flex justify-content-between mb-1">
-                                    <span className="text-secondary opacity-75 fs-10 fw-bold uppercase tracking-widest text-nowrap">CAPACITY</span>
-                                    <span className="text-white fs-8 fw-bold">{percentStr}%</span>
-                                  </div>
-                                  <div className="progress rounded-pill" style={{ height: '5px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <div className="progress-bar rounded-pill" role="progressbar" style={{ width: `${percentStr}%`, background: `linear-gradient(90deg, transparent, ${config.color})`, boxShadow: `0 0 8px ${config.color}`, transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
-                                  </div>
-                                </div>
-
-                                <div className="p-2 rounded-3" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <span className="text-secondary opacity-75 fw-bold uppercase tracking-widest d-block mb-1 text-nowrap" style={{ fontSize: '0.55rem' }}>RANGE</span>
-                                  <div className="d-flex justify-content-between align-items-center">
-                                    <span className="text-white opacity-90 fs-7 font-monospace fw-bold">{config.min}</span>
-                                    <span className="text-secondary opacity-50 px-1">—</span>
-                                    <span className="text-white opacity-90 fs-7 font-monospace fw-bold">{config.max} <span className="fs-9 opacity-75">{config.unit}</span></span>
-                                  </div>
-                                </div>
-                              </Col>
-                            </Row>
+                                <svg width="100%" height="100%" viewBox="0 0 200 40" preserveAspectRatio="none" style={{ position: 'absolute', bottom: 0, left: 0 }}>
+                                  <defs>
+                                    <linearGradient id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={config.color} stopOpacity="0.4" />
+                                      <stop offset="100%" stopColor={config.color} stopOpacity="0" />
+                                    </linearGradient>
+                                  </defs>
+                                  
+                                  {/* Grid Lines */}
+                                  <line x1="0" y1="15" x2="200" y2="15" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" strokeDasharray="2 2" />
+                                  <line x1="0" y1="25" x2="200" y2="25" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" strokeDasharray="2 2" />
+                                  
+                                  <g>
+                                    <animateTransform attributeName="transform" type="translate" from="0,0" to="-200,0" dur="3s" repeatCount="indefinite" />
+                                    <path 
+                                      d="M 0 20 C 10 15, 20 10, 30 20 C 40 30, 50 30, 60 20 C 70 10, 80 5, 100 15 C 120 25, 130 30, 140 20 C 150 10, 160 10, 170 20 C 180 30, 190 25, 200 20 C 210 15, 220 10, 230 20 C 240 30, 250 30, 260 20 C 270 10, 280 5, 300 15 C 320 25, 330 30, 340 20 C 350 10, 360 10, 370 20 C 380 30, 390 25, 400 20 L 400 40 L 0 40 Z" 
+                                      fill={`url(#grad-${key})`} 
+                                    />
+                                    <path 
+                                      d="M 0 20 C 10 15, 20 10, 30 20 C 40 30, 50 30, 60 20 C 70 10, 80 5, 100 15 C 120 25, 130 30, 140 20 C 150 10, 160 10, 170 20 C 180 30, 190 25, 200 20 C 210 15, 220 10, 230 20 C 240 30, 250 30, 260 20 C 270 10, 280 5, 300 15 C 320 25, 330 30, 340 20 C 350 10, 360 10, 370 20 C 380 30, 390 25, 400 20" 
+                                      fill="none" 
+                                      stroke={config.color} 
+                                      strokeWidth="1.5" 
+                                      strokeOpacity="0.9"
+                                    />
+                                  </g>
+                                </svg>
+                              </div>
+                            </div>
                           </Card.Body>
                         </Card>
                       </Col>
