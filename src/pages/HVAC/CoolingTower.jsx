@@ -8,6 +8,7 @@ import {
 
 const CoolingTower = () => {
   const [graphTimeRange, setGraphTimeRange] = useState('DAY');
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Mock data for the Instantaneous Trend chart
   const graphData = {
@@ -118,7 +119,7 @@ const CoolingTower = () => {
           }
         `}
       </style>
-      <Row className="g-4 mb-4">
+      <Row className="g-4 mb-4" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
         {/* DIAGRAM SECTION */}
         <Col xl={12}>
           <div className="cooling-diagram-container position-relative w-100 rounded-4 overflow-hidden border border-white border-opacity-5 shadow-lg" style={{ background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%)', height: '850px' }}>
@@ -189,7 +190,13 @@ const CoolingTower = () => {
 
             {/* Center Cooling Tower Image */}
             <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ zIndex: 2, width: '95%', maxWidth: '850px' }}>
-              <img src="/cooling_tower.png" alt="Cooling Tower" className="img-fluid drop-shadow-glow" style={{ mixBlendMode: 'screen', filter: 'contrast(1.1)' }} />
+              <img 
+                src="/cooling_tower.png" 
+                alt="Cooling Tower" 
+                className="img-fluid drop-shadow-glow" 
+                style={{ mixBlendMode: 'screen', filter: 'contrast(1.1)' }} 
+                onLoad={() => setImageLoaded(true)}
+              />
               
               {/* Spinning Fan Overlay */}
               <div style={{

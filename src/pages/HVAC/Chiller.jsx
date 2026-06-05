@@ -9,6 +9,7 @@ import {
 const Chiller = () => {
   const [timeRange, setTimeRange] = useState('DAY');
   const [graphTimeRange, setGraphTimeRange] = useState('DAY');
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const statsData = {
     DAY: {
@@ -150,7 +151,7 @@ const Chiller = () => {
         </div>
       </div>
 
-      <Row className="g-4 mb-4">
+      <Row className="g-4 mb-4" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
         {/* DIAGRAM SECTION */}
         <Col xl={8}>
           <div className="chiller-diagram-container position-relative w-100 rounded-4 overflow-hidden border border-white border-opacity-5 shadow-lg" style={{ background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%)', height: '650px' }}>
@@ -229,7 +230,13 @@ const Chiller = () => {
 
             {/* Center Chiller Image from Public Folder */}
             <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ zIndex: 2, width: '40%', maxWidth: '380px' }}>
-              <img src="/chiller.png" alt="Chiller System" className="img-fluid drop-shadow-glow" style={{ mixBlendMode: 'screen', filter: 'contrast(1.2) brightness(1.2)' }} />
+              <img 
+                src="/chiller.png" 
+                alt="Chiller System" 
+                className="img-fluid drop-shadow-glow" 
+                style={{ mixBlendMode: 'screen', filter: 'contrast(1.2) brightness(1.2)' }} 
+                onLoad={() => setImageLoaded(true)}
+              />
             </div>
 
           </div>

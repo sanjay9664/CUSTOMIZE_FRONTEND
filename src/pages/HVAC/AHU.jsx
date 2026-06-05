@@ -8,6 +8,7 @@ import {
 
 const AHU = () => {
   const [graphTimeRange, setGraphTimeRange] = useState('DAY');
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Mock data for the Instantaneous Trend chart (AHU Temp Tracking)
   const graphData = {
@@ -110,14 +111,20 @@ const AHU = () => {
         `}
       </style>
       
-      <Row className="g-4 mb-4">
+      <Row className="g-4 mb-4" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
         {/* DIAGRAM SECTION */}
         <Col xl={12}>
           <div className="ahu-diagram-container position-relative w-100 rounded-4 overflow-hidden border border-white border-opacity-5 shadow-lg" style={{ background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%)', height: '850px' }}>
             
             {/* Center AHU Image */}
             <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ zIndex: 2, width: '95%', maxWidth: '900px' }}>
-              <img src="/ahu_v3.png" alt="AHU Machine" className="img-fluid drop-shadow-glow" style={{ filter: 'contrast(1.1) brightness(0.85)' }} />
+              <img 
+                src="/ahu_v3.png" 
+                alt="AHU Machine" 
+                className="img-fluid drop-shadow-glow" 
+                style={{ filter: 'contrast(1.1) brightness(0.85)' }} 
+                onLoad={() => setImageLoaded(true)}
+              />
               
               {/* Massive Glowing Airflow SVG Animation Overlay */}
               <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3, pointerEvents: 'none', overflow: 'visible' }}>
