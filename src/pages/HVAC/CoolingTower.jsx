@@ -111,12 +111,7 @@ const CoolingTower = () => {
 
       <style>
         {`
-          @keyframes water-drip {
-            0% { transform: translateY(0) scale(1.2); opacity: 1; }
-            50% { transform: translateY(50px) scale(1); opacity: 0.9; }
-            80% { transform: translateY(80px) scale(0.6); opacity: 0.6; }
-            100% { transform: translateY(100px) scale(0); opacity: 0; }
-          }
+          /* Keeping empty block in case other keyframes are added later, or remove entirely if unused */
         `}
       </style>
       <Row className="g-4 mb-4" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
@@ -166,18 +161,25 @@ const CoolingTower = () => {
               <use href="#pathExhaustRight" stroke="#ef4444" strokeWidth="3" fill="none" strokeDasharray="10 5" markerEnd="url(#arrowRed)" opacity="0.6">
                 <animate attributeName="stroke-dashoffset" from="30" to="0" dur="1s" repeatCount="indefinite" />
               </use>
+
+              {/* Text Labels for Flows */}
+              {/* Ambient Air (Left) */}
+              <text x="220" y="220" fill="#e2e8f0" fontSize="16" fontWeight="bold" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000, 0px 0px 8px #000' }}>AMBIENT AIR</text>
+              <text x="220" y="240" fill="#e2e8f0" fontSize="12" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000' }}>(Entering Tower)</text>
+
+              {/* Hot Return Water (Right Top) */}
+              <text x="780" y="220" fill="#f97316" fontSize="16" fontWeight="bold" textAnchor="end" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000, 0px 0px 8px #000' }}>HOT RETURN WATER</text>
+              <text x="780" y="240" fill="#f97316" fontSize="12" textAnchor="end" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000' }}>(From Chiller Condenser)</text>
+
+              {/* Cooled Water (Right Bottom) */}
+              <text x="780" y="420" fill="#0ea5e9" fontSize="16" fontWeight="bold" textAnchor="end" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000, 0px 0px 8px #000' }}>COOLED WATER</text>
+              <text x="780" y="440" fill="#0ea5e9" fontSize="12" textAnchor="end" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000' }}>(To Chiller Condenser)</text>
+
+              {/* Exhaust Air (Top Center) */}
+              <text x="500" y="25" fill="#ef4444" fontSize="16" fontWeight="bold" textAnchor="middle" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000, 0px 0px 8px #000' }}>EXHAUST AIR</text>
+              <text x="500" y="45" fill="#ef4444" fontSize="12" textAnchor="middle" style={{ textShadow: '2px 2px 4px #000, -1px -1px 4px #000' }}>(Hot, Moist Air Out)</text>
             </svg>
 
-            {/* Dripping Water Animation */}
-            <div style={{ position: 'absolute', top: '78%', right: '23%', zIndex: 4, pointerEvents: 'none' }}>
-              <svg width="50" height="120" viewBox="0 0 50 120">
-                <ellipse cx="25" cy="10" rx="3" ry="6" fill="#3b82f6" style={{ animation: 'water-drip 0.8s linear infinite 0s' }} />
-                <ellipse cx="18" cy="15" rx="2" ry="4" fill="#60a5fa" style={{ animation: 'water-drip 0.9s linear infinite 0.2s' }} />
-                <ellipse cx="32" cy="5" rx="2.5" ry="5" fill="#2563eb" style={{ animation: 'water-drip 0.7s linear infinite 0.4s' }} />
-                <ellipse cx="22" cy="12" rx="3" ry="5.5" fill="#93c5fd" style={{ animation: 'water-drip 0.85s linear infinite 0.6s' }} />
-                <ellipse cx="28" cy="8" rx="2" ry="4" fill="#3b82f6" style={{ animation: 'water-drip 0.75s linear infinite 0.1s' }} />
-              </svg>
-            </div>
 
             <style>
               {`
@@ -245,26 +247,26 @@ const CoolingTower = () => {
               </div>
             </div>
 
-            {/* KPI Bottom Overlay */}
-            <div className="position-absolute start-50 translate-middle-x p-4 rounded-4 shadow-lg d-flex gap-5 align-items-center justify-content-center" style={{ bottom: '4%', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)', zIndex: 10, minWidth: '500px' }}>
-              <div className="pe-4 border-end border-secondary border-opacity-25">
-                <div className="text-white text-opacity-75 fs-12 fw-bold text-uppercase mb-1 tracking-wider">Key Performance Index</div>
-                <div className="text-info fs-10 text-opacity-75 text-uppercase">Live Analytics</div>
-              </div>
-              <div className="text-center">
-                <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Range</div>
-                <div className="fs-3 fw-black text-white">0.7</div>
-              </div>
-              <div className="text-center">
-                <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Approach</div>
-                <div className="fs-3 fw-black text-white">0.5</div>
-              </div>
-              <div className="text-center">
-                <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Effectiveness</div>
-                <div className="fs-3 fw-black text-white">58.3%</div>
-              </div>
-            </div>
+          </div>
 
+          {/* KPI Bottom Overlay - Moved outside container to uncover the cooling tower basin */}
+          <div className="mx-auto p-4 rounded-4 shadow-lg d-flex gap-5 align-items-center justify-content-center position-relative" style={{ background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', zIndex: 10, width: 'fit-content', marginTop: '-40px' }}>
+            <div className="pe-4 border-end border-secondary border-opacity-25">
+              <div className="text-white text-opacity-75 fs-12 fw-bold text-uppercase mb-1 tracking-wider">Key Performance Index</div>
+              <div className="text-info fs-10 text-opacity-75 text-uppercase">Live Analytics</div>
+            </div>
+            <div className="text-center">
+              <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Range</div>
+              <div className="fs-3 fw-black text-white">0.7</div>
+            </div>
+            <div className="text-center">
+              <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Approach</div>
+              <div className="fs-3 fw-black text-white">0.5</div>
+            </div>
+            <div className="text-center">
+              <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Effectiveness</div>
+              <div className="fs-3 fw-black text-white">58.3%</div>
+            </div>
           </div>
         </Col>
       </Row>
