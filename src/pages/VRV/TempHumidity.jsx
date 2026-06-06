@@ -23,11 +23,11 @@ const Gauge = ({ value, min, max, unit, color }) => {
   const rotation = -90 + (percent * 180);
 
   return (
-    <div className="d-flex flex-column align-items-center justify-content-center w-100" style={{ height: '150px' }}>
+    <div className="d-flex flex-column align-items-center justify-content-center w-100" style={{ height: '135px', marginTop: '-5px' }}>
       <svg viewBox="0 -10 200 170" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
         <defs>
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feGaussianBlur stdDeviation="1" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
           <filter id="shadow">
@@ -72,10 +72,10 @@ const Gauge = ({ value, min, max, unit, color }) => {
         <text x={cx + radius + 15} y={cy + 5} fill="rgba(255,255,255,0.4)" fontSize="10" textAnchor="start" alignmentBaseline="middle">{max}</text>
 
         {/* Big Value Text (Positioned safely below the needle pivot) */}
-        <text x={cx} y={cy + 40} fill="#ffffff" fontSize="32" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+        <text x={cx} y={cy + 38} fill="rgba(255, 255, 255, 0.85)" fontSize="42" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
           {Number.isInteger(value) ? value : value.toFixed(2)}
         </text>
-        <text x={cx} y={cy + 60} fill={color} fontSize="14" fontWeight="bold" textAnchor="middle" letterSpacing="1">
+        <text x={cx} y={cy + 58} fill={color} fontSize="16" fontWeight="bold" textAnchor="middle" letterSpacing="2">
           {unit}
         </text>
       </svg>
@@ -338,7 +338,7 @@ const EnvDashboard = () => {
           </Col>
 
           {/* Dashboard Grid */}
-          <Col xl={9} lg={8}>
+          <Col xl={9} lg={8} className="overflow-auto scada-scrollbar" style={{ maxHeight: 'calc(100vh - 120px)', paddingBottom: '20px' }}>
             {isFetching && !unitData ? (
               // Silent Skeleton Loader instead of error message
               <div className="pe-2 placeholder-glow">
@@ -392,7 +392,7 @@ const EnvDashboard = () => {
                     const statusText = isOptimal ? 'OPTIMAL' : 'ATTENTION';
                     
                     return (
-                      <Col xl={6} lg={6} md={12} key={key}>
+                      <Col xl={4} lg={6} md={12} key={key}>
                         <Card 
                           className="scada-card border-0 h-100 position-relative overflow-hidden" 
                           style={{ 
@@ -401,15 +401,15 @@ const EnvDashboard = () => {
                             borderRadius: '16px',
                             border: '1px solid rgba(255,255,255,0.08)',
                             boxShadow: '0 8px 32px -8px rgba(0,0,0,0.7)',
-                            minHeight: '220px'
+                            minHeight: '100px'
                           }}
                         >
                           {/* Subtle background glow based on metric color */}
                           <div className="position-absolute" style={{ top: '-50px', right: '-50px', width: '160px', height: '160px', background: config.color, filter: 'blur(80px)', opacity: 0.15, borderRadius: '50%', pointerEvents: 'none' }}></div>
                           
-                          <Card.Body className="p-3 d-flex flex-column justify-content-between">
+                          <Card.Body className="p-2 d-flex flex-column justify-content-between">
                             {/* Card Header */}
-                            <div className="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-10 pb-2 mb-2">
+                            <div className="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-10 pb-1 mb-1">
                               <h6 className="text-white fw-bold text-uppercase fs-7 m-0 d-flex align-items-center" style={{ letterSpacing: '1px' }}>
                                 <div className="p-2 rounded-circle me-3 d-flex align-items-center justify-content-center shadow-sm" style={{ background: `rgba(${hexToRgb(config.color)}, 0.15)`, border: `1px solid rgba(${hexToRgb(config.color)}, 0.3)` }}>
                                   <IconComponent size={20} style={{ color: config.color }} /> 
@@ -422,7 +422,7 @@ const EnvDashboard = () => {
                               </div>
                             </div>
 
-                            <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1 py-2">
+                            <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1 py-0" style={{ transform: 'scale(0.95)', transformOrigin: 'top center', marginBottom: '-10px' }}>
                               <Gauge 
                                 value={value} 
                                 min={config.min} 
@@ -433,11 +433,11 @@ const EnvDashboard = () => {
                             </div>
 
                             {/* Informative Footer */}
-                            <div className="mt-3 pt-3 border-top border-secondary border-opacity-10 w-100">
+                            <div className="mt-0 pt-1 border-top border-secondary border-opacity-10 w-100">
                               <Row className="text-center g-0">
                                 <Col xs={4}>
-                                  <div className="text-secondary opacity-50 fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '0.6rem' }}>24H HIGH</div>
-                                  <div className="text-white opacity-90 fs-6 fw-bold font-monospace">
+                                  <div className="text-secondary opacity-50 fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '0.55rem' }}>24H HIGH</div>
+                                  <div className="text-white opacity-75 fs-6 fw-bold font-monospace">
                                     {(value > 0 ? value + (config.max - config.min) * 0.08 : config.max * 0.8).toFixed(1)}
                                   </div>
                                 </Col>
@@ -450,15 +450,15 @@ const EnvDashboard = () => {
                                 </Col>
                                 <Col xs={4}>
                                   <div className="text-secondary opacity-50 fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '0.6rem' }}>24H LOW</div>
-                                  <div className="text-white opacity-90 fs-6 fw-bold font-monospace">
+                                  <div className="text-white opacity-75 fs-6 fw-bold font-monospace">
                                     {Math.max(config.min, value - (config.max - config.min) * 0.12).toFixed(1)}
                                   </div>
                                 </Col>
                               </Row>
                               
                               {/* Animated Live Trend Line */}
-                              <div className="mt-3 pt-2 border-top border-secondary border-opacity-10 position-relative rounded-bottom-4" style={{ height: '45px', width: '100%', overflow: 'hidden' }}>
-                                <div className="position-absolute top-0 start-0 w-100 d-flex justify-content-between px-2" style={{ zIndex: 2, marginTop: '2px' }}>
+                              <div className="mt-1 pt-0 border-top border-secondary border-opacity-10 position-relative rounded-bottom-4" style={{ height: '28px', width: '100%', overflow: 'hidden' }}>
+                                <div className="position-absolute top-0 start-0 w-100 d-flex justify-content-between px-2" style={{ zIndex: 2, marginTop: '1px' }}>
                                   <span className="text-secondary opacity-50 fw-bold" style={{ fontSize: '0.45rem', letterSpacing: '1px' }}>LIVE TELEMETRY TREND</span>
                                   <div className="d-flex align-items-center gap-1">
                                     <div className="spinner-grow spinner-grow-sm" style={{ width: '4px', height: '4px', background: config.color }}></div>

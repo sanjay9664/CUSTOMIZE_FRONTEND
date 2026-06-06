@@ -46,6 +46,9 @@ import Chiller from '../pages/HVAC/Chiller';
 import AHU from '../pages/HVAC/AHU';
 import CoolingTower from '../pages/HVAC/CoolingTower';
 
+// AC
+import ACOverview from '../pages/AC/Overview';
+
 // Fire Pumps
 import FireOverview from '../pages/FirePumps/Overview';
 import PumpStatus from '../pages/FirePumps/PumpStatus';
@@ -187,6 +190,10 @@ const AppRoutes = () => {
       <Route path="/hvac/ahu" element={<AHU />} />
       <Route path="/hvac/cooling-tower" element={<CoolingTower />} />
       <Route path="/hvac/report" element={<PlaceholderPage title="HVAC PDF Reports" />} />
+
+      {/* AC */}
+      <Route path="/ac/overview" element={<ACOverview />} />
+      <Route path="/ac/report" element={<PlaceholderPage title="AC PDF Reports" />} />
 
       {/* Fire */}
       <Route path="/fire-pumps/overview" element={<FireOverview />} />
