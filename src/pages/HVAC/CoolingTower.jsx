@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Card, Nav, Badge } from 'react-bootstrap';
 import { Activity, Thermometer, Wind, RefreshCw, Zap, TrendingUp, List } from 'lucide-react';
 import {
@@ -9,6 +9,42 @@ import {
 const CoolingTower = () => {
   const [graphTimeRange, setGraphTimeRange] = useState('DAY');
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isRunning, setIsRunning] = useState(true);
+  
+  const fanRotationRef = useRef(0);
+  const fanVelocityRef = useRef(15); // Current rotational velocity (balanced fast)
+  const targetVelocityRef = useRef(15); // Target velocity
+  const requestRef = useRef();
+
+  useEffect(() => {
+    targetVelocityRef.current = isRunning ? 15 : 0;
+  }, [isRunning]);
+
+  useEffect(() => {
+    const animate = () => {
+      // Smoothly approach target velocity (inertia effect)
+      if (fanVelocityRef.current < targetVelocityRef.current) {
+         fanVelocityRef.current += 0.08; // Slowly speed up
+         if (fanVelocityRef.current > targetVelocityRef.current) fanVelocityRef.current = targetVelocityRef.current;
+      } else if (fanVelocityRef.current > targetVelocityRef.current) {
+         fanVelocityRef.current -= 0.08; // Slowly slow down
+         if (fanVelocityRef.current < 0) fanVelocityRef.current = 0;
+      }
+      
+      fanRotationRef.current += fanVelocityRef.current;
+      
+      // Apply rotation directly to DOM for performance
+      const fanSvg = document.getElementById('cooling-tower-fan');
+      if (fanSvg) {
+         fanSvg.style.transform = `rotate(${fanRotationRef.current}deg)`;
+      }
+      
+      requestRef.current = requestAnimationFrame(animate);
+    };
+    
+    requestRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(requestRef.current);
+  }, []);
 
   // Mock data for the Instantaneous Trend chart
   const graphData = {
@@ -103,9 +139,18 @@ const CoolingTower = () => {
             The <strong className="text-white">Cooling Tower Monitoring System</strong> provides real-time visibility into thermal performance, water circulation efficiency, and energy consumption of cooling tower operations. It helps optimize heat rejection, reduce energy waste, and ensure stable HVAC system performance through continuous monitoring and analytics.
           </p>
         </div>
-        <div className="d-flex flex-column gap-2 text-end">
-          <Badge bg="success" className="px-3 py-2 rounded-pill fw-bold tracking-wider">SYSTEM ONLINE</Badge>
-          <Badge bg="info" className="px-3 py-2 rounded-pill fw-bold tracking-wider">AUTO MODE</Badge>
+        <div className="d-flex flex-column gap-2 text-end align-items-end">
+          <div className="d-flex gap-2">
+             <Badge bg={isRunning ? "success" : "danger"} className="px-3 py-2 rounded-pill fw-bold tracking-wider">{isRunning ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}</Badge>
+             <Badge bg="info" className="px-3 py-2 rounded-pill fw-bold tracking-wider">AUTO MODE</Badge>
+          </div>
+          <button 
+             onClick={() => setIsRunning(!isRunning)}
+             className={`btn mt-2 fw-bold rounded-pill text-white shadow ${isRunning ? 'bg-danger hover-darken' : 'bg-success hover-darken'}`}
+             style={{ border: 'none', padding: '8px 24px', letterSpacing: '1px', transition: 'all 0.3s' }}
+          >
+             {isRunning ? '■ STOP Fan' : '▶ START FAN'}
+          </button>
         </div>
       </div>
 
@@ -211,7 +256,7 @@ const CoolingTower = () => {
                 zIndex: 3,
                 pointerEvents: 'none'
               }}>
-                <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', animation: 'spin-fan 0.7s linear infinite' }}>
+                <svg id="cooling-tower-fan" viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
                   <g stroke="#1e293b" strokeWidth="1">
                     {[0, 60, 120, 180, 240, 300].map(angle => (
                       <g key={angle} transform={`rotate(${angle} 50 50)`}>
