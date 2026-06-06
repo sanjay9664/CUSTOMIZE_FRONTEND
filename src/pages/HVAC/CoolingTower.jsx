@@ -10,7 +10,7 @@ const CoolingTower = () => {
   const [graphTimeRange, setGraphTimeRange] = useState('DAY');
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isRunning, setIsRunning] = useState(true);
-  
+
   const fanRotationRef = useRef(0);
   const fanVelocityRef = useRef(15); // Current rotational velocity (balanced fast)
   const targetVelocityRef = useRef(15); // Target velocity
@@ -24,24 +24,24 @@ const CoolingTower = () => {
     const animate = () => {
       // Smoothly approach target velocity (inertia effect)
       if (fanVelocityRef.current < targetVelocityRef.current) {
-         fanVelocityRef.current += 0.08; // Slowly speed up
-         if (fanVelocityRef.current > targetVelocityRef.current) fanVelocityRef.current = targetVelocityRef.current;
+        fanVelocityRef.current += 0.08; // Slowly speed up
+        if (fanVelocityRef.current > targetVelocityRef.current) fanVelocityRef.current = targetVelocityRef.current;
       } else if (fanVelocityRef.current > targetVelocityRef.current) {
-         fanVelocityRef.current -= 0.08; // Slowly slow down
-         if (fanVelocityRef.current < 0) fanVelocityRef.current = 0;
+        fanVelocityRef.current -= 0.08; // Slowly slow down
+        if (fanVelocityRef.current < 0) fanVelocityRef.current = 0;
       }
-      
+
       fanRotationRef.current += fanVelocityRef.current;
-      
+
       // Apply rotation directly to DOM for performance
       const fanSvg = document.getElementById('cooling-tower-fan');
       if (fanSvg) {
-         fanSvg.style.transform = `rotate(${fanRotationRef.current}deg)`;
+        fanSvg.style.transform = `rotate(${fanRotationRef.current}deg)`;
       }
-      
+
       requestRef.current = requestAnimationFrame(animate);
     };
-    
+
     requestRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestRef.current);
   }, []);
@@ -117,7 +117,7 @@ const CoolingTower = () => {
       <div className={`fs-11 fw-bold text-white text-opacity-75 text-uppercase mb-2 border-bottom border-white border-opacity-25 pb-1 tracking-wider`}>{title}</div>
       {data.map((item, i) => (
         <div key={i} className="fs-13 text-white mb-1 d-flex justify-content-between gap-3 align-items-center">
-          <span className={labelColor}>{item.label}</span> 
+          <span className={labelColor}>{item.label}</span>
           <span className="fw-black fs-5">{item.value}</span>
         </div>
       ))}
@@ -141,15 +141,15 @@ const CoolingTower = () => {
         </div>
         <div className="d-flex flex-column gap-2 text-end align-items-end">
           <div className="d-flex gap-2">
-             <Badge bg={isRunning ? "success" : "danger"} className="px-3 py-2 rounded-pill fw-bold tracking-wider">{isRunning ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}</Badge>
-             <Badge bg="info" className="px-3 py-2 rounded-pill fw-bold tracking-wider">AUTO MODE</Badge>
+            <Badge bg={isRunning ? "success" : "danger"} className="px-3 py-2 rounded-pill fw-bold tracking-wider">{isRunning ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}</Badge>
+            <Badge bg="info" className="px-3 py-2 rounded-pill fw-bold tracking-wider">AUTO MODE</Badge>
           </div>
-          <button 
-             onClick={() => setIsRunning(!isRunning)}
-             className={`btn mt-2 fw-bold rounded-pill text-white shadow ${isRunning ? 'bg-danger hover-darken' : 'bg-success hover-darken'}`}
-             style={{ border: 'none', padding: '8px 24px', letterSpacing: '1px', transition: 'all 0.3s' }}
+          <button
+            onClick={() => setIsRunning(!isRunning)}
+            className={`btn mt-2 fw-bold rounded-pill text-white shadow ${isRunning ? 'bg-danger hover-darken' : 'bg-success hover-darken'}`}
+            style={{ border: 'none', padding: '8px 24px', letterSpacing: '1px', transition: 'all 0.3s' }}
           >
-             {isRunning ? '■ STOP Fan' : '▶ START FAN'}
+            {isRunning ? '■ STOP FAN' : '▶ START FAN'}
           </button>
         </div>
       </div>
@@ -163,7 +163,7 @@ const CoolingTower = () => {
         {/* DIAGRAM SECTION */}
         <Col xl={12}>
           <div className="cooling-diagram-container position-relative w-100 rounded-4 overflow-hidden border border-white border-opacity-5 shadow-lg" style={{ background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%)', height: '850px' }}>
-            
+
             {/* SVG Flow Lines Overlay */}
             <svg className="flow-lines-overlay" viewBox="0 0 1000 600" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3, pointerEvents: 'none' }}>
               <defs>
@@ -237,21 +237,21 @@ const CoolingTower = () => {
 
             {/* Center Cooling Tower Image */}
             <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ zIndex: 2, width: '95%', maxWidth: '850px' }}>
-              <img 
-                src="/cooling_tower.png" 
-                alt="Cooling Tower" 
-                className="img-fluid drop-shadow-glow" 
-                style={{ mixBlendMode: 'screen', filter: 'contrast(1.1)' }} 
+              <img
+                src="/cooling_tower.png"
+                alt="Cooling Tower"
+                className="img-fluid drop-shadow-glow"
+                style={{ mixBlendMode: 'screen', filter: 'contrast(1.1)' }}
                 onLoad={() => setImageLoaded(true)}
               />
-              
+
               {/* Spinning Fan Overlay */}
               <div style={{
                 position: 'absolute',
-                top: '24%', 
+                top: '24%',
                 left: '50.5%',
                 transform: 'translate(-50%, -50%) rotateX(60deg)',
-                width: '38%', 
+                width: '38%',
                 aspectRatio: '1/1',
                 zIndex: 3,
                 pointerEvents: 'none'
@@ -271,18 +271,18 @@ const CoolingTower = () => {
             </div>
 
             {/* Left Side Cards */}
-            <LabelCard title="Pump" data={[{label: 'Status', value: 'Off'}, {label: 'Power', value: '---'}]} top="8%" left="2%" />
-            <LabelCard title="Ambient" data={[{label: 'WBT', value: '21.28 °C'}, {label: 'DBT', value: '26.80 °C'}, {label: 'Hum', value: '61.1 %'}]} top="26%" left="2%" />
-            <LabelCard title="Pressure" data={[{label: 'Inlet', value: '---'}, {label: 'Outlet', value: '---'}]} top="46%" left="2%" />
-            <LabelCard title="Make-Up Water" data={[{label: 'Valve', value: 'OPEN'}, {label: 'Flow', value: '15 LPM'}]} top="64%" left="2%" />
-            <LabelCard title="Cooling Load" data={[{label: 'Capacity', value: '82%'}, {label: 'Rejection', value: '1250 kW'}]} top="82%" left="2%" />
-            
+            <LabelCard title="Pump" data={[{ label: 'Status', value: 'Off' }, { label: 'Power', value: '---' }]} top="8%" left="2%" />
+            <LabelCard title="Ambient" data={[{ label: 'WBT', value: '21.28 °C' }, { label: 'DBT', value: '26.80 °C' }, { label: 'Hum', value: '61.1 %' }]} top="26%" left="2%" />
+            <LabelCard title="Pressure" data={[{ label: 'Inlet', value: '---' }, { label: 'Outlet', value: '---' }]} top="46%" left="2%" />
+            <LabelCard title="Make-Up Water" data={[{ label: 'Valve', value: 'OPEN' }, { label: 'Flow', value: '15 LPM' }]} top="64%" left="2%" />
+            <LabelCard title="Cooling Load" data={[{ label: 'Capacity', value: '82%' }, { label: 'Rejection', value: '1250 kW' }]} top="82%" left="2%" />
+
             {/* Right Side Cards */}
-            <LabelCard title="Fan Status" data={[{label: 'Status', value: 'ON'}, {label: 'Power', value: '4.2 kW'}]} top="8%" right="2%" />
-            <LabelCard title="Motor Diag." data={[{label: 'Vibration', value: '1.2 mm/s'}, {label: 'VFD Freq', value: '48 Hz'}]} top="26%" right="2%" />
-            <LabelCard title="Return Water" data={[{label: 'Temp', value: '28.00 °C'}, {label: 'Flow', value: '450 LPM'}]} top="46%" right="2%" />
-            <LabelCard title="Sump Water" data={[{label: 'Temp', value: '27.30 °C'}, {label: 'Level', value: '85%'}]} top="64%" right="2%" />
-            <LabelCard title="Blowdown" data={[{label: 'Valve', value: 'CLOSED'}, {label: 'Cond.', value: '1200 µS'}]} top="82%" right="2%" />
+            <LabelCard title="Fan Status" data={[{ label: 'Status', value: 'ON' }, { label: 'Power', value: '4.2 kW' }]} top="8%" right="2%" />
+            <LabelCard title="Motor Diag." data={[{ label: 'Vibration', value: '1.2 mm/s' }, { label: 'VFD Freq', value: '48 Hz' }]} top="26%" right="2%" />
+            <LabelCard title="Return Water" data={[{ label: 'Temp', value: '28.00 °C' }, { label: 'Flow', value: '450 LPM' }]} top="46%" right="2%" />
+            <LabelCard title="Sump Water" data={[{ label: 'Temp', value: '27.30 °C' }, { label: 'Level', value: '85%' }]} top="64%" right="2%" />
+            <LabelCard title="Blowdown" data={[{ label: 'Valve', value: 'CLOSED' }, { label: 'Cond.', value: '1200 µS' }]} top="82%" right="2%" />
 
             {/* Last Sync Overlay */}
             <div className="position-absolute p-3 rounded-4 shadow-lg" style={{ top: '3%', right: '2%', background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.05)', zIndex: 10 }}>
@@ -324,19 +324,19 @@ const CoolingTower = () => {
               <h6 className="mb-0 text-white fw-black tracking-widest uppercase fs-14 text-nowrap">
                 <TrendingUp size={16} className="me-2 text-info" /> Instantaneous
               </h6>
-              
+
               <div className="d-flex align-items-center gap-3">
                 {graphTimeRange === 'CUSTOM' && (
-                  <input 
-                    type="date" 
-                    className="form-control form-control-sm bg-dark text-white border-white border-opacity-25 rounded-pill px-3 shadow-none" 
+                  <input
+                    type="date"
+                    className="form-control form-control-sm bg-dark text-white border-white border-opacity-25 rounded-pill px-3 shadow-none"
                     style={{ fontSize: '12px' }}
                   />
                 )}
                 <Nav variant="pills" className="flex-nowrap bg-dark bg-opacity-50 p-1 rounded-pill border border-white border-opacity-5">
                   {['DAY', 'WEEK', 'MONTH', 'YEAR', 'CUSTOM'].map(range => (
                     <Nav.Item key={range}>
-                      <Nav.Link 
+                      <Nav.Link
                         className={`rounded-pill px-3 py-1 fs-11 fw-bold text-uppercase tracking-wider ${graphTimeRange === range ? 'bg-info text-dark' : 'text-muted'}`}
                         onClick={() => setGraphTimeRange(range)}
                       >
@@ -355,9 +355,9 @@ const CoolingTower = () => {
                     <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                     <YAxis yAxisId="left" stroke="rgba(255,255,255,0.4)" fontSize={12} tickLine={false} axisLine={false} dx={-10} />
                     <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.4)" fontSize={12} tickLine={false} axisLine={false} dx={10} />
-                    <ChartTooltip 
-                      contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} 
-                      itemStyle={{ fontSize: '13px', fontWeight: 'bold' }} 
+                    <ChartTooltip
+                      contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                      itemStyle={{ fontSize: '13px', fontWeight: 'bold' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     />
                     <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 'bold' }} />
@@ -372,7 +372,7 @@ const CoolingTower = () => {
         </Col>
       </Row>
 
-      
+
     </div>
   );
 };

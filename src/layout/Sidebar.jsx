@@ -48,7 +48,8 @@ const Sidebar = ({ collapsed }) => {
             showEnergyMetering: 'Energy Metering',
             showVRV: 'VRV',
             showAQISensor: 'AQI Sensor',
-            showHVAC: 'HVAC'
+            showHVAC: 'HVAC',
+            showAC: 'AC'
           };
 
           const sidebarModules = {};
@@ -276,6 +277,15 @@ const Sidebar = ({ collapsed }) => {
         { title: "Cooling Tower", path: "/hvac/cooling-tower" },
         { title: "PDF Report", path: "/hvac/report" }
       ].filter((subItem) => submodulesConfig.showHVAC?.[subItem.title] ?? true)
+    },
+    {
+      title: "AC",
+      icon: <Wind size={20} />,
+      disabled: modulesConfig ? !modulesConfig["AC"] : false,
+      subItems: [
+        { title: "Overview", path: "/ac/overview" },
+        { title: "PDF Report", path: "/ac/report" }
+      ].filter((subItem) => submodulesConfig.showAC?.[subItem.title] ?? true)
     }
   ];
 

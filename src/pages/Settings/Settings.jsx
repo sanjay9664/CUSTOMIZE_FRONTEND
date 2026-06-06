@@ -24,7 +24,8 @@ const createDefaultModules = () => ({
   'Energy Metering': true,
   'VRV': true,
   'AQI Sensor': true,
-  'HVAC': true
+  'HVAC': true,
+  'AC': true
 });
 
 const Settings = () => {
@@ -55,7 +56,8 @@ const Settings = () => {
           showEnergyMetering: 'Energy Metering',
           showVRV: 'VRV',
           showAQISensor: 'AQI Sensor',
-          showHVAC: 'HVAC'
+          showHVAC: 'HVAC',
+          showAC: 'AC'
         };
 
         const sidebarModules = {};
@@ -105,7 +107,8 @@ const Settings = () => {
         'Energy Metering': 'showEnergyMetering',
         'VRV': 'showVRV',
         'AQI Sensor': 'showAQISensor',
-        'HVAC': 'showHVAC'
+        'HVAC': 'showHVAC',
+        'AC': 'showAC'
       };
 
       const backendConfig = {};

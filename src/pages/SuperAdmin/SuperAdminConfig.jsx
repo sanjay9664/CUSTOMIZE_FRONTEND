@@ -5,7 +5,7 @@ import {
   Search, Filter, RefreshCcw, CheckCircle2, XCircle, ChevronRight,
   LayoutDashboard, Settings, Bell, Zap, Droplets, Activity, Database,
   ShieldAlert, ClipboardList, PenTool, History, Gauge, Lock, Users,
-  Building2, UserPlus, Trash2, Edit, ExternalLink, Sliders, Thermometer
+  Building2, UserPlus, Trash2, Edit, ExternalLink, Sliders, Thermometer, Wind
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PremiumLoader from '../../components/PremiumLoader';
@@ -22,7 +22,8 @@ const defaultSubmoduleVisibility = {
   showServiceHistory: { 'Equipment-wise': true, 'Service Records': true, 'PDF Report': true },
   showDailyDPR: { 'Data Aggregation': true, 'Daily Logs': true, 'PDF Report': true },
   showEnergyMetering: { Overview: true, 'Main Meter': true, 'Sub Meters': true, 'PDF Report': true },
-  showHVAC: { 'Chiller': true, 'AHU': true, 'Cooling Tower': true, 'PDF Report': true }
+  showHVAC: { 'Chiller': true, 'AHU': true, 'Cooling Tower': true, 'PDF Report': true },
+  showAC: { 'Overview': true, 'PDF Report': true }
 };
 
 const defaultConfig = {
@@ -41,6 +42,7 @@ const defaultConfig = {
   showDailyDPR: true,
   showEnergyMetering: true,
   showHVAC: true,
+  showAC: true,
   submoduleVisibility: defaultSubmoduleVisibility
 };
 
@@ -59,7 +61,8 @@ const moduleDetails = {
   showServiceHistory: { label: 'Service History', icon: <History size={18} />, subItems: ['Equipment-wise', 'Service Records', 'PDF Report'] },
   showDailyDPR: { label: 'Daily DPR', icon: <Gauge size={18} />, subItems: ['Data Aggregation', 'Daily Logs', 'PDF Report'] },
   showEnergyMetering: { label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'PDF Report'] },
-  showHVAC: { label: 'HVAC', icon: <Thermometer size={18} />, subItems: ['Chiller', 'AHU', 'Cooling Tower', 'PDF Report'] }
+  showHVAC: { label: 'HVAC', icon: <Thermometer size={18} />, subItems: ['Chiller', 'AHU', 'Cooling Tower', 'PDF Report'] },
+  showAC: { label: 'AC', icon: <Wind size={18} />, subItems: ['Overview', 'PDF Report'] }
 };
 
 const mergeConfig = (rawConfig = {}) => ({
@@ -290,6 +293,7 @@ const SuperAdminConfig = () => {
         "Daily DPR": tenantConfig.showDailyDPR,
         "Energy Metering": tenantConfig.showEnergyMetering,
         "HVAC": tenantConfig.showHVAC,
+        "AC": tenantConfig.showAC,
       };
 
       localStorage.setItem('scada_modules_config', JSON.stringify(sidebarMapping));
@@ -336,6 +340,7 @@ const SuperAdminConfig = () => {
         "Daily DPR": tenantConfig.showDailyDPR,
         "Energy Metering": tenantConfig.showEnergyMetering,
         "HVAC": tenantConfig.showHVAC,
+        "AC": tenantConfig.showAC,
       };
 
       localStorage.setItem('scada_modules_config', JSON.stringify(sidebarMapping));

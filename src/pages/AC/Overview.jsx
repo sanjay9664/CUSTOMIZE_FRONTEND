@@ -1,0 +1,790 @@
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Badge, Form, Button, Modal } from 'react-bootstrap';
+import { Wind, Thermometer, Droplets, Zap, Power, Settings, Fan, MapPin, Clock, Info, Activity, Edit2, Eye, EyeOff, Trash2 } from 'lucide-react';
+
+// --- MOCK DATA ---
+const INITIAL_ACS = [
+  { id: 1, name: 'Master AC', type: '1.5 Ton Inverter Split AC', room: 'Master Bedroom', status: 'ON', mode: 'Cool', setTemp: 22, roomTemp: 23.5, fanSpeed: 'Auto', powerUsage: 1.2, scheduleStart: '22:00', scheduleEnd: '06:00' },
+  { id: 2, name: 'Lobby AC', type: '2.0 Ton Cassette AC', room: 'Lobby', status: 'ON', mode: 'Cool', setTemp: 24, roomTemp: 25.0, fanSpeed: 'High', powerUsage: 2.1, scheduleStart: '09:00', scheduleEnd: '20:00' },
+  { id: 3, name: 'Main Hall AC', type: '2.0 Ton Split AC', room: 'Hall', status: 'OFF', mode: 'Fan', setTemp: 24, roomTemp: 26.5, fanSpeed: 'Low', powerUsage: 0.0, scheduleStart: '', scheduleEnd: '' },
+  { id: 4, name: 'Server Room AC', type: '2.0 Ton Cassette AC', room: 'Server Room', status: 'ON', mode: 'Cool', setTemp: 18, roomTemp: 18.5, fanSpeed: 'High', powerUsage: 2.5, scheduleStart: '00:00', scheduleEnd: '23:59' },
+];
+
+const RealisticAC = ({ unit }) => {
+  return (
+    <div style={{
+      width: '100%',
+      height: '85px',
+      background: 'linear-gradient(to bottom, #cbd5e1 0%, #94a3b8 100%)',
+      borderRadius: '12px',
+      position: 'relative',
+      boxShadow: '0 8px 20px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.6)',
+      border: '1px solid rgba(255,255,255,0.3)',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      padding: '8px 0',
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+    }}>
+      {/* Brand Line */}
+      <div className="d-flex justify-content-center">
+        <div style={{ width: '40px', height: '2px', background: '#475569', borderRadius: '4px', opacity: 0.4 }}></div>
+      </div>
+      
+      {/* Sensor (IR/Temp Receiver) */}
+      <div style={{
+        position: 'absolute',
+        left: '25px',
+        top: '25px',
+        width: '12px',
+        height: '6px',
+        borderRadius: '3px',
+        background: '#020617',
+        boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.3), 0 1px 1px rgba(255,255,255,0.1)',
+        border: '1px solid rgba(0,0,0,0.5)'
+      }}></div>
+
+      {/* Digital Display (Power & Temp) */}
+      <div style={{
+        position: 'absolute',
+        right: '15px',
+        top: '20px',
+        background: '#0f172a',
+        padding: '4px 10px',
+        borderRadius: '6px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontFamily: "'Courier New', monospace",
+        fontWeight: 'bold',
+        fontSize: '12px',
+        boxShadow: unit.status === 'ON' ? '0 0 10px rgba(14, 165, 233, 0.4)' : 'inset 0 0 4px rgba(0,0,0,0.8)',
+        transition: 'all 0.3s ease',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }}>
+        {/* Power Display */}
+        <span style={{ 
+          color: unit.status === 'ON' ? '#10b981' : '#475569', 
+          borderRight: '1px solid #334155', 
+          paddingRight: '8px',
+          textShadow: unit.status === 'ON' ? '0 0 5px #10b981' : 'none'
+        }}>
+          {unit.status === 'ON' ? `${unit.powerUsage}kW` : '0.0kW'}
+        </span>
+        {/* Temp Display */}
+        <span style={{ 
+          color: unit.status === 'ON' ? '#0ea5e9' : '#475569',
+          textShadow: unit.status === 'ON' ? '0 0 5px #0ea5e9' : 'none'
+        }}>
+          {unit.status === 'ON' ? `${unit.setTemp}°` : '--'}
+        </span>
+      </div>
+      
+      {/* Status LED */}
+      <div style={{
+        position: 'absolute',
+        left: '12px',
+        top: '25px',
+        width: '5px',
+        height: '5px',
+        borderRadius: '50%',
+        background: unit.status === 'ON' ? '#10b981' : '#ef4444',
+        boxShadow: unit.status === 'ON' ? '0 0 8px #10b981' : '0 0 5px rgba(239, 68, 68, 0.5)',
+        transition: 'all 0.3s ease'
+      }}></div>
+
+      {/* Flap Area (Vent) */}
+      <div style={{
+        width: '88%',
+        margin: '0 auto',
+        height: '14px',
+        background: '#0f172a', // Deep dark vent
+        borderRadius: '4px',
+        marginTop: 'auto',
+        marginBottom: '4px',
+        boxShadow: 'inset 0 4px 6px rgba(0,0,0,0.8)',
+        position: 'relative',
+        perspective: '400px'
+      }}>
+        <div style={{
+           position: 'absolute',
+           top: 0, left: 0, right: 0, bottom: 0,
+           background: 'linear-gradient(to bottom, #94a3b8, #64748b)',
+           transformOrigin: 'top',
+           transform: unit.status === 'ON' ? 'rotateX(75deg)' : 'rotateX(0deg)',
+           transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+           borderRadius: '3px',
+           boxShadow: unit.status === 'ON' ? '0 8px 10px rgba(0,0,0,0.4)' : '0 2px 4px rgba(0,0,0,0.2)',
+           borderBottom: '1px solid rgba(255,255,255,0.4)'
+        }}></div>
+      </div>
+      
+      {/* Airflow Animation (Only visible when ON) */}
+      {unit.status === 'ON' && (
+        <div style={{
+          position: 'absolute',
+          bottom: '-20px',
+          left: '0',
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '20px',
+          opacity: 0.6,
+          zIndex: 0
+        }}>
+          <div className="airflow-line" style={{ width: '2px', height: '15px', background: 'linear-gradient(to bottom, #0ea5e9, transparent)', animationDelay: '0s' }}></div>
+          <div className="airflow-line" style={{ width: '2px', height: '25px', background: 'linear-gradient(to bottom, #0ea5e9, transparent)', animationDelay: '0.2s' }}></div>
+          <div className="airflow-line" style={{ width: '2px', height: '20px', background: 'linear-gradient(to bottom, #0ea5e9, transparent)', animationDelay: '0.4s' }}></div>
+          <div className="airflow-line" style={{ width: '2px', height: '25px', background: 'linear-gradient(to bottom, #0ea5e9, transparent)', animationDelay: '0.1s' }}></div>
+          <div className="airflow-line" style={{ width: '2px', height: '15px', background: 'linear-gradient(to bottom, #0ea5e9, transparent)', animationDelay: '0.3s' }}></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ACOverview = () => {
+  const [units, setUnits] = useState(INITIAL_ACS);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Settings Modal State
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState(null);
+  const [formData, setFormData] = useState({});
+
+  // Group & Schedule State
+  const [acGroups, setAcGroups] = useState([{ id: 'g1', name: 'Master Control', acIds: [1, 2] }]);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  
+  const [newGroupName, setNewGroupName] = useState('');
+  const [selectedACsForGroup, setSelectedACsForGroup] = useState([]);
+  const [editingGroupId, setEditingGroupId] = useState(null);
+  const [expandedGroupId, setExpandedGroupId] = useState(null);
+
+  const [scheduleTargetId, setScheduleTargetId] = useState('');
+  const [scheduleData, setScheduleData] = useState({ scheduleStart: '', scheduleEnd: '', mode: 'Cool', setTemp: 24 });
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const togglePower = (id) => {
+    setUnits(units.map(u => {
+      if (u.id === id) {
+        return { ...u, status: u.status === 'ON' ? 'OFF' : 'ON', powerUsage: u.status === 'ON' ? 0 : 1.5 };
+      }
+      return u;
+    }));
+  };
+
+  const getModeIcon = (mode) => {
+    switch (mode) {
+      case 'Cool': return <Thermometer size={14} className="text-info" />;
+      case 'Dry': return <Droplets size={14} className="text-warning" />;
+      case 'Fan': return <Fan size={14} className="text-secondary" />;
+      case 'Heat': return <Thermometer size={14} className="text-danger" />;
+      default: return <Wind size={14} />;
+    }
+  };
+
+  const openSettings = (unit) => {
+    setSelectedUnit(unit);
+    setFormData({ ...unit });
+    setShowSettings(true);
+  };
+
+  const saveSettings = () => {
+    setUnits(units.map(u => u.id === formData.id ? { ...u, ...formData } : u));
+    setShowSettings(false);
+  };
+
+  const handleACGroupSelection = (id) => {
+    if (selectedACsForGroup.includes(id)) {
+      setSelectedACsForGroup(selectedACsForGroup.filter(acId => acId !== id));
+    } else {
+      setSelectedACsForGroup([...selectedACsForGroup, id]);
+    }
+  };
+
+  const createOrUpdateGroup = () => {
+    if (!newGroupName || selectedACsForGroup.length === 0) return;
+    if (editingGroupId) {
+       setAcGroups(acGroups.map(g => g.id === editingGroupId ? { ...g, name: newGroupName, acIds: selectedACsForGroup } : g));
+       setEditingGroupId(null);
+    } else {
+       setAcGroups([...acGroups, { id: 'g' + Date.now(), name: newGroupName, acIds: selectedACsForGroup }]);
+    }
+    setNewGroupName('');
+    setSelectedACsForGroup([]);
+  };
+
+  const startEditGroup = (group) => {
+    setEditingGroupId(group.id);
+    setNewGroupName(group.name);
+    setSelectedACsForGroup(group.acIds);
+  };
+
+  const cancelEdit = () => {
+    setEditingGroupId(null);
+    setNewGroupName('');
+    setSelectedACsForGroup([]);
+  };
+
+  const deleteGroup = (id) => {
+    setAcGroups(acGroups.filter(g => g.id !== id));
+  };
+
+  const controlGroup = (groupId, action, value) => {
+    const group = acGroups.find(g => g.id === groupId);
+    if (!group) return;
+
+    setUnits(units.map(u => {
+      if (group.acIds.includes(u.id)) {
+        if (action === 'POWER') return { ...u, status: value, powerUsage: value === 'ON' ? 2.0 : 0 };
+        if (action === 'MODE') return { ...u, mode: value };
+        if (action === 'TEMP') return { ...u, setTemp: value };
+      }
+      return u;
+    }));
+  };
+
+  const applySchedule = () => {
+    if (!scheduleTargetId) return;
+
+    let targetACIds = [];
+    if (scheduleTargetId === 'ALL') {
+      targetACIds = units.map(u => u.id);
+    } else if (scheduleTargetId.toString().startsWith('g')) {
+      const group = acGroups.find(g => g.id === scheduleTargetId);
+      if (group) targetACIds = group.acIds;
+    } else {
+      targetACIds = [Number(scheduleTargetId)];
+    }
+
+    setUnits(units.map(u => {
+      if (targetACIds.includes(u.id)) {
+        return {
+          ...u,
+          scheduleStart: scheduleData.scheduleStart || u.scheduleStart,
+          scheduleEnd: scheduleData.scheduleEnd || u.scheduleEnd,
+          mode: scheduleData.mode || u.mode,
+          setTemp: scheduleData.setTemp || u.setTemp
+        };
+      }
+      return u;
+    }));
+    setShowScheduleModal(false);
+    setScheduleData({ scheduleStart: '', scheduleEnd: '', mode: 'Cool', setTemp: 24 });
+  };
+
+  return (
+    <div className="ac-dashboard-wrapper fade-in p-4" style={{ 
+      minHeight: '100vh', 
+      background: 'transparent',
+      fontFamily: "'Inter', sans-serif" 
+    }}>
+      
+      {/* HEADER SECTION */}
+      <div className="d-flex justify-content-between align-items-center mb-5 pb-4 position-relative" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div>
+          <h3 className="text-white fw-bold mb-2 d-flex align-items-center" style={{ letterSpacing: '0.5px' }}>
+            <Wind className="me-3 text-info" size={28} />
+            AC Control Center
+          </h3>
+          <div className="d-flex align-items-center gap-4">
+            <span className="text-secondary fw-bold" style={{ fontSize: '12px', letterSpacing: '1px' }}>{currentTime.toLocaleTimeString()}</span>
+            <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+               <div className="pulse-dot"></div>
+               <span className="text-success fw-bold" style={{ fontSize: '11px', letterSpacing: '1px' }}>SYSTEM ACTIVE</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* SUMMARY WIDGET */}
+        <div className="d-flex align-items-center gap-3">
+          <Button variant="info" className="rounded-pill fw-bold px-4 py-2 shadow-sm d-flex align-items-center border-0 text-white" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)' }} onClick={() => setShowGroupModal(true)}>
+            <Settings size={16} className="me-2"/> Manage Groups
+          </Button>
+          <Button variant="outline-light" className="rounded-pill fw-bold px-4 py-2 shadow-sm d-flex align-items-center border-secondary text-secondary hover-white" onClick={() => setShowScheduleModal(true)}>
+            <Clock size={16} className="me-2"/> Global Schedule
+          </Button>
+        </div>
+      </div>
+
+      <Row className="g-4 mb-5">
+        {/* AC UNIT CARDS */}
+        {units.map((unit) => (
+          <Col xl={3} lg={4} md={6} key={unit.id}>
+            <Card className="border-0 h-100 overflow-hidden premium-card" style={{ 
+              background: 'rgba(15, 23, 42, 0.4)', 
+              borderRadius: '24px', 
+              border: '1px solid rgba(255,255,255,0.05)',
+              backdropFilter: 'blur(20px)',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+              transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }}>
+              
+              {/* Elegant Top Border Indicator */}
+              <div style={{ height: '4px', background: unit.status === 'ON' ? 'linear-gradient(90deg, #0ea5e9, #10b981)' : '#334155', transition: 'all 0.3s ease' }}></div>
+
+              <Card.Body className="p-4 d-flex flex-column position-relative">
+                {/* Settings Button */}
+                <button 
+                  onClick={() => openSettings(unit)}
+                  className="position-absolute btn p-2 rounded-circle hover-glow" 
+                  style={{ top: '16px', right: '16px', zIndex: 10, background: 'rgba(255,255,255,0.03)', border: 'none', color: '#64748b' }}
+                >
+                  <Settings size={18} />
+                </button>
+
+                {/* ROOM INFO */}
+                <div className="mb-4 pe-4">
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <MapPin size={12} className="text-info" />
+                    <span className="text-info fw-bold text-uppercase" style={{ fontSize: '10px', letterSpacing: '1.5px' }}>{unit.room}</span>
+                  </div>
+                  <h4 className="text-white fw-bold mb-1">{unit.name}</h4>
+                  <div className="text-secondary fw-medium" style={{ fontSize: '12px' }}>{unit.type}</div>
+                </div>
+
+                {/* REALISTIC AC GRAPHIC */}
+                <div className="mb-4 px-2">
+                  <RealisticAC unit={unit} />
+                </div>
+
+                {/* CONTROLS AREA */}
+                <div className="mt-auto">
+                  
+                  {/* Target Temp & Power */}
+                  <div className="d-flex align-items-center justify-content-between p-3 rounded-4 mb-4" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div>
+                      <div className="text-secondary fw-bold mb-1 text-uppercase" style={{ fontSize: '10px', letterSpacing: '1px' }}>Target Temp</div>
+                      <div className="d-flex align-items-start">
+                        <span className="text-white fw-bold lh-1" style={{ fontSize: '2.5rem', letterSpacing: '-1px' }}>{unit.setTemp}</span>
+                        <span className="text-info fw-bold ms-1 mt-1" style={{ fontSize: '1.2rem' }}>°C</span>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => togglePower(unit.id)}
+                      className={`btn rounded-circle d-flex align-items-center justify-content-center sleek-power ${unit.status === 'ON' ? 'on' : 'off'}`} 
+                      style={{ 
+                        width: '56px', height: '56px', 
+                        background: unit.status === 'ON' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'rgba(255,255,255,0.05)',
+                        border: unit.status === 'ON' ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                        color: unit.status === 'ON' ? '#fff' : '#64748b',
+                        boxShadow: unit.status === 'ON' ? '0 10px 20px rgba(14, 165, 233, 0.3)' : 'none',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <Power size={24} />
+                    </button>
+                  </div>
+
+                  {/* Status Badges */}
+                  <div className="d-flex gap-2 mb-4">
+                    <Badge bg="transparent" className="flex-grow-1 py-2 px-0 text-light fw-normal d-flex justify-content-center align-items-center border border-secondary border-opacity-25 rounded-pill" style={{ background: 'rgba(255,255,255,0.02) !important' }}>
+                      {getModeIcon(unit.mode)} <span className="ms-2 fs-12">{unit.mode}</span>
+                    </Badge>
+                    <Badge bg="transparent" className="flex-grow-1 py-2 px-0 text-light fw-normal d-flex justify-content-center align-items-center border border-secondary border-opacity-25 rounded-pill" style={{ background: 'rgba(255,255,255,0.02) !important' }}>
+                      <Fan size={14} className="text-secondary me-2" /> <span className="fs-12">{unit.fanSpeed}</span>
+                    </Badge>
+                    <Badge bg="transparent" className="flex-grow-1 py-2 px-0 text-light fw-normal d-flex justify-content-center align-items-center border border-secondary border-opacity-25 rounded-pill" style={{ background: 'rgba(255,255,255,0.02) !important' }}>
+                      <Zap size={14} className={unit.powerUsage > 0 ? "text-warning me-2" : "text-secondary me-2"} /> <span className="fs-12">{unit.powerUsage}kW</span>
+                    </Badge>
+                  </div>
+
+                  {/* Schedule Indicator */}
+                  {unit.scheduleStart && unit.scheduleEnd ? (
+                    <div className="d-flex align-items-center justify-content-between px-3 py-2 rounded-pill" style={{ background: 'rgba(14, 165, 233, 0.1)', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
+                      <div className="d-flex align-items-center gap-2">
+                        <Clock size={12} className="text-info" />
+                        <span className="text-info fw-bold" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>{unit.scheduleStart} — {unit.scheduleEnd}</span>
+                      </div>
+                      <div className="bg-info rounded-circle" style={{ width: '6px', height: '6px', boxShadow: '0 0 8px #0ea5e9' }}></div>
+                    </div>
+                  ) : (
+                    <div className="d-flex align-items-center justify-content-center px-3 py-2 rounded-pill" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+                      <span className="text-secondary fw-bold" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>No Active Schedule</span>
+                    </div>
+                  )}
+
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* AC INDIVIDUAL SETTINGS MODAL */}
+      <Modal show={showSettings} onHide={() => setShowSettings(false)} centered className="premium-modal">
+        {selectedUnit && (
+          <>
+            <Modal.Header closeButton closeVariant="white" className="border-bottom-0 pb-0" style={{ background: '#0f172a' }}>
+              <Modal.Title className="text-white fs-5 fw-bold d-flex align-items-center gap-3">
+                <div className="bg-info rounded-circle d-flex align-items-center justify-content-center shadow" style={{ width: '36px', height: '36px' }}>
+                  <Settings size={20} color="white" />
+                </div>
+                Configure Unit
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body className="px-4 py-4" style={{ background: '#0f172a', color: '#fff' }}>
+              
+              <div className="mb-4">
+                <h6 className="text-info fw-bold mb-3 fs-12 tracking-widest text-uppercase">Identification</h6>
+                <Row className="g-3">
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="text-secondary fs-12">Room / Location</Form.Label>
+                      <Form.Control type="text" value={formData.room || ''} onChange={e => setFormData({...formData, room: e.target.value})} className="premium-input" />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="text-secondary fs-12">AC Type</Form.Label>
+                      <Form.Control type="text" value={formData.type || ''} onChange={e => setFormData({...formData, type: e.target.value})} className="premium-input" />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </div>
+
+              <div className="mb-4">
+                <h6 className="text-info fw-bold mb-3 fs-12 tracking-widest text-uppercase">Automation Schedule</h6>
+                <Row className="g-3">
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="text-secondary fs-12 d-flex align-items-center gap-1"><Clock size={12}/> Auto ON Time</Form.Label>
+                      <Form.Control type="time" value={formData.scheduleStart || ''} onChange={e => setFormData({...formData, scheduleStart: e.target.value})} className="premium-input" />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="text-secondary fs-12 d-flex align-items-center gap-1"><Clock size={12}/> Auto OFF Time</Form.Label>
+                      <Form.Control type="time" value={formData.scheduleEnd || ''} onChange={e => setFormData({...formData, scheduleEnd: e.target.value})} className="premium-input" />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </div>
+
+              <div>
+                <h6 className="text-info fw-bold mb-3 fs-12 tracking-widest text-uppercase">Operation Default</h6>
+                <Row className="g-3">
+                  <Col md={4}>
+                    <Form.Group>
+                      <Form.Label className="text-secondary fs-12">Mode</Form.Label>
+                      <Form.Select value={formData.mode || 'Cool'} onChange={e => setFormData({...formData, mode: e.target.value})} className="premium-input">
+                        <option value="Cool">Cool</option>
+                        <option value="Fan">Fan</option>
+                        <option value="Dry">Dry</option>
+                        <option value="Heat">Heat</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group>
+                      <Form.Label className="text-secondary fs-12">Fan Speed</Form.Label>
+                      <Form.Select value={formData.fanSpeed || 'Auto'} onChange={e => setFormData({...formData, fanSpeed: e.target.value})} className="premium-input">
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Auto">Auto</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group>
+                      <Form.Label className="text-secondary fs-12">Target Temp</Form.Label>
+                      <Form.Control type="number" min="16" max="30" value={formData.setTemp || 24} onChange={e => setFormData({...formData, setTemp: Number(e.target.value)})} className="premium-input" />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </div>
+
+            </Modal.Body>
+            <Modal.Footer className="border-top-0 pt-0 px-4 pb-4" style={{ background: '#0f172a' }}>
+              <Button variant="outline-secondary" className="rounded-pill px-4" onClick={() => setShowSettings(false)}>Cancel</Button>
+              <Button variant="info" className="rounded-pill px-5 fw-bold shadow" onClick={saveSettings}>Apply Changes</Button>
+            </Modal.Footer>
+          </>
+        )}
+      </Modal>
+
+      {/* MANAGE GROUPS MODAL */}
+      <Modal show={showGroupModal} onHide={() => setShowGroupModal(false)} centered size="xl" className="premium-modal">
+        <Modal.Header closeButton closeVariant="white" className="border-bottom-0 pb-0" style={{ background: '#0f172a' }}>
+          <Modal.Title className="text-white fs-4 fw-bold d-flex align-items-center gap-3">
+            <div className="bg-info rounded-circle d-flex align-items-center justify-content-center shadow" style={{ width: '42px', height: '42px' }}>
+              <Wind size={24} color="white" />
+            </div>
+            AC Group Management
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4" style={{ background: '#0f172a', color: '#fff' }}>
+          <Row className="g-5">
+            <Col lg={5}>
+              <div className="bg-slate-800 p-4 rounded-4" style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(30, 41, 59, 0.3)' }}>
+                <h5 className="text-white fw-bold mb-4">{editingGroupId ? 'Update Existing Group' : 'Create New Group'}</h5>
+                <Form.Group className="mb-4">
+                  <Form.Label className="text-secondary fs-12 fw-bold tracking-widest text-uppercase">Group Name</Form.Label>
+                  <Form.Control type="text" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="e.g. Server Rooms" className="premium-input py-3" />
+                </Form.Group>
+                
+                <Form.Label className="text-secondary fs-12 fw-bold tracking-widest text-uppercase mb-3">Assign Units to Group</Form.Label>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="mb-4 pe-2">
+                  {units.map(u => (
+                    <div key={u.id} className="d-flex align-items-center p-3 mb-2 rounded-3" style={{ background: selectedACsForGroup.includes(u.id) ? 'rgba(14, 165, 233, 0.1)' : 'rgba(0,0,0,0.2)', border: `1px solid ${selectedACsForGroup.includes(u.id) ? 'rgba(14, 165, 233, 0.3)' : 'transparent'}`, cursor: 'pointer' }} onClick={() => handleACGroupSelection(u.id)}>
+                      <Form.Check type="checkbox" id={`group-ac-${u.id}`} checked={selectedACsForGroup.includes(u.id)} onChange={() => {}} className="me-3" />
+                      <div>
+                        <div className="text-white fw-bold fs-12">{u.name}</div>
+                        <div className="text-secondary fs-11"><MapPin size={10} className="me-1"/>{u.room}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="d-flex gap-3">
+                  {editingGroupId && <Button variant="outline-secondary" className="w-50 rounded-pill fw-bold py-2" onClick={cancelEdit}>CANCEL</Button>}
+                  <Button variant="info" onClick={createOrUpdateGroup} disabled={!newGroupName || selectedACsForGroup.length === 0} className={`${editingGroupId ? 'w-50' : 'w-100'} rounded-pill fw-bold py-2 shadow`}>
+                    {editingGroupId ? 'UPDATE GROUP' : 'CREATE GROUP'}
+                  </Button>
+                </div>
+              </div>
+            </Col>
+            
+            <Col lg={7}>
+              <h5 className="text-white fw-bold mb-4">Active Groups & Control</h5>
+              {acGroups.length === 0 ? (
+                <div className="text-center p-5 border border-dashed rounded-4" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <Wind size={48} className="text-secondary mb-3 opacity-50" />
+                  <h6 className="text-secondary">No groups configured yet.</h6>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-3" style={{ maxHeight: '550px', overflowY: 'auto' }}>
+                  {acGroups.map(group => (
+                    <Card key={group.id} className="border-0 shadow-sm" style={{ background: 'rgba(15,23,42,0.6)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Card.Body className="p-4">
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <div>
+                            <h5 className="text-white fw-bold mb-1">{group.name}</h5>
+                            <Badge bg="transparent" className="px-2 py-1 rounded-pill fw-bold" style={{ background: 'rgba(14, 165, 233, 0.2) !important', color: '#0ea5e9', border: '1px solid rgba(14, 165, 233, 0.3)' }}>{group.acIds.length} Linked Units</Badge>
+                          </div>
+                          <div className="d-flex gap-2">
+                            <Button variant="link" className="text-info p-2" onClick={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}>
+                              {expandedGroupId === group.id ? <EyeOff size={16}/> : <Eye size={16}/>}
+                            </Button>
+                            <Button variant="link" className="text-warning p-2" onClick={() => startEditGroup(group)}>
+                              <Edit2 size={16}/>
+                            </Button>
+                            <Button variant="link" className="text-danger p-2" onClick={() => deleteGroup(group.id)}>
+                              <Trash2 size={16}/>
+                            </Button>
+                          </div>
+                        </div>
+
+                        {expandedGroupId === group.id && (
+                          <div className="bg-black bg-opacity-30 p-3 rounded-3 mb-3 border border-secondary border-opacity-25 mt-3">
+                            <div className="d-flex flex-wrap gap-2">
+                              {group.acIds.map(id => {
+                                const ac = units.find(u => u.id === id);
+                                return ac ? <Badge bg="dark" className="border border-secondary border-opacity-50 px-3 py-2 text-light fw-normal" key={id}>{ac.name}</Badge> : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="bg-black bg-opacity-20 rounded-3 p-3 mt-3 border border-secondary border-opacity-10">
+                           <Row className="g-2">
+                             <Col xs={6} md={3}>
+                               <Button variant="outline-success" className="w-100 fw-bold rounded-pill" onClick={() => controlGroup(group.id, 'POWER', 'ON')}><Power size={14} className="me-1"/> ON</Button>
+                             </Col>
+                             <Col xs={6} md={3}>
+                               <Button variant="outline-danger" className="w-100 fw-bold rounded-pill" onClick={() => controlGroup(group.id, 'POWER', 'OFF')}><Power size={14} className="me-1"/> OFF</Button>
+                             </Col>
+                             <Col xs={6} md={3}>
+                               <Form.Select className="premium-select rounded-pill" onChange={(e) => controlGroup(group.id, 'MODE', e.target.value)}>
+                                 <option value="">Set Mode</option>
+                                 <option value="Cool">Cool</option>
+                                 <option value="Fan">Fan</option>
+                                 <option value="Dry">Dry</option>
+                                 <option value="Heat">Heat</option>
+                               </Form.Select>
+                             </Col>
+                             <Col xs={6} md={3}>
+                               <Form.Select className="premium-select rounded-pill" onChange={(e) => controlGroup(group.id, 'TEMP', Number(e.target.value))}>
+                                 <option value="">Set Temp</option>
+                                 {[16,18,20,22,24,26,28,30].map(t => <option key={t} value={t}>{t}°C</option>)}
+                               </Form.Select>
+                             </Col>
+                           </Row>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Col>
+          </Row>
+        </Modal.Body>
+      </Modal>
+
+      {/* SCHEDULE SETTINGS MODAL */}
+      <Modal show={showScheduleModal} onHide={() => setShowScheduleModal(false)} centered size="md" className="premium-modal">
+        <Modal.Header closeButton closeVariant="white" className="border-bottom-0 pb-0" style={{ background: '#0f172a' }}>
+          <Modal.Title className="text-white fs-5 fw-bold d-flex align-items-center gap-3">
+            <div className="bg-info rounded-circle d-flex align-items-center justify-content-center shadow" style={{ width: '36px', height: '36px' }}>
+              <Clock size={20} color="white" />
+            </div>
+            Global Scheduler
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="px-4 py-4" style={{ background: '#0f172a', color: '#fff' }}>
+          
+          <div className="bg-slate-800 p-4 rounded-4 mb-4" style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(30, 41, 59, 0.3)' }}>
+            <Form.Group>
+              <Form.Label className="text-info fw-bold fs-12 tracking-widest text-uppercase">1. Select Target Application</Form.Label>
+              <Form.Select value={scheduleTargetId} onChange={(e) => setScheduleTargetId(e.target.value)} className="premium-input py-3">
+                <option value="">-- Choose Target --</option>
+                <option value="ALL" className="fw-bold text-info">★ ALL AC UNITS IN FACILITY</option>
+                {acGroups.length > 0 && <optgroup label="Custom Groups">
+                  {acGroups.map(g => <option key={g.id} value={g.id}>{g.name} ({g.acIds.length} Units)</option>)}
+                </optgroup>}
+                <optgroup label="Individual Units">
+                  {units.map(u => <option key={u.id} value={u.id}>{u.name} - {u.room}</option>)}
+                </optgroup>
+              </Form.Select>
+            </Form.Group>
+          </div>
+          
+          <div className="bg-slate-800 p-4 rounded-4" style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(30, 41, 59, 0.3)' }}>
+            <h6 className="text-info fw-bold mb-4 fs-12 tracking-widest text-uppercase">2. Execution Parameters</h6>
+            
+            <Row className="mb-4 g-4">
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="text-secondary fs-12 fw-bold d-flex align-items-center gap-2"><div className="w-2 h-2 rounded-circle bg-success" style={{width:'8px',height:'8px'}}></div> Power ON Time</Form.Label>
+                  <Form.Control type="time" value={scheduleData.scheduleStart || ''} onChange={e => setScheduleData({...scheduleData, scheduleStart: e.target.value})} className="premium-input py-2" />
+                </Form.Group>
+              </Col>
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="text-secondary fs-12 fw-bold d-flex align-items-center gap-2"><div className="w-2 h-2 rounded-circle bg-danger" style={{width:'8px',height:'8px'}}></div> Power OFF Time</Form.Label>
+                  <Form.Control type="time" value={scheduleData.scheduleEnd || ''} onChange={e => setScheduleData({...scheduleData, scheduleEnd: e.target.value})} className="premium-input py-2" />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="g-4">
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="text-secondary fs-12 fw-bold">Target Mode</Form.Label>
+                  <Form.Select value={scheduleData.mode || 'Cool'} onChange={e => setScheduleData({...scheduleData, mode: e.target.value})} className="premium-input py-2">
+                    <option value="Cool">Cool</option>
+                    <option value="Fan">Fan</option>
+                    <option value="Dry">Dry</option>
+                    <option value="Heat">Heat</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col sm={6}>
+                <Form.Group>
+                  <Form.Label className="text-secondary fs-12 fw-bold">Target Temp (°C)</Form.Label>
+                  <Form.Control type="number" min="16" max="30" value={scheduleData.setTemp || 24} onChange={e => setScheduleData({...scheduleData, setTemp: Number(e.target.value)})} className="premium-input py-2" />
+                </Form.Group>
+              </Col>
+            </Row>
+          </div>
+
+        </Modal.Body>
+        <Modal.Footer className="border-top-0 pt-0 px-4 pb-4" style={{ background: '#0f172a' }}>
+          <Button variant="outline-secondary" className="rounded-pill px-4" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
+          <Button variant="info" className="rounded-pill px-5 fw-bold shadow" onClick={applySchedule} disabled={!scheduleTargetId}>
+            Dispatch Schedule
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* STYLE SHEET */}
+      <style dangerouslySetInnerHTML={{__html: `
+        
+        .premium-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+          border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .hover-glow:hover {
+          background: rgba(255,255,255,0.1) !important;
+          color: #fff !important;
+        }
+
+        .sleek-power.on:hover {
+          box-shadow: 0 12px 25px rgba(14, 165, 233, 0.5) !important;
+          transform: scale(1.05);
+        }
+        .sleek-power.off:hover {
+          background: rgba(255,255,255,0.1) !important;
+          color: #fff !important;
+        }
+
+        .hover-white:hover {
+          color: #fff !important;
+          background: rgba(255,255,255,0.05);
+        }
+
+        .premium-input {
+          background: rgba(15, 23, 42, 0.8) !important;
+          border: 1px solid rgba(255,255,255,0.1) !important;
+          color: #fff !important;
+          border-radius: 12px;
+          transition: all 0.3s;
+        }
+        .premium-input:focus {
+          border-color: #0ea5e9 !important;
+          box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2) !important;
+        }
+
+        .premium-select {
+          background-color: rgba(15, 23, 42, 0.8);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: #fff;
+          font-size: 11px;
+          font-weight: bold;
+        }
+        
+        .fs-12 { font-size: 0.75rem !important; }
+        .fs-11 { font-size: 0.7rem !important; }
+        .tracking-widest { letter-spacing: 1.5px !important; }
+
+        .pulse-dot {
+          width: 6px;
+          height: 6px;
+          background-color: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+          animation: pulse 2s infinite;
+        }
+        .pulse-badge {
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes airflow {
+          0% { transform: translateY(-5px); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(15px); opacity: 0; }
+        }
+        .airflow-line {
+          animation: airflow 1.5s infinite linear;
+        }
+        @keyframes pulse {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+      `}} />
+    </div>
+  );
+};
+
+export default ACOverview;
