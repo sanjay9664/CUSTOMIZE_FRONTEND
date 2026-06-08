@@ -549,6 +549,7 @@ const ACOverview = () => {
                     <Form.Group>
                       <Form.Label className="text-secondary fs-12">Room Temp</Form.Label>
                       <Form.Control type="number" min="16" max="30" value={formData.setTemp === '--' ? '' : formData.setTemp} onChange={e => setFormData({...formData, setTemp: e.target.value ? Number(e.target.value) : '--'})} className="premium-input" placeholder="--" />
+
                     </Form.Group>
                   </Col>
                 </Row>

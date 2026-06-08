@@ -13,7 +13,7 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
-  Battery,
+  Usb,
   Plug,
   Flashlight,
   Eye,

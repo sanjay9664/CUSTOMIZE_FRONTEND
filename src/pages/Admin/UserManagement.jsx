@@ -19,7 +19,7 @@ const defaultSubmoduleVisibility = {
   showMaintenance: { Scheduled: true, 'Pending Tasks': true, 'PDF Report': true },
   showServiceHistory: { 'Equipment-wise': true, 'Service Records': true, 'PDF Report': true },
   showDailyDPR: { 'Data Aggregation': true, 'Daily Logs': true, 'PDF Report': true },
-  showEnergyMetering: { Overview: true, 'Main Meter': true, 'Sub Meters': true, 'PDF Report': true }
+  showEnergyMetering: { Overview: true, 'Main Meter': true, 'Sub Meters': true, 'Graphs': true, 'PDF Report': true }
 };
 
 const moduleDetails = {
@@ -36,7 +36,7 @@ const moduleDetails = {
   showMaintenance: { label: 'Maintenance', icon: <PenTool size={18} />, subItems: ['Scheduled', 'Pending Tasks', 'PDF Report'] },
   showServiceHistory: { label: 'Service History', icon: <History size={18} />, subItems: ['Equipment-wise', 'Service Records', 'PDF Report'] },
   showDailyDPR: { label: 'Daily DPR', icon: <Gauge size={18} />, subItems: ['Data Aggregation', 'Daily Logs', 'PDF Report'] },
-  showEnergyMetering: { label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'PDF Report'] }
+  showEnergyMetering: { label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'Graphs', 'PDF Report'] }
 };
 
 const UserManagement = () => {
