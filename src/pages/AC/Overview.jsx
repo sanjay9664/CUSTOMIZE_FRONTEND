@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Badge, Form, Button, Modal } from 'react-bootstrap';
-import { Wind, Thermometer, Droplets, Zap, Power, Settings, Fan, MapPin, Clock, Info, Activity, Edit2, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Wind, Thermometer, Droplets, Zap, Power, Settings, Fan, MapPin, Clock, Info, Activity, Edit2, Eye, EyeOff, Trash2, Play, Square } from 'lucide-react';
 
 // --- MOCK DATA ---
 const INITIAL_ACS = [
-  { id: 1, name: 'Master AC', type: '1.5 Ton Inverter Split AC', room: 'Master Bedroom', status: 'ON', mode: 'Cool', setTemp: 22, roomTemp: 23.5, fanSpeed: 'Auto', powerUsage: 1.2, scheduleStart: '22:00', scheduleEnd: '06:00' },
-  { id: 2, name: 'Lobby AC', type: '2.0 Ton Cassette AC', room: 'Lobby', status: 'ON', mode: 'Cool', setTemp: 24, roomTemp: 25.0, fanSpeed: 'High', powerUsage: 2.1, scheduleStart: '09:00', scheduleEnd: '20:00' },
-  { id: 3, name: 'Main Hall AC', type: '2.0 Ton Split AC', room: 'Hall', status: 'OFF', mode: 'Fan', setTemp: 24, roomTemp: 26.5, fanSpeed: 'Low', powerUsage: 0.0, scheduleStart: '', scheduleEnd: '' },
-  { id: 4, name: 'Server Room AC', type: '2.0 Ton Cassette AC', room: 'Server Room', status: 'ON', mode: 'Cool', setTemp: 18, roomTemp: 18.5, fanSpeed: 'High', powerUsage: 2.5, scheduleStart: '00:00', scheduleEnd: '23:59' },
+  { id: 1, name: 'Master AC', type: '1.5 Ton Inverter Split AC', room: 'Master Bedroom', status: 'ON', mode: 'Cool', setTemp: 22, roomTemp: 23.5, fanSpeed: 'Auto', powerUsage: 1.2, scheduleStart: '22:00', scheduleEnd: '06:00', operationMode: 'Auto' },
+  { id: 2, name: 'Lobby AC', type: '2.0 Ton Cassette AC', room: 'Lobby', status: 'ON', mode: 'Cool', setTemp: 24, roomTemp: 25.0, fanSpeed: 'High', powerUsage: 2.1, scheduleStart: '09:00', scheduleEnd: '20:00', operationMode: 'Auto' },
+  { id: 3, name: 'Main Hall AC', type: '2.0 Ton Split AC', room: 'Hall', status: 'OFF', mode: 'Fan', setTemp: 24, roomTemp: 26.5, fanSpeed: 'Low', powerUsage: 0.0, scheduleStart: '', scheduleEnd: '', operationMode: 'Manual' },
+  { id: 4, name: 'Server Room AC', type: '2.0 Ton Cassette AC', room: 'Server Room', status: 'ON', mode: 'Cool', setTemp: 18, roomTemp: 18.5, fanSpeed: 'High', powerUsage: 2.5, scheduleStart: '00:00', scheduleEnd: '23:59', operationMode: 'Auto' },
 ];
 
 const RealisticAC = ({ unit }) => {
@@ -165,6 +165,12 @@ const ACOverview = () => {
   const [scheduleTargetId, setScheduleTargetId] = useState('');
   const [scheduleData, setScheduleData] = useState({ scheduleStart: '', scheduleEnd: '', mode: 'Cool', setTemp: 24 });
 
+  // Control Action Modal State
+  const [showControlModal, setShowControlModal] = useState(false);
+  const [controlTargetId, setControlTargetId] = useState(null);
+  const [controlMode, setControlMode] = useState('Manual');
+  const [controlSuccessMessage, setControlSuccessMessage] = useState('');
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -177,6 +183,36 @@ const ACOverview = () => {
       }
       return u;
     }));
+  };
+
+  const openControlModal = (id) => {
+    const unit = units.find(u => u.id === id);
+    setControlTargetId(id);
+    setControlMode(unit?.operationMode || 'Manual');
+    setControlSuccessMessage('');
+    setShowControlModal(true);
+  };
+
+  const handleControlAction = (action) => {
+    if (action === 'SCHEDULE') {
+      setShowControlModal(false);
+      setScheduleTargetId(controlTargetId.toString());
+      setShowScheduleModal(true);
+      return;
+    }
+
+    setControlSuccessMessage(`SUCCESSFULL ${action}`);
+    
+    if (action === 'START') {
+      setUnits(units.map(u => u.id === controlTargetId ? { ...u, status: 'ON', powerUsage: 1.5 } : u));
+    } else if (action === 'STOP') {
+      setUnits(units.map(u => u.id === controlTargetId ? { ...u, status: 'OFF', powerUsage: 0 } : u));
+    }
+
+    setTimeout(() => {
+      setControlSuccessMessage('');
+      setShowControlModal(false);
+    }, 2000);
   };
 
   const getModeIcon = (mode) => {
@@ -357,10 +393,10 @@ const ACOverview = () => {
                 {/* CONTROLS AREA */}
                 <div className="mt-auto">
                   
-                  {/* Target Temp & Power */}
+                  {/* Room Temp & Power */}
                   <div className="d-flex align-items-center justify-content-between p-3 rounded-4 mb-4" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
                     <div>
-                      <div className="text-secondary fw-bold mb-1 text-uppercase" style={{ fontSize: '10px', letterSpacing: '1px' }}>Target Temp</div>
+                      <div className="text-secondary fw-bold mb-1 text-uppercase" style={{ fontSize: '10px', letterSpacing: '1px' }}>Room Temp</div>
                       <div className="d-flex align-items-start">
                         <span className="text-white fw-bold lh-1" style={{ fontSize: '2.5rem', letterSpacing: '-1px' }}>{unit.setTemp}</span>
                         <span className="text-info fw-bold ms-1 mt-1" style={{ fontSize: '1.2rem' }}>°C</span>
@@ -368,7 +404,7 @@ const ACOverview = () => {
                     </div>
 
                     <button 
-                      onClick={() => togglePower(unit.id)}
+                      onClick={() => openControlModal(unit.id)}
                       className={`btn rounded-circle d-flex align-items-center justify-content-center sleek-power ${unit.status === 'ON' ? 'on' : 'off'}`} 
                       style={{ 
                         width: '56px', height: '56px', 
@@ -495,7 +531,7 @@ const ACOverview = () => {
                   </Col>
                   <Col md={4}>
                     <Form.Group>
-                      <Form.Label className="text-secondary fs-12">Target Temp</Form.Label>
+                      <Form.Label className="text-secondary fs-12">Room Temp</Form.Label>
                       <Form.Control type="number" min="16" max="30" value={formData.setTemp || 24} onChange={e => setFormData({...formData, setTemp: Number(e.target.value)})} className="premium-input" />
                     </Form.Group>
                   </Col>
@@ -533,15 +569,41 @@ const ACOverview = () => {
                 
                 <Form.Label className="text-secondary fs-12 fw-bold tracking-widest text-uppercase mb-3">Assign Units to Group</Form.Label>
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="mb-4 pe-2">
-                  {units.map(u => (
-                    <div key={u.id} className="d-flex align-items-center p-3 mb-2 rounded-3" style={{ background: selectedACsForGroup.includes(u.id) ? 'rgba(14, 165, 233, 0.1)' : 'rgba(0,0,0,0.2)', border: `1px solid ${selectedACsForGroup.includes(u.id) ? 'rgba(14, 165, 233, 0.3)' : 'transparent'}`, cursor: 'pointer' }} onClick={() => handleACGroupSelection(u.id)}>
-                      <Form.Check type="checkbox" id={`group-ac-${u.id}`} checked={selectedACsForGroup.includes(u.id)} onChange={() => {}} className="me-3" />
-                      <div>
-                        <div className="text-white fw-bold fs-12">{u.name}</div>
-                        <div className="text-secondary fs-11"><MapPin size={10} className="me-1"/>{u.room}</div>
+                  {units.map(u => {
+                    const isManual = u.operationMode === 'Manual';
+                    const isSelected = selectedACsForGroup.includes(u.id);
+                    return (
+                      <div 
+                        key={u.id} 
+                        className="d-flex align-items-center justify-content-between p-3 mb-2 rounded-3 position-relative" 
+                        style={{ 
+                          background: isSelected ? 'rgba(14, 165, 233, 0.1)' : 'rgba(0,0,0,0.2)', 
+                          border: `1px solid ${isSelected ? 'rgba(14, 165, 233, 0.3)' : 'transparent'}`, 
+                          cursor: isManual ? 'not-allowed' : 'pointer',
+                          opacity: isManual ? 0.5 : 1
+                        }} 
+                        onClick={() => !isManual && handleACGroupSelection(u.id)}
+                      >
+                        <div className="d-flex align-items-center">
+                          <Form.Check 
+                            type="checkbox" 
+                            id={`group-ac-${u.id}`} 
+                            checked={isSelected} 
+                            disabled={isManual}
+                            onChange={() => {}} 
+                            className="me-3" 
+                          />
+                          <div>
+                            <div className="text-white fw-bold fs-12">{u.name}</div>
+                            <div className="text-secondary fs-11"><MapPin size={10} className="me-1"/>{u.room}</div>
+                          </div>
+                        </div>
+                        {isManual && (
+                          <Badge bg="dark" className="text-secondary border border-secondary border-opacity-25 px-2 py-1" style={{ fontSize: '9px', letterSpacing: '0.5px' }}>MANUAL</Badge>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 
                 <div className="d-flex gap-3">
@@ -689,7 +751,7 @@ const ACOverview = () => {
               </Col>
               <Col sm={6}>
                 <Form.Group>
-                  <Form.Label className="text-secondary fs-12 fw-bold">Target Temp (°C)</Form.Label>
+                  <Form.Label className="text-secondary fs-12 fw-bold">Room Temp (°C)</Form.Label>
                   <Form.Control type="number" min="16" max="30" value={scheduleData.setTemp || 24} onChange={e => setScheduleData({...scheduleData, setTemp: Number(e.target.value)})} className="premium-input py-2" />
                 </Form.Group>
               </Col>
@@ -703,6 +765,100 @@ const ACOverview = () => {
             Dispatch Schedule
           </Button>
         </Modal.Footer>
+      </Modal>
+
+      {/* POWER CONTROL MODAL */}
+      <Modal show={showControlModal} onHide={() => setShowControlModal(false)} centered size="sm" className="premium-modal">
+        <Modal.Header closeButton closeVariant="white" className="border-bottom-0 pb-0" style={{ background: '#0f172a' }}>
+          <Modal.Title className="text-white fs-5 fw-bold d-flex align-items-center gap-3">
+            <div className="bg-info rounded-circle d-flex align-items-center justify-content-center shadow" style={{ width: '36px', height: '36px' }}>
+              <Power size={18} color="white" />
+            </div>
+            Operation Mode
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="px-4 py-4 text-center position-relative" style={{ background: '#0f172a', color: '#fff' }}>
+          
+          {/* Segmented Control for Auto/Manual */}
+          <div className="d-flex align-items-center justify-content-between p-1 rounded-pill mb-4 mx-auto" style={{ background: 'rgba(0,0,0,0.3)', width: '220px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)' }}>
+            <div 
+              onClick={() => {
+                setControlMode('Manual'); 
+                setControlSuccessMessage('');
+                setUnits(units.map(u => u.id === controlTargetId ? { ...u, operationMode: 'Manual' } : u));
+              }}
+              className={`w-50 text-center py-2 rounded-pill fw-bold transition-all ${controlMode === 'Manual' ? 'bg-info text-white shadow' : 'text-secondary'}`}
+              style={{ fontSize: '12px', letterSpacing: '1px', cursor: 'pointer' }}
+            >
+              MANUAL
+            </div>
+            <div 
+              onClick={() => {
+                setControlMode('Auto'); 
+                setControlSuccessMessage('');
+                setUnits(units.map(u => u.id === controlTargetId ? { ...u, operationMode: 'Auto' } : u));
+              }}
+              className={`w-50 text-center py-2 rounded-pill fw-bold transition-all ${controlMode === 'Auto' ? 'bg-info text-white shadow' : 'text-secondary'}`}
+              style={{ fontSize: '12px', letterSpacing: '1px', cursor: 'pointer' }}
+            >
+              AUTO
+            </div>
+          </div>
+
+          {/* Floating Success Message Overlay */}
+          <div 
+            className="alert py-2 border-0 fw-bold shadow-lg d-flex align-items-center justify-content-center m-0" 
+            style={{ 
+              position: 'absolute', 
+              top: '65%', 
+              left: '50%', 
+              transform: controlSuccessMessage ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.9)', 
+              width: '85%', 
+              zIndex: 100,
+              background: 'rgba(16, 185, 129, 0.95)', 
+              color: '#fff', 
+              borderRadius: '12px', 
+              border: '1px solid rgba(16, 185, 129, 1)',
+              opacity: controlSuccessMessage ? 1 : 0,
+              visibility: controlSuccessMessage ? 'visible' : 'hidden',
+              transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              backdropFilter: 'blur(4px)'
+            }}>
+            {controlSuccessMessage || 'SUCCESS'}
+          </div>
+
+          {/* Premium Action Buttons */}
+          <div className="d-flex justify-content-center align-items-center gap-2 w-100" style={{ height: '85px', transition: 'all 0.3s ease' }}>
+            {controlMode === 'Manual' ? (
+              <>
+                <button onClick={() => handleControlAction('START')} className="action-btn-premium start-btn" style={{ width: '100px', height: '85px' }}>
+                  <Play size={24} className="mb-2" />
+                  <span>START</span>
+                </button>
+                <button onClick={() => handleControlAction('STOP')} className="action-btn-premium stop-btn" style={{ width: '100px', height: '85px' }}>
+                  <Square size={22} className="mb-2" fill="currentColor" />
+                  <span>STOP</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => handleControlAction('SCHEDULE')} className="action-btn-premium schedule-btn" style={{ width: '75px', height: '85px' }}>
+                  <Clock size={20} className="mb-2" />
+                  <span style={{ fontSize: '9px' }}>SCHEDULE</span>
+                </button>
+                <button onClick={() => handleControlAction('SENSOR')} className="action-btn-premium sensor-btn" style={{ width: '75px', height: '85px' }}>
+                  <Activity size={20} className="mb-2" />
+                  <span style={{ fontSize: '9px' }}>SENSOR</span>
+                </button>
+                <button onClick={() => handleControlAction('LOCAL')} className="action-btn-premium local-btn" style={{ width: '75px', height: '85px' }}>
+                  <Settings size={20} className="mb-2" />
+                  <span style={{ fontSize: '9px' }}>LOCAL</span>
+                </button>
+              </>
+            )}
+          </div>
+
+        </Modal.Body>
       </Modal>
 
       {/* STYLE SHEET */}
@@ -752,6 +908,42 @@ const ACOverview = () => {
           font-size: 11px;
           font-weight: bold;
         }
+
+        .action-btn-premium {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100px;
+          height: 100px;
+          border-radius: 20px;
+          border: 1px solid rgba(255,255,255,0.05);
+          background: rgba(15, 23, 42, 0.6);
+          color: #94a3b8;
+          font-weight: 700;
+          font-size: 12px;
+          letter-spacing: 0.5px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+          cursor: pointer;
+        }
+
+        .action-btn-premium:hover {
+          transform: translateY(-5px);
+        }
+
+        .start-btn { color: #10b981; border-color: rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05); }
+        .stop-btn { color: #ef4444; border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); }
+        .schedule-btn { color: #0ea5e9; border-color: rgba(14, 165, 233, 0.2); background: rgba(14, 165, 233, 0.05); }
+        .sensor-btn { color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); background: rgba(245, 158, 11, 0.05); }
+        .local-btn { color: #a855f7; border-color: rgba(168, 85, 247, 0.2); background: rgba(168, 85, 247, 0.05); }
+
+        .start-btn:hover { background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3)); border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2); }
+        .stop-btn:hover { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.3)); border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2); }
+        .schedule-btn:hover { background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(2, 132, 199, 0.3)); border-color: rgba(14, 165, 233, 0.5); box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2); }
+        .sensor-btn:hover { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.3)); border-color: rgba(245, 158, 11, 0.5); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.2); }
+        .local-btn:hover { background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.3)); border-color: rgba(168, 85, 247, 0.5); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); }
+
         
         .fs-12 { font-size: 0.75rem !important; }
         .fs-11 { font-size: 0.7rem !important; }
