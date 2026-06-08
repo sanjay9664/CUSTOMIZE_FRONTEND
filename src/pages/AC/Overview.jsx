@@ -4,10 +4,10 @@ import { Wind, Thermometer, Droplets, Zap, Power, Settings, Fan, MapPin, Clock, 
 
 // --- MOCK DATA ---
 const INITIAL_ACS = [
-  { id: 1, name: 'Master AC', type: '1.5 Ton Inverter Split AC', room: 'Master Bedroom', status: 'ON', mode: 'Cool', setTemp: 22, roomTemp: 23.5, fanSpeed: 'Auto', powerUsage: 1.2, scheduleStart: '22:00', scheduleEnd: '06:00', operationMode: 'Auto' },
-  { id: 2, name: 'Lobby AC', type: '2.0 Ton Cassette AC', room: 'Lobby', status: 'ON', mode: 'Cool', setTemp: 24, roomTemp: 25.0, fanSpeed: 'High', powerUsage: 2.1, scheduleStart: '09:00', scheduleEnd: '20:00', operationMode: 'Auto' },
-  { id: 3, name: 'Main Hall AC', type: '2.0 Ton Split AC', room: 'Hall', status: 'OFF', mode: 'Fan', setTemp: 24, roomTemp: 26.5, fanSpeed: 'Low', powerUsage: 0.0, scheduleStart: '', scheduleEnd: '', operationMode: 'Manual' },
-  { id: 4, name: 'Server Room AC', type: '2.0 Ton Cassette AC', room: 'Server Room', status: 'ON', mode: 'Cool', setTemp: 18, roomTemp: 18.5, fanSpeed: 'High', powerUsage: 2.5, scheduleStart: '00:00', scheduleEnd: '23:59', operationMode: 'Auto' },
+  { id: 1, name: 'Master AC', type: '1.5 Ton Inverter Split AC', room: 'Master Bedroom', status: 'ON', mode: '--', setTemp: '--', roomTemp: 23.5, fanSpeed: '--', powerUsage: 1.2, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto' },
+  { id: 2, name: 'Lobby AC', type: '2.0 Ton Cassette AC', room: 'Lobby', status: 'ON', mode: '--', setTemp: '--', roomTemp: 25.0, fanSpeed: '--', powerUsage: 2.1, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto' },
+  { id: 3, name: 'Main Hall AC', type: '2.0 Ton Split AC', room: 'Hall', status: 'OFF', mode: '--', setTemp: '--', roomTemp: 26.5, fanSpeed: '--', powerUsage: 0.0, scheduleStart: '', scheduleEnd: '', operationMode: 'Manual' },
+  { id: 4, name: 'Server Room AC', type: '2.0 Ton Cassette AC', room: 'Server Room', status: 'ON', mode: '--', setTemp: '--', roomTemp: 18.5, fanSpeed: '--', powerUsage: 2.5, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto' },
 ];
 
 const RealisticAC = ({ unit }) => {
@@ -69,14 +69,14 @@ const RealisticAC = ({ unit }) => {
           paddingRight: '8px',
           textShadow: unit.status === 'ON' ? '0 0 5px #10b981' : 'none'
         }}>
-          {unit.status === 'ON' ? `${unit.powerUsage}kW` : '0.0kW'}
+          {unit.status === 'ON' ? `${unit.powerUsage}kW` : '--'}
         </span>
         {/* Temp Display */}
         <span style={{ 
           color: unit.status === 'ON' ? '#0ea5e9' : '#475569',
           textShadow: unit.status === 'ON' ? '0 0 5px #0ea5e9' : 'none'
         }}>
-          {unit.status === 'ON' ? `${unit.setTemp}°` : '--'}
+          {unit.status === 'ON' ? (unit.setTemp === '--' ? '--' : `${unit.setTemp}°`) : '--'}
         </span>
       </div>
       
@@ -144,7 +144,10 @@ const RealisticAC = ({ unit }) => {
 };
 
 const ACOverview = () => {
-  const [units, setUnits] = useState(INITIAL_ACS);
+  const [units, setUnits] = useState(() => {
+    const saved = localStorage.getItem('bms_ac_units');
+    return saved ? JSON.parse(saved) : INITIAL_ACS;
+  });
   const [currentTime, setCurrentTime] = useState(new Date());
   
   // Settings Modal State
@@ -153,9 +156,20 @@ const ACOverview = () => {
   const [formData, setFormData] = useState({});
 
   // Group & Schedule State
-  const [acGroups, setAcGroups] = useState([{ id: 'g1', name: 'Master Control', acIds: [1, 2] }]);
+  const [acGroups, setAcGroups] = useState(() => {
+    const saved = localStorage.getItem('bms_ac_groups');
+    return saved ? JSON.parse(saved) : [{ id: 'g1', name: 'Master Control', acIds: [1, 2] }];
+  });
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  
+  useEffect(() => {
+    localStorage.setItem('bms_ac_units', JSON.stringify(units));
+  }, [units]);
+
+  useEffect(() => {
+    localStorage.setItem('bms_ac_groups', JSON.stringify(acGroups));
+  }, [acGroups]);
   
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedACsForGroup, setSelectedACsForGroup] = useState([]);
@@ -399,7 +413,7 @@ const ACOverview = () => {
                       <div className="text-secondary fw-bold mb-1 text-uppercase" style={{ fontSize: '10px', letterSpacing: '1px' }}>Room Temp</div>
                       <div className="d-flex align-items-start">
                         <span className="text-white fw-bold lh-1" style={{ fontSize: '2.5rem', letterSpacing: '-1px' }}>{unit.setTemp}</span>
-                        <span className="text-info fw-bold ms-1 mt-1" style={{ fontSize: '1.2rem' }}>°C</span>
+                        <span className="text-info fw-bold ms-1 mt-1" style={{ fontSize: '1.2rem' }}>{unit.setTemp === '--' ? '' : '°C'}</span>
                       </div>
                     </div>
 
@@ -422,13 +436,13 @@ const ACOverview = () => {
                   {/* Status Badges */}
                   <div className="d-flex gap-2 mb-4">
                     <Badge bg="transparent" className="flex-grow-1 py-2 px-0 text-light fw-normal d-flex justify-content-center align-items-center border border-secondary border-opacity-25 rounded-pill" style={{ background: 'rgba(255,255,255,0.02) !important' }}>
-                      {getModeIcon(unit.mode)} <span className="ms-2 fs-12">{unit.mode}</span>
+                      {getModeIcon(unit.mode)} <span className="ms-2 fs-12">{unit.status === 'ON' ? unit.mode : '--'}</span>
                     </Badge>
                     <Badge bg="transparent" className="flex-grow-1 py-2 px-0 text-light fw-normal d-flex justify-content-center align-items-center border border-secondary border-opacity-25 rounded-pill" style={{ background: 'rgba(255,255,255,0.02) !important' }}>
-                      <Fan size={14} className="text-secondary me-2" /> <span className="fs-12">{unit.fanSpeed}</span>
+                      <Fan size={14} className="text-secondary me-2" /> <span className="fs-12">{unit.status === 'ON' ? unit.fanSpeed : '--'}</span>
                     </Badge>
                     <Badge bg="transparent" className="flex-grow-1 py-2 px-0 text-light fw-normal d-flex justify-content-center align-items-center border border-secondary border-opacity-25 rounded-pill" style={{ background: 'rgba(255,255,255,0.02) !important' }}>
-                      <Zap size={14} className={unit.powerUsage > 0 ? "text-warning me-2" : "text-secondary me-2"} /> <span className="fs-12">{unit.powerUsage}kW</span>
+                      <Zap size={14} className={unit.powerUsage > 0 ? "text-warning me-2" : "text-secondary me-2"} /> <span className="fs-12">{unit.status === 'ON' ? `${unit.powerUsage}kW` : '--'}</span>
                     </Badge>
                   </div>
 
@@ -510,7 +524,8 @@ const ACOverview = () => {
                   <Col md={4}>
                     <Form.Group>
                       <Form.Label className="text-secondary fs-12">Mode</Form.Label>
-                      <Form.Select value={formData.mode || 'Cool'} onChange={e => setFormData({...formData, mode: e.target.value})} className="premium-input">
+                      <Form.Select value={formData.mode || '--'} onChange={e => setFormData({...formData, mode: e.target.value})} className="premium-input">
+                        <option value="--" disabled>-- Select --</option>
                         <option value="Cool">Cool</option>
                         <option value="Fan">Fan</option>
                         <option value="Dry">Dry</option>
@@ -521,7 +536,8 @@ const ACOverview = () => {
                   <Col md={4}>
                     <Form.Group>
                       <Form.Label className="text-secondary fs-12">Fan Speed</Form.Label>
-                      <Form.Select value={formData.fanSpeed || 'Auto'} onChange={e => setFormData({...formData, fanSpeed: e.target.value})} className="premium-input">
+                      <Form.Select value={formData.fanSpeed || '--'} onChange={e => setFormData({...formData, fanSpeed: e.target.value})} className="premium-input">
+                        <option value="--" disabled>-- Select --</option>
                         <option value="Low">Low</option>
                         <option value="Medium">Medium</option>
                         <option value="High">High</option>
@@ -532,7 +548,7 @@ const ACOverview = () => {
                   <Col md={4}>
                     <Form.Group>
                       <Form.Label className="text-secondary fs-12">Room Temp</Form.Label>
-                      <Form.Control type="number" min="16" max="30" value={formData.setTemp || 24} onChange={e => setFormData({...formData, setTemp: Number(e.target.value)})} className="premium-input" />
+                      <Form.Control type="number" min="16" max="30" value={formData.setTemp === '--' ? '' : formData.setTemp} onChange={e => setFormData({...formData, setTemp: e.target.value ? Number(e.target.value) : '--'})} className="premium-input" placeholder="--" />
                     </Form.Group>
                   </Col>
                 </Row>
