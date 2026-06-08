@@ -752,14 +752,19 @@ const MainMeter = () => {
           totalKw: getValueForField(mapping.emChangeConfig, 'totalKw') ?? getValueForField(mapping.emPowerConfig, 'activePower'),
           freq: getValueForField(mapping.emChangeConfig, 'freq') ?? getValueForField(mapping.emSystemConfig, 'freq'),
           pf: getValueForField(mapping.emChangeConfig, 'pf') ?? getValueForField(mapping.emSystemConfig, 'pf'),
+          ebKwh: getValueForField(mapping.emChangeConfig, 'ebKwh') ?? getValueForField(mapping.emReadConfig, 'ebKwh') ?? getValueForField(mapping.emConsumptionConfig, 'cumulativekWh'),
+          dgKwh: getValueForField(mapping.emChangeConfig, 'dgKwh'),
+          ebKvah: getValueForField(mapping.emChangeConfig, 'ebKvah') ?? getValueForField(mapping.emReadConfig, 'ebKvah'),
+          totalKva: getValueForField(mapping.emChangeConfig, 'totalKva') ?? getValueForField(mapping.emPowerConfig, 'apparentPower'),
+          reactivePower: getValueForField(mapping.emPowerConfig, 'reactivePower'),
           commStatus: (() => { const val = getValueForField(mapping.emSystemConfig, 'commStatus'); return val; })(),
           connectedStatus: (() => { const val = getValueForField(mapping.emWarningConfig, 'connectedStatus'); return val; })(),
         };
         // Only record if at least one field has live data
         const hasData = snap.vR !== null || snap.iR !== null || snap.totalKw !== null;
         if (!hasData) return prev;
-        const next = [snap, ...prev];
-        return next.length > 10 ? next.slice(0, 10) : next;
+        const next = [...prev, snap];
+        return next.length > 50 ? next.slice(next.length - 50) : next;
       });
     };
 

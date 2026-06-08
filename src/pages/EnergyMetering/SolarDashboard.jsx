@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Card, Container } from 'react-bootstrap';
+import { Row, Col, Card, Container, Button } from 'react-bootstrap';
 import { Sun, Battery, BatteryCharging, UtilityPole, PlugZap, Zap, RefreshCw, Download, CloudRain, Wind, Droplets, Activity, Clock, History, Server, Building2, Lightbulb, MoreVertical, Thermometer } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, BarChart, Bar } from 'recharts';
 
@@ -190,15 +190,20 @@ const FlowLine = ({ path, color, flowing = true, reverse = false }) => {
          <path d="M 0 0 L 8 4 L 0 8 z" fill={color} />
        </marker>
      </defs>
-     <path d={path} fill="none" stroke={color} strokeWidth="2" strokeOpacity="0.3" markerEnd={`url(#${markerId})`} />
+     <path d={path} fill="none" stroke={color} strokeWidth="2" strokeOpacity="0.4" markerEnd={`url(#${markerId})`} />
      {flowing && (
        <path d={path} fill="none" stroke={color} strokeWidth="3" strokeDasharray="8 8"
-         style={{ filter: `drop-shadow(0 0 5px ${color})`, animation: `dashFlow ${reverse ? 'reverse' : 'normal'} 1.5s linear infinite` }} />
+         style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.2))', animation: `dashFlow ${reverse ? 'reverse' : 'normal'} 1.5s linear infinite` }} />
      )}
   </>
 )};
 
 const SolarDashboard = () => {
+  const [isDark, setIsDark] = useState(true);
+  const currentTheme = isDark ? 
+    { bg: '#0a101d', panelBg: '#131b2c', cardBg: '#1b2436', border: '#2c3a50', text: '#e2e8f0', muted: '#94a3b8', accent: '#f97316', green: '#10b981', blue: '#0ea5e9', red: '#ef4444', purple: '#d946ef', yellow: '#facc15', shadow: 'none', glow: true, progressGrad: 'linear-gradient(90deg, #a855f7, #d946ef)' } : 
+    { bg: '#d2d3db', panelBg: '#d2d3db', cardBg: 'rgba(255, 255, 255, 0.25)', border: 'rgba(0, 0, 0, 0.08)', text: '#1e293b', muted: '#475569', accent: '#c2410c', green: '#047857', blue: '#0369a1', red: '#b91c1c', purple: '#7e22ce', yellow: '#b45309', shadow: '0 4px 20px rgba(0, 0, 0, 0.03)', glow: false, progressGrad: 'linear-gradient(90deg, #7e22ce, #a21caf)' };
+
   const [topRightTab, setTopRightTab] = useState('Power Metrics');
   const [bottomRightTab, setBottomRightTab] = useState('BMS');
   const [powerData, setPowerData] = useState([]);
@@ -298,104 +303,132 @@ const SolarDashboard = () => {
   }, [selectedDate]);
 
   return (
-    <div style={{ background: DashboardTheme.bg, minHeight: '100vh', color: DashboardTheme.text, fontFamily: "'Inter', sans-serif" }}>
+    <div className="theme-transition" style={{ background: currentTheme.bg, minHeight: '100vh', color: currentTheme.text, fontFamily: "'Inter', sans-serif" }}>
        <style>{`
+          .theme-transition, .theme-transition * {
+             transition: background-color 0.6s ease, background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease, color 0.6s ease, fill 0.6s ease, stroke 0.6s ease;
+          }
           @keyframes dashFlow { from { stroke-dashoffset: 16; } to { stroke-dashoffset: 0; } }
           @keyframes waveMove { from { transform: translateX(0); } to { transform: translateX(-40px); } }
           .action-hover:hover { opacity: 0.8; }
           ::-webkit-scrollbar { height: 8px; width: 8px; }
-          ::-webkit-scrollbar-track { background: ${DashboardTheme.bg}; }
-          ::-webkit-scrollbar-thumb { background: ${DashboardTheme.border}; border-radius: 4px; }
+          ::-webkit-scrollbar-track { background: ${currentTheme.bg}; }
+          ::-webkit-scrollbar-thumb { background: ${currentTheme.border}; border-radius: 4px; }
        `}</style>
 
-       <Container fluid className="p-4">
-          <Row className="g-4">
+       <Container fluid className="pt-2 px-4 pb-0">
+          <Row className="g-0">
              {/* LEFT PARTITION: ENERGY METERING OVERVIEW */}
-             <Col xl={12} lg={12}>
-                <Card className="border-0 shadow-lg h-100" style={{ background: DashboardTheme.panelBg, overflow: 'hidden' }}>
-                   <div ref={containerRef} style={{ width: '100%', height: `${700 * scale}px`, position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                      <div style={{ position: 'absolute', top: 0, width: '1150px', height: '700px', transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+             <Col xl={12} lg={12} className="position-relative">
+                <div className="position-absolute" style={{ top: '5px', right: '5px', zIndex: 100 }}>
+                   <Button variant={isDark ? 'outline-light' : 'outline-dark'} size="sm" onClick={() => setIsDark(!isDark)} className="fw-bold fs-12 d-flex align-items-center gap-2" style={{ borderRadius: '20px', padding: '6px 16px', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', backdropFilter: 'blur(10px)', border: `1px solid ${currentTheme.border}` }}>
+                     {isDark ? <Sun size={14}/> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>}
+                     {isDark ? 'LIGHT MODE' : 'DARK MODE'}
+                   </Button>
+                </div>
+                <Card className="border-0 h-100" style={{ background: currentTheme.panelBg, overflow: 'hidden', boxShadow: currentTheme.shadow, minHeight: 'calc(100vh - 90px)' }}>
+                   <div ref={containerRef} style={{ width: '100%', height: `${680 * scale}px`, position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                      <div style={{ position: 'absolute', top: 0, width: '1150px', height: '680px', transform: `scale(${scale})`, transformOrigin: 'top center' }}>
                          
                          {/* SVG Connecting Lines */}
                          <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
-                            <FlowLine path="M 300 110 L 340 110 L 340 210 L 380 210" color="#0ea5e9" />
-                            <FlowLine path="M 300 330 L 340 330 L 340 240 L 380 240" color="#facc15" />
-                            <FlowLine path="M 300 550 L 340 550 L 340 270 L 380 270" color="#10b981" />
-                            <FlowLine path="M 510 380 L 510 440" color="#a855f7" />
-                            <FlowLine path="M 640 500 L 700 500" color="#d946ef" />
-                            <FlowLine path="M 700 58 L 700 608" color="#d946ef" />
-                            <FlowLine path="M 700 58 L 750 58" color="#d946ef" />
-                            <FlowLine path="M 700 168 L 750 168" color="#d946ef" />
-                            <FlowLine path="M 700 278 L 750 278" color="#d946ef" />
-                            <FlowLine path="M 700 388 L 750 388" color="#d946ef" />
-                            <FlowLine path="M 700 498 L 750 498" color="#d946ef" />
-                            <FlowLine path="M 700 608 L 750 608" color="#d946ef" />
+                            <FlowLine path="M 300 88 L 340 88 L 340 140 L 380 140" color={currentTheme.blue} />
+                            <FlowLine path="M 300 258 L 340 258 L 340 200 L 380 200" color={currentTheme.yellow} />
+                            <FlowLine path="M 300 428 L 340 428 L 340 260 L 380 260" color={currentTheme.green} />
+                            <FlowLine path="M 300 598 L 340 598 L 340 320 L 380 320" color={currentTheme.red} />
+                            <FlowLine path="M 510 380 L 510 430" color={currentTheme.purple} />
+                            <FlowLine path="M 640 500 L 700 500" color={currentTheme.purple} />
+                            <FlowLine path="M 700 68 L 700 593" color={currentTheme.purple} />
+                            <FlowLine path="M 700 68 L 750 68" color={currentTheme.purple} />
+                            <FlowLine path="M 700 173 L 750 173" color={currentTheme.purple} />
+                            <FlowLine path="M 700 278 L 750 278" color={currentTheme.purple} />
+                            <FlowLine path="M 700 383 L 750 383" color={currentTheme.purple} />
+                            <FlowLine path="M 700 488 L 750 488" color={currentTheme.purple} />
+                            <FlowLine path="M 700 593 L 750 593" color={currentTheme.purple} />
                          </svg>
 
                          {/* COL 1: INPUTS */}
-                         <div style={{ position: 'absolute', left: '20px', top: '20px', background: DashboardTheme.cardBg, border: `1px solid ${DashboardTheme.border}`, borderRadius: '12px', padding: '20px', width: '280px', height: '180px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                         <div style={{ position: 'absolute', left: '20px', top: '10px', background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '12px', padding: '15px 20px', width: '280px', height: '155px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: currentTheme.shadow }}>
                             <div className="d-flex w-100">
                                <div className="me-3 d-flex align-items-start justify-content-center" style={{ width: '50px' }}>
                                   <GridIconBig />
                                </div>
                                <div>
-                                  <div className="text-white fw-bold mb-1" style={{ fontSize: '13px', letterSpacing: '0.5px' }}>GRID (UTILITY)</div>
-                                  <div style={{ color: '#0ea5e9', fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{liveNodes.grid} W</div>
-                                  <div className="text-white fw-bold mt-1" style={{ fontSize: '12px' }}>{liveNodes.gridV} V <span className="text-muted mx-1">|</span> {liveNodes.gridA} A <span className="text-muted mx-1">|</span> {liveNodes.gridHz} Hz</div>
+                                  <div className={`fw-bold mb-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px', letterSpacing: '0.5px' }}>GRID (UTILITY)</div>
+                                  <div style={{ color: currentTheme.blue, fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{liveNodes.grid} W</div>
+                                  <div className={`fw-bold mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12px' }}>{liveNodes.gridV} V <span className="text-muted mx-1">|</span> {liveNodes.gridA} A <span className="text-muted mx-1">|</span> {liveNodes.gridHz} Hz</div>
                                </div>
                             </div>
-                            <MiniWave color="#0ea5e9" />
+                            <MiniWave color={currentTheme.blue} />
                             <div className="d-flex flex-column mt-1">
                                <span className="text-muted" style={{ fontSize: '11px' }}>Today's Energy</span>
-                               <span className="text-white fw-bold" style={{ fontSize: '13px' }}>6.35 kWh</span>
+                               <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>6.35 kWh</span>
                             </div>
                          </div>
 
-                         <div style={{ position: 'absolute', left: '20px', top: '240px', background: DashboardTheme.cardBg, border: `1px solid ${DashboardTheme.border}`, borderRadius: '12px', padding: '20px', width: '280px', height: '180px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                         <div style={{ position: 'absolute', left: '20px', top: '180px', background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '12px', padding: '15px 20px', width: '280px', height: '155px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: currentTheme.shadow }}>
                             <div className="d-flex w-100">
                                <div className="me-3 d-flex align-items-start justify-content-center" style={{ width: '50px' }}>
                                   <SolarIconBig />
                                </div>
                                <div>
-                                  <div className="text-white fw-bold mb-1" style={{ fontSize: '13px', letterSpacing: '0.5px' }}>SOLAR (PV)</div>
-                                  <div style={{ color: '#facc15', fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{liveNodes.solar} W</div>
-                                  <div className="text-white fw-bold mt-1" style={{ fontSize: '12px' }}>{liveNodes.solarV} V <span className="text-muted mx-1">|</span> {liveNodes.solarA} A</div>
+                                  <div className={`fw-bold mb-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px', letterSpacing: '0.5px' }}>SOLAR (PV)</div>
+                                  <div style={{ color: currentTheme.yellow, fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{liveNodes.solar} W</div>
+                                  <div className={`fw-bold mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12px' }}>{liveNodes.solarV} V <span className="text-muted mx-1">|</span> {liveNodes.solarA} A</div>
                                </div>
                             </div>
-                            <MiniWave color="#facc15" />
+                            <MiniWave color={currentTheme.yellow} />
                             <div className="d-flex flex-column mt-1">
                                <span className="text-muted" style={{ fontSize: '11px' }}>Today's Energy</span>
-                               <span className="text-warning fw-bold" style={{ fontSize: '13px' }}>12.70 kWh</span>
+                               <span className="fw-bold" style={{ color: currentTheme.yellow, fontSize: '13px' }}>12.70 kWh</span>
                             </div>
                          </div>
 
-                         <div style={{ position: 'absolute', left: '20px', top: '460px', background: DashboardTheme.cardBg, border: `1px solid ${DashboardTheme.border}`, borderRadius: '12px', padding: '20px', width: '280px', height: '180px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                         <div style={{ position: 'absolute', left: '20px', top: '350px', background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '12px', padding: '15px 20px', width: '280px', height: '155px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: currentTheme.shadow }}>
                             <div className="d-flex w-100">
                                <div className="me-3 d-flex align-items-start justify-content-center" style={{ width: '50px' }}>
                                   <BatteryIconBig />
                                </div>
                                <div>
-                                  <div className="text-white fw-bold mb-1" style={{ fontSize: '13px', letterSpacing: '0.5px' }}>BATTERY</div>
-                                  <div style={{ color: '#10b981', fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{liveNodes.batterySoc.toFixed(1)}%</div>
-                                  <div className="text-white fw-bold mt-1" style={{ fontSize: '12px' }}>{liveNodes.batteryV} V <span className="text-muted mx-1">|</span> {liveNodes.batteryA} A</div>
+                                  <div className={`fw-bold mb-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px', letterSpacing: '0.5px' }}>UPS</div>
+                                  <div style={{ color: currentTheme.green, fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{liveNodes.batterySoc.toFixed(1)}%</div>
+                                  <div className={`fw-bold mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12px' }}>{liveNodes.batteryV} V <span className="text-muted mx-1">|</span> {liveNodes.batteryA} A</div>
                                </div>
                             </div>
                             <div className="w-100 mt-2">
-                              <div style={{ background: '#2e3238', height: '8px', borderRadius: '4px', width: '100%', position: 'relative' }}>
-                                 <div style={{ background: '#10b981', height: '100%', borderRadius: '4px', width: `${liveNodes.batterySoc}%`, boxShadow: '0 0 8px #10b981', transition: 'width 2s ease-in-out' }}></div>
+                              <div style={{ background: isDark ? '#2e3238' : '#cbd5e1', height: '8px', borderRadius: '4px', width: '100%', position: 'relative' }}>
+                                 <div style={{ background: currentTheme.green, height: '100%', borderRadius: '4px', width: `${liveNodes.batterySoc}%`, boxShadow: isDark ? `0 0 8px ${currentTheme.green}` : 'none', transition: 'width 2s ease-in-out' }}></div>
                               </div>
-                              <div className="d-flex justify-content-end text-success fw-bold mt-1" style={{ fontSize: '11px' }}>Charging</div>
+                              <div className="d-flex justify-content-end fw-bold mt-1" style={{ fontSize: '11px', color: currentTheme.green }}>Charging</div>
                             </div>
                             <div className="d-flex justify-content-between align-items-end mt-1">
                                <span className="text-muted" style={{ fontSize: '11px' }}>Today's Charge</span>
-                               <span className="text-white fw-bold" style={{ fontSize: '13px' }}>5.21 kWh</span>
+                               <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>5.21 kWh</span>
+                            </div>
+                         </div>
+
+                         <div style={{ position: 'absolute', left: '20px', top: '520px', background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '12px', padding: '15px 20px', width: '280px', height: '155px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: currentTheme.shadow }}>
+                            <div className="d-flex w-100">
+                               <div className="me-3 d-flex align-items-start justify-content-center" style={{ width: '50px' }}>
+                                  <Zap color={currentTheme.red} size={45} strokeWidth={1.5} />
+                               </div>
+                               <div>
+                                  <div className={`fw-bold mb-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px', letterSpacing: '0.5px' }}>DG SET</div>
+                                  <div style={{ color: currentTheme.red, fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>0 W</div>
+                                  <div className={`fw-bold mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12px' }}>0.0 V <span className="text-muted mx-1">|</span> 0.0 A</div>
+                               </div>
+                            </div>
+                            <MiniWave color={currentTheme.red} />
+                            <div className="mt-auto d-flex flex-column">
+                               <span className="text-muted" style={{ fontSize: '11px' }}>Today's Energy</span>
+                               <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>0.00 kWh</span>
                             </div>
                          </div>
 
                          {/* COL 2: INVERTER */}
-                         <div style={{ position: 'absolute', left: '380px', top: '100px', background: DashboardTheme.cardBg, border: `1px solid ${DashboardTheme.border}`, borderRadius: '16px', padding: '24px 20px', width: '260px', height: '280px', zIndex: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                         <div style={{ position: 'absolute', left: '380px', top: '100px', background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '16px', padding: '24px 20px', width: '260px', height: '280px', zIndex: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: currentTheme.shadow }}>
                             <div className="w-100 d-flex justify-content-center position-relative mb-2">
-                               <span className="text-white fw-bold" style={{ fontSize: '16px', letterSpacing: '1px' }}>SOCHIOT</span>
+                               <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '16px', letterSpacing: '1px' }}>SOCHIOT</span>
                                <div style={{ position: 'absolute', right: 0, top: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                   <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></div>
                                   <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></div>
@@ -405,7 +438,7 @@ const SolarDashboard = () => {
                             
                             {/* Inverter 3D Image */}
                             <div className="mb-3">
-                               <svg width="100" height="90" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.5))' }}>
+                               <svg width="100" height="90" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: isDark ? 'drop-shadow(0 10px 15px rgba(0,0,0,0.5))' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.15))' }}>
                                  <defs>
                                    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="100">
                                      <stop offset="0%" stopColor="#e2e8f0" />
@@ -434,72 +467,73 @@ const SolarDashboard = () => {
                                </svg>
                             </div>
 
-                            <div className="text-center w-100" style={{ color: '#10b981', fontSize: '38px', fontWeight: 'bold', textShadow: '0 0 15px rgba(16,185,129,0.4)', transition: 'color 0.3s ease', lineHeight: '1' }}>{liveNodes.total} W</div>
+                            <div className="text-center w-100" style={{ color: currentTheme.green, fontSize: '38px', fontWeight: 'bold', textShadow: isDark ? `0 0 15px rgba(16,185,129,0.4)` : 'none', transition: 'color 0.3s ease', lineHeight: '1' }}>{liveNodes.total} W</div>
                             
-                            <div className="d-flex justify-content-between w-100 mt-4 text-white px-2" style={{ fontSize: '13px' }}>
+                            <div className={`d-flex justify-content-between w-100 mt-4 px-2 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>
                                <div className="text-start">
                                   <div className="text-muted mb-1" style={{ fontSize: '11px' }}>Efficiency</div>
-                                  <b style={{ fontSize: '15px' }}>{liveNodes.invEff.toFixed(1)} %</b>
+                                  <b style={{ fontSize: '15px', color: currentTheme.text }}>{liveNodes.invEff.toFixed(1)} %</b>
                                </div>
-                               <div style={{ width: '1px', background: '#2c3a50', height: '30px' }}></div>
+                               <div style={{ width: '1px', background: currentTheme.border, height: '30px' }}></div>
                                <div className="text-start" style={{ width: '80px' }}>
                                   <div className="text-muted mb-1" style={{ fontSize: '11px' }}>Temperature</div>
-                                  <b style={{ fontSize: '15px' }}>{liveNodes.invTemp.toFixed(1)} °C</b>
+                                  <b style={{ fontSize: '15px', color: currentTheme.text }}>{liveNodes.invTemp.toFixed(1)} °C</b>
                                </div>
                             </div>
 
                             <svg width="100%" height="30" style={{ position: 'absolute', bottom: 10, left: 0, overflow: 'hidden' }}>
                                <g style={{ animation: 'waveMove 4s linear infinite' }}>
-                                 <path d="M 0 15 Q 20 5 40 15 T 80 15 T 120 15 T 160 15 T 200 15 T 240 15 T 280 15 T 320 15 L 320 30 L 0 30 Z" fill="rgba(16,185,129,0.05)" />
-                                 <path d="M 0 15 Q 20 5 40 15 T 80 15 T 120 15 T 160 15 T 200 15 T 240 15 T 280 15 T 320 15" fill="none" stroke="#10b981" strokeWidth="1.5" style={{ filter: 'drop-shadow(0 0 4px rgba(16,185,129,0.6))' }} />
+                                 <path d="M 0 15 Q 20 5 40 15 T 80 15 T 120 15 T 160 15 T 200 15 T 240 15 T 280 15 T 320 15 L 320 30 L 0 30 Z" fill={isDark ? "rgba(16,185,129,0.05)" : "rgba(5,150,105,0.05)"} />
+                                 <path d="M 0 15 Q 20 5 40 15 T 80 15 T 120 15 T 160 15 T 200 15 T 240 15 T 280 15 T 320 15" fill="none" stroke={currentTheme.green} strokeWidth="1.5" style={{ filter: isDark ? 'drop-shadow(0 0 4px rgba(16,185,129,0.6))' : 'none' }} />
                                </g>
                             </svg>
                          </div>
 
-                         <div style={{ position: 'absolute', left: '380px', top: '440px', background: DashboardTheme.cardBg, border: `1px solid ${DashboardTheme.border}`, borderRadius: '16px', padding: '24px 20px', width: '260px', height: '140px', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                            <div className="text-center text-white fw-bold mb-2" style={{ fontSize: '14px', letterSpacing: '0.5px' }}>TOTAL OUTPUT</div>
-                            <div className="text-center mb-3" style={{ color: '#a855f7', fontSize: '42px', fontWeight: 'bold', textShadow: '0 0 15px rgba(168,85,247,0.4)', transition: 'color 0.3s ease', lineHeight: '1' }}>{liveNodes.total} W</div>
-                            <div className="w-100" style={{ height: '1px', background: '#2c3a50', marginBottom: '15px' }}></div>
-                            <div className="d-flex justify-content-between w-100 text-muted" style={{ fontSize: '12px' }}>
+                         {/* TOTAL OUTPUT */}
+                         <div style={{ position: 'absolute', left: '380px', top: '430px', background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '16px', padding: '24px 20px', width: '260px', height: '140px', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: currentTheme.shadow }}>
+                            <div className={`text-center fw-bold mb-2 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '14px', letterSpacing: '0.5px' }}>TOTAL OUTPUT</div>
+                            <div className="text-center mb-3" style={{ color: currentTheme.purple, fontSize: '42px', fontWeight: 'bold', textShadow: isDark ? '0 0 15px rgba(168,85,247,0.4)' : 'none', transition: 'color 0.3s ease', lineHeight: '1' }}>{liveNodes.total} W</div>
+                            <div className="w-100" style={{ height: '1px', background: currentTheme.border, marginBottom: '15px' }}></div>
+                             <div className="d-flex justify-content-between w-100 text-muted" style={{ fontSize: '12px' }}>
                                <span>Today's Consumption</span>
-                               <span className="text-white fw-bold">14.86 kWh</span>
-                            </div>
+                               <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`}>14.86 kWh</span>
+                             </div>
                          </div>
 
-                         <div style={{ position: 'absolute', left: '655px', top: '465px', color: '#d946ef', fontSize: '10px', fontWeight: 'bold', zIndex: 10 }}>POWER<br/>FLOW</div>
+                         <div style={{ position: 'absolute', left: '655px', top: '465px', color: currentTheme.purple, fontSize: '10px', fontWeight: 'bold', zIndex: 10 }}>POWER<br/>FLOW</div>
 
                          {/* COL 3: LOADS */}
-                         <div style={{ position: 'absolute', left: '750px', top: '5px', color: '#d946ef', fontSize: '13px', fontWeight: 'bold' }}>OUTGOING (DISTRIBUTION)</div>
+                         <div style={{ position: 'absolute', left: '750px', top: '5px', color: currentTheme.purple, fontSize: '13px', fontWeight: 'bold' }}>OUTGOING (DISTRIBUTION)</div>
 
                          {[
-                            { y: 20, icon: BuildingIcon, title: "COMMERCIAL WING A INCOMER", value: `${liveNodes.loads[0]} W`, pct: ((liveNodes.loads[0]/liveNodes.total)*100).toFixed(1), kw: "5.21" },
-                            { y: 130, icon: ServerIcon, title: "DATA CENTER MAIN UPS INPUT", value: `${liveNodes.loads[1]} W`, pct: ((liveNodes.loads[1]/liveNodes.total)*100).toFixed(1), kw: "3.45" },
-                            { y: 240, icon: DropIcon, title: "WATER PLANT & UTILITY MOTORS ROOM", value: `${liveNodes.loads[2]} W`, pct: ((liveNodes.loads[2]/liveNodes.total)*100).toFixed(1), kw: "2.87" },
-                            { y: 350, icon: LightningIcon, title: "PHASE-NEUTRAL VOLTAGE", value: `${liveNodes.loads[3]} W`, pct: ((liveNodes.loads[3]/liveNodes.total)*100).toFixed(1), kw: "1.52" },
-                            { y: 460, icon: LightningIcon, title: "PHASE-NEUTRAL VOLTAGE", value: `${liveNodes.loads[4]} W`, pct: ((liveNodes.loads[4]/liveNodes.total)*100).toFixed(1), kw: "1.09" },
-                            { y: 570, icon: LampIcon, title: "OUTDOOR STREET & PARKING LIGHTS", value: `${liveNodes.loads[5]} W`, pct: ((liveNodes.loads[5]/liveNodes.total)*100).toFixed(1), kw: "0.92" }
+                            { y: 10, icon: BuildingIcon, title: "COMMERCIAL WING A INCOMER", value: `${liveNodes.loads[0]} W`, pct: ((liveNodes.loads[0]/liveNodes.total)*100).toFixed(1), kw: "5.21" },
+                            { y: 115, icon: ServerIcon, title: "DATA CENTER MAIN UPS INPUT", value: `${liveNodes.loads[1]} W`, pct: ((liveNodes.loads[1]/liveNodes.total)*100).toFixed(1), kw: "3.45" },
+                            { y: 220, icon: DropIcon, title: "WATER PLANT & UTILITY MOTORS ROOM", value: `${liveNodes.loads[2]} W`, pct: ((liveNodes.loads[2]/liveNodes.total)*100).toFixed(1), kw: "2.87" },
+                            { y: 325, icon: LightningIcon, title: "PHASE-NEUTRAL VOLTAGE", value: `${liveNodes.loads[3]} W`, pct: ((liveNodes.loads[3]/liveNodes.total)*100).toFixed(1), kw: "1.52" },
+                            { y: 430, icon: LightningIcon, title: "PHASE-NEUTRAL VOLTAGE", value: `${liveNodes.loads[4]} W`, pct: ((liveNodes.loads[4]/liveNodes.total)*100).toFixed(1), kw: "1.09" },
+                            { y: 535, icon: LampIcon, title: "OUTDOOR STREET & PARKING LIGHTS", value: `${liveNodes.loads[5]} W`, pct: ((liveNodes.loads[5]/liveNodes.total)*100).toFixed(1), kw: "0.92" }
                          ].map((load, i) => (
-                            <div key={i} style={{ position: 'absolute', left: '750px', top: `${load.y}px`, background: DashboardTheme.cardBg, border: `1px solid ${DashboardTheme.border}`, borderRadius: '12px', padding: '12px 15px', width: '380px', height: '75px', display: 'flex', alignItems: 'center', gap: '15px', zIndex: 10 }}>
+                            <div key={i} style={{ position: 'absolute', left: '750px', top: `${load.y + 20}px`, background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '12px', padding: '12px 15px', width: '380px', minHeight: '75px', height: 'auto', display: 'flex', alignItems: 'center', gap: '15px', zIndex: 10, boxShadow: currentTheme.shadow }}>
                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px' }}>
                                   <load.icon />
                                </div>
                                <div className="flex-grow-1">
-                                  <div className="text-white fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>{load.title}</div>
-                                  <div style={{ background: '#2e3238', height: '6px', borderRadius: '3px', width: '70%' }}>
-                                     <div style={{ background: 'linear-gradient(90deg, #a855f7, #d946ef)', height: '100%', borderRadius: '3px', width: `${load.pct}%`, boxShadow: '0 0 8px rgba(168,85,247,0.6)', transition: 'width 2s ease-in-out' }}></div>
+                                  <div className={`fw-bold mb-2 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '10.5px', letterSpacing: '0.3px', lineHeight: '1.2' }}>{load.title}</div>
+                                  <div style={{ background: isDark ? '#2e3238' : '#cbd5e1', height: '6px', borderRadius: '3px', width: '70%' }}>
+                                     <div style={{ background: currentTheme.progressGrad, height: '100%', borderRadius: '3px', width: `${load.pct}%`, boxShadow: isDark ? '0 0 8px rgba(168,85,247,0.6)' : 'none', transition: 'width 2s ease-in-out' }}></div>
                                   </div>
                                </div>
                                <div className="text-end" style={{ minWidth: '90px' }}>
-                                  <div style={{ color: '#d946ef', fontSize: '18px', fontWeight: 'bold' }}>{load.value}</div>
+                                  <div style={{ color: currentTheme.purple, fontSize: '18px', fontWeight: 'bold' }}>{load.value}</div>
                                   <div className="text-muted mt-1" style={{ fontSize: '11px' }}>{load.pct} %</div>
                                   <div className="text-muted" style={{ fontSize: '10px' }}>Today: {load.kw} kWh</div>
                                </div>
                             </div>
                          ))}
 
-                          <div style={{ position: 'absolute', left: '750px', top: '655px', width: '380px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
-                             <div><b>Total Outgoing Load</b></div>
-                             <div style={{ color: '#d946ef', transition: 'color 0.3s ease' }}><b>{liveNodes.total} W (100%)</b></div>
+                          <div style={{ position: 'absolute', left: '750px', top: '640px', width: '380px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                             <div className={`fw-bold text-${isDark ? 'white' : 'dark'}`}>Total Outgoing Load</div>
+                             <div style={{ color: currentTheme.purple, transition: 'color 0.3s ease' }}><b>{liveNodes.total} W (100%)</b></div>
                           </div>
                       </div>
                    </div>

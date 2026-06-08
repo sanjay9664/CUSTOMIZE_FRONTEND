@@ -1680,7 +1680,7 @@ const ConfigTemplates = () => {
     return null;
   };
 
-  const getFieldList = (key, rowState = {}) => {
+  const getRawFieldList = (key, rowState = {}) => {
     if (!hierarchyData || hierarchyData.length === 0) return [];
 
     const getSafeVal = (k) => rowState[k] || globalLocation[k];
@@ -1851,6 +1851,15 @@ const ConfigTemplates = () => {
     }
 
     return [];
+  };
+
+  const getFieldList = (key, rowState = {}) => {
+    const list = getRawFieldList(key, rowState) || [];
+    const currentVal = rowState[key] || globalLocation[key];
+    if (currentVal && !list.some(opt => String(opt.id) === String(currentVal))) {
+      return [{ label: currentVal, id: currentVal, rawId: currentVal }, ...list];
+    }
+    return list;
   };
 
   function getFilteredFieldList(sectionKey, fieldKey, fieldLabel, allFields) {
@@ -4694,8 +4703,8 @@ const ConfigTemplates = () => {
           <div className="d-flex align-items-center justify-content-between mb-4 p-3 bg-dark bg-opacity-20 rounded-4 border border-white border-opacity-5">
             <div className="d-flex align-items-center gap-3">
               <span className="fs-11 text-secondary fw-black uppercase letter-spacing-1 ms-2">Filter By:</span>
-              <div className="d-flex gap-2">
-                {['ALL', 'AG Tank', 'UG Pump', 'UG Tank', 'Pressure', 'Electrical Parameter', 'Main Meter', 'Sub Meters'].map(mod => (
+              <div className="d-flex gap-2 flex-wrap">
+                {['ALL', ...Array.from(new Set(savedTemplates.map(t => t.module))).sort()].map(mod => (
                   <Button
                     key={mod}
                     variant={filterModule === mod ? "info" : "outline-secondary"}

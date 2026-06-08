@@ -244,6 +244,7 @@ const Sidebar = ({ collapsed }) => {
         { title: "Overview", path: "/energy-metering/overview" },
         { title: "Main Meter", path: "/energy-metering/main" },
         { title: "Sub Meters", path: "/energy-metering/sub" },
+        { title: "Graphs", path: "/energy-metering/graphs" },
         { title: "PDF Report", path: "/energy-metering/report" }
       ].filter((subItem) => submodulesConfig.showEnergyMetering?.[subItem.title] ?? true)
     },

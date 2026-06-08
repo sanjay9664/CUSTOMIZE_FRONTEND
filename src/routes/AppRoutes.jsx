@@ -22,6 +22,7 @@ import EnergyOverview from '../pages/EnergyMetering/Overview';
 import EnergyMainMeter from '../pages/EnergyMetering/MainMeter';
 import EnergySubMeters from '../pages/EnergyMetering/SubMeters';
 import EnergyPDFReport from '../pages/EnergyMetering/PDFReport';
+import EnergyGraphs from '../pages/EnergyMetering/EnergyGraphs';
 
 // VRV
 import VRVOverview from '../pages/VRV/Overview';
@@ -173,6 +174,7 @@ const AppRoutes = () => {
       <Route path="/energy-metering/overview" element={<EnergyOverview />} />
       <Route path="/energy-metering/main" element={<EnergyMainMeter />} />
       <Route path="/energy-metering/sub" element={<EnergySubMeters />} />
+      <Route path="/energy-metering/graphs" element={<EnergyGraphs />} />
       <Route path="/energy-metering/report" element={<EnergyPDFReport />} />
 
       {/* VRV*/}
