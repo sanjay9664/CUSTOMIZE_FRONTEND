@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Card, Container, Button } from 'react-bootstrap';
 import { Sun, Battery, BatteryCharging, UtilityPole, PlugZap, Zap, RefreshCw, Download, CloudRain, Wind, Droplets, Activity, Clock, History, Server, Building2, Lightbulb, MoreVertical, Thermometer } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, BarChart, Bar } from 'recharts';
+import { useTheme } from '../../context/ThemeContext';
 
 // --- MOCK DATA GENERATORS ---
 const generatePowerMetrics = () => {
@@ -199,7 +200,7 @@ const FlowLine = ({ path, color, flowing = true, reverse = false }) => {
 )};
 
 const SolarDashboard = () => {
-  const [isDark, setIsDark] = useState(true);
+  const { isDark } = useTheme();
   const currentTheme = isDark ? 
     { bg: '#0a101d', panelBg: '#131b2c', cardBg: '#1b2436', border: '#2c3a50', text: '#e2e8f0', muted: '#94a3b8', accent: '#f97316', green: '#10b981', blue: '#0ea5e9', red: '#ef4444', purple: '#d946ef', yellow: '#facc15', shadow: 'none', glow: true, progressGrad: 'linear-gradient(90deg, #a855f7, #d946ef)' } : 
     { bg: '#d2d3db', panelBg: '#d2d3db', cardBg: 'rgba(255, 255, 255, 0.25)', border: 'rgba(0, 0, 0, 0.08)', text: '#1e293b', muted: '#475569', accent: '#c2410c', green: '#047857', blue: '#0369a1', red: '#b91c1c', purple: '#7e22ce', yellow: '#b45309', shadow: '0 4px 20px rgba(0, 0, 0, 0.03)', glow: false, progressGrad: 'linear-gradient(90deg, #7e22ce, #a21caf)' };
@@ -320,12 +321,6 @@ const SolarDashboard = () => {
           <Row className="g-0">
              {/* LEFT PARTITION: ENERGY METERING OVERVIEW */}
              <Col xl={12} lg={12} className="position-relative">
-                <div className="position-absolute" style={{ top: '5px', right: '5px', zIndex: 100 }}>
-                   <Button variant={isDark ? 'outline-light' : 'outline-dark'} size="sm" onClick={() => setIsDark(!isDark)} className="fw-bold fs-12 d-flex align-items-center gap-2" style={{ borderRadius: '20px', padding: '6px 16px', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', backdropFilter: 'blur(10px)', border: `1px solid ${currentTheme.border}` }}>
-                     {isDark ? <Sun size={14}/> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>}
-                     {isDark ? 'LIGHT MODE' : 'DARK MODE'}
-                   </Button>
-                </div>
                 <Card className="border-0 h-100" style={{ background: currentTheme.panelBg, overflow: 'hidden', boxShadow: currentTheme.shadow, minHeight: 'calc(100vh - 90px)' }}>
                    <div ref={containerRef} style={{ width: '100%', height: `${680 * scale}px`, position: 'relative', display: 'flex', justifyContent: 'center' }}>
                       <div style={{ position: 'absolute', top: 0, width: '1150px', height: '680px', transform: `scale(${scale})`, transformOrigin: 'top center' }}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Row, Col, Card } from 'react-bootstrap';
+import { Row, Col, Card, Badge } from 'react-bootstrap';
 import { Zap, Thermometer, Gauge, Activity } from 'lucide-react';
 import ScadaCard from '../../components/ScadaCard';
 import StatusBadge from '../../components/StatusBadge';
