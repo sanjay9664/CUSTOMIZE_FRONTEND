@@ -392,10 +392,10 @@ const SiemensStyleDG = () => {
 
   const DataBox = ({ label, value, unit, labelBg = SCADA_COLORS.info, valueColor = '#38bdf8' }) => (
     <div className="d-flex align-items-center mb-1 gap-1 flex-wrap flex-sm-nowrap w-100">
-        <div className="text-white px-1 py-1 fw-black fs-12 text-center rounded-1 border border-white border-opacity-5 flex-grow-1 flex-sm-grow-0" style={{ width: '75px', minHeight: '26px', fontSize: '0.58rem', backgroundColor: labelBg, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1.1' }}>
+        <div className="data-box-label px-1 py-1 fw-black fs-12 text-center rounded-1 border border-white border-opacity-5 flex-grow-1 flex-sm-grow-0" style={{ width: '75px', minHeight: '26px', fontSize: '0.58rem', backgroundColor: labelBg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1.1' }}>
             {label}
         </div>
-        <div className="bg-black border border-white border-opacity-10 px-2 py-1 fw-black fs-10 text-center rounded-1 flex-grow-1 font-monospace shadow-value" style={{ minWidth: '55px', minHeight: '26px', color: valueColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="data-box-value bg-black border border-white border-opacity-10 px-2 py-1 fw-black fs-10 text-center rounded-1 flex-grow-1 font-monospace shadow-value" style={{ minWidth: '55px', minHeight: '26px', color: valueColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {typeof value === 'number' ? value.toFixed(1) : (value !== null && value !== undefined ? value : '-')}
         </div>
         <div className="text-secondary fw-black fs-13 ms-1" style={{ width: '20px', fontSize: '0.65rem' }}>{unit}</div>

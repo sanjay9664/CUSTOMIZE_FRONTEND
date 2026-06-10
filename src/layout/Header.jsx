@@ -1,8 +1,11 @@
 import React from 'react';
-import { Menu, Search, User, Bell, LayoutGrid } from 'lucide-react';
+import { Menu, Search, User, Bell, LayoutGrid, Sun } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
+import { useTheme } from '../context/ThemeContext';
 
 const Header = ({ collapsed, toggleSidebar }) => {
+  const { isDark, toggleTheme } = useTheme();
+
   return (
     <header className={`scada-header ${collapsed ? 'collapsed' : ''}`}>
       <div className="header-left d-flex align-items-center">
@@ -31,6 +34,18 @@ const Header = ({ collapsed, toggleSidebar }) => {
       </div>
 
       <div className="header-right d-flex align-items-center">
+        {/* Toggle Theme Button */}
+        <Button 
+          variant={isDark ? 'outline-light' : 'outline-dark'} 
+          size="sm" 
+          onClick={toggleTheme} 
+          className="fw-bold fs-12 d-flex align-items-center gap-2 me-3" 
+          style={{ borderRadius: '20px', padding: '6px 16px', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', backdropFilter: 'blur(10px)', border: '1px solid var(--scada-border)' }}
+        >
+          {isDark ? <Sun size={14}/> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>}
+          {isDark ? 'LIGHT MODE' : 'DARK MODE'}
+        </Button>
+        
         <Button variant="link" className="text-muted p-2 me-2 position-relative">
           <Bell size={20} />
           <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ marginTop: '8px', marginLeft: '-8px' }}></span>

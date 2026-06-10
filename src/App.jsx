@@ -4,6 +4,7 @@ import MainLayout from './layout/MainLayout';
 import AppRoutes from './routes/AppRoutes';
 import Login from './pages/Login';
 import { DeviceStatusProvider } from './services/DeviceStatusContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -62,32 +63,35 @@ function App() {
   }, []);
 
   return (
-    <DeviceStatusProvider>
-      <Router>
-        <Routes>
-          {/* LOGIN ROUTE */}
-          <Route 
-            path="/login" 
-            element={!isAuthenticated ? <Login /> : <Navigate to={localStorage.getItem('userRole') === 'SUPER_ADMIN' ? "/super-admin" : "/dashboard"} replace />} 
-          />
+    <ThemeProvider>
+      <DeviceStatusProvider>
+        <Router>
+          <Routes>
+            {/* LOGIN ROUTE */}
+            <Route 
+              path="/login" 
+              element={!isAuthenticated ? <Login /> : <Navigate to={localStorage.getItem('userRole') === 'SUPER_ADMIN' ? "/super-admin" : "/dashboard"} replace />} 
+            />
 
-          {/* PROTECTED ROUTES */}
-          <Route
-            path="/*"
-            element={
-              isAuthenticated ? (
-                <MainLayout>
-                  <AppRoutes />
-                </MainLayout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-        </Routes>
-      </Router>
-    </DeviceStatusProvider>
+            {/* PROTECTED ROUTES */}
+            <Route
+              path="/*"
+              element={
+                isAuthenticated ? (
+                  <MainLayout>
+                    <AppRoutes />
+                  </MainLayout>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
+          </Routes>
+        </Router>
+      </DeviceStatusProvider>
+    </ThemeProvider>
   );
 }
 
 export default App;
+
