@@ -185,31 +185,33 @@ const EnvDashboard = () => {
           const vrvTemplates = mappedData.filter(t => (t.category === 'VRV' || t.category === 'AQI Sensor') && t.module === 'Temp & Humidity');
           currentTemplates = vrvTemplates;
           
-          if (vrvTemplates.length > 0) {
-            setSavedZones(prev => {
-              if (prev.length > 0) return prev; // already initialized
-              
-              const mappedZones = vrvTemplates.map((t, index) => ({
+          setSavedZones(prev => {
+            if (prev.length > 0) return prev; // already initialized
+            
+            const mappedZones = Array.from({ length: 6 }).map((_, index) => {
+              const t = vrvTemplates[index];
+              return {
                 id: index + 1,
-                name: t.mapping?.vrvConfig?.vrvZone || t.template_name || `Zone ${index + 1}`,
+                name: t?.mapping?.vrvConfig?.vrvZone || t?.template_name || `Channel ${index + 1}`,
                 TEMP: 0,
                 HUMIDITY: 0,
                 CO2: 0,
                 TVOC: 0,
                 AQI: 0,
                 status: 'Optimal',
-                mapping: t.mapping
-              }));
-              
-              if (mappedZones.length > 0 && selectedUnit === 'Common' && globalCachedSelectedUnit === 'Common') {
-                setSelectedUnit(mappedZones[0].name);
-              }
-              return mappedZones;
+                mapping: t?.mapping || null
+              };
             });
             
-            // Stop loading as soon as the layout is ready
-            setIsLoading(false);
-            
+            if (mappedZones.length > 0 && selectedUnit === 'Common' && globalCachedSelectedUnit === 'Common') {
+              setSelectedUnit(mappedZones[0].name);
+            }
+            return mappedZones;
+          });
+          
+          setIsFetching(false);
+          
+          if (vrvTemplates.length > 0) {
             // Initial stats fetch
             const modulesToPoll = new Set();
             vrvTemplates.forEach(t => {
@@ -231,8 +233,6 @@ const EnvDashboard = () => {
               const stats = await statsRes.json();
               processTelemetry(stats);
             }
-          } else {
-            setIsFetching(false);
           }
         } else {
           setIsFetching(false);
@@ -324,9 +324,12 @@ const EnvDashboard = () => {
                           <span className={`fw-bold d-block fs-6 ${isSelected ? 'text-white' : 'text-secondary'}`}>{zone.name}</span>
                           <span className="text-muted fs-8">Zone {zone.id}</span>
                         </div>
-                        <div className="text-end">
-                          <span className={`font-monospace fw-bold fs-5 ${isSelected ? 'text-info' : 'text-white'}`}>
-                            {zone.TEMP.toFixed(1)}<span style={{fontSize:'0.6em'}}>°C</span>
+                        <div className="text-end d-flex flex-column align-items-end">
+                          <span className={`font-monospace fw-bold fs-5 ${isSelected ? 'text-info' : 'text-white'} d-flex align-items-center`}>
+                            {zone.TEMP.toFixed(1)}<span style={{fontSize:'0.6em', marginLeft:'2px'}}>°C</span>
+                          </span>
+                          <span className={`font-monospace fw-bold fs-6 ${isSelected ? 'text-primary' : 'text-secondary'} d-flex align-items-center`} style={{marginTop: '-4px'}}>
+                            {zone.HUMIDITY.toFixed(1)}<span style={{fontSize:'0.6em', marginLeft:'2px'}}>%</span>
                           </span>
                         </div>
                       </div>

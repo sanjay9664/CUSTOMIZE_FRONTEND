@@ -199,7 +199,7 @@ const FlowLine = ({ path, color, flowing = true, reverse = false }) => {
   </>
 )};
 
-const SolarDashboard = () => {
+const SolarDashboard = ({ mainMeters = [], subMeters = [] }) => {
   const { isDark } = useTheme();
   const currentTheme = isDark ? 
     { bg: '#0a101d', panelBg: '#131b2c', cardBg: '#1b2436', border: '#2c3a50', text: '#e2e8f0', muted: '#94a3b8', accent: '#f97316', green: '#10b981', blue: '#0ea5e9', red: '#ef4444', purple: '#d946ef', yellow: '#facc15', shadow: 'none', glow: true, progressGrad: 'linear-gradient(90deg, #a855f7, #d946ef)' } : 
@@ -297,6 +297,59 @@ const SolarDashboard = () => {
     };
   }, []);
 
+  // Compute real data where available
+  const hasRealMain = mainMeters && mainMeters.length > 0;
+  const realTotalKw = mainMeters ? mainMeters.reduce((s, m) => s + (m.loadKw || 0), 0) : 0;
+  const realTotalW = Math.round(realTotalKw * 1000);
+  const realV = hasRealMain ? (mainMeters.reduce((s, m) => s + Math.max(m.vR||0, m.vY||0, m.vB||0), 0) / mainMeters.length).toFixed(1) : null;
+  const realA = hasRealMain ? mainMeters.reduce((s, m) => s + (m.iR||0)+(m.iY||0)+(m.iB||0), 0).toFixed(2) : null;
+  const realHz = hasRealMain ? (mainMeters[0].freq || 50).toFixed(1) : null;
+  const realKwh = hasRealMain ? mainMeters.reduce((s, m) => s + (m.kwh || 0), 0).toFixed(2) : null;
+
+  // Use real data or fallback to dummy
+  const gridW = hasRealMain ? realTotalW : liveNodes.grid;
+  const gridV = hasRealMain ? realV : liveNodes.gridV;
+  const gridA = hasRealMain ? realA : liveNodes.gridA;
+  const gridHz = hasRealMain ? realHz : liveNodes.gridHz;
+  const gridKwh = hasRealMain ? realKwh : "6.35";
+
+  // Calculate dummy total but use real if it's there
+  const totalSystemW = gridW + liveNodes.solar;
+
+  // Submeters override
+  const defaultLoadTitles = [
+    "COMMERCIAL WING A INCOMER",
+    "DATA CENTER MAIN UPS INPUT",
+    "WATER PLANT & UTILITY MOTORS ROOM",
+    "PHASE-NEUTRAL VOLTAGE",
+    "PHASE-NEUTRAL VOLTAGE",
+    "OUTDOOR STREET & PARKING LIGHTS"
+  ];
+
+  const displayLoads = liveNodes.loads.map((dummyW, i) => {
+    // If we have a mapped submeter for this index, use it. Otherwise use dummy.
+    const realSub = subMeters && subMeters[i];
+    if (realSub && realSub.isOnline) {
+      const realSubW = Math.round((realSub.loadKw || 0) * 1000);
+      return {
+        title: realSub.name,
+        w: realSubW,
+        pct: totalSystemW > 0 ? ((realSubW / totalSystemW) * 100).toFixed(1) : "0.0",
+        kwh: (realSub.kwh || 0).toFixed(2)
+      };
+    }
+    
+    // Otherwise fallback to dummy
+    return {
+      title: defaultLoadTitles[i],
+      w: dummyW,
+      pct: totalSystemW > 0 ? ((dummyW / totalSystemW) * 100).toFixed(1) : "0.0",
+      kwh: i === 0 ? "5.21" : i === 1 ? "3.45" : i === 2 ? "2.87" : i === 3 ? "1.52" : i === 4 ? "1.09" : "0.92"
+    };
+  });
+
+  const totalLoadW = displayLoads.reduce((sum, l) => sum + l.w, 0);
+
   useEffect(() => {
     setPowerData(generatePowerMetrics());
     setHistoryData(generateHistory());
@@ -350,14 +403,14 @@ const SolarDashboard = () => {
                                </div>
                                <div>
                                   <div className={`fw-bold mb-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px', letterSpacing: '0.5px' }}>GRID (UTILITY)</div>
-                                  <div style={{ color: currentTheme.blue, fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{liveNodes.grid} W</div>
-                                  <div className={`fw-bold mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12px' }}>{liveNodes.gridV} V <span className="text-muted mx-1">|</span> {liveNodes.gridA} A <span className="text-muted mx-1">|</span> {liveNodes.gridHz} Hz</div>
+                                  <div style={{ color: currentTheme.blue, fontSize: '30px', fontWeight: 'bold', lineHeight: '1.2', transition: 'color 0.3s ease' }}>{gridW} W</div>
+                                  <div className={`fw-bold mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12px' }}>{gridV} V <span className="text-muted mx-1">|</span> {gridA} A <span className="text-muted mx-1">|</span> {gridHz} Hz</div>
                                </div>
                             </div>
                             <MiniWave color={currentTheme.blue} />
                             <div className="d-flex flex-column mt-1">
                                <span className="text-muted" style={{ fontSize: '11px' }}>Today's Energy</span>
-                               <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>6.35 kWh</span>
+                               <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>{gridKwh} kWh</span>
                             </div>
                          </div>
 
@@ -462,7 +515,7 @@ const SolarDashboard = () => {
                                </svg>
                             </div>
 
-                            <div className="text-center w-100" style={{ color: currentTheme.green, fontSize: '38px', fontWeight: 'bold', textShadow: isDark ? `0 0 15px rgba(16,185,129,0.4)` : 'none', transition: 'color 0.3s ease', lineHeight: '1' }}>{liveNodes.total} W</div>
+                            <div className="text-center w-100" style={{ color: currentTheme.green, fontSize: '38px', fontWeight: 'bold', textShadow: isDark ? `0 0 15px rgba(16,185,129,0.4)` : 'none', transition: 'color 0.3s ease', lineHeight: '1' }}>{totalSystemW} W</div>
                             
                             <div className={`d-flex justify-content-between w-100 mt-4 px-2 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>
                                <div className="text-start">
@@ -487,7 +540,7 @@ const SolarDashboard = () => {
                          {/* TOTAL OUTPUT */}
                          <div style={{ position: 'absolute', left: '380px', top: '430px', background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '16px', padding: '24px 20px', width: '260px', height: '140px', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: currentTheme.shadow }}>
                             <div className={`text-center fw-bold mb-2 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '14px', letterSpacing: '0.5px' }}>TOTAL OUTPUT</div>
-                            <div className="text-center mb-3" style={{ color: currentTheme.purple, fontSize: '42px', fontWeight: 'bold', textShadow: isDark ? '0 0 15px rgba(168,85,247,0.4)' : 'none', transition: 'color 0.3s ease', lineHeight: '1' }}>{liveNodes.total} W</div>
+                            <div className="text-center mb-3" style={{ color: currentTheme.purple, fontSize: '42px', fontWeight: 'bold', textShadow: isDark ? '0 0 15px rgba(168,85,247,0.4)' : 'none', transition: 'color 0.3s ease', lineHeight: '1' }}>{totalSystemW} W</div>
                             <div className="w-100" style={{ height: '1px', background: currentTheme.border, marginBottom: '15px' }}></div>
                              <div className="d-flex justify-content-between w-100 text-muted" style={{ fontSize: '12px' }}>
                                <span>Today's Consumption</span>
@@ -501,16 +554,18 @@ const SolarDashboard = () => {
                          <div style={{ position: 'absolute', left: '750px', top: '5px', color: currentTheme.purple, fontSize: '13px', fontWeight: 'bold' }}>OUTGOING (DISTRIBUTION)</div>
 
                          {[
-                            { y: 10, icon: BuildingIcon, title: "COMMERCIAL WING A INCOMER", value: `${liveNodes.loads[0]} W`, pct: ((liveNodes.loads[0]/liveNodes.total)*100).toFixed(1), kw: "5.21" },
-                            { y: 115, icon: ServerIcon, title: "DATA CENTER MAIN UPS INPUT", value: `${liveNodes.loads[1]} W`, pct: ((liveNodes.loads[1]/liveNodes.total)*100).toFixed(1), kw: "3.45" },
-                            { y: 220, icon: DropIcon, title: "WATER PLANT & UTILITY MOTORS ROOM", value: `${liveNodes.loads[2]} W`, pct: ((liveNodes.loads[2]/liveNodes.total)*100).toFixed(1), kw: "2.87" },
-                            { y: 325, icon: LightningIcon, title: "PHASE-NEUTRAL VOLTAGE", value: `${liveNodes.loads[3]} W`, pct: ((liveNodes.loads[3]/liveNodes.total)*100).toFixed(1), kw: "1.52" },
-                            { y: 430, icon: LightningIcon, title: "PHASE-NEUTRAL VOLTAGE", value: `${liveNodes.loads[4]} W`, pct: ((liveNodes.loads[4]/liveNodes.total)*100).toFixed(1), kw: "1.09" },
-                            { y: 535, icon: LampIcon, title: "OUTDOOR STREET & PARKING LIGHTS", value: `${liveNodes.loads[5]} W`, pct: ((liveNodes.loads[5]/liveNodes.total)*100).toFixed(1), kw: "0.92" }
-                         ].map((load, i) => (
-                            <div key={i} style={{ position: 'absolute', left: '750px', top: `${load.y + 20}px`, background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '12px', padding: '12px 15px', width: '380px', minHeight: '75px', height: 'auto', display: 'flex', alignItems: 'center', gap: '15px', zIndex: 10, boxShadow: currentTheme.shadow }}>
+                            { y: 10, icon: BuildingIcon, loadIdx: 0 },
+                            { y: 115, icon: ServerIcon, loadIdx: 1 },
+                            { y: 220, icon: DropIcon, loadIdx: 2 },
+                            { y: 325, icon: LightningIcon, loadIdx: 3 },
+                            { y: 430, icon: LightningIcon, loadIdx: 4 },
+                            { y: 535, icon: LampIcon, loadIdx: 5 }
+                         ].map((item, i) => {
+                            const load = displayLoads[item.loadIdx];
+                            return (
+                            <div key={i} style={{ position: 'absolute', left: '750px', top: `${item.y + 20}px`, background: currentTheme.cardBg, border: `1px solid ${currentTheme.border}`, borderRadius: '12px', padding: '12px 15px', width: '380px', minHeight: '75px', height: 'auto', display: 'flex', alignItems: 'center', gap: '15px', zIndex: 10, boxShadow: currentTheme.shadow }}>
                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px' }}>
-                                  <load.icon />
+                                  <item.icon />
                                </div>
                                <div className="flex-grow-1">
                                   <div className={`fw-bold mb-2 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '10.5px', letterSpacing: '0.3px', lineHeight: '1.2' }}>{load.title}</div>
@@ -519,16 +574,16 @@ const SolarDashboard = () => {
                                   </div>
                                </div>
                                <div className="text-end" style={{ minWidth: '90px' }}>
-                                  <div style={{ color: currentTheme.purple, fontSize: '18px', fontWeight: 'bold' }}>{load.value}</div>
+                                  <div style={{ color: currentTheme.purple, fontSize: '18px', fontWeight: 'bold' }}>{load.w} W</div>
                                   <div className="text-muted mt-1" style={{ fontSize: '11px' }}>{load.pct} %</div>
-                                  <div className="text-muted" style={{ fontSize: '10px' }}>Today: {load.kw} kWh</div>
+                                  <div className="text-muted" style={{ fontSize: '10px' }}>Today: {load.kwh} kWh</div>
                                </div>
                             </div>
-                         ))}
+                         )})}
 
                           <div style={{ position: 'absolute', left: '750px', top: '640px', width: '380px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
                              <div className={`fw-bold text-${isDark ? 'white' : 'dark'}`}>Total Outgoing Load</div>
-                             <div style={{ color: currentTheme.purple, transition: 'color 0.3s ease' }}><b>{liveNodes.total} W (100%)</b></div>
+                             <div style={{ color: currentTheme.purple, transition: 'color 0.3s ease' }}><b>{totalLoadW} W (100%)</b></div>
                           </div>
                       </div>
                    </div>

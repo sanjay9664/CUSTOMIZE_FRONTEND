@@ -229,7 +229,14 @@ const Dashboard = () => {
                 { label: 'CO2', val: '', unit: '', icon: <Battery size={18} />, color: '#22c55e', status: 'FULL' },
                 { label: 'TVOC', val: '', unit: '', icon: <Activity size={18} />, color: '#f59e0b', status: 'WARN' }
               ].map((s, i) => (
-                <div key={i} className="sensor-tile-static p-3 mb-3 bg-black bg-opacity-30 rounded-4 border border-white border-opacity-5">
+                <div 
+                  key={i} 
+                  className="sensor-tile-static p-3 mb-3 bg-black bg-opacity-30 rounded-4 border border-white border-opacity-5 cursor-pointer"
+                  onClick={() => navigate('/aqi-sensor/temp-humidity')}
+                  style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.5)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                >
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div className="p-1 rounded-circle bg-white bg-opacity-5" style={{ color: s.color }}>{s.icon}</div>
                     <Badge style={{ background: `${s.color}22`, color: s.color, border: `1px solid ${s.color}44` }} className="fs-12 fw-black tracking-widest">{s.status}</Badge>

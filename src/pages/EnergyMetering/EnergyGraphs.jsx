@@ -537,6 +537,8 @@ const EnergyGraphs = () => {
   const [selectedMeterId, setSelectedMeterId] = useState(() => {
     return localStorage.getItem('selected_main_meter_id') || '';
   });
+  const [isSwitching, setIsSwitching] = useState(false);
+  const generateEmptyHistory = () => [];
   const [historyLog, setHistoryLog] = useState([]);
   
   const [globalRanges, setGlobalRanges] = useState(() => {
@@ -628,91 +630,27 @@ const EnergyGraphs = () => {
     return tpl;
   }, [templates, selectedMeterId, energyMeters]);
 
-  // UNIFIED TICK SYSTEM: 
-  // We use exactly ONE interval pushing points into historyLog every 2 seconds.
-  // It uses dummy data to move, but if real data is present in latestRealDataRef, it overrides the dummy data!
-  // This completely solves the issue of graphs breaking/disappearing when real data returns NULL.
   useEffect(() => {
-    let dummy = [];
-    let baseEbKwh = 15024.5;
-    let baseDgKwh = 205.2;
-    let timeTick = 0;
+    setIsSwitching(true);
+    setHistoryLog([]); // Clear old history to prevent ghost lines
 
-    let baseTime = new Date();
-    baseTime.setMinutes(baseTime.getMinutes() - 80);
-
-    const generatePoint = (dateObj, index) => {
-        const phaseVar = Math.sin(index * 0.1) * 3 + (Math.random() * 2 - 1);
-        const currentVar = Math.cos(index * 0.15) * 8 + (Math.random() * 4);
-        
-        const vRN = +(238 + phaseVar).toFixed(2);
-        const vYN = +(240 + phaseVar * 0.8).toFixed(2);
-        const vBN = +(239 + phaseVar * 1.2).toFixed(2);
-        
-        baseEbKwh += Math.random() * 0.5;
-        baseDgKwh += Math.random() * 0.05;
-
-        const generated = {
-          time: new Date(dateObj).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          vRN: vRN,
-          vYN: vYN,
-          vBN: vBN,
-          vRY: +(vRN * 1.732 + Math.random() * 2).toFixed(2),
-          vYB: +(vYN * 1.732 + Math.random() * 2).toFixed(2),
-          vBR: +(vBN * 1.732 + Math.random() * 2).toFixed(2),
-          iR: +(45 + currentVar).toFixed(2),
-          iY: +(42 + currentVar * 0.9).toFixed(2),
-          iB: +(48 + currentVar * 1.1).toFixed(2),
-          totalKva: +(30 + (currentVar * 0.5)).toFixed(2),
-          reactivePower: +(8 + Math.random() * 4).toFixed(2),
-          freq: +(50 + (Math.random() * 0.1 - 0.05)).toFixed(2),
-          ebKwh: +(baseEbKwh).toFixed(2),
-          dgKwh: +(baseDgKwh).toFixed(2),
-          ebKvah: +(baseEbKwh * 1.05 + Math.random()).toFixed(2),
-          thdV: +(2 + Math.random() * 1.5).toFixed(2),
-          thdI: +(15 + Math.random() * 5).toFixed(2),
-          distPf: +(0.92 + Math.random() * 0.05).toFixed(2),
-          neutralPercent: +(5 + Math.random() * 4).toFixed(2)
-        };
-
-        // If real data exists, override the dummy point with real data safely
-        const real = latestRealDataRef.current;
-        if (real.vRN != null) generated.vRN = real.vRN;
-        if (real.vYN != null) generated.vYN = real.vYN;
-        if (real.vBN != null) generated.vBN = real.vBN;
-        if (real.vRY != null) generated.vRY = real.vRY;
-        if (real.vYB != null) generated.vYB = real.vYB;
-        if (real.vBR != null) generated.vBR = real.vBR;
-        if (real.iR != null) generated.iR = real.iR;
-        if (real.iY != null) generated.iY = real.iY;
-        if (real.iB != null) generated.iB = real.iB;
-        if (real.totalKva != null) generated.totalKva = real.totalKva;
-        if (real.reactivePower != null) generated.reactivePower = real.reactivePower;
-        if (real.freq != null) generated.freq = real.freq;
-        if (real.ebKwh != null) generated.ebKwh = real.ebKwh;
-        if (real.dgKwh != null) generated.dgKwh = real.dgKwh;
-        if (real.ebKvah != null) generated.ebKvah = real.ebKvah;
-
-        return generated;
-    };
-
-    // Prefill history
-    for (let i = 0; i < 80; i++) {
-      baseTime.setSeconds(baseTime.getSeconds() + 2);
-      dummy.push(generatePoint(baseTime, timeTick++));
-    }
-    
-    setHistoryLog(dummy);
-
-    // Make the chart continuously move using unified point generation
     const interval = setInterval(() => {
         setHistoryLog(prev => {
-            const nextTime = new Date();
-            const newPoint = generatePoint(nextTime, timeTick++);
+            const real = latestRealDataRef.current;
+            if (!real) return prev;
+            
+            const hasValidData = Object.values(real).some(v => v !== null && v !== undefined && !isNaN(v));
+            if (prev.length === 0 && !hasValidData) return prev; // Wait for initial valid data before ticking
+
+            const newPoint = {
+              time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              ...real
+            };
+
             const next = [...prev, newPoint];
             return next.length > 80 ? next.slice(next.length - 80) : next;
         });
-    }, 2000); 
+    }, 5000); 
 
     return () => clearInterval(interval);
   }, [selectedMeterId]);
@@ -786,8 +724,32 @@ const EnergyGraphs = () => {
         dgKwh: getValueForField(mapping.emChangeConfig, 'dgKwh'),
         ebKvah: getValueForField(mapping.emChangeConfig, 'ebKvah') ?? getValueForField(mapping.emReadConfig, 'ebKvah'),
         totalKva: getValueForField(mapping.emChangeConfig, 'totalKva') ?? getValueForField(mapping.emPowerConfig, 'apparentPower'),
-        reactivePower: getValueForField(mapping.emPowerConfig, 'reactivePower')
+        reactivePower: getValueForField(mapping.emChangeConfig, 'reactivePower') ?? getValueForField(mapping.emPowerConfig, 'reactivePower')
       };
+      
+      // Instantly fill history if it's empty or entirely null so line appears instantly across full width
+      setHistoryLog(prev => {
+        const hasValidIncomingData = Object.values(latestRealDataRef.current).some(v => v !== null && v !== undefined && !isNaN(v));
+        
+        if (!hasValidIncomingData) return prev; // Do not fill with nulls! Wait for valid data.
+
+        const hasAnyValidHistoricalData = prev.some(point => 
+          Object.keys(point).some(k => k !== 'time' && point[k] !== null && point[k] !== undefined && !isNaN(point[k]))
+        );
+
+        if (prev.length === 0 || !hasAnyValidHistoricalData) {
+          const instant = [];
+          const now = new Date();
+          for (let i = 79; i >= 0; i--) {
+            instant.push({
+              time: new Date(now.getTime() - i * 5000).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              ...latestRealDataRef.current
+            });
+          }
+          return instant;
+        }
+        return prev;
+      });
     };
 
     socket.on('telemetry_update', updateRealData);
@@ -815,7 +777,7 @@ const EnergyGraphs = () => {
             { config: mapping.emPowerConfig, fields: ['activePower', 'reactivePower', 'apparentPower'] },
             { config: mapping.emSystemConfig, fields: ['pf', 'freq'] },
             { config: mapping.emConsumptionConfig, fields: ['cumulativekWh'] },
-            { config: mapping.emChangeConfig, fields: ['ebKvah', 'ebKwh', 'balance', 'totalKw', 'vR', 'vY', 'vB', 'iR', 'iY', 'iB', 'pf', 'totalKva', 'dgKwh'] }
+            { config: mapping.emChangeConfig, fields: ['ebKvah', 'ebKwh', 'balance', 'totalKw', 'vR', 'vY', 'vB', 'iR', 'iY', 'iB', 'pf', 'totalKva', 'dgKwh', 'reactivePower', 'apparentPower', 'freq'] }
           ];
 
           configFieldsMap.forEach(({ config, fields }) => {
@@ -827,7 +789,10 @@ const EnergyGraphs = () => {
         }
 
         const pollList = Array.from(modulesToPoll);
-        if (pollList.length === 0) return;
+        if (pollList.length === 0) {
+          setIsSwitching(false);
+          return;
+        }
 
         const url = `/api/templates/stats?modules=${pollList.join(',')}`;
         const res = await fetch(url);
@@ -835,11 +800,14 @@ const EnergyGraphs = () => {
           const stats = await res.json();
           updateRealData(stats);
         }
+        setIsSwitching(false);
       } catch (err) {
         console.error('Error fetching main meter stats:', err);
+        setIsSwitching(false);
       }
     };
 
+    fetchStats(); // Instantly fetch data on load without waiting 5 seconds
     const pollingInterval = setInterval(fetchStats, 5000);
 
     return () => {
@@ -847,6 +815,22 @@ const EnergyGraphs = () => {
       clearInterval(pollingInterval);
     };
   }, [mainMeterTemplate]);
+
+  const checkFields = (configName, fields) => {
+    if (!mainMeterTemplateRef.current?.mapping) return false;
+    const config = mainMeterTemplateRef.current.mapping[configName];
+    if (!config || config.enabled === false) return false;
+    return fields.some(field => config[field] && String(config[field]).trim() !== '');
+  };
+
+  const chartVisibility = {
+    voltage: checkFields('emVoltageConfig', ['vR', 'vY', 'vB', 'vRY', 'vYB', 'vBR', 'vRN', 'vYN', 'vBN']) || checkFields('emChangeConfig', ['vR', 'vY', 'vB', 'vRY', 'vYB', 'vBR']),
+    current: checkFields('emCurrentConfig', ['iR', 'iY', 'iB']) || checkFields('emChangeConfig', ['iR', 'iY', 'iB']),
+    power: checkFields('emPowerConfig', ['activePower', 'reactivePower', 'apparentPower', 'totalKw', 'totalKva']) || checkFields('emChangeConfig', ['totalKw', 'totalKva', 'reactivePower', 'apparentPower']),
+    system: checkFields('emSystemConfig', ['freq', 'pf']) || checkFields('emChangeConfig', ['freq', 'pf']),
+    consumption: checkFields('emConsumptionConfig', ['cumulativekWh', 'ebKwh', 'dgKwh']) || checkFields('emReadConfig', ['ebKwh']) || checkFields('emChangeConfig', ['ebKwh', 'dgKwh']),
+    apparentConsumption: checkFields('emConsumptionConfig', ['ebKvah']) || checkFields('emReadConfig', ['ebKvah']) || checkFields('emChangeConfig', ['ebKvah'])
+  };
 
   return (
     <div className="fade-in px-2 px-md-4 py-3">
@@ -879,115 +863,138 @@ const EnergyGraphs = () => {
         </div>
       </div>
 
-      <div className="energy-graphs-container mb-4">
-        <Row className="g-4">
-          <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.1s' }}>
-            <ChartRow 
-              title="Supply Voltage" 
-              unit="Volts (V)" 
-              data={historyLog} 
-              dataKeys={[
-                {key: 'vRY', name: 'VR-Y'}, 
-                {key: 'vYB', name: 'VY-B'}, 
-                {key: 'vBR', name: 'VB-R'},
-                {key: 'vRN', name: 'VR-N'}, 
-                {key: 'vYN', name: 'VY-N'}, 
-                {key: 'vBN', name: 'VB-N'}
-              ]} 
-              defaultColors={['#ef4444', '#facc15', '#3b82f6', '#fca5a5', '#fef08a', '#93c5fd']} 
-              type="line"
-              ranges={globalRanges.voltage}
-              onUpdateRanges={(r) => handleUpdateRange('voltage', r)}
-            />
-          </Col>
-          
-          <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.2s' }}>
-            <ChartRow 
-              title="Current" 
-              unit="Amperes (A)" 
-              data={historyLog} 
-              dataKeys={[
-                {key: 'iR', name: 'I1'}, 
-                {key: 'iY', name: 'I2'}, 
-                {key: 'iB', name: 'I3'}
-              ]} 
-              defaultColors={['#ef4444', '#facc15', '#3b82f6']} 
-              type="line"
-              ranges={globalRanges.current}
-              onUpdateRanges={(r) => handleUpdateRange('current', r)}
-            />
-          </Col>
+      <div className="energy-graphs-container mb-4" style={{ minHeight: '60vh' }}>
+        {isSwitching ? (
+          <div className="d-flex flex-column justify-content-center align-items-center h-100" style={{ minHeight: '400px' }}>
+            <div className="spinner-border text-info mb-3" role="status" style={{ width: '3rem', height: '3rem', filter: 'drop-shadow(0 0 10px rgba(56,189,248,0.8))' }}>
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <h5 className="text-info fw-black uppercase tracking-widest" style={{ letterSpacing: '2px', animation: 'pulse 1.5s infinite' }}>
+              Fetching Meter Data...
+            </h5>
+            <small className="text-secondary opacity-50 uppercase tracking-widest">Please wait a moment</small>
+          </div>
+        ) : (
+          <Row className="g-4">
+            {chartVisibility.voltage && (
+              <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.1s' }}>
+                <ChartRow 
+                  title="Supply Voltage" 
+                  unit="Volts (V)" 
+                  data={historyLog} 
+                  dataKeys={[
+                    {key: 'vRN', name: 'VR-N'}, 
+                    {key: 'vYN', name: 'VY-N'}, 
+                    {key: 'vBN', name: 'VB-N'}
+                  ]} 
+                  defaultColors={['#ef4444', '#facc15', '#3b82f6']} 
+                  type="line"
+                  ranges={globalRanges.voltage}
+                  onUpdateRanges={(r) => handleUpdateRange('voltage', r)}
+                />
+              </Col>
+            )}
+            
+            {chartVisibility.current && (
+              <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.2s' }}>
+                <ChartRow 
+                  title="Current" 
+                  unit="Amperes (A)" 
+                  data={historyLog} 
+                  dataKeys={[
+                    {key: 'iR', name: 'I1'}, 
+                    {key: 'iY', name: 'I2'}, 
+                    {key: 'iB', name: 'I3'}
+                  ]} 
+                  defaultColors={['#ef4444', '#facc15', '#3b82f6']} 
+                  type="line"
+                  ranges={globalRanges.current}
+                  onUpdateRanges={(r) => handleUpdateRange('current', r)}
+                />
+              </Col>
+            )}
 
-          <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.2s' }}>
-            <ChartRow 
-              title="Apparent Power" 
-              unit="kVA" 
-              data={historyLog} 
-              dataKeys={[{key: 'totalKva', name: 'kVA'}]} 
-              defaultColors={['#0ea5e9']} 
-              type="bar"
-              ranges={globalRanges.demand}
-              onUpdateRanges={(r) => handleUpdateRange('demand', r)}
-            />
-          </Col>
+            {chartVisibility.power && (
+              <>
+                <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.3s' }}>
+                  <ChartRow 
+                    title="Apparent Power" 
+                    unit="kVA" 
+                    data={historyLog} 
+                    dataKeys={[{key: 'totalKva', name: 'kVA'}]} 
+                    defaultColors={['#0ea5e9']} 
+                    type="bar"
+                    ranges={globalRanges.demand}
+                    onUpdateRanges={(r) => handleUpdateRange('demand', r)}
+                  />
+                </Col>
 
-          <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.5s' }}>
-            <ChartRow 
-              title="Reactive Power" 
-              unit="kVAR" 
-              data={historyLog} 
-              dataKeys={[{key: 'reactivePower', name: 'kVAR'}]} 
-              defaultColors={['#64748b']} 
-              type="area"
-            />
-          </Col>
+                <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.4s' }}>
+                  <ChartRow 
+                    title="Reactive Power" 
+                    unit="kVAR" 
+                    data={historyLog} 
+                    dataKeys={[{key: 'reactivePower', name: 'kVAR'}]} 
+                    defaultColors={['#64748b']} 
+                    type="area"
+                  />
+                </Col>
+              </>
+            )}
 
-          <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.2s' }}>
-            <ChartRow 
-              title="Frequency" 
-              unit="Hz" 
-              data={historyLog} 
-              dataKeys={[{key: 'freq', name: 'Freq'}]} 
-              defaultColors={['#8b5cf6']} 
-              type="bar"
-              ranges={globalRanges.frequency}
-              onUpdateRanges={(r) => handleUpdateRange('frequency', r)}
-            />
-          </Col>
+            {chartVisibility.system && (
+              <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.5s' }}>
+                <ChartRow 
+                  title="Frequency" 
+                  unit="Hz" 
+                  data={historyLog} 
+                  dataKeys={[{key: 'freq', name: 'Freq'}]} 
+                  defaultColors={['#8b5cf6']} 
+                  type="bar"
+                  ranges={globalRanges.frequency}
+                  onUpdateRanges={(r) => handleUpdateRange('frequency', r)}
+                />
+              </Col>
+            )}
 
-          <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.2s' }}>
-            <ChartRow 
-              title="Power Consumption (Active)" 
-              unit="kWH" 
-              data={historyLog} 
-              dataKeys={[
-                {key: 'ebKwh', name: 'EB kWH'}, 
-                {key: 'dgKwh', name: 'DG kWH'}
-              ]} 
-              defaultColors={['#38bdf8', '#f59e0b']} 
-              type="bar"
-              isStacked={true}
-              ranges={globalRanges.demand}
-              onUpdateRanges={(r) => handleUpdateRange('demand', r)}
-            />
-          </Col>
+            {chartVisibility.consumption && (
+              <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.6s' }}>
+                <ChartRow 
+                  title="Power Consumption (Active)" 
+                  unit="kWH" 
+                  data={historyLog} 
+                  dataKeys={[
+                    {key: 'ebKwh', name: 'EB kWH'}, 
+                    {key: 'dgKwh', name: 'DG kWH'}
+                  ]} 
+                  defaultColors={['#38bdf8', '#f59e0b']} 
+                  type="bar"
+                  isStacked={true}
+                  ranges={globalRanges.demand}
+                  onUpdateRanges={(r) => handleUpdateRange('demand', r)}
+                />
+              </Col>
+            )}
 
-          <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.2s' }}>
-            <ChartRow 
-              title="Power Consumption (Apparent)" 
-              unit="kVAH" 
-              data={historyLog} 
-              dataKeys={[
-                {key: 'ebKvah', name: 'EB kVAH'}
-              ]} 
-              defaultColors={['#10b981']} 
-              type="bar"
-              ranges={globalRanges.demand}
-              onUpdateRanges={(r) => handleUpdateRange('demand', r)}
-            />
-          </Col>
+            {chartVisibility.apparentConsumption && (
+              <Col lg={12} className="graph-slide-up" style={{ animationDelay: '0.7s' }}>
+                <ChartRow 
+                  title="Power Consumption (Apparent)" 
+                  unit="kVAH" 
+                  data={historyLog} 
+                  dataKeys={[
+                    {key: 'ebKvah', name: 'EB kVAH'}
+                  ]} 
+                  defaultColors={['#10b981']} 
+                  type="bar"
+                  ranges={globalRanges.demand}
+                  onUpdateRanges={(r) => handleUpdateRange('demand', r)}
+                />
+              </Col>
+            )}
 
-        </Row>
+          </Row>
+        )}
       </div>
     </div>
   );

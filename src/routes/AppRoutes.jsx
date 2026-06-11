@@ -49,6 +49,7 @@ import CoolingTower from '../pages/HVAC/CoolingTower';
 
 // AC
 import ACOverview from '../pages/AC/Overview';
+import ACScheduler from '../pages/AC/ACScheduler';
 
 // Fire Pumps
 import FireOverview from '../pages/FirePumps/Overview';
@@ -195,6 +196,7 @@ const AppRoutes = () => {
 
       {/* AC */}
       <Route path="/ac/overview" element={<ACOverview />} />
+      <Route path="/ac/schedule" element={<ACScheduler />} />
       <Route path="/ac/report" element={<PlaceholderPage title="AC PDF Reports" />} />
 
       {/* Fire */}
