@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Badge } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { Leaf, Wind, Thermometer, Droplets, MapPin, Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { io } from 'socket.io-client';
 
 // --- MOCK DATA ---
 const CHANNELS = Array.from({ length: 6 }).map((_, i) => {
   const baseTemp = 20 + Math.random() * 5;
   const baseHum = 40 + Math.random() * 20;
   const baseAqi = 15 + Math.random() * 15; // IAQ
-  const basePressure = 1010 + Math.random() * 10;
-  const baseGas = 180000 + Math.random() * 40000;
-  const baseBattery = 85 + Math.random() * 15;
+  const baseCo2 = 400 + Math.random() * 200;
+  const baseTvoc = 50 + Math.random() * 50;
   
   return {
     id: i + 1,
@@ -19,9 +20,8 @@ const CHANNELS = Array.from({ length: 6 }).map((_, i) => {
     temp: baseTemp.toFixed(2),
     hum: baseHum.toFixed(1),
     aqi: baseAqi.toFixed(2),
-    pressure: basePressure.toFixed(2),
-    gas: Math.round(baseGas),
-    battery: baseBattery.toFixed(2),
+    co2: Math.round(baseCo2),
+    tvoc: Math.round(baseTvoc),
     history: Array.from({ length: 24 }).map((_, j) => {
       const time = new Date();
       time.setHours(time.getHours() - (23 - j));
@@ -30,9 +30,8 @@ const CHANNELS = Array.from({ length: 6 }).map((_, i) => {
         temp: (baseTemp + (Math.random() * 4 - 2)).toFixed(2),
         hum: (baseHum + (Math.random() * 10 - 5)).toFixed(1),
         aqi: Math.max(0, baseAqi + (Math.random() * 10 - 5)).toFixed(2),
-        pressure: (basePressure + (Math.random() * 2 - 1)).toFixed(2),
-        gas: Math.round(baseGas + (Math.random() * 20000 - 10000)),
-        battery: baseBattery.toFixed(2)
+        co2: Math.round(baseCo2 + (Math.random() * 50 - 25)),
+        tvoc: Math.round(baseTvoc + (Math.random() * 20 - 10))
       };
     })
   };
@@ -84,7 +83,10 @@ const CustomArcGauge = ({ value, max, label, color, format = (v) => v }) => {
 };
 
 const AQIOverview = () => {
-  const [selectedCh, setSelectedCh] = useState(CHANNELS[0]);
+  const navigate = useNavigate();
+  const [channels, setChannels] = useState(CHANNELS);
+  const [selectedChId, setSelectedChId] = useState(CHANNELS[0].id);
+  const selectedCh = channels.find(ch => ch.id === selectedChId) || channels[0];
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -92,13 +94,160 @@ const AQIOverview = () => {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
+    const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+      console.log('AQI Sensor WebSocket Connected - Listening for Telemetry');
+    });
+
+    let currentTemplates = [];
+
+    const processTelemetry = (stats) => {
+      if (!Array.isArray(stats)) return;
+      
+      setChannels(prev => {
+        let updated = false;
+        const next = prev.map(zone => {
+          if (!zone.mapping || !zone.mapping.vrvConfig) return zone;
+          
+          let newZone = { ...zone };
+          const config = zone.mapping.vrvConfig;
+
+          const getValue = (configField) => {
+            if (!configField || !configField.includes('::')) return null;
+            const [moduleId, fieldId] = configField.split('::');
+            const stat = stats.find(s => String(s.moduleId) === String(moduleId) || String(s.meta?.module_id) === String(moduleId));
+            if (stat && stat.meta && stat.meta[fieldId] !== undefined) {
+              return parseFloat(stat.meta[fieldId]);
+            }
+            return null;
+          };
+
+          const temp = getValue(config.temperature);
+          if (temp !== null && newZone.temp !== temp.toFixed(2)) { newZone.temp = temp.toFixed(2); updated = true; }
+
+          const hum = getValue(config.humidity);
+          if (hum !== null && newZone.hum !== hum.toFixed(1)) { newZone.hum = hum.toFixed(1); updated = true; }
+
+          const co2 = getValue(config.co2);
+          if (co2 !== null && newZone.co2 !== Math.round(co2)) { newZone.co2 = Math.round(co2); updated = true; }
+
+          const tvoc = getValue(config.tvoc);
+          if (tvoc !== null && newZone.tvoc !== Math.round(tvoc)) { newZone.tvoc = Math.round(tvoc); updated = true; }
+
+          const aqi = getValue(config.aqi);
+          if (aqi !== null && newZone.aqi !== aqi.toFixed(2)) { newZone.aqi = aqi.toFixed(2); updated = true; }
+
+          return newZone;
+        });
+
+        return updated ? next : prev;
+      });
+    };
+
+    socket.on('telemetry_update', processTelemetry);
+
+    const fetchTemplatesAndStats = async () => {
+      try {
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const tenantId = userData?.tenantId;
+        const url = tenantId ? `/api/templates?tenantId=${tenantId}` : '/api/templates';
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          const mappedData = data.map(t => {
+            const hasDefaultValues = t.defaultValues && typeof t.defaultValues === 'object' && Object.keys(t.defaultValues).length > 0;
+            const defValues = hasDefaultValues ? t.defaultValues : null;
+            const mappingSource = defValues || (t.settings && t.settings[0]?.meta) || {};
+            return {
+              id: t.id,
+              name: t.name,
+              category: (defValues && defValues.category) || t.category || 'Water Management',
+              module: (defValues && defValues.module) || (t.settings && t.settings[0]?.eventKey) || 'AG Tank',
+              mapping: mappingSource,
+              template_name: t.name
+            };
+          });
+          const aqiTemplates = mappedData.filter(t => (t.category === 'VRV' || t.category === 'AQI Sensor') && t.module === 'Temp & Humidity');
+          currentTemplates = aqiTemplates;
+          
+          setChannels(prev => {
+            const next = [...prev];
+            for (let i = 0; i < Math.min(next.length, aqiTemplates.length); i++) {
+               const t = aqiTemplates[i];
+               next[i].name = t.mapping?.vrvConfig?.vrvZone || t.template_name || next[i].name;
+               next[i].mapping = t.mapping;
+            }
+            return next;
+          });
+
+          if (aqiTemplates.length > 0) {
+            const modulesToPoll = new Set();
+            aqiTemplates.forEach(t => {
+              if (t.mapping?.vrvConfig) {
+                Object.values(t.mapping.vrvConfig).forEach(val => {
+                  if (typeof val === 'string' && val.includes('::')) {
+                    modulesToPoll.add(val.split('::')[0]);
+                  }
+                });
+              }
+            });
+            
+            const pollList = Array.from(modulesToPoll);
+            const apiBase = backendUrl;
+            const statsUrl = pollList.length > 0 ? `${apiBase}/api/templates/stats?modules=${pollList.join(',')}` : `${apiBase}/api/templates/stats`;
+            
+            const statsRes = await fetch(statsUrl);
+            if (statsRes.ok) {
+              const stats = await statsRes.json();
+              processTelemetry(stats);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching AQI templates:', error);
+      }
+    };
+    
+    fetchTemplatesAndStats();
+    
+    const pollInterval = setInterval(async () => {
+      if (currentTemplates.length === 0) return;
+      const modulesToPoll = new Set();
+      currentTemplates.forEach(t => {
+        if (t.mapping?.vrvConfig) {
+          Object.values(t.mapping.vrvConfig).forEach(val => {
+            if (typeof val === 'string' && val.includes('::')) {
+              modulesToPoll.add(val.split('::')[0]);
+            }
+          });
+        }
+      });
+      const pollList = Array.from(modulesToPoll);
+      const statsUrl = pollList.length > 0 ? `${backendUrl}/api/templates/stats?modules=${pollList.join(',')}` : `${backendUrl}/api/templates/stats`;
+      try {
+        const res = await fetch(statsUrl);
+        if (res.ok) {
+          const stats = await res.json();
+          processTelemetry(stats);
+        }
+      } catch (e) {}
+    }, 2000);
+
+    return () => {
+      socket.disconnect();
+      clearInterval(pollInterval);
+    };
+  }, []);
+
   const parameters = [
     { label: 'Temperature', key: 'temp', max: 50, color: '#38bdf8', unit: '°C' },
-    { label: 'Pressure', key: 'pressure', max: 2000, color: '#ef4444', unit: 'hPa' },
     { label: 'Humidity', key: 'hum', max: 100, color: '#10b981', unit: '%' },
-    { label: 'Gas Resistance', key: 'gas', max: 300000, color: '#facc15', unit: 'Ω' },
-    { label: 'Battery', key: 'battery', max: 100, color: '#10b981', unit: '%' },
-    { label: 'IAQ', key: 'aqi', max: 100, color: '#ef4444', unit: 'Index' }
+    { label: 'CO2', key: 'co2', max: 2000, color: '#ec4899', unit: 'PPM' },
+    { label: 'TVOC', key: 'tvoc', max: 500, color: '#a855f7', unit: 'PPM' },
+    { label: 'AQI', key: 'aqi', max: 200, color: '#ef4444', unit: 'Index' }
   ];
 
   return (
@@ -126,13 +275,13 @@ const AQIOverview = () => {
           </div>
           
           <div className="d-flex flex-column gap-2">
-            {CHANNELS.map(ch => {
+            {channels.map(ch => {
               const isSelected = selectedCh.id === ch.id;
               
               return (
                 <div 
                   key={ch.id} 
-                  onClick={() => setSelectedCh(ch)}
+                  onClick={() => navigate('/aqi-sensor/temp-humidity')}
                   className="p-3 rounded position-relative overflow-hidden"
                   style={{ 
                     cursor: 'pointer',
@@ -140,6 +289,7 @@ const AQIOverview = () => {
                     border: `1px solid ${isSelected ? '#38bdf8' : 'rgba(255,255,255,0.03)'}`,
                     transition: 'all 0.3s ease'
                   }}
+                  title="Single click to view analytics, Double click for detailed diagnostics"
                 >
                   {isSelected && <div className="position-absolute h-100" style={{ left: 0, top: 0, width: '4px', background: '#38bdf8', boxShadow: '0 0 10px #38bdf8' }}></div>}
                   
@@ -155,7 +305,7 @@ const AQIOverview = () => {
                   
                   <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
                     <span className="text-secondary" style={{ fontSize: '11px' }}>{ch.location}</span>
-                    <span className="text-white font-monospace fw-bold" style={{ fontSize: '12px' }}>IAQ: {ch.aqi}</span>
+                    <span className="text-white font-monospace fw-bold" style={{ fontSize: '12px' }}>Humidity: {ch.hum}%</span>
                   </div>
                 </div>
               )
@@ -183,7 +333,13 @@ const AQIOverview = () => {
           <Row className="g-3">
             {parameters.map((param, idx) => (
               <Col md={6} key={idx}>
-                <Card className="border-0 shadow-sm h-100" style={{ background: 'rgba(30, 41, 59, 0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Card 
+                  className="border-0 shadow-sm h-100" 
+                  style={{ background: 'rgba(30, 41, 59, 0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  onClick={() => navigate('/aqi-sensor/temp-humidity')}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.5)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                >
                   <Card.Body className="p-3 d-flex gap-2 align-items-center">
                     
                     {/* Gauge Area */}

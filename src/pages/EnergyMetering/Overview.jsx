@@ -291,26 +291,94 @@ const EnergyMeteringOverview = () => {
     };
   }, [templates]);
 
+  const PARAMETER_SYNONYMS = {
+    ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
+    ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY'],
+    totalKw: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
+    totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
+    vR: ['3,168', '3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R'],
+    vY: ['3,169', '3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE', 'Voltage-Y'],
+    vB: ['3,170', '3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE', 'Voltage-B'],
+    iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current'],
+    iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current'],
+    iB: ['3,173', '3,168', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current'],
+    pf: ['3,174', 'POWER FACTOR', 'PF', 'SYSTEM PF', 'POWER_FACTOR'],
+    activePower: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW'],
+    apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA'],
+    reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER'],
+    freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ'],
+    cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
+  };
+
   const getTelemetryValue = (template, sectionKey, fieldKey) => {
     if (!template?.mapping?.[sectionKey]) return null;
     const config = template.mapping[sectionKey];
     if (config.enabled === false) return null;
-    const field = config[fieldKey];
-    if (!field) return null;
+    const fieldVal = config[fieldKey];
+    if (!fieldVal) return null;
 
-    let moduleId = config.module;
-    let fieldId = field;
-    if (String(field).includes('::')) {
-      const [modulePart, fieldPart] = String(field).split('::');
-      moduleId = modulePart;
-      fieldId = fieldPart;
+    let targetModuleId = config.module;
+    let cleanKey = fieldVal;
+
+    if (typeof fieldVal === 'string' && fieldVal.includes('::')) {
+      const parts = fieldVal.split('::');
+      targetModuleId = parts[0];
+      cleanKey = parts[1];
+    } else if (typeof fieldVal === 'string' && fieldVal.includes(':')) {
+      const parts = fieldVal.split(':');
+      targetModuleId = parts[0];
+      cleanKey = parts.pop();
     }
 
     const stat = telemetryStats.find(
-      item => item && (String(item.moduleId) === String(moduleId) || String(item.meta?.module_id) === String(moduleId))
+      item => item && (String(item.moduleId) === String(targetModuleId) || String(item.meta?.module_id) === String(targetModuleId))
     );
 
-    if (stat?.meta?.[fieldId] !== undefined) return stat.meta[fieldId];
+    if (!stat || !stat.meta) return null;
+
+    if (cleanKey && stat.meta[cleanKey] !== undefined) return stat.meta[cleanKey];
+    if (stat.meta[fieldVal] !== undefined) return stat.meta[fieldVal];
+
+    if (cleanKey) {
+      const cleanKeyLower = cleanKey.toLowerCase().trim();
+      const foundKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === cleanKeyLower);
+      if (foundKey && stat.meta[foundKey] !== undefined) return stat.meta[foundKey];
+    }
+
+    if (typeof fieldVal === 'string' && fieldVal.includes('] ')) {
+      let inner = fieldVal.split('] ')[1];
+      if (inner) {
+        if (inner.includes(' | ')) {
+          const afterPipe = inner.split(' | ')[1];
+          if (afterPipe) {
+            const actualKey = afterPipe.split(' (')[0].trim();
+            if (actualKey && stat.meta[actualKey] !== undefined) return stat.meta[actualKey];
+            const foundPipeKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === actualKey.toLowerCase().trim());
+            if (foundPipeKey && stat.meta[foundPipeKey] !== undefined) return stat.meta[foundPipeKey];
+          }
+          const beforePipe = inner.split(' | ')[0].split(' (')[0].trim();
+          if (beforePipe && stat.meta[beforePipe] !== undefined) return stat.meta[beforePipe];
+          const foundBeforePipeKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === beforePipe.toLowerCase().trim());
+          if (foundBeforePipeKey && stat.meta[foundBeforePipeKey] !== undefined) return stat.meta[foundBeforePipeKey];
+        } else {
+          const innerKey = inner.split(' (')[0].trim();
+          if (innerKey && stat.meta[innerKey] !== undefined) return stat.meta[innerKey];
+          const foundInnerKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === innerKey.toLowerCase().trim());
+          if (foundInnerKey && stat.meta[foundInnerKey] !== undefined) return stat.meta[foundInnerKey];
+        }
+      }
+    }
+
+    const synonyms = PARAMETER_SYNONYMS[fieldKey] || [];
+    for (const sym of synonyms) {
+      if (stat.meta[sym] !== undefined) return stat.meta[sym];
+      const matchedKey = Object.keys(stat.meta).find(k =>
+        k.toUpperCase() === sym.toUpperCase() ||
+        k.toUpperCase().replace(/[^A-Z0-9]/g, '') === sym.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      );
+      if (matchedKey && stat.meta[matchedKey] !== undefined) return stat.meta[matchedKey];
+    }
+
     return null;
   };
 
@@ -360,6 +428,8 @@ const EnergyMeteringOverview = () => {
     // Extracting comprehensive parameters exactly as requested
     const loadKw = getTelemetryValue(template, 'emChangeConfig', 'totalKw') ?? getTelemetryValue(template, 'emPowerConfig', 'activePower');
     const loadKva = getTelemetryValue(template, 'emChangeConfig', 'totalKva') ?? getTelemetryValue(template, 'emPowerConfig', 'apparentPower');
+    const reactivePower = getTelemetryValue(template, 'emChangeConfig', 'reactivePower') ?? getTelemetryValue(template, 'emPowerConfig', 'reactivePower');
+    const freq = getTelemetryValue(template, 'emChangeConfig', 'freq') ?? getTelemetryValue(template, 'emSystemConfig', 'freq');
     const kwh = getTelemetryValue(template, 'emReadConfig', 'ebKwh') ?? getTelemetryValue(template, 'emChangeConfig', 'ebKwh') ?? getTelemetryValue(template, 'emConsumptionConfig', 'cumulativekWh');
     const kvah = getTelemetryValue(template, 'emReadConfig', 'ebKvah') ?? getTelemetryValue(template, 'emChangeConfig', 'ebKvah');
 
@@ -386,6 +456,8 @@ const EnergyMeteringOverview = () => {
       // Core Parameters
       loadKw: isOnline ? parseNumber(loadKw) : 0,
       loadKva: isOnline ? parseNumber(loadKva) : 0,
+      reactivePower: isOnline ? parseNumber(reactivePower) : 0,
+      freq: isOnline ? parseNumber(freq, 2) : 0,
       kwh: parseNumber(kwh),
       kvah: parseNumber(kvah),
       pf: isOnline ? parseNumber(pf, 2) : 0,
@@ -704,7 +776,10 @@ const EnergyMeteringOverview = () => {
         /* Fix the header spacer so it doesn't push the dashboard down unnecessarily */
         .scada-main-content > div[style*="height: 60px"] { display: none !important; }
       `}</style>
-      <SolarDashboard />
+      <SolarDashboard 
+        mainMeters={meterRows.filter(row => row.isMain)} 
+        subMeters={subMeterRows} 
+      />
     </div>
   );
 };

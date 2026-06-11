@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Badge, Form, Button, Modal } from 'react-bootstrap';
-import { Wind, Thermometer, Droplets, Zap, Power, Settings, Fan, MapPin, Clock, Info, Activity, Edit2, Eye, EyeOff, Trash2, Play, Square } from 'lucide-react';
+import { Wind, Thermometer, Droplets, Zap, Power, Settings, Fan, MapPin, Clock, Info, Activity, Edit2, Eye, EyeOff, Trash2, Play, Square, CheckCircle } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 // --- MOCK DATA ---
 const INITIAL_ACS = [
-  { id: 1, name: 'Master AC', type: '1.5 Ton Inverter Split AC', room: 'Master Bedroom', status: 'ON', mode: '--', setTemp: '--', roomTemp: 23.5, fanSpeed: '--', powerUsage: 1.2, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto' },
-  { id: 2, name: 'Lobby AC', type: '2.0 Ton Cassette AC', room: 'Lobby', status: 'ON', mode: '--', setTemp: '--', roomTemp: 25.0, fanSpeed: '--', powerUsage: 2.1, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto' },
-  { id: 3, name: 'Main Hall AC', type: '2.0 Ton Split AC', room: 'Hall', status: 'OFF', mode: '--', setTemp: '--', roomTemp: 26.5, fanSpeed: '--', powerUsage: 0.0, scheduleStart: '', scheduleEnd: '', operationMode: 'Manual' },
-  { id: 4, name: 'Server Room AC', type: '2.0 Ton Cassette AC', room: 'Server Room', status: 'ON', mode: '--', setTemp: '--', roomTemp: 18.5, fanSpeed: '--', powerUsage: 2.5, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto' },
+  { id: 1, name: 'Master AC', type: '1.5 Ton Inverter Split AC', room: 'Master Bedroom', status: 'ON', mode: '--', setTemp: '--', roomTemp: 23.5, fanSpeed: '--', powerUsage: 1.2, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto', activeAutoOptions: [] },
+  { id: 2, name: 'Lobby AC', type: '2.0 Ton Cassette AC', room: 'Lobby', status: 'ON', mode: '--', setTemp: '--', roomTemp: 25.0, fanSpeed: '--', powerUsage: 2.1, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto', activeAutoOptions: [] },
+  { id: 3, name: 'Main Hall AC', type: '2.0 Ton Split AC', room: 'Hall', status: 'OFF', mode: '--', setTemp: '--', roomTemp: 26.5, fanSpeed: '--', powerUsage: 0.0, scheduleStart: '', scheduleEnd: '', operationMode: 'Manual', activeAutoOptions: [] },
+  { id: 4, name: 'Server Room AC', type: '2.0 Ton Cassette AC', room: 'Server Room', status: 'ON', mode: '--', setTemp: '--', roomTemp: 18.5, fanSpeed: '--', powerUsage: 2.5, scheduleStart: '', scheduleEnd: '', operationMode: 'Auto', activeAutoOptions: [] },
 ];
 
 const RealisticAC = ({ unit }) => {
@@ -144,6 +146,8 @@ const RealisticAC = ({ unit }) => {
 };
 
 const ACOverview = () => {
+  const { isDark } = useTheme();
+  const navigate = useNavigate();
   const [units, setUnits] = useState(() => {
     const saved = localStorage.getItem('bms_ac_units');
     return saved ? JSON.parse(saved) : INITIAL_ACS;
@@ -184,11 +188,97 @@ const ACOverview = () => {
   const [controlTargetId, setControlTargetId] = useState(null);
   const [controlMode, setControlMode] = useState('Manual');
   const [controlSuccessMessage, setControlSuccessMessage] = useState('');
+  const [autoOptions, setAutoOptions] = useState([]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Realtime Schedule Runner
+  useEffect(() => {
+    const now = currentTime;
+    const currentHours = now.getHours().toString().padStart(2, '0');
+    const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTimeStr = `${currentHours}:${currentMinutes}`;
+    
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDay = days[now.getDay()];
+    
+    const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
+
+    const savedSchedulesStr = localStorage.getItem('bms_ac_schedules');
+    if (!savedSchedulesStr) return;
+    
+    try {
+      const savedSchedules = JSON.parse(savedSchedulesStr);
+      
+      setUnits(prevUnits => {
+        let hasChanges = false;
+        const newUnits = prevUnits.map(unit => {
+          if (!unit.activeAutoOptions?.includes('SCHEDULE')) return unit;
+          
+          const acIdStr = unit.id.toString();
+          
+          const specialSchedules = savedSchedules.special || {};
+          let activeSpecialDate = null;
+          if (specialSchedules[acIdStr] && specialSchedules[acIdStr].length > 0) {
+            activeSpecialDate = specialSchedules[acIdStr].find(d => d.date === dateStr);
+          }
+          if (!activeSpecialDate && specialSchedules['ALL']) {
+            activeSpecialDate = specialSchedules['ALL'].find(d => d.date === dateStr);
+          }
+          
+          const dailySchedules = savedSchedules.daily || {};
+          let todaySlots = [];
+          if (dailySchedules[acIdStr] && dailySchedules[acIdStr][currentDay] && dailySchedules[acIdStr][currentDay].length > 0) {
+            todaySlots = dailySchedules[acIdStr][currentDay];
+          } else if (dailySchedules['ALL'] && dailySchedules['ALL'][currentDay]) {
+            todaySlots = dailySchedules['ALL'][currentDay];
+          }
+          
+          const activeSlot = todaySlots.find(slot => {
+             return currentTimeStr >= slot.start && currentTimeStr < slot.end;
+          });
+
+          let expectedPower = unit.status;
+          let expectedTemp = unit.setTemp;
+          
+          if (activeSpecialDate) {
+            if (activeSpecialDate.action === 'System OFF') {
+              expectedPower = 'OFF';
+            } else if (activeSpecialDate.action === 'Custom Temp') {
+              expectedTemp = Number(activeSpecialDate.temp);
+              expectedPower = 'ON';
+            }
+          } else if (activeSlot) {
+            expectedPower = activeSlot.power;
+            if (activeSlot.temp) expectedTemp = Number(activeSlot.temp);
+          } else {
+             // Turn OFF if out of schedule
+             expectedPower = 'OFF';
+          }
+          
+          if (unit.status !== expectedPower || unit.setTemp !== expectedTemp) {
+            hasChanges = true;
+            return {
+              ...unit,
+              status: expectedPower,
+              setTemp: expectedTemp,
+              powerUsage: expectedPower === 'ON' ? 1.5 : 0
+            };
+          }
+          
+          return unit;
+        });
+        
+        return hasChanges ? newUnits : prevUnits;
+      });
+      
+    } catch (e) {
+      // ignore
+    }
+  }, [currentTime]);
 
   const togglePower = (id) => {
     setUnits(units.map(u => {
@@ -203,8 +293,17 @@ const ACOverview = () => {
     const unit = units.find(u => u.id === id);
     setControlTargetId(id);
     setControlMode(unit?.operationMode || 'Manual');
+    setAutoOptions(unit?.activeAutoOptions || []);
     setControlSuccessMessage('');
     setShowControlModal(true);
+  };
+
+  const handleAutoToggle = (option) => {
+    setAutoOptions(prev => {
+      const newOptions = prev.includes(option) ? prev.filter(o => o !== option) : [...prev, option];
+      setUnits(units.map(u => u.id === controlTargetId ? { ...u, activeAutoOptions: newOptions } : u));
+      return newOptions;
+    });
   };
 
   const handleControlAction = (action) => {
@@ -236,6 +335,71 @@ const ACOverview = () => {
       case 'Fan': return <Fan size={14} className="text-secondary" />;
       case 'Heat': return <Thermometer size={14} className="text-danger" />;
       default: return <Wind size={14} />;
+    }
+  };
+
+  const handleViewDetails = (unit) => {
+    navigate(`/ac/${unit.id}`);
+  };
+
+  const getActiveScheduleForUnit = (unit) => {
+    if (!unit.activeAutoOptions?.includes('SCHEDULE')) return null;
+    
+    const savedSchedulesStr = localStorage.getItem('bms_ac_schedules');
+    if (!savedSchedulesStr) return null;
+    
+    try {
+      const savedSchedules = JSON.parse(savedSchedulesStr);
+      const acIdStr = unit.id.toString();
+      
+      const dailySchedules = savedSchedules.daily || {};
+      const targetDaily = dailySchedules[acIdStr] || dailySchedules['ALL'] || {};
+      
+      const specialSchedules = savedSchedules.special || {};
+      const targetSpecial = specialSchedules[acIdStr] || specialSchedules['ALL'] || [];
+      
+      const hasDailySlots = Object.values(targetDaily).some(daySlots => daySlots && daySlots.length > 0);
+      const hasSpecialDates = targetSpecial.length > 0;
+      
+      return (hasDailySlots || hasSpecialDates) ? true : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const getScheduleStats = (unit) => {
+    const savedSchedulesStr = localStorage.getItem('bms_ac_schedules');
+    if (!savedSchedulesStr) return { done: 0, upcoming: 0, total: 0 };
+    try {
+      const savedSchedules = JSON.parse(savedSchedulesStr);
+      const acIdStr = unit.id.toString();
+      const dailySchedules = savedSchedules.daily || {};
+      
+      const now = new Date();
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const currentDay = days[now.getDay()];
+      
+      let todaySlots = [];
+      if (dailySchedules[acIdStr] && dailySchedules[acIdStr][currentDay] && dailySchedules[acIdStr][currentDay].length > 0) {
+        todaySlots = dailySchedules[acIdStr][currentDay];
+      } else if (dailySchedules['ALL'] && dailySchedules['ALL'][currentDay]) {
+        todaySlots = dailySchedules['ALL'][currentDay];
+      }
+      
+      const currentHours = now.getHours().toString().padStart(2, '0');
+      const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+      const currentTimeStr = `${currentHours}:${currentMinutes}`;
+      
+      let done = 0;
+      let upcoming = 0;
+      todaySlots.forEach(slot => {
+        if (slot.end <= currentTimeStr) done++;
+        else if (slot.start > currentTimeStr) upcoming++;
+      });
+      
+      return { done, upcoming, total: todaySlots.length };
+    } catch (e) {
+      return { done: 0, upcoming: 0, total: 0 };
     }
   };
 
@@ -354,11 +518,20 @@ const ACOverview = () => {
         
         {/* SUMMARY WIDGET */}
         <div className="d-flex align-items-center gap-3">
-          <Button variant="info" className="rounded-pill fw-bold px-4 py-2 shadow-sm d-flex align-items-center border-0 text-white" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)' }} onClick={() => setShowGroupModal(true)}>
-            <Settings size={16} className="me-2"/> Manage Groups
+          <Button 
+            className="rounded-pill fw-bold d-flex align-items-center border-0 shadow-none text-white" 
+            style={{ background: '#0ea5e9', padding: '10px 24px', letterSpacing: '0.3px', transition: 'all 0.3s ease' }} 
+            onClick={() => setShowGroupModal(true)}
+          >
+            <Settings size={18} className="me-2"/> Manage Groups
           </Button>
-          <Button variant="outline-light" className="rounded-pill fw-bold px-4 py-2 shadow-sm d-flex align-items-center border-secondary text-secondary hover-white" onClick={() => setShowScheduleModal(true)}>
-            <Clock size={16} className="me-2"/> Global Schedule
+          <Button 
+            variant="outline-secondary" 
+            className="rounded-pill fw-bold d-flex align-items-center bg-transparent" 
+            style={{ padding: '10px 24px', borderColor: isDark ? '#334155' : '#cbd5e1', color: isDark ? '#94a3b8' : '#64748b', letterSpacing: '0.3px', transition: 'all 0.3s ease' }} 
+            onClick={() => navigate('/ac/schedule')}
+          >
+            <Clock size={18} className="me-2"/> Global Schedule
           </Button>
         </div>
       </div>
@@ -419,17 +592,21 @@ const ACOverview = () => {
 
                     <button 
                       onClick={() => openControlModal(unit.id)}
-                      className={`btn rounded-circle d-flex align-items-center justify-content-center sleek-power ${unit.status === 'ON' ? 'on' : 'off'}`} 
+                      className={`rounded-circle d-flex align-items-center justify-content-center sleek-power ${unit.status === 'ON' ? 'on' : 'off'}`} 
                       style={{ 
                         width: '56px', height: '56px', 
-                        background: unit.status === 'ON' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'rgba(255,255,255,0.05)',
-                        border: unit.status === 'ON' ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                        color: unit.status === 'ON' ? '#fff' : '#64748b',
+                        background: unit.status === 'ON' 
+                          ? (isDark ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : '#ffffff') 
+                          : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                        border: unit.status === 'ON' ? 'none' : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                        color: unit.status === 'ON' 
+                          ? (isDark ? '#fff' : '#0ea5e9') 
+                          : (isDark ? '#64748b' : '#94a3b8'),
                         boxShadow: unit.status === 'ON' ? '0 10px 20px rgba(14, 165, 233, 0.3)' : 'none',
                         transition: 'all 0.3s ease'
                       }}
                     >
-                      <Power size={24} />
+                      <Power size={24} strokeWidth={unit.status === 'ON' ? 2.5 : 2} />
                     </button>
                   </div>
 
@@ -447,16 +624,31 @@ const ACOverview = () => {
                   </div>
 
                   {/* Schedule Indicator */}
-                  {unit.scheduleStart && unit.scheduleEnd ? (
-                    <div className="d-flex align-items-center justify-content-between px-3 py-2 rounded-pill" style={{ background: 'rgba(14, 165, 233, 0.1)', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
-                      <div className="d-flex align-items-center gap-2">
-                        <Clock size={12} className="text-info" />
-                        <span className="text-info fw-bold" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>{unit.scheduleStart} — {unit.scheduleEnd}</span>
+                  {getActiveScheduleForUnit(unit) ? (
+                    <div className="d-flex flex-column gap-2 mt-2">
+                      <div className="d-flex align-items-center justify-content-between px-3 py-2 rounded-pill" style={{ background: 'rgba(14, 165, 233, 0.1)', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
+                        <div className="d-flex align-items-center gap-2">
+                          <Clock size={12} className="text-info" />
+                          <span className="text-info fw-bold" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>
+                            {currentTime.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <div className="bg-info rounded-circle" style={{ width: '6px', height: '6px', boxShadow: '0 0 8px #0ea5e9' }}></div>
                       </div>
-                      <div className="bg-info rounded-circle" style={{ width: '6px', height: '6px', boxShadow: '0 0 8px #0ea5e9' }}></div>
+                      
+                      {(() => {
+                        const stats = getScheduleStats(unit);
+                        return (
+                          <div className="d-flex justify-content-between px-2 text-secondary fw-bold" style={{ fontSize: '10px', letterSpacing: '0.5px' }}>
+                            <span>Done: <span className={isDark ? 'text-white' : 'text-dark'}>{stats.done}</span></span>
+                            <span>Upcoming: <span className={isDark ? 'text-white' : 'text-dark'}>{stats.upcoming}</span></span>
+                            <span>Total: <span className={isDark ? 'text-white' : 'text-dark'}>{stats.total}</span></span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
-                    <div className="d-flex align-items-center justify-content-center px-3 py-2 rounded-pill" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+                    <div className="d-flex align-items-center justify-content-center px-3 py-2 rounded-pill mt-2" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px dashed rgba(255, 255, 255, 0.1)' }}>
                       <span className="text-secondary fw-bold" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>No Active Schedule</span>
                     </div>
                   )}
@@ -785,26 +977,26 @@ const ACOverview = () => {
       </Modal>
 
       {/* POWER CONTROL MODAL */}
-      <Modal show={showControlModal} onHide={() => setShowControlModal(false)} centered size="sm" className="premium-modal">
-        <Modal.Header closeButton closeVariant="white" className="border-bottom-0 pb-0" style={{ background: '#0f172a' }}>
-          <Modal.Title className="text-white fs-5 fw-bold d-flex align-items-center gap-3">
+      <Modal show={showControlModal} onHide={() => setShowControlModal(false)} centered size="sm" className={`premium-modal ${isDark ? '' : 'light-mode-modal'}`}>
+        <Modal.Header closeButton closeVariant={isDark ? "white" : "black"} className="border-bottom-0 pb-0" style={{ background: isDark ? '#0f172a' : '#f8fafc' }}>
+          <Modal.Title className={`fs-5 fw-bold d-flex align-items-center gap-3 ${isDark ? 'text-white' : 'text-dark'}`}>
             <div className="bg-info rounded-circle d-flex align-items-center justify-content-center shadow" style={{ width: '36px', height: '36px' }}>
               <Power size={18} color="white" />
             </div>
             Operation Mode
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body className="px-4 py-4 text-center position-relative" style={{ background: '#0f172a', color: '#fff' }}>
+        <Modal.Body className="px-4 py-4 text-center position-relative" style={{ background: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#fff' : '#0f172a' }}>
           
           {/* Segmented Control for Auto/Manual */}
-          <div className="d-flex align-items-center justify-content-between p-1 rounded-pill mb-4 mx-auto" style={{ background: 'rgba(0,0,0,0.3)', width: '220px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)' }}>
+          <div className="d-flex align-items-center justify-content-between p-1 rounded-pill mb-4 mx-auto" style={{ background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)', width: '220px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)'}`, boxShadow: isDark ? 'inset 0 2px 4px rgba(0,0,0,0.5)' : 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
             <div 
               onClick={() => {
                 setControlMode('Manual'); 
                 setControlSuccessMessage('');
                 setUnits(units.map(u => u.id === controlTargetId ? { ...u, operationMode: 'Manual' } : u));
               }}
-              className={`w-50 text-center py-2 rounded-pill fw-bold transition-all ${controlMode === 'Manual' ? 'bg-info text-white shadow' : 'text-secondary'}`}
+              className={`w-50 text-center py-2 rounded-pill fw-bold transition-all ${controlMode === 'Manual' ? 'bg-info text-white shadow' : (isDark ? 'text-secondary' : 'text-dark')}`}
               style={{ fontSize: '12px', letterSpacing: '1px', cursor: 'pointer' }}
             >
               MANUAL
@@ -815,7 +1007,7 @@ const ACOverview = () => {
                 setControlSuccessMessage('');
                 setUnits(units.map(u => u.id === controlTargetId ? { ...u, operationMode: 'Auto' } : u));
               }}
-              className={`w-50 text-center py-2 rounded-pill fw-bold transition-all ${controlMode === 'Auto' ? 'bg-info text-white shadow' : 'text-secondary'}`}
+              className={`w-50 text-center py-2 rounded-pill fw-bold transition-all ${controlMode === 'Auto' ? 'bg-info text-white shadow' : (isDark ? 'text-secondary' : 'text-dark')}`}
               style={{ fontSize: '12px', letterSpacing: '1px', cursor: 'pointer' }}
             >
               AUTO
@@ -845,7 +1037,7 @@ const ACOverview = () => {
           </div>
 
           {/* Premium Action Buttons */}
-          <div className="d-flex justify-content-center align-items-center gap-2 w-100" style={{ height: '85px', transition: 'all 0.3s ease' }}>
+          <div className="d-flex justify-content-center align-items-center gap-2 w-100" style={{ minHeight: '110px', transition: 'all 0.3s ease' }}>
             {controlMode === 'Manual' ? (
               <>
                 <button onClick={() => handleControlAction('START')} className="action-btn-premium start-btn" style={{ width: '100px', height: '85px' }}>
@@ -859,17 +1051,29 @@ const ACOverview = () => {
               </>
             ) : (
               <>
-                <button onClick={() => handleControlAction('SCHEDULE')} className="action-btn-premium schedule-btn" style={{ width: '75px', height: '85px' }}>
-                  <Clock size={20} className="mb-2" />
-                  <span style={{ fontSize: '9px' }}>SCHEDULE</span>
+                <button onClick={() => handleAutoToggle('SCHEDULE')} className={`action-btn-premium schedule-btn ${autoOptions.includes('SCHEDULE') ? 'active-opt' : ''} ${!isDark ? 'light-btn' : ''}`} style={{ width: '70px', height: '105px', position: 'relative' }}>
+                  {autoOptions.includes('SCHEDULE') && <CheckCircle size={18} fill="#10b981" color="#ffffff" style={{position: 'absolute', top: '4px', right: '4px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'}} />}
+                  <Clock size={24} className="mb-2" />
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>SCHEDULE</span>
                 </button>
-                <button onClick={() => handleControlAction('SENSOR')} className="action-btn-premium sensor-btn" style={{ width: '75px', height: '85px' }}>
-                  <Activity size={20} className="mb-2" />
-                  <span style={{ fontSize: '9px' }}>SENSOR</span>
+                <button onClick={() => handleAutoToggle('SENSOR')} className={`action-btn-premium sensor-btn ${autoOptions.includes('SENSOR') ? 'active-opt' : ''} ${!isDark ? 'light-btn' : ''}`} style={{ width: '70px', height: '105px', position: 'relative' }}>
+                  {autoOptions.includes('SENSOR') && <CheckCircle size={18} fill="#10b981" color="#ffffff" style={{position: 'absolute', top: '4px', right: '4px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'}} />}
+                  <Activity size={24} className="mb-2" />
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>SENSOR</span>
                 </button>
-                <button onClick={() => handleControlAction('LOCAL')} className="action-btn-premium local-btn" style={{ width: '75px', height: '85px' }}>
-                  <Settings size={20} className="mb-2" />
-                  <span style={{ fontSize: '9px' }}>LOCAL</span>
+                <button onClick={() => handleAutoToggle('TEMP')} className={`action-btn-premium temp-btn ${autoOptions.includes('TEMP') ? 'active-opt' : ''} ${!isDark ? 'light-btn' : ''}`} style={{ width: '70px', height: '105px', position: 'relative' }}>
+                  {autoOptions.includes('TEMP') && <CheckCircle size={18} fill="#10b981" color="#ffffff" style={{position: 'absolute', top: '4px', right: '4px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'}} />}
+                  <Thermometer size={24} className="mb-2" />
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>TEMP</span>
+                </button>
+                <button 
+                  className={`action-btn-premium local-btn ${autoOptions.includes('LOCAL') ? 'active-opt' : ''} ${!isDark ? 'light-btn' : ''}`} 
+                  style={{ width: '70px', height: '105px', position: 'relative', cursor: 'not-allowed', opacity: 0.8 }}
+                  title="This is selected automatically when the AC is operated from a physical switch."
+                >
+                  {autoOptions.includes('LOCAL') && <CheckCircle size={18} fill="#10b981" color="#ffffff" style={{position: 'absolute', top: '4px', right: '4px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'}} />}
+                  <Settings size={24} className="mb-2" />
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>LOCAL</span>
                 </button>
               </>
             )}
@@ -933,7 +1137,7 @@ const ACOverview = () => {
           justify-content: center;
           width: 100px;
           height: 100px;
-          border-radius: 20px;
+          border-radius: 26px;
           border: 1px solid rgba(255,255,255,0.05);
           background: rgba(15, 23, 42, 0.6);
           color: #94a3b8;
@@ -945,21 +1149,40 @@ const ACOverview = () => {
           cursor: pointer;
         }
 
+        .action-btn-premium.light-btn:not(.active-opt) {
+          background: #ffffff;
+          border-color: rgba(0,0,0,0.1);
+          color: #475569;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        
+        .action-btn-premium.light-btn:not(.active-opt):hover {
+          background: #f8fafc;
+          border-color: rgba(0,0,0,0.15);
+        }
+
         .action-btn-premium:hover {
           transform: translateY(-5px);
         }
 
         .start-btn { color: #10b981; border-color: rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05); }
         .stop-btn { color: #ef4444; border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); }
-        .schedule-btn { color: #0ea5e9; border-color: rgba(14, 165, 233, 0.2); background: rgba(14, 165, 233, 0.05); }
-        .sensor-btn { color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); background: rgba(245, 158, 11, 0.05); }
-        .local-btn { color: #a855f7; border-color: rgba(168, 85, 247, 0.2); background: rgba(168, 85, 247, 0.05); }
+        .schedule-btn { color: #0ea5e9; border-color: rgba(14, 165, 233, 0.3); background: rgba(14, 165, 233, 0.02); }
+        .sensor-btn { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.02); }
+        .temp-btn { color: #ec4899; border-color: rgba(236, 72, 153, 0.3); background: rgba(236, 72, 153, 0.02); }
+        .local-btn { color: #a855f7; border-color: rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.02); }
 
         .start-btn:hover { background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3)); border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2); }
         .stop-btn:hover { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.3)); border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2); }
-        .schedule-btn:hover { background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(2, 132, 199, 0.3)); border-color: rgba(14, 165, 233, 0.5); box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2); }
-        .sensor-btn:hover { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.3)); border-color: rgba(245, 158, 11, 0.5); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.2); }
-        .local-btn:hover { background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.3)); border-color: rgba(168, 85, 247, 0.5); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); }
+        .schedule-btn:hover { background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(2, 132, 199, 0.2)); border-color: rgba(14, 165, 233, 0.5); box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2); }
+        .sensor-btn:hover { background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.2)); border-color: rgba(245, 158, 11, 0.5); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.2); }
+        .temp-btn:hover { background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(219, 39, 119, 0.2)); border-color: rgba(236, 72, 153, 0.5); box-shadow: 0 10px 20px rgba(236, 72, 153, 0.2); }
+        .local-btn:hover { background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.2)); border-color: rgba(168, 85, 247, 0.5); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); }
+
+        .schedule-btn.active-opt { background: linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(2, 132, 199, 0.6)); border-color: rgba(14, 165, 233, 0.8); box-shadow: 0 10px 20px rgba(14, 165, 233, 0.4); color: #fff; }
+        .sensor-btn.active-opt { background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.6)); border-color: rgba(245, 158, 11, 0.8); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4); color: #fff; }
+        .temp-btn.active-opt { background: linear-gradient(135deg, rgba(236, 72, 153, 0.4), rgba(219, 39, 119, 0.6)); border-color: rgba(236, 72, 153, 0.8); box-shadow: 0 10px 20px rgba(236, 72, 153, 0.4); color: #fff; }
+        .local-btn.active-opt { background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(147, 51, 234, 0.6)); border-color: rgba(168, 85, 247, 0.8); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.4); color: #fff; }
 
         
         .fs-12 { font-size: 0.75rem !important; }
