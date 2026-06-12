@@ -640,7 +640,7 @@ const EnergyMeteringOverview = () => {
   const removeDraftGroup = (groupId) => {
     setGroupDrafts(prev => prev.filter(group => group.id !== groupId));
   };
-
+  
   const updateDraftGroup = (groupId, field, value) => {
     setGroupDrafts(prev => prev.map(group => (group.id === groupId ? { ...group, [field]: value } : group)));
   };

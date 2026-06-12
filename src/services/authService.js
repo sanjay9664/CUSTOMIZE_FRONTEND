@@ -64,6 +64,7 @@ export const getSochiotUserMe = async () => {
 };
 
 const CONFIG_API_URL = '/sochiot-config';
+const TRIGGERS_API_URL = '/sochiot-triggers';
 
 export const getSochiotLocationData = async (locationId) => {
   const token = localStorage.getItem('sochiot_token');
@@ -154,6 +155,149 @@ export const getSochiotDeviceStatus = async (deviceId) => {
     return await response.json();
   } catch (error) {
     console.error('Fetch Device Status Error:', error);
+    throw error;
+  }
+};
+export const getSochiotRules = async (nodeType, nodeId, page = 1) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`${TRIGGERS_API_URL}/rules/${nodeType}/${nodeId}?page=${page}&isPageable=true&sortBy=lastUpdated&sortOrder=DESC`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }, 10000); // 10 seconds timeout for rules
+
+    if (!response.ok) throw new Error('Failed to fetch rules');
+    return await response.json();
+  } catch (error) {
+    console.error('Fetch Rules Error:', error);
+    throw error;
+  }
+};
+
+export const getSochiotRuleById = async (ruleId) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`${TRIGGERS_API_URL}/rules/${ruleId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }, 10000);
+
+    if (!response.ok) throw new Error('Failed to fetch rule detail');
+    return await response.json();
+  } catch (error) {
+    console.error('Fetch Rule By ID Error:', error);
+    throw error;
+  }
+};
+
+// Fetch event fields for a given moduleId (used in condition edit dropdown)
+export const getSochiotEventFields = async (moduleId, moduleTypeId) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return [];
+
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  // Try 1: triggers/fields endpoint with moduleId
+  try {
+    const r = await fetchWithTimeout(`${TRIGGERS_API_URL}/fields?moduleId=${moduleId}`, { headers }, 8000);
+    if (r.ok) {
+      const d = await r.json();
+      const arr = Array.isArray(d) ? d : (d.list || d.content || d.data || []);
+      if (arr.length > 0) return arr;
+    }
+  } catch (e) {}
+
+  // Try 2: config-engine event-fields by moduleTypeId
+  if (moduleTypeId) {
+    try {
+      const r = await fetchWithTimeout(`${CONFIG_API_URL}/module-type/${moduleTypeId}/event-fields`, { headers }, 8000);
+      if (r.ok) {
+        const d = await r.json();
+        const arr = Array.isArray(d) ? d : (d.list || d.content || d.data || []);
+        if (arr.length > 0) return arr;
+      }
+    } catch (e) {}
+  }
+
+  // Try 3: triggers event-fields by moduleTypeId
+  if (moduleTypeId) {
+    try {
+      const r = await fetchWithTimeout(`${TRIGGERS_API_URL}/fields?moduleTypeId=${moduleTypeId}`, { headers }, 8000);
+      if (r.ok) {
+        const d = await r.json();
+        const arr = Array.isArray(d) ? d : (d.list || d.content || d.data || []);
+        if (arr.length > 0) return arr;
+      }
+    } catch (e) {}
+  }
+
+  return [];
+};
+
+// Fetch modules for a device UUID (used in condition edit Module dropdown)
+export const getSochiotDeviceModules = async (deviceUuid) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return [];
+
+  try {
+    const response = await fetchWithTimeout(`${CONFIG_API_URL}/device/${deviceUuid}/modules`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }, 8000);
+    if (response.ok) {
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.list || data.content || []);
+    }
+  } catch (e) { console.error('Fetch Device Modules Error:', e); }
+  return [];
+};
+
+// Fetch full device details by numeric ID → includes modules + event fields
+// API: GET /config-engine/device/{numericId}
+export const getSochiotDeviceByNumericId = async (deviceNumericId) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`${CONFIG_API_URL}/device/${deviceNumericId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }, 10000);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (e) { console.error('Fetch Device By Numeric ID Error:', e); }
+  return null;
+};
+
+// Update an existing rule
+// API: PUT /triggers/rules/{ruleId}
+export const updateSochiotRule = async (ruleId, payload) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/${ruleId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: (() => { const json = JSON.stringify(payload); console.log('🔴 UPDATE RULE PAYLOAD:', json); return json; })()
+    }, 10000);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Update Rule API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Update Rule Error:', error);
     throw error;
   }
 };

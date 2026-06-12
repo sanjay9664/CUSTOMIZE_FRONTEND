@@ -190,7 +190,7 @@ const ConfigTemplates = () => {
   const [emPowerConfig, setEmPowerConfig] = useState({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', activePower: '', reactivePower: '', apparentPower: '', enabled: true });
   const [emSystemConfig, setEmSystemConfig] = useState({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', pf: '', freq: '', commStatus: '', enabled: true });
   const [emConsumptionConfig, setEmConsumptionConfig] = useState({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', cumulativekWh: '', enabled: true });
-  const [emChangeConfig, setEmChangeConfig] = useState({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', ebKvah: '', ebKwh: '', balance: '', totalKw: '', vR: '', vY: '', vB: '', iR: '', iY: '', iB: '', pf: '', totalKva: '', dgKwh: '', enabled: true });
+  const [emChangeConfig, setEmChangeConfig] = useState({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', ebKvah: '', ebKwh: '', balance: '', totalKw: '', vR: '', vY: '', vB: '', iR: '', iY: '', iB: '', pf: '', totalKva: '', dgKwh: '', vLLAvg: '', vLNAvg: '', iAvg: '', kvaAvg: '', kvarAvg: '', pfAvg: '', vRY: '', vYB: '', vBR: '', pfR: '', pfY: '', pfB: '', loadHrs: '', loadMin: '', noLoadHrs: '', noLoadMin: '', loadPct: '', enabled: true });
   const [emWarningConfig, setEmWarningConfig] = useState({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', lowBalanceCut: '', overloadTrip: '', overloadLimitReached: '', connectedStatus: '', forceOff: '', enabled: true });
   const [emReadConfig, setEmReadConfig] = useState({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', meterSrno: '', noOfOverloadCheck: '', ebDgStatus: '', ebTariff: '', dgTariff: '', ebRLoadSet: '', ebYLoadSet: '', ebBLoadSet: '', dgRLoadSet: '', dgYLoadSet: '', dgBLoadSet: '', enabled: true });
   const [emLimitsConfig, setEmLimitsConfig] = useState({
@@ -1429,7 +1429,124 @@ const ConfigTemplates = () => {
           }
         }
       } else if (key === 'device') {
-        if (value) fetchDeviceDetails(value);
+        if (value) {
+          fetchDeviceDetails(value).then(modules => {
+            if (modules) {
+              const allFields = [];
+              Object.values(modules).forEach(m => {
+                (m.fields || []).forEach(f => {
+                  allFields.push({ ...f, id: `${m.id}::${f.id}` });
+                });
+              });
+
+              const usedFields = new Set();
+              const findField = (...suggestionKeys) => {
+                for (const suggestionKey of suggestionKeys) {
+                  // Escape special regex characters in suggestionKey except when we want them to act as literals
+                  const escapedKey = suggestionKey.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  const regex = new RegExp(`\\b${escapedKey}\\b`);
+                  const found = allFields.find(f => !usedFields.has(f.id) && regex.test(f.label.toUpperCase()));
+                  if (found) {
+                    usedFields.add(found.id);
+                    return found.id;
+                  }
+                }
+                return '';
+              };
+
+              setEmVoltageConfig(prev => ({
+                ...prev,
+                vR: findField('VOLTAGE R-PHASE', 'VOLTAGE R', 'VR', 'U1'),
+                vY: findField('VOLTAGE Y-PHASE', 'VOLTAGE Y', 'VY', 'U2'),
+                vB: findField('VOLTAGE B-PHASE', 'VOLTAGE B', 'VB', 'U3')
+              }));
+
+              setEmCurrentConfig(prev => ({
+                ...prev,
+                iR: findField('R-CURRENT', 'CURRENT R', 'L1 AMPS', 'IR', 'A1'),
+                iY: findField('Y-CURRENT', 'CURRENT Y', 'L2 AMPS', 'IY', 'A2'),
+                iB: findField('B-CURRENT', 'CURRENT B', 'L3 AMPS', 'IB', 'A3')
+              }));
+
+              setEmPowerConfig(prev => ({
+                ...prev,
+                activePower: findField('TOTAL KW', 'ACTIVE POWER'),
+                reactivePower: findField('REACTIVE POWER'),
+                apparentPower: findField('TOTAL KVA', 'APPARENT POWER')
+              }));
+
+              setEmSystemConfig(prev => ({
+                ...prev,
+                pf: findField('POWER FACTOR', 'PF', 'AVG PF'),
+                freq: findField('FREQUENCY', 'HZ'),
+                commStatus: findField('COMM STATUS', 'COMMUNICATION')
+              }));
+
+              setEmConsumptionConfig(prev => ({
+                ...prev,
+                cumulativekWh: findField('CUMULATIVE KWH', 'EB KWH', 'ACTIVE ENERGY')
+              }));
+
+              setEmWarningConfig(prev => ({
+                ...prev,
+                lowBalanceCut: findField('LOW BALANCE', 'BALANCE CUT'),
+                overloadTrip: findField('OVERLOAD TRIP'),
+                overloadLimitReached: findField('OVERLOAD LIMIT'),
+                connectedStatus: findField('CONNECTED STATUS', 'RELAY STATUS'),
+                forceOff: findField('FORCE OFF')
+              }));
+
+              setEmReadConfig(prev => ({
+                ...prev,
+                meterSrno: findField('METER SERIAL', 'METER SR', 'SERIAL NUMBER'),
+                noOfOverloadCheck: findField('OVERLOAD CHECK'),
+                ebDgStatus: findField('EB DG STATUS', 'SOURCE STATUS'),
+                ebTariff: findField('EB TARIFF'),
+                dgTariff: findField('DG TARIFF'),
+                ebRLoadSet: findField('EB R LOAD'),
+                ebYLoadSet: findField('EB Y LOAD'),
+                ebBLoadSet: findField('EB B LOAD'),
+                dgRLoadSet: findField('DG R LOAD'),
+                dgYLoadSet: findField('DG Y LOAD'),
+                dgBLoadSet: findField('DG B LOAD')
+              }));
+
+              setEmChangeConfig(prev => ({
+                ...prev,
+                ebKvah: findField('EB KVAH', 'KVAH', '3,152', '3,157'),
+                ebKwh: findField('EB KWH', 'KWH', '3,151'),
+                balance: findField('BALANCE', 'AMT'),
+                totalKw: findField('TOTAL KW', 'ACTIVE POWER'),
+                vR: findField('VOLTAGE R-PHASE', 'VOLTAGE R', 'VR', 'U1'),
+                vY: findField('VOLTAGE Y-PHASE', 'VOLTAGE Y', 'VY', 'U2'),
+                vB: findField('VOLTAGE B-PHASE', 'VOLTAGE B', 'VB', 'U3'),
+                iR: findField('R-CURRENT', 'CURRENT R', 'L1 AMPS', 'IR', 'A1'),
+                iY: findField('Y-CURRENT', 'CURRENT Y', 'L2 AMPS', 'IY', 'A2'),
+                iB: findField('B-CURRENT', 'CURRENT B', 'L3 AMPS', 'IB', 'A3'),
+                pf: findField('POWER FACTOR', 'PF', 'AVG PF'),
+                totalKva: findField('TOTAL KVA', 'POWER KVA'),
+                dgKwh: findField('DG KWH', 'DG ENERGY'),
+                vLLAvg: findField('AVG VOLTAGE L-L', 'VLL AVG', 'AVG VLL'),
+                vLNAvg: findField('AVG VOLTAGE L-N', 'VLN AVG', 'AVG VLN'),
+                iAvg: findField('AVG CURRENT', 'I AVG', 'IAVG'),
+                kvaAvg: findField('POWER KVA (AVG)', 'KVA AVG', 'AVG KVA'),
+                kvarAvg: findField('POWER KVAR (AVG)', 'KVAR AVG', 'AVG KVAR'),
+                pfAvg: findField('AVG PF', 'PF AVG', 'PFAVG'),
+                vRY: findField('VOLTAGE R-Y', 'VRY', 'V RY'),
+                vYB: findField('VOLTAGE Y-B', 'VYB', 'V YB'),
+                vBR: findField('VOLTAGE B-R', 'VBR', 'V BR'),
+                pfR: findField('PF-R', 'PF R', 'PFR'),
+                pfY: findField('PF-Y', 'PF Y', 'PFY'),
+                pfB: findField('PF-B', 'PF B', 'PFB'),
+                loadHrs: findField('LOAD HRS', 'LOAD HOURS'),
+                loadMin: findField('LOAD MIN'),
+                noLoadHrs: findField('NO LOAD HRS', 'NO LOAD HOURS'),
+                noLoadMin: findField('NO LOAD MIN'),
+                loadPct: findField('LOAD %', 'LOAD PCT', 'LOAD PERCENT')
+              }));
+            }
+          });
+        }
       }
       return;
     }
@@ -4136,7 +4253,7 @@ const ConfigTemplates = () => {
                                 setEmPowerConfig(existing.mapping.emPowerConfig || { organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', activePower: '', reactivePower: '', apparentPower: '', enabled: true });
                                 setEmSystemConfig(existing.mapping.emSystemConfig || { organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', pf: '', freq: '', commStatus: '', enabled: true });
                                 setEmConsumptionConfig(existing.mapping.emConsumptionConfig || { organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', cumulativekWh: '', enabled: true });
-                                setEmChangeConfig(existing.mapping.emChangeConfig || { organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', ebKvah: '', ebKwh: '', balance: '', totalKw: '', vR: '', vY: '', vB: '', iR: '', iY: '', iB: '', pf: '', totalKva: '', dgKwh: '', enabled: true });
+                                setEmChangeConfig(existing.mapping.emChangeConfig || { organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', ebKvah: '', ebKwh: '', balance: '', totalKw: '', vR: '', vY: '', vB: '', iR: '', iY: '', iB: '', pf: '', totalKva: '', dgKwh: '', vLLAvg: '', vLNAvg: '', iAvg: '', kvaAvg: '', kvarAvg: '', pfAvg: '', vRY: '', vYB: '', vBR: '', pfR: '', pfY: '', pfB: '', loadHrs: '', loadMin: '', noLoadHrs: '', noLoadMin: '', loadPct: '', enabled: true });
                                 setEmWarningConfig(existing.mapping.emWarningConfig || { organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', lowBalanceCut: '', overloadTrip: '', overloadLimitReached: '', connectedStatus: '', forceOff: '', enabled: true });
                                 setEmReadConfig(existing.mapping.emReadConfig || { organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', meterSrno: '', noOfOverloadCheck: '', ebDgStatus: '', ebTariff: '', dgTariff: '', ebRLoadSet: '', ebYLoadSet: '', ebBLoadSet: '', dgRLoadSet: '', dgYLoadSet: '', dgBLoadSet: '', enabled: true });
                                 setEmLimitsConfig(existing.mapping.emLimitsConfig || {
@@ -4157,7 +4274,7 @@ const ConfigTemplates = () => {
                                 setEmPowerConfig({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', activePower: '', reactivePower: '', apparentPower: '', enabled: true });
                                 setEmSystemConfig({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', pf: '', freq: '', commStatus: '', enabled: true });
                                 setEmConsumptionConfig({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', cumulativekWh: '', enabled: true });
-                                setEmChangeConfig({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', ebKvah: '', ebKwh: '', balance: '', totalKw: '', vR: '', vY: '', vB: '', iR: '', iY: '', iB: '', pf: '', totalKva: '', dgKwh: '', enabled: true });
+                                setEmChangeConfig({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', ebKvah: '', ebKwh: '', balance: '', totalKw: '', vR: '', vY: '', vB: '', iR: '', iY: '', iB: '', pf: '', totalKva: '', dgKwh: '', vLLAvg: '', vLNAvg: '', iAvg: '', kvaAvg: '', kvarAvg: '', pfAvg: '', vRY: '', vYB: '', vBR: '', pfR: '', pfY: '', pfB: '', loadHrs: '', loadMin: '', noLoadHrs: '', noLoadMin: '', loadPct: '', enabled: true });
                                 setEmWarningConfig({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', lowBalanceCut: '', overloadTrip: '', overloadLimitReached: '', connectedStatus: '', forceOff: '', enabled: true });
                                 setEmReadConfig({ organization: '', client: '', zone: '', subZone: '', building: '', device: '', module: '', meterSrno: '', noOfOverloadCheck: '', ebDgStatus: '', ebTariff: '', dgTariff: '', ebRLoadSet: '', ebYLoadSet: '', ebBLoadSet: '', dgRLoadSet: '', dgYLoadSet: '', dgBLoadSet: '', enabled: true });
                                 setEmLimitsConfig({
@@ -4231,7 +4348,24 @@ const ConfigTemplates = () => {
                                 { label: 'B-CURRENT (A)', key: 'iB' },
                                 { label: 'POWER FACTOR (PF)', key: 'pf' },
                                 { label: 'TOTAL KVA (KVA)', key: 'totalKva' },
-                                { label: 'DG KWH (KWH)', key: 'dgKwh' }
+                                { label: 'DG KWH (KWH)', key: 'dgKwh' },
+                                { label: 'AVG VOLTAGE L-L', key: 'vLLAvg' },
+                                { label: 'AVG VOLTAGE L-N', key: 'vLNAvg' },
+                                { label: 'AVG CURRENT', key: 'iAvg' },
+                                { label: 'POWER KVA (AVG)', key: 'kvaAvg' },
+                                { label: 'POWER KVAR (AVG)', key: 'kvarAvg' },
+                                { label: 'AVG PF', key: 'pfAvg' },
+                                { label: 'VOLTAGE R-Y', key: 'vRY' },
+                                { label: 'VOLTAGE Y-B', key: 'vYB' },
+                                { label: 'VOLTAGE B-R', key: 'vBR' },
+                                { label: 'PF-R', key: 'pfR' },
+                                { label: 'PF-Y', key: 'pfY' },
+                                { label: 'PF-B', key: 'pfB' },
+                                { label: 'LOAD HRS', key: 'loadHrs' },
+                                { label: 'LOAD MIN', key: 'loadMin' },
+                                { label: 'NO LOAD HRS', key: 'noLoadHrs' },
+                                { label: 'NO LOAD MIN', key: 'noLoadMin' },
+                                { label: 'LOAD %', key: 'loadPct' }
                               ]
                             },
                             {
