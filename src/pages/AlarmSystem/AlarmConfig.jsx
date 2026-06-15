@@ -349,6 +349,73 @@ const AlarmConfig = () => {
     return [];
   };
 
+  // Toggle rule active/inactive via API
+  const toggleRuleActive = async (rule, e) => {
+    if (e) e.stopPropagation();
+    const newActive = !rule.active;
+    try {
+      // Fetch latest rule data to get current version (prevents optimistic lock errors)
+      const freshRule = await getSochiotRuleById(rule.id);
+      if (!freshRule) throw new Error('Could not fetch latest rule data');
+      
+      const origConditions = freshRule.conditions || [];
+      const origConsequences = freshRule.consequences || [];
+      const payload = {
+        name: freshRule.name,
+        active: newActive,
+        emailGroupId: freshRule.emailGroupVO?.id || freshRule.emailGroupId,
+        conditions: origConditions.map((c, idx) => {
+          const ef = c.eventField || {};
+          return {
+            name: c.name, locationId: c.locationId, deviceId: c.deviceId,
+            moduleId: c.moduleId, thresholdValue: c.thresholdValue,
+            logicalOperatorType: idx === 0 ? 'NONE' : (c.logicalOperatorType && c.logicalOperatorType !== 'NONE' ? c.logicalOperatorType : 'AND'),
+            debounceTime: c.debounceTime, parentId: c.parentId,
+            description: c.description, onModuleGroup: c.onModuleGroup || false,
+            moduleGroupId: c.moduleGroupId || null,
+            conditionType: (typeof c.conditionType === 'object' && c.conditionType) ? c.conditionType.name : c.conditionType,
+            eventField: {
+              id: ef.id, fieldName: ef.fieldName, displayName: ef.displayName,
+              fieldType: (typeof ef.fieldType === 'object' && ef.fieldType) ? ef.fieldType.name : (ef.fieldType || 'MODULE'),
+              moduleTypeId: ef.moduleTypeId, moduleTypeNumber: ef.moduleTypeNumber,
+              moduleTypeName: ef.moduleTypeName,
+              dataType: (typeof ef.dataType === 'object' && ef.dataType) ? ef.dataType.name : ef.dataType,
+              supportedValues: Array.isArray(ef.supportedValues) ? ef.supportedValues.join(',') : (ef.supportedValues ?? ''),
+              dateCreated: ef.dateCreated, lastUpdated: ef.lastUpdated, deleted: ef.deleted || false
+            }
+          };
+        }),
+        consequences: origConsequences.map(c => ({
+          name: c.name, deviceId: c.deviceId, moduleId: c.moduleId,
+          locationId: c.locationId,
+          dataType: (typeof c.dataType === 'object' && c.dataType) ? c.dataType.name : c.dataType,
+          cmdField: c.cmdField,
+          supportedValues: Array.isArray(c.supportedValues) ? c.supportedValues.join(',') : (c.supportedValues ?? ''),
+          cmdArg: c.cmdArg, argValue: c.argValue,
+          moduleTypeName: c.moduleTypeName, moduleTypeNumber: c.moduleTypeNumber,
+          moduleTypeId: c.moduleTypeId, parentId: c.parentId,
+          description: c.description, onModuleGroup: c.onModuleGroup || false,
+          moduleGroupId: c.moduleGroupId || null
+        })),
+        notifications: (freshRule.notifications || []).map(n => ({
+          id: n.id, text: n.text, alias: n.alias, userIds: n.userIds,
+          created: n.created, type: n.type, icon: n.icon, priority: n.priority
+        })),
+        version: freshRule.version
+      };
+      const updatedRule = await updateSochiotRule(rule.id, payload);
+      // Update local state with fresh data from API response
+      const newRuleData = updatedRule || { ...freshRule, active: newActive, version: freshRule.version + 1 };
+      setRules(prev => prev.map(r => r.id === rule.id ? { ...r, ...newRuleData } : r));
+      if (selectedRule?.id === rule.id) {
+        setSelectedRule(prev => ({ ...prev, ...newRuleData }));
+      }
+    } catch (error) {
+      console.error('Toggle active error:', error);
+      alert('Failed to toggle active: ' + error.message);
+    }
+  };
+
   // Styles
   const pageBg = isDark ? '#0b1120' : '#f8f9fa';
   const cardBg = isDark ? '#1e293b' : '#ffffff';
@@ -490,8 +557,8 @@ const AlarmConfig = () => {
                         type="switch"
                         id={`rule-switch-${rule.id}`}
                         checked={rule.active}
-                        readOnly
-                        onClick={e => e.stopPropagation()}
+                        onChange={() => {}}
+                        onClick={e => toggleRuleActive(rule, e)}
                         style={{ transform: 'scale(1.2)' }}
                       />
                     </div>
@@ -701,14 +768,15 @@ const AlarmConfig = () => {
                 onClick={() => alert('Delete rule: ' + selectedRule.id)}>
                 <FiTrash2 size={14} className="me-2" />Delete
               </Button>
-              <Form.Check
-                type="switch"
-                id="detail-rule-active"
-                label={<span style={{ fontSize: '13px', color: subTextColor }}>Active</span>}
-                checked={selectedRule.active}
-                readOnly
-                style={{ marginLeft: 'auto' }}
-              />
+              <div style={{ marginLeft: 'auto' }}>
+                <Form.Check
+                  type="switch"
+                  id="detail-rule-active"
+                  checked={selectedRule.active}
+                  onChange={() => toggleRuleActive(selectedRule)}
+                  label={<span style={{ fontSize: '13px', fontWeight: '600', color: selectedRule.active ? '#10b981' : '#ef4444' }}>Active</span>}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -727,21 +795,26 @@ const AlarmConfig = () => {
           onClose={() => setIsEditModalOpen(false)}
           onSaved={async (updated) => {
             try {
-              // Find original condition/consequence data from selectedRule to preserve fields
-              // that the edit modal doesn't track (moduleTypeId, moduleTypeNumber, dateCreated, etc.)
-              const origConditions = selectedRule?.conditions || [];
-              const origConsequences = selectedRule?.consequences || [];
-              const origNotifications = selectedRule?.notifications || [];
+              // Fetch latest version from API to prevent optimistic lock errors
+              const freshRule = await getSochiotRuleById(updated.id);
+              const latestVersion = freshRule?.version || updated.version;
+
+              // Find original condition/consequence data from freshRule to preserve fields
+              const origConditions = freshRule?.conditions || selectedRule?.conditions || [];
+              const origConsequences = freshRule?.consequences || selectedRule?.consequences || [];
+              const origNotifications = freshRule?.notifications || selectedRule?.notifications || [];
 
               const payload = {
                 name: updated.name,
                 active: updated.active,
                 emailGroupId: updated.emailGroupVO?.id || updated.emailGroupId,
-                conditions: updated.conditions?.map(c => {
+                conditions: updated.conditions?.map((c, idx, arr) => {
                   // Find original condition to get missing fields
                   const orig = origConditions.find(oc => oc.id === c.id) || {};
                   const origEF = orig.eventField || {};
                   const ef = c.eventField || origEF;
+                  // First condition must be NONE (no preceding operator), others keep their AND/OR setting
+                  const isFirst = idx === 0;
 
                   return {
                     name: c.name,
@@ -749,7 +822,7 @@ const AlarmConfig = () => {
                     deviceId: c.deviceId,
                     moduleId: c.moduleId,
                     thresholdValue: c.thresholdValue,
-                    logicalOperatorType: c.logicalOperatorType || 'NONE',
+                    logicalOperatorType: isFirst ? 'NONE' : (c.logicalOperatorType && c.logicalOperatorType !== 'NONE' ? c.logicalOperatorType : 'AND'),
                     debounceTime: c.debounceTime,
                     parentId: c.parentId,
                     description: c.description,
@@ -803,7 +876,7 @@ const AlarmConfig = () => {
                   icon: n.icon,
                   priority: n.priority
                 })),
-                version: updated.version
+                version: latestVersion
               };
 
               await updateSochiotRule(updated.id, payload);

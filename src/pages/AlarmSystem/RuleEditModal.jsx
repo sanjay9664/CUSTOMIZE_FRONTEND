@@ -826,34 +826,65 @@ const RuleEditModal = ({ rule, onClose, onSaved, hierarchyData, isDark }) => {
           <div>
             {sectionTitle(`Conditions (${conditions.length})`, '#06b6d4', <FiAlertCircle size={15} />)}
             {conditions.map((c, i) => (
-              <div key={c.id} style={cardSt('#06b6d4')}>
-                <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px' }}>
-                  <button onClick={() => setEditingCondition(c)} style={{ background: isDark ? 'rgba(6,182,212,0.15)' : 'rgba(6,182,212,0.1)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#06b6d4' }}>
-                    <FiEdit2 size={12} />
-                  </button>
-                  <button onClick={() => setConditions(prev => prev.filter(x => x.id !== c.id))} style={{ background: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#ef4444' }}>
-                    <FiX size={12} />
-                  </button>
+              <React.Fragment key={c.id}>
+                <div style={cardSt('#06b6d4')}>
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px' }}>
+                    <button onClick={() => setEditingCondition(c)} style={{ background: isDark ? 'rgba(6,182,212,0.15)' : 'rgba(6,182,212,0.1)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#06b6d4' }}>
+                      <FiEdit2 size={12} />
+                    </button>
+                    <button onClick={() => setConditions(prev => prev.filter(x => x.id !== c.id))} style={{ background: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#ef4444' }}>
+                      <FiX size={12} />
+                    </button>
+                  </div>
+                  <div style={{ fontWeight: '600', color: textColor, marginBottom: '10px', fontSize: '13px' }}>{i + 1}. {c.name}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {[
+                      ['Module', c.eventField?.moduleTypeName?.substring(0, 18), textColor],
+                      ['Event Field', c.eventField?.displayName, '#06b6d4'],
+                      ['Condition', c.conditionType?.displayName, '#f59e0b'],
+                      ['Value', c.thresholdValue, textColor],
+                      ['Debounce', c.debounceTime ? `${c.debounceTime}s` : '-', textColor],
+                      ['Description', c.description, textColor],
+                    ].map(([k, v, col]) => (
+                      <div key={k}>
+                        <div style={{ fontSize: '10px', color: subTextColor, textTransform: 'uppercase' }}>{k}</div>
+                        <div style={{ fontSize: '12px', color: col, fontWeight: '500' }}>{v || '-'}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ fontWeight: '600', color: textColor, marginBottom: '10px', fontSize: '13px' }}>{i + 1}. {c.name}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {[
-                    ['Module', c.eventField?.moduleTypeName?.substring(0, 18), textColor],
-                    ['Event Field', c.eventField?.displayName, '#06b6d4'],
-                    ['Condition', c.conditionType?.displayName, '#f59e0b'],
-                    ['Value', c.thresholdValue, textColor],
-                    ['Debounce', c.debounceTime ? `${c.debounceTime}s` : '-', textColor],
-                    ['Description', c.description, textColor],
-                  ].map(([k, v, col]) => (
-                    <div key={k}>
-                      <div style={{ fontSize: '10px', color: subTextColor, textTransform: 'uppercase' }}>{k}</div>
-                      <div style={{ fontSize: '12px', color: col, fontWeight: '500' }}>{v || '-'}</div>
+                {/* AND/OR toggle between conditions */}
+                {i < conditions.length - 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 10px' }}>
+                    <div style={{
+                      display: 'inline-flex', border: `1px solid ${borderColor}`, borderRadius: '8px', overflow: 'hidden'
+                    }}>
+                      {['AND', 'OR'].map(op => {
+                        // The operator belongs to the NEXT condition (first condition is always NONE)
+                        const nextCondition = conditions[i + 1];
+                        const current = (nextCondition?.logicalOperatorType && nextCondition.logicalOperatorType !== 'NONE') ? nextCondition.logicalOperatorType : 'AND';
+                        const active = current === op;
+                        return (
+                          <button key={op} onClick={() => {
+                            setConditions(prev => prev.map((cc, ci) =>
+                              ci === i + 1 ? { ...cc, logicalOperatorType: op } : cc
+                            ));
+                          }} style={{
+                            padding: '6px 20px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                            background: active ? '#4f46e5' : (isDark ? '#0f172a' : '#f1f5f9'),
+                            color: active ? '#fff' : subTextColor,
+                            transition: 'all 0.2s ease'
+                          }}>
+                            {op}
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
+              </React.Fragment>
             ))}
-            <button onClick={() => setEditingCondition({ id: `new_${Date.now()}`, name: '', thresholdValue: '', debounceTime: '', description: '', conditionType: { name: 'IS_GREATER_THAN', displayName: 'Is Greater Than' } })}
+            <button onClick={() => setEditingCondition({ id: `new_${Date.now()}`, name: '', thresholdValue: '', debounceTime: '', description: '', conditionType: { name: 'IS_GREATER_THAN', displayName: 'Is Greater Than' }, logicalOperatorType: 'AND' })}
               style={{ width: '100%', padding: '10px', border: `2px dashed ${borderColor}`, borderRadius: '10px', background: 'transparent', color: '#06b6d4', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
               <FiPlus size={14} /> Add Condition
             </button>

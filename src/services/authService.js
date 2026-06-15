@@ -287,8 +287,8 @@ export const updateSochiotRule = async (ruleId, payload) => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: (() => { const json = JSON.stringify(payload); console.log('🔴 UPDATE RULE PAYLOAD:', json); return json; })()
-    }, 10000);
+      body: JSON.stringify(payload)
+    }, 30000);
 
     if (!response.ok) {
       const errorText = await response.text();
