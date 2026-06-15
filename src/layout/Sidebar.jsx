@@ -155,6 +155,7 @@ const Sidebar = ({ collapsed }) => {
       disabled: modulesConfig ? !modulesConfig["Alarm System"] : false,
       subItems: [
         { title: "Overview", path: "/alarm-system/overview" },
+        { title: "Alarm Config", path: "/alarm-system/config" },
         { title: "Active Alarms", path: "/alarm-system/active" },
         { title: "Inactive Alarms", path: "/alarm-system/inactive" },
         { title: "ACK (Acknowledge)", path: "/alarm-system/ack" },

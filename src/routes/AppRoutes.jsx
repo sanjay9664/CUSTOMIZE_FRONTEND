@@ -7,6 +7,7 @@ import WaterOverview from '../pages/WaterManagement/Overview';
 import DGSetOverview from '../pages/DGSet/Overview';
 import AlarmOverview from '../pages/AlarmSystem/Overview';
 import ActiveAlarms from '../pages/AlarmSystem/Active';
+import AlarmConfig from '../pages/AlarmSystem/AlarmConfig';
 import TransformerOverview from '../pages/Transformer/Overview';
 import Settings from '../pages/Settings/Settings';
 import AgTank from '../pages/WaterManagement/AgTank';
@@ -16,6 +17,7 @@ import TicketingSystem from '../pages/Ticketing/Index';
 import ConfigTemplates from '../pages/Configuration/Templates';
 import SuperAdminConfig from '../pages/SuperAdmin/SuperAdminConfig';
 import UserManagement from '../pages/Admin/UserManagement';
+import MaintenancePage from '../pages/Maintenance/Index';
 
 // Energy Metering Pages
 import EnergyOverview from '../pages/EnergyMetering/Overview';
@@ -133,6 +135,7 @@ const AppRoutes = () => {
       {/* Alarm System */}
       <Route path="/alarm-system/overview" element={<AlarmOverview />} />
       <Route path="/alarm-system/active" element={<ActiveAlarms />} />
+      <Route path="/alarm-system/config" element={<AlarmConfig />} />
       <Route path="/alarm-system/inactive" element={<PlaceholderPage title="Inactive Alarms" />} />
       <Route path="/alarm-system/ack" element={<PlaceholderPage title="ACK (Acknowledge)" />} />
       <Route path="/alarm-system/history" element={<PlaceholderPage title="Alarm History" />} />
@@ -167,6 +170,16 @@ const AppRoutes = () => {
       {userRole === 'ADMIN' && (
         <Route path="/admin/manage-users" element={<UserManagement />} />
       )}
+
+      {/* Maintenance & Service History */}
+      <Route path="/maintenance" element={<MaintenancePage />} />
+      <Route path="/maintenance/scheduled" element={<MaintenancePage />} />
+      <Route path="/maintenance/pending" element={<MaintenancePage />} />
+      <Route path="/maintenance/report" element={<MaintenancePage />} />
+      <Route path="/service" element={<MaintenancePage />} />
+      <Route path="/service/equipment" element={<MaintenancePage />} />
+      <Route path="/service/records" element={<MaintenancePage />} />
+      <Route path="/service/report" element={<MaintenancePage />} />
 
       {/* Ticketing */}
       <Route path="/ticketing" element={<TicketingSystem />} />

@@ -45,40 +45,57 @@ class ErrorBoundary extends React.Component {
 }
 
 const PARAMETER_SYNONYMS = {
-  ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
+  ebKwh: ['3,151', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
   ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY'],
-  balance: ['3,162', '3,168', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
-  totalKw: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
+  balance: ['3,162', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
+  totalKw: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
   totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
-  vR: ['3,168', '3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE'],
-  vY: ['3,169', '3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE'],
-  vB: ['3,170', '3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE'],
-  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT'],
-  iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT'],
-  iB: ['3,173', '3,168', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT'],
+  vR: ['3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE'],
+  vY: ['3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE'],
+  vB: ['3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE'],
+  iR: ['3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT'],
+  iY: ['3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT'],
+  iB: ['3,168', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT'],
   pf: ['3,174', 'POWER FACTOR', 'PF', 'SYSTEM PF', 'POWER_FACTOR'],
   dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY'],
-  lowBalanceCut: ['3,164', 'LOW BALANCE', 'BALANCE CUT', 'LOW_BAL', 'LOW_BALANCE_CUT'],
-  overloadTrip: ['3,165', 'OVERLOAD TRIP', 'OL TRIP', 'OVERLOAD_TRIP', 'OVERLOAD TRIP STATUS'],
-  overloadLimitReached: ['3,166', 'OVERLOAD LIMIT', 'OL LIMIT', 'OVERLOAD_WARN', 'OVERLOAD LIMIT REACHED'],
-  connectedStatus: ['3,167', 'CONNECTED STATUS', 'RELAY STATUS', 'BREAKER STATUS', 'CONNECTED', 'CONNECTED_STATUS'],
-  forceOff: ['3,168', 'FORCE OFF', 'REMOTE TRIP', 'FORCE_OFF', 'FORCE_OFF_STATUS'],
+  lowBalanceCut: ['LOW BALANCE', 'BALANCE CUT', 'LOW_BAL', 'LOW_BALANCE_CUT'],
+  overloadTrip: ['OVERLOAD TRIP', 'OL TRIP', 'OVERLOAD_TRIP', 'OVERLOAD TRIP STATUS'],
+  overloadLimitReached: ['OVERLOAD LIMIT', 'OL LIMIT', 'OVERLOAD_WARN', 'OVERLOAD LIMIT REACHED'],
+  connectedStatus: ['CONNECTED STATUS', 'RELAY STATUS', 'BREAKER STATUS', 'CONNECTED', 'CONNECTED_STATUS'],
+  forceOff: ['FORCE OFF', 'REMOTE TRIP', 'FORCE_OFF', 'FORCE_OFF_STATUS'],
   meterSrno: ['3,150', 'METER SERIAL', 'SERIAL NUMBER', 'SR NO', 'METER SR', 'METER_NO', 'METERSRNO'],
-  noOfOverloadCheck: ['3,169', 'OVERLOAD CHECK', 'OL CHECK', 'OVERLOAD_COUNT', 'NOOFOVERLOADCHECK'],
-  ebDgStatus: ['3,170', 'EB DG STATUS', 'EB/DG STATUS', 'SOURCE STATUS', 'EB_DG', 'EBDGSTATUS'],
+  noOfOverloadCheck: ['OVERLOAD CHECK', 'OL CHECK', 'OVERLOAD_COUNT', 'NOOFOVERLOADCHECK'],
+  ebDgStatus: ['EB DG STATUS', 'EB/DG STATUS', 'SOURCE STATUS', 'EB_DG', 'EBDGSTATUS'],
   ebTariff: ['3,160', 'EB TARIFF', 'GRID TARIFF', 'EB_RATE', 'EBTARIFF'],
-  dgTariff: ['3,172', 'DG TARIFF', 'GEN RATE', 'DG_RATE', 'DGTARIFF'],
-  ebRLoadSet: ['3,173', 'EB R LOAD', 'EB_R_LOAD', 'EB_R_LIMIT', 'EBRLOADSET'],
-  ebYLoadSet: ['3,174', 'EB Y LOAD', 'EB_Y_LOAD', 'EB_Y_LIMIT', 'EBYLOADSET'],
-  ebBLoadSet: ['3,175', 'EB B LOAD', 'EB_B_LOAD', 'EB_B_LIMIT', 'EBBLOADSET'],
-  dgRLoadSet: ['3,176', 'DG R LOAD', 'DG_R_LOAD', 'DG_R_LIMIT', 'DGRLOADSET'],
-  dgYLoadSet: ['3,177', 'DG Y LOAD', 'DG_Y_LOAD', 'DG_Y_LIMIT', 'DGYLOADSET'],
-  dgBLoadSet: ['3,178', 'DG B LOAD', 'DG_B_LOAD', 'DG_B_LIMIT', 'DGBLOADSET'],
-  activePower: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
+  dgTariff: ['DG TARIFF', 'GEN RATE', 'DG_RATE', 'DGTARIFF'],
+  ebRLoadSet: ['EB R LOAD', 'EB_R_LOAD', 'EB_R_LIMIT', 'EBRLOADSET'],
+  ebYLoadSet: ['EB Y LOAD', 'EB_Y_LOAD', 'EB_Y_LIMIT', 'EBYLOADSET'],
+  ebBLoadSet: ['EB B LOAD', 'EB_B_LOAD', 'EB_B_LIMIT', 'EBBLOADSET'],
+  dgRLoadSet: ['DG R LOAD', 'DG_R_LOAD', 'DG_R_LIMIT', 'DGRLOADSET'],
+  dgYLoadSet: ['DG Y LOAD', 'DG_Y_LOAD', 'DG_Y_LIMIT', 'DGYLOADSET'],
+  dgBLoadSet: ['DG B LOAD', 'DG_B_LOAD', 'DG_B_LIMIT', 'DGBLOADSET'],
+  activePower: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
   reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER'],
   apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
-  cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
-  freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ']
+  cumulativekWh: ['3,151', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
+  freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ'],
+  vLLAvg: ['AVG VOLTAGE L-L', 'V_LL_AVG', 'AVG VLL', 'VLL AVG'],
+  vLNAvg: ['AVG VOLTAGE L-N', 'V_LN_AVG', 'AVG VLN', 'VLN AVG'],
+  iAvg: ['AVG CURRENT', 'I_AVG', 'IAVG'],
+  kvaAvg: ['POWER KVA (AVG)', 'KVA_AVG', 'KVA AVG'],
+  kvarAvg: ['POWER KVAR (AVG)', 'KVAR_AVG', 'KVAR AVG'],
+  pfAvg: ['AVG PF', 'PF_AVG', 'PFAVG'],
+  vRY: ['VOLTAGE R-Y', 'V_RY', 'VRY'],
+  vYB: ['VOLTAGE Y-B', 'V_YB', 'VYB'],
+  vBR: ['VOLTAGE B-R', 'V_BR', 'VBR'],
+  pfR: ['PF-R', 'PF_R', 'PFR'],
+  pfY: ['PF-Y', 'PF_Y', 'PFY'],
+  pfB: ['PF-B', 'PF_B', 'PFB'],
+  loadHrs: ['LOAD HRS', 'LOAD_HRS'],
+  loadMin: ['LOAD MIN', 'LOAD_MIN'],
+  noLoadHrs: ['NO LOAD HRS', 'NO_LOAD_HRS'],
+  noLoadMin: ['NO LOAD MIN', 'NO_LOAD_MIN'],
+  loadPct: ['LOAD %', 'LOAD_PCT', 'LOAD PCT']
 };
 
 const parseLimit = (val) => {
@@ -396,6 +413,11 @@ const MainMeter = () => {
     meterSrno: 0, noOfOverloadCheck: 0, ebDgStatus: 0, ebTariff: 0, dgTariff: 0,
     ebRLoadSet: 0, ebYLoadSet: 0, ebBLoadSet: 0,
     dgRLoadSet: 0, dgYLoadSet: 0, dgBLoadSet: 0,
+
+    // NEW PARAMS
+    vLLAvg: '', vLNAvg: '', iAvg: '', kvaAvg: '', kvarAvg: '', pfAvg: '',
+    vRY: '', vYB: '', vBR: '', pfR: '', pfY: '', pfB: '',
+    loadHrs: '', loadMin: '', noLoadHrs: '', noLoadMin: '', loadPct: '',
 
     // Legacy metrics
     activePower: 0, reactivePower: 0, apparentPower: 0, freq: 0, cumulativekWh: 0
@@ -1429,7 +1451,24 @@ const MainMeter = () => {
                           { defaultLabel: 'REACTIVE POWER', defaultUnit: 'kVAR', key: 'reactivePower', config: mapping?.emPowerConfig, rawValue: data.reactivePower, icon: <Activity size={14} className="text-warning" /> },
                           { defaultLabel: 'APPARENT POWER', defaultUnit: 'kVA', key: 'apparentPower', config: mapping?.emPowerConfig, rawValue: data.apparentPower, icon: <Gauge size={14} className="text-primary" /> },
                           { defaultLabel: 'CUMULATIVE ENERGY', defaultUnit: 'kWh', key: 'cumulativekWh', config: mapping?.emConsumptionConfig, rawValue: data.cumulativekWh, icon: <Zap size={14} className="text-success" /> },
-                          { defaultLabel: 'FREQUENCY', defaultUnit: 'Hz', key: 'freq', config: mapping?.emSystemConfig, rawValue: data.freq, icon: <Activity size={14} className="text-info" /> }
+                          { defaultLabel: 'FREQUENCY', defaultUnit: 'Hz', key: 'freq', config: mapping?.emSystemConfig, rawValue: data.freq, icon: <Activity size={14} className="text-info" /> },
+                          { defaultLabel: 'AVG VOLTAGE L-L', defaultUnit: 'V', key: 'vLLAvg', config: mapping?.emChangeConfig, rawValue: data.vLLAvg, icon: <Activity size={14} className="text-info" /> },
+                          { defaultLabel: 'AVG VOLTAGE L-N', defaultUnit: 'V', key: 'vLNAvg', config: mapping?.emChangeConfig, rawValue: data.vLNAvg, icon: <Activity size={14} className="text-info" /> },
+                          { defaultLabel: 'AVG CURRENT', defaultUnit: 'A', key: 'iAvg', config: mapping?.emChangeConfig, rawValue: data.iAvg, icon: <Activity size={14} className="text-info" /> },
+                          { defaultLabel: 'POWER KVA (AVG)', defaultUnit: 'kVA', key: 'kvaAvg', config: mapping?.emChangeConfig, rawValue: data.kvaAvg, icon: <Activity size={14} className="text-primary" /> },
+                          { defaultLabel: 'POWER KVAR (AVG)', defaultUnit: 'kVAR', key: 'kvarAvg', config: mapping?.emChangeConfig, rawValue: data.kvarAvg, icon: <Activity size={14} className="text-warning" /> },
+                          { defaultLabel: 'AVG PF', defaultUnit: '', key: 'pfAvg', config: mapping?.emChangeConfig, rawValue: data.pfAvg, icon: <Cpu size={14} className="text-success" /> },
+                          { defaultLabel: 'VOLTAGE R-Y', defaultUnit: 'V', key: 'vRY', config: mapping?.emChangeConfig, rawValue: data.vRY, icon: <Activity size={14} className="text-danger" /> },
+                          { defaultLabel: 'VOLTAGE Y-B', defaultUnit: 'V', key: 'vYB', config: mapping?.emChangeConfig, rawValue: data.vYB, icon: <Activity size={14} className="text-warning" /> },
+                          { defaultLabel: 'VOLTAGE B-R', defaultUnit: 'V', key: 'vBR', config: mapping?.emChangeConfig, rawValue: data.vBR, icon: <Activity size={14} className="text-info" /> },
+                          { defaultLabel: 'PF-R', defaultUnit: '', key: 'pfR', config: mapping?.emChangeConfig, rawValue: data.pfR, icon: <Cpu size={14} className="text-danger" /> },
+                          { defaultLabel: 'PF-Y', defaultUnit: '', key: 'pfY', config: mapping?.emChangeConfig, rawValue: data.pfY, icon: <Cpu size={14} className="text-warning" /> },
+                          { defaultLabel: 'PF-B', defaultUnit: '', key: 'pfB', config: mapping?.emChangeConfig, rawValue: data.pfB, icon: <Cpu size={14} className="text-info" /> },
+                          { defaultLabel: 'LOAD HRS', defaultUnit: 'h', key: 'loadHrs', config: mapping?.emChangeConfig, rawValue: data.loadHrs, icon: <Clock size={14} className="text-secondary" /> },
+                          { defaultLabel: 'LOAD MIN', defaultUnit: 'm', key: 'loadMin', config: mapping?.emChangeConfig, rawValue: data.loadMin, icon: <Clock size={14} className="text-secondary" /> },
+                          { defaultLabel: 'NO LOAD HRS', defaultUnit: 'h', key: 'noLoadHrs', config: mapping?.emChangeConfig, rawValue: data.noLoadHrs, icon: <Clock size={14} className="text-secondary" /> },
+                          { defaultLabel: 'NO LOAD MIN', defaultUnit: 'm', key: 'noLoadMin', config: mapping?.emChangeConfig, rawValue: data.noLoadMin, icon: <Clock size={14} className="text-secondary" /> },
+                          { defaultLabel: 'LOAD %', defaultUnit: '%', key: 'loadPct', config: mapping?.emChangeConfig, rawValue: data.loadPct, icon: <Gauge size={14} className="text-primary" /> }
                         ].map((item, idx) => {
                           if (!isFieldVisible(item.key)) return null;
                           
@@ -1612,6 +1651,401 @@ const MainMeter = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* PROFESSIONAL LIVE TELEMETRY GRAPH PANEL */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {(() => {
+        // ── Inline SVG Sparkline Chart Component ──────────────────────────────
+        const LiveChart = ({ title, subtitle, unit, series, rangeLabel, rangeColor = '#06b6d4', height = 120, showRangeZone = null }) => {
+          const W = 800; const H = height;
+          const PAD = { top: 10, right: 16, bottom: 28, left: 46 };
+          const innerW = W - PAD.left - PAD.right;
+          const innerH = H - PAD.top - PAD.bottom;
+          const N_GRID_X = 6; // 6 vertical lines on x-axis as requested
+
+          // Gather all values across all series to find domain
+          const allVals = series.flatMap(s => s.data.map(d => d.v)).filter(v => v !== null && !isNaN(v));
+          if (allVals.length === 0) {
+            return (
+              <div style={{ height: H + 44, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', opacity: 0.3 }}>
+                <Activity size={18} className="text-info" />
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 6 }}>Awaiting live data…</span>
+              </div>
+            );
+          }
+          const minVal = Math.min(...allVals);
+          const maxVal = Math.max(...allVals);
+          const domainMin = minVal === maxVal ? minVal - 1 : minVal;
+          const domainMax = minVal === maxVal ? maxVal + 1 : maxVal;
+          const range = domainMax - domainMin || 1;
+          const bufY = range * 0.12;
+          const yMin = domainMin - bufY;
+          const yMax = domainMax + bufY;
+          const yRange = yMax - yMin;
+
+          const toX = (idx, total) => PAD.left + (total <= 1 ? innerW / 2 : (idx / (total - 1)) * innerW);
+          const toY = (v) => PAD.top + innerH - ((v - yMin) / yRange) * innerH;
+
+          // Y-axis ticks
+          const N_Y = 4;
+          const yTicks = Array.from({ length: N_Y + 1 }, (_, i) => yMin + (yRange * i) / N_Y);
+
+          // X-axis ticks
+          const maxN = Math.max(...series.map(s => s.data.length));
+          const xTickIndices = Array.from({ length: N_GRID_X }, (_, i) => Math.round((i / (N_GRID_X - 1)) * (maxN - 1)));
+
+          // Build path for each series (use indexed entries to avoid indexOf bug)
+          const buildPath = (data) => {
+            const indexed = data.map((d, i) => ({ ...d, i })).filter(d => d.v !== null && !isNaN(d.v));
+            if (indexed.length < 2) return '';
+            return indexed.map((d, j) => `${j === 0 ? 'M' : 'L'} ${toX(d.i, data.length).toFixed(1)} ${toY(d.v).toFixed(1)}`).join(' ');
+          };
+
+          const buildAreaPath = (data) => {
+            const indexed = data.map((d, i) => ({ ...d, i })).filter(d => d.v !== null && !isNaN(d.v));
+            if (indexed.length < 2) return '';
+            const line = indexed.map((d, j) => `${j === 0 ? 'M' : 'L'} ${toX(d.i, data.length).toFixed(1)} ${toY(d.v).toFixed(1)}`).join(' ');
+            const firstX = toX(indexed[0].i, data.length).toFixed(1);
+            const lastX = toX(indexed[indexed.length - 1].i, data.length).toFixed(1);
+            const baseY = (PAD.top + innerH).toFixed(1);
+            return `${line} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
+          };
+
+          // Unique gradient id per series
+          const gradId = (i) => `lgrd_${title.replace(/\s/g, '')}_${i}`;
+          const glowId = (i) => `glow_${title.replace(/\s/g, '')}_${i}`;
+
+          // Last values for live readout
+          const lastReadouts = series.map(s => {
+            const last = [...s.data].reverse().find(d => d.v !== null && !isNaN(d.v));
+            return last ? last.v : null;
+          });
+
+          return (
+            <div style={{ position: 'relative' }}>
+              {/* Live value badges */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
+                {series.map((s, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ display: 'inline-block', width: 28, height: 3, borderRadius: 2, background: s.color, boxShadow: `0 0 6px ${s.color}` }} />
+                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontFamily: 'monospace', letterSpacing: '0.5px' }}>{s.name}</span>
+                    {lastReadouts[i] !== null && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: s.color, fontFamily: 'monospace' }}>
+                        {Number(lastReadouts[i]).toFixed(1)}<span style={{ fontSize: '0.6rem', opacity: 0.7, marginLeft: 2 }}>{unit}</span>
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* SVG Chart */}
+              <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ overflow: 'visible', display: 'block' }}>
+                <defs>
+                  {series.map((s, i) => (
+                    <React.Fragment key={i}>
+                      <linearGradient id={gradId(i)} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={s.color} stopOpacity="0.25" />
+                        <stop offset="100%" stopColor={s.color} stopOpacity="0.01" />
+                      </linearGradient>
+                      <filter id={glowId(i)} x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                      </filter>
+                    </React.Fragment>
+                  ))}
+                </defs>
+
+                {/* Optional range zone (e.g. normal band) */}
+                {showRangeZone && (
+                  <rect
+                    x={PAD.left} y={toY(showRangeZone.max)}
+                    width={innerW} height={toY(showRangeZone.min) - toY(showRangeZone.max)}
+                    fill={showRangeZone.color} fillOpacity="0.08"
+                    rx="2"
+                  />
+                )}
+
+                {/* Horizontal Y-grid lines */}
+                {yTicks.map((tick, i) => (
+                  <g key={i}>
+                    <line
+                      x1={PAD.left} y1={toY(tick)}
+                      x2={PAD.left + innerW} y2={toY(tick)}
+                      stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4,4"
+                    />
+                    <text x={PAD.left - 4} y={toY(tick)} fill="#64748b" fontSize="9" textAnchor="end" dominantBaseline="middle" fontFamily="monospace">
+                      {tick.toFixed(tick >= 100 ? 0 : 1)}
+                    </text>
+                  </g>
+                ))}
+
+                {/* Vertical X-grid lines (6 lines) */}
+                {xTickIndices.map((idx, i) => {
+                  const x = toX(idx, maxN || 1);
+                  const label = series[0]?.data[idx]?.t || '';
+                  return (
+                    <g key={i}>
+                      <line
+                        x1={x} y1={PAD.top}
+                        x2={x} y2={PAD.top + innerH}
+                        stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="3,5"
+                      />
+                      <text x={x} y={PAD.top + innerH + 12} fill="#475569" fontSize="8.5" textAnchor="middle" fontFamily="monospace">
+                        {label}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Chart border/axis */}
+                <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + innerH} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+                <line x1={PAD.left} y1={PAD.top + innerH} x2={PAD.left + innerW} y2={PAD.top + innerH} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+
+                {/* Area fills (under each line) */}
+                {series.map((s, i) => {
+                  const aPath = buildAreaPath(s.data, s.color);
+                  return aPath ? <path key={i} d={aPath} fill={`url(#${gradId(i)})`} /> : null;
+                })}
+
+                {/* Line strokes */}
+                {series.map((s, i) => {
+                  const lPath = buildPath(s.data);
+                  return lPath ? (
+                    <path
+                      key={i} d={lPath}
+                      fill="none" stroke={s.color} strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round"
+                      filter={`url(#${glowId(i)})`}
+                      style={{ transition: 'd 0.3s ease' }}
+                    />
+                  ) : null;
+                })}
+
+                {/* Dot at last point of each series */}
+                {series.map((s, i) => {
+                  let lIdx = -1;
+                  for (let k = s.data.length - 1; k >= 0; k--) {
+                    if (s.data[k].v !== null && !isNaN(s.data[k].v)) { lIdx = k; break; }
+                  }
+                  if (lIdx < 0) return null;
+                  return (
+                    <circle
+                      key={i}
+                      cx={toX(lIdx, s.data.length)}
+                      cy={toY(s.data[lIdx].v)}
+                      r="3.5" fill={s.color}
+                      style={{ filter: `drop-shadow(0 0 4px ${s.color})` }}
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+          );
+        };
+
+        // ── Build series data from historyLog ─────────────────────────────────
+        const fmt2 = (v) => (v !== null && v !== undefined && !isNaN(Number(v))) ? Number(v) : null;
+        const logData = historyLog.length > 0 ? historyLog : [];
+
+        const voltSeries = [
+          { name: 'VR-N', color: '#ef4444', data: logData.map(r => ({ t: r.time, v: fmt2(r.vR) })) },
+          { name: 'VY-N', color: '#f59e0b', data: logData.map(r => ({ t: r.time, v: fmt2(r.vY) })) },
+          { name: 'VB-N', color: '#3b82f6', data: logData.map(r => ({ t: r.time, v: fmt2(r.vB) })) },
+        ];
+        const currSeries = [
+          { name: 'I1 (R)', color: '#f87171', data: logData.map(r => ({ t: r.time, v: fmt2(r.iR) })) },
+          { name: 'I2 (Y)', color: '#fbbf24', data: logData.map(r => ({ t: r.time, v: fmt2(r.iY) })) },
+          { name: 'I3 (B)', color: '#60a5fa', data: logData.map(r => ({ t: r.time, v: fmt2(r.iB) })) },
+        ];
+        const appPwrSeries = [
+          { name: 'kVA', color: '#06b6d4', data: logData.map(r => ({ t: r.time, v: fmt2(r.totalKva) })) },
+        ];
+        const reactPwrSeries = [
+          { name: 'kVAR', color: '#a78bfa', data: logData.map(r => ({ t: r.time, v: fmt2(r.reactivePower) })) },
+        ];
+        const freqSeries = [
+          { name: 'Hz', color: '#34d399', data: logData.map(r => ({ t: r.time, v: fmt2(r.freq) })) },
+        ];
+        const actPwrConsSeries = [
+          { name: 'kWh (EB)', color: '#f97316', data: logData.map(r => ({ t: r.time, v: fmt2(r.ebKwh) })) },
+        ];
+        const appPwrConsSeries = [
+          { name: 'kVAh (EB)', color: '#10b981', data: logData.map(r => ({ t: r.time, v: fmt2(r.ebKvah) })) },
+        ];
+
+        const charts = [
+          {
+            key: 'voltage', title: 'Supply Voltage', subtitle: 'Phase-to-Neutral (V)', unit: 'V',
+            icon: '⚡', iconColor: '#ef4444',
+            series: voltSeries,
+            rangeLabel: 'Normal: 207–253 V (Single Phase)',
+            rangeColor: '#22c55e',
+            showRangeZone: { min: 207, max: 253, color: '#22c55e' },
+            defaultRanges: [
+              { label: 'Normal', color: '#22c55e', value: '207–253 V' },
+              { label: 'Warning', color: '#f59e0b', value: '190–207 V or 253–270 V' },
+              { label: 'Alarm', color: '#ef4444', value: '<190 V or >270 V' },
+            ]
+          },
+          {
+            key: 'current', title: 'Current', subtitle: 'Phase Currents (A)', unit: 'A',
+            icon: '〜', iconColor: '#f59e0b',
+            series: currSeries,
+            rangeLabel: 'Normal: 0–80% of IN',
+            rangeColor: '#22c55e',
+            defaultRanges: [
+              { label: 'Normal (0–80%)', color: '#22c55e', value: 'Safe operating' },
+              { label: 'Warning (80–90%)', color: '#f59e0b', value: 'High load' },
+              { label: 'Critical (90–100%)', color: '#f97316', value: 'Near limit' },
+              { label: 'Over (>100%)', color: '#ef4444', value: 'Trip risk' },
+            ]
+          },
+          {
+            key: 'apparent', title: 'Apparent Power', subtitle: 'Total kVA', unit: 'kVA',
+            icon: '◈', iconColor: '#06b6d4',
+            series: appPwrSeries,
+            rangeColor: '#06b6d4',
+            defaultRanges: [
+              { label: 'Normal', color: '#22c55e', value: '<80% of Rated kVA' },
+              { label: 'Warning', color: '#f59e0b', value: '80–95% of Rated kVA' },
+              { label: 'Alarm', color: '#ef4444', value: '>95% of Rated kVA' },
+            ]
+          },
+          {
+            key: 'reactive', title: 'Reactive Power', subtitle: 'Total kVAR', unit: 'kVAR',
+            icon: '⊛', iconColor: '#a78bfa',
+            series: reactPwrSeries,
+            rangeColor: '#a78bfa',
+            defaultRanges: [
+              { label: 'Normal', color: '#22c55e', value: 'PF > 0.90' },
+              { label: 'Warning', color: '#f59e0b', value: '0.80 < PF ≤ 0.90' },
+              { label: 'Alarm', color: '#ef4444', value: 'PF ≤ 0.80' },
+            ]
+          },
+          {
+            key: 'freq', title: 'Frequency', subtitle: 'Grid Frequency (Hz)', unit: 'Hz',
+            icon: '≈', iconColor: '#34d399',
+            series: freqSeries,
+            rangeColor: '#34d399',
+            showRangeZone: { min: 47.5, max: 51.5, color: '#22c55e' },
+            defaultRanges: [
+              { label: 'Normal', color: '#22c55e', value: '49.5–50.5 Hz' },
+              { label: 'Warning', color: '#f59e0b', value: '47.5–49.5 or 50.5–51.5 Hz' },
+              { label: 'Alarm', color: '#ef4444', value: '<47.5 or >51.5 Hz' },
+            ]
+          },
+          {
+            key: 'actcons', title: 'Power Consumption (Active)', subtitle: 'EB kWh Accumulation', unit: 'kWh',
+            icon: '⬧', iconColor: '#f97316',
+            series: actPwrConsSeries,
+            rangeColor: '#f97316',
+            defaultRanges: [
+              { label: 'Live Reading', color: '#f97316', value: 'Cumulative kWh' },
+              { label: 'EB Source', color: '#22c55e', value: 'Grid Supply' },
+            ]
+          },
+          {
+            key: 'appcons', title: 'Power Consumption (Apparent)', subtitle: 'EB kVAh Accumulation', unit: 'kVAh',
+            icon: '⬦', iconColor: '#10b981',
+            series: appPwrConsSeries,
+            rangeColor: '#10b981',
+            defaultRanges: [
+              { label: 'Live Reading', color: '#10b981', value: 'Cumulative kVAh' },
+              { label: 'Note', color: '#94a3b8', value: 'Includes reactive energy' },
+            ]
+          },
+        ];
+
+        return (
+          <div style={{ marginTop: 20, marginBottom: 4 }}>
+            {/* Section Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 4, height: 28, borderRadius: 2, background: 'linear-gradient(180deg,#06b6d4,#6366f1)', flexShrink: 0 }} />
+              <div>
+                <h5 style={{ margin: 0, fontWeight: 900, color: '#f8fafc', fontSize: '0.9rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                  <Activity size={16} style={{ marginRight: 8, color: '#06b6d4', verticalAlign: 'text-top' }} />
+                  Live Parameter Graphs
+                </h5>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', marginTop: 1 }}>
+                  Real-time waveform monitoring — Updates every 2 seconds • Last {historyLog.length} readings
+                </p>
+              </div>
+              {/* Live badge */}
+              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', padding: '3px 10px', borderRadius: 20, fontFamily: 'monospace', letterSpacing: 1 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981', animation: 'pulseGlow 1.5s infinite' }} />
+                LIVE
+              </span>
+            </div>
+
+            {/* 7 Charts Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: 14 }}>
+              {charts.map((chart) => (
+                <div
+                  key={chart.key}
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(13,20,38,0.96) 0%, rgba(8,12,24,0.98) 100%)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 16,
+                    padding: '14px 16px 10px',
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+                    backdropFilter: 'blur(12px)',
+                    transition: 'border-color 0.3s',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = chart.rangeColor + '55'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
+                >
+                  {/* Subtle background glow */}
+                  <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: chart.rangeColor, opacity: 0.04, filter: 'blur(30px)', pointerEvents: 'none' }} />
+
+                  {/* Card Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ fontSize: '1rem', filter: `drop-shadow(0 0 4px ${chart.iconColor})` }}>{chart.icon}</span>
+                        <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#e2e8f0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{chart.title}</span>
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: '#475569', marginTop: 2, marginLeft: 24, fontFamily: 'monospace' }}>{chart.subtitle}</div>
+                    </div>
+                    {/* Unit badge */}
+                    <span style={{ fontSize: '0.65rem', background: `${chart.rangeColor}18`, border: `1px solid ${chart.rangeColor}35`, color: chart.rangeColor, padding: '2px 8px', borderRadius: 8, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0.5 }}>{chart.unit}</span>
+                  </div>
+
+                  {/* Chart */}
+                  <LiveChart
+                    title={chart.title}
+                    subtitle={chart.subtitle}
+                    unit={chart.unit}
+                    series={chart.series}
+                    rangeColor={chart.rangeColor}
+                    showRangeZone={chart.showRangeZone || null}
+                    height={110}
+                  />
+
+                  {/* Range by Default legend */}
+                  <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                      <span style={{ fontSize: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Range by Default</span>
+                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }}>
+                      {chart.defaultRanges.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: r.color, display: 'inline-block', boxShadow: `0 0 5px ${r.color}80`, flexShrink: 0 }} />
+                          <span style={{ fontSize: '0.62rem', color: '#64748b', fontFamily: 'monospace' }}>{r.label}</span>
+                          <span style={{ fontSize: '0.62rem', color: '#94a3b8', fontFamily: 'monospace' }}>{r.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* HISTORICAL LOG TABLE */}
       <Card className="scada-glass-card border-0 text-white mt-3">

@@ -24,6 +24,11 @@ export default defineConfig({
         target: 'https://app.sochiot.com/api/config-engine',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/sochiot-config/, '')
+      },
+      '/sochiot-triggers': {
+        target: 'https://app.sochiot.com/api/triggers',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sochiot-triggers/, '')
       }
     }
   }

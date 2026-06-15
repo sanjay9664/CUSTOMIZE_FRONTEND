@@ -48,6 +48,23 @@ const FIELD_LABELS = {
   apparentPower: { label: 'Apparent Power', unit: 'kVA' },
   cumulativekWh: { label: 'Cumulative KWH', unit: 'kWh' },
   commStatus: { label: 'Comm Status', unit: '' },
+  vLLAvg: { label: 'AVG VOLTAGE L-L', unit: 'V' },
+  vLNAvg: { label: 'AVG VOLTAGE L-N', unit: 'V' },
+  iAvg: { label: 'AVG CURRENT', unit: 'A' },
+  kvaAvg: { label: 'POWER KVA (AVG)', unit: 'kVA' },
+  kvarAvg: { label: 'POWER KVAR (AVG)', unit: 'kVAR' },
+  pfAvg: { label: 'AVG PF', unit: '' },
+  vRY: { label: 'VOLTAGE R-Y', unit: 'V' },
+  vYB: { label: 'VOLTAGE Y-B', unit: 'V' },
+  vBR: { label: 'VOLTAGE B-R', unit: 'V' },
+  pfR: { label: 'PF-R', unit: '' },
+  pfY: { label: 'PF-Y', unit: '' },
+  pfB: { label: 'PF-B', unit: '' },
+  loadHrs: { label: 'LOAD HRS', unit: 'h' },
+  loadMin: { label: 'LOAD MIN', unit: 'm' },
+  noLoadHrs: { label: 'NO LOAD HRS', unit: 'h' },
+  noLoadMin: { label: 'NO LOAD MIN', unit: 'm' },
+  loadPct: { label: 'LOAD %', unit: '%' },
 };
 
 const TelemetryCard = ({ label, value, unit, colorClass, type, isMapped = true, isOnline = true }) => {
@@ -746,7 +763,7 @@ const SubMeters = () => {
   const getTemplateForMeter = (meterLabel) => {
     return templates.find(t =>
       t.module === 'Sub Meters' &&
-      String(t.mapping?.energyMeteringTarget || '').trim().toUpperCase() === String(meterLabel || '').trim().toUpperCase()
+      String(t.mapping?.energyMeteringTarget || t.name || '').trim().toUpperCase() === String(meterLabel || '').trim().toUpperCase()
     );
   };
 
@@ -1568,7 +1585,14 @@ const SubMeters = () => {
               </Modal.Header>
               <Modal.Body className="p-3" style={{ maxHeight: '80vh', overflowY: 'auto', zIndex: 1, position: 'relative' }}>
                 {(() => {
-                  const ALL_CHANGE_FIELDS = ['ebKvah', 'ebKwh', 'balance', 'totalKw', 'vR', 'vY', 'vB', 'iR', 'iY', 'iB', 'pf', 'totalKva', 'dgKwh'];
+                  const ALL_CHANGE_FIELDS = [
+                    'ebKvah', 'ebKwh', 'balance', 'totalKw', 'pf', 'totalKva', 'dgKwh',
+                    'activePower', 'reactivePower', 'apparentPower', 'cumulativekWh', 'freq',
+                    'vR', 'vY', 'vB', 'iR', 'iY', 'iB',
+                    'vLLAvg', 'vLNAvg', 'iAvg', 'kvaAvg', 'kvarAvg', 'pfAvg',
+                    'vRY', 'vYB', 'vBR', 'pfR', 'pfY', 'pfB',
+                    'loadHrs', 'loadMin', 'noLoadHrs', 'noLoadMin', 'loadPct'
+                  ];
 
                   return (
                     <Row className="g-3">
@@ -1581,7 +1605,13 @@ const SubMeters = () => {
                           <Row className="g-2">
                             {ALL_CHANGE_FIELDS.map(key => {
                               const meta = FIELD_LABELS[key] || { label: key, unit: '' };
-                              const isFieldMapped = activeSections ? activeSections.change.includes(key) : false;
+                              const isFieldMapped = activeMeter?.moduleEvents?.change?.some(e => e.key === key) ||
+                                                    activeMeter?.moduleEvents?.warning?.some(e => e.key === key) ||
+                                                    activeMeter?.moduleEvents?.read?.some(e => e.key === key);
+                              
+                              // HIDE UNMAPPED FIELDS IF METER IS MAPPED
+                              if (isMapped && !isFieldMapped) return null;
+
                               const shouldShowValue = !isMapped || isFieldMapped;
                               const val = shouldShowValue ? (activeMeter?.telemetryValues?.[key] ?? activeMeter?.[key]) : null;
                               return (
