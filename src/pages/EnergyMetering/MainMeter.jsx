@@ -106,7 +106,7 @@ const parseLimit = (val) => {
 
 const getThresholdStatus = (value, limitObj) => {
   if (!limitObj) return 'default';
-  
+
   const low = parseLimit(limitObj.low);
   const normalMin = parseLimit(limitObj.normalMin);
   const normalMax = parseLimit(limitObj.normalMax);
@@ -1471,7 +1471,7 @@ const MainMeter = () => {
                           { defaultLabel: 'LOAD %', defaultUnit: '%', key: 'loadPct', config: mapping?.emChangeConfig, rawValue: data.loadPct, icon: <Gauge size={14} className="text-primary" /> }
                         ].map((item, idx) => {
                           if (!isFieldVisible(item.key)) return null;
-                          
+
                           // Skip rendering duplicates if primary parameters are already present
                           if (item.key === 'activePower' && isFieldVisible('totalKw')) return null;
                           if (item.key === 'apparentPower' && isFieldVisible('totalKva')) return null;
@@ -1479,10 +1479,10 @@ const MainMeter = () => {
 
                           const { label, val } = getFieldMetadata(item.config, item.key, item.defaultLabel, item.defaultUnit, item.rawValue);
                           const numericValue = typeof item.rawValue === 'number' ? item.rawValue : Number(item.rawValue) || 0;
-                          
+
                           // Get threshold status if limits are configured
                           const cardStatus = item.limits ? getThresholdStatus(numericValue, item.limits) : 'default';
-                          
+
                           // Determine the parameter accent color based on key
                           let accentColor = 'rgba(255, 255, 255, 0.1)';
                           if (item.key.includes('R') || item.key === 'vR' || item.key === 'iR') accentColor = '#ef4444';
@@ -1503,7 +1503,7 @@ const MainMeter = () => {
                             transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                           };
                           let textClass = item.isImportant ? 'text-warning' : 'text-white';
-                          
+
                           if (cardStatus === 'alert') {
                             borderStyle = {
                               ...borderStyle,
@@ -1532,7 +1532,7 @@ const MainMeter = () => {
 
                           return (
                             <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
-                              <div 
+                              <div
                                 className={`parameter-glass-card p-2.5 rounded-3 h-100 d-flex flex-column justify-content-between text-start ${item.isImportant ? 'important-glow-card' : ''}`}
                                 style={borderStyle}
                               >
@@ -2070,7 +2070,7 @@ const MainMeter = () => {
                 {historyLog.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-4 text-center text-secondary font-monospace fs-13">
-                      <div className="d-flex flex-column align-items-center gap-2" style={{opacity:0.5}}>
+                      <div className="d-flex flex-column align-items-center gap-2" style={{ opacity: 0.5 }}>
                         <Activity size={20} className="text-info" />
                         <span>Waiting for live telemetry from {mainMeterTemplate?.name || 'meter'}...</span>
                         <small>Data will populate automatically every 4 seconds.</small>
@@ -2078,7 +2078,7 @@ const MainMeter = () => {
                     </td>
                   </tr>
                 ) : historyLog.map((row, idx) => {
-                  const fmt = (v, d=1) => v !== null && v !== undefined ? Number(v).toFixed(d) : '—';
+                  const fmt = (v, d = 1) => v !== null && v !== undefined ? Number(v).toFixed(d) : '—';
                   const isNormal = !row.connectedStatus || row.connectedStatus > 0;
                   return (
                     <tr key={idx} className="border-bottom border-secondary border-opacity-5">

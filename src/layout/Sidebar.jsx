@@ -26,7 +26,8 @@ const Sidebar = ({ collapsed }) => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await fetch('/api/super-admin/config');
+        const configEndpoint = isSuperAdmin ? '/api/super-admin/config' : '/api/super-admin/admin-config';
+        const response = await fetch(configEndpoint);
         if (response.ok) {
           const config = await response.json();
 
@@ -156,12 +157,13 @@ const Sidebar = ({ collapsed }) => {
       subItems: [
         { title: "Overview", path: "/alarm-system/overview" },
         { title: "Alarm Config", path: "/alarm-system/config" },
+        { title: "Message Template Setting", path: "/alarm-system/message-templates" },
         { title: "Active Alarms", path: "/alarm-system/active" },
         { title: "Inactive Alarms", path: "/alarm-system/inactive" },
         { title: "ACK (Acknowledge)", path: "/alarm-system/ack" },
         { title: "Alarm History", path: "/alarm-system/history" },
         { title: "PDF Report", path: "/alarm-system/report" }
-      ].filter((subItem) => submodulesConfig.showAlarms?.[subItem.title] ?? true)
+      ].filter((subItem) => (submodulesConfig.showAlarms?.[subItem.title] ?? true) && !subItem.hidden)
     },
     {
       title: "LT Panel",

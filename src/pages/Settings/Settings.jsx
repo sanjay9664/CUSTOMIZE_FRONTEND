@@ -29,6 +29,9 @@ const createDefaultModules = () => ({
 });
 
 const Settings = () => {
+  const userRole = localStorage.getItem('userRole') || 'USER';
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+
   const defaultModules = useMemo(() => createDefaultModules(), []);
   const [saving, setSaving] = useState(false);
   const [modules, setModules] = useState(defaultModules);
@@ -36,7 +39,8 @@ const Settings = () => {
 
   const fetchGlobalConfig = async () => {
     try {
-      const response = await fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/super-admin/config`);
+      const configEndpoint = isSuperAdmin ? '/api/super-admin/config' : '/api/super-admin/admin-config';
+      const response = await fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}${configEndpoint}`);
       if (response.ok) {
         const data = await response.json();
         const moduleMap = {
@@ -116,7 +120,8 @@ const Settings = () => {
         backendConfig[key] = modules[label];
       });
 
-      const response = await fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/super-admin/config`, {
+      const configEndpoint = isSuperAdmin ? '/api/super-admin/config' : '/api/super-admin/admin-config';
+      const response = await fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}${configEndpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ config: backendConfig })

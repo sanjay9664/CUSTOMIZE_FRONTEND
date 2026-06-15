@@ -8,6 +8,7 @@ import DGSetOverview from '../pages/DGSet/Overview';
 import AlarmOverview from '../pages/AlarmSystem/Overview';
 import ActiveAlarms from '../pages/AlarmSystem/Active';
 import AlarmConfig from '../pages/AlarmSystem/AlarmConfig';
+import MessageTemplateSetting from '../pages/AlarmSystem/MessageTemplateSetting';
 import TransformerOverview from '../pages/Transformer/Overview';
 import Settings from '../pages/Settings/Settings';
 import AgTank from '../pages/WaterManagement/AgTank';
@@ -136,6 +137,7 @@ const AppRoutes = () => {
       <Route path="/alarm-system/overview" element={<AlarmOverview />} />
       <Route path="/alarm-system/active" element={<ActiveAlarms />} />
       <Route path="/alarm-system/config" element={<AlarmConfig />} />
+      <Route path="/alarm-system/message-templates" element={<MessageTemplateSetting />} />
       <Route path="/alarm-system/inactive" element={<PlaceholderPage title="Inactive Alarms" />} />
       <Route path="/alarm-system/ack" element={<PlaceholderPage title="ACK (Acknowledge)" />} />
       <Route path="/alarm-system/history" element={<PlaceholderPage title="Alarm History" />} />
