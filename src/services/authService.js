@@ -163,7 +163,7 @@ export const getSochiotRules = async (nodeType, nodeId, page = 1) => {
   if (!token) return null;
 
   try {
-    const response = await fetchWithTimeout(`${TRIGGERS_API_URL}/rules/${nodeType}/${nodeId}?page=${page}&isPageable=true&sortBy=lastUpdated&sortOrder=DESC`, {
+    const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/${nodeType}/${nodeId}?page=${page}&isPageable=true&sortBy=lastUpdated&sortOrder=DESC`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -182,7 +182,7 @@ export const getSochiotRuleById = async (ruleId) => {
   if (!token) return null;
 
   try {
-    const response = await fetchWithTimeout(`${TRIGGERS_API_URL}/rules/${ruleId}`, {
+    const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/${ruleId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -272,6 +272,91 @@ export const getSochiotDeviceByNumericId = async (deviceNumericId) => {
     }
   } catch (e) { console.error('Fetch Device By Numeric ID Error:', e); }
   return null;
+};// Activate an existing rule
+// API: PUT /triggers/rules/activate/{ruleId}
+export const activateSochiotRule = async (ruleId) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/activate/${ruleId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }, 20000);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Activate Rule API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Activate Rule Error:', error);
+    throw error;
+  }
+};
+
+// Deactivate an existing rule
+// API: PUT /triggers/rules/de-activate/{ruleId}
+export const deactivateSochiotRule = async (ruleId) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/de-activate/${ruleId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }, 20000);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Deactivate Rule API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Deactivate Rule Error:', error);
+    throw error;
+  }
+};
+
+
+// Delete an existing rule
+// API: DELETE /triggers/rules/{ruleId}
+export const deleteSochiotRule = async (ruleId) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/${ruleId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }, 20000);
+
+    if (!response.ok) {
+      let errorBody = {};
+      try { errorBody = await response.json(); } catch (_) {}
+      console.error('Delete Rule API Error:', response.status, errorBody);
+      // Create a typed error so callers can check err.status directly
+      const err = new Error(
+        errorBody?.message || `API Error ${response.status}`
+      );
+      err.status = response.status;
+      err.body = errorBody;
+      throw err;
+    }
+    // API returns { status: "OK", data: null, message: "Setting is deleted successfully." }
+    return await response.json();
+  } catch (error) {
+    console.error('Delete Rule Error:', error);
+    throw error;
+  }
 };
 
 // Update an existing rule
@@ -298,6 +383,34 @@ export const updateSochiotRule = async (ruleId, payload) => {
     return await response.json();
   } catch (error) {
     console.error('Update Rule Error:', error);
+    throw error;
+  }
+};
+
+// Create a new rule
+// API: POST /triggers/rules
+export const createSochiotRule = async (payload) => {
+  const token = localStorage.getItem('sochiot_token');
+  if (!token) return null;
+
+  try {
+    const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }, 30000);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Create Rule API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Create Rule Error:', error);
     throw error;
   }
 };
