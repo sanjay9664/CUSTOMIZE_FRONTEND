@@ -143,6 +143,55 @@ const findLocationPath = (id, nodes, path = []) => {
 };
 
 /* ─────────────────────────────────────────────
+   Helper: cleanDeviceName
+   Strips raw internal format like "CLUSTER@374@UUID" or "DEVICE@1227@UUID"
+   Auto-scans all string fields in obj to find a human-readable name.
+   Expected output: "M022N3N0MN177" (gateway) / "MFM_177" (device)
+───────────────────────────────────────────── */
+const cleanDeviceName = (rawName, obj) => {
+  if (!obj) return rawName || '';
+
+  // Priority fields to check first (most likely to hold clean name)
+  const priorityFields = [
+    'serialNo', 'clusterSerialNo', 'gatewaySerialNo', 'deviceSerialNo',
+    'shortName', 'alias', 'displayName', 'description', 'label',
+    'macAddress', 'deviceName', 'gatewayName', 'clusterName'
+  ];
+
+  // Helper: is this string a "clean" human-readable name?
+  const isClean = (s) => {
+    if (!s || typeof s !== 'string') return false;
+    const t = s.trim();
+    if (!t) return false;
+    if (t.includes('@')) return false; // internal format
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)) return false; // UUID
+    if (/^\d+$/.test(t)) return false; // pure number
+    return true;
+  };
+
+  // 1. Check priority fields
+  for (const field of priorityFields) {
+    if (isClean(obj[field])) return obj[field].trim();
+  }
+
+  // 2. Auto-scan ALL string fields (excluding known internal ones)
+  const skip = new Set(['name', 'id', 'uuid', 'parentId', 'token', 'status', 'type', 'createdAt', 'updatedAt', 'dateCreated', 'lastUpdated']);
+  for (const [key, val] of Object.entries(obj)) {
+    if (skip.has(key)) continue;
+    if (isClean(val)) return val.trim();
+  }
+
+  // 3. Fallback: strip "CLUSTER@374@UUID" → return numeric ID part
+  if (rawName && rawName.includes('@')) {
+    const parts = rawName.split('@');
+    const numeric = parts.find((p, i) => i > 0 && /^\d+$/.test(p));
+    return numeric || parts[parts.length - 1] || rawName;
+  }
+
+  return rawName || '';
+};
+
+/* ─────────────────────────────────────────────
    Edit Condition Modal
    Flow: Location → API(LOCATION/{id}) → Devices
          Device   → API(device/{numericId}) → Modules
@@ -201,6 +250,10 @@ const EditConditionModal = ({
           const locVOS = data?.locationVOS || [];
           const locNodeData = locVOS[0] || data;
           const gateways = locNodeData?.gatewayVOList || data?.gatewayVOList || [];
+          // 🔍 Debug: inspect first gateway structure
+          if (gateways.length > 0) {
+            console.log('[DeviceDebug] Gateway object:', JSON.stringify(gateways[0], null, 2));
+          }
           const devices = [];
           gateways.forEach(gw => {
             (gw.deviceEntityVOS || gw.deviceVOS || []).forEach(d => {
@@ -209,7 +262,7 @@ const EditConditionModal = ({
                 uuid: d.uuid,
                 name: d.name,
                 gatewayName: gw.name,
-                label: `${gw.name} / ${d.name}`
+                label: `${cleanDeviceName(gw.name, gw)} / ${cleanDeviceName(d.name, d)}`
               });
             });
           });
@@ -226,6 +279,23 @@ const EditConditionModal = ({
             setIsLoadingModules(true);
             try {
               const deviceData = await getSochiotDeviceByNumericId(matchingDevice.id);
+              // 🔍 Debug: see all fields in device detail API response
+              console.log('[DeviceDebug] deviceData:', JSON.stringify(deviceData, null, 2));
+
+              // ✅ Use rich deviceData fields to build a clean label
+              const cleanDeviceLabel = cleanDeviceName(matchingDevice.name, deviceData) || cleanDeviceName(matchingDevice.name, {});
+              const gatewayObj = gateways.find(g => (g.deviceEntityVOS || g.deviceVOS || []).some(d => String(d.id) === String(matchingDevice.id)));
+              // Try to get clean gateway name from deviceData (may have clusterName, gatewayName etc.)
+              const cleanGwLabel = cleanDeviceName(matchingDevice.gatewayName, deviceData) || cleanDeviceName(matchingDevice.gatewayName, gatewayObj || {});
+              
+              // Update the label in locationDevices if we got a better name
+              if (cleanDeviceLabel || cleanGwLabel) {
+                const newLabel = `${cleanGwLabel || matchingDevice.gatewayName} / ${cleanDeviceLabel || matchingDevice.name}`;
+                setLocationDevices(prev => prev.map(d =>
+                  d.id === matchingDevice.id ? { ...d, label: newLabel } : d
+                ));
+              }
+
               const mods = deviceData?.moduleEntityVOS
                 || deviceData?.moduleVOS
                 || deviceData?.modules
@@ -290,7 +360,7 @@ const EditConditionModal = ({
             uuid: d.uuid,
             name: d.name,
             gatewayName: gw.name,
-            label: `${gw.name} / ${d.name}`
+            label: `${cleanDeviceName(gw.name, gw)} / ${cleanDeviceName(d.name, d)}`
           });
         });
       });
@@ -622,7 +692,7 @@ const EditConsequenceModal = ({
                 uuid: d.uuid,
                 name: d.name,
                 gatewayName: gw.name,
-                label: `${gw.name} / ${d.name}`
+                label: `${cleanDeviceName(gw.name, gw)} / ${cleanDeviceName(d.name, d)}`
               });
             });
           });
@@ -660,7 +730,7 @@ const EditConsequenceModal = ({
       const devices = [];
       gateways.forEach(gw => {
         (gw.deviceEntityVOS || gw.deviceVOS || []).forEach(d => {
-          devices.push({ id: d.id, uuid: d.uuid, name: d.name, gatewayName: gw.name, label: `${gw.name} / ${d.name}` });
+          devices.push({ id: d.id, uuid: d.uuid, name: d.name, gatewayName: gw.name, label: `${cleanDeviceName(gw.name, gw)} / ${cleanDeviceName(d.name, d)}` });
         });
       });
       setLocationDevices(devices);

@@ -2303,6 +2303,14 @@ const AlarmConfig = () => {
                   // First condition must be NONE (no preceding operator), others keep their AND/OR setting
                   const isFirst = idx === 0;
 
+                  // Helper: extract string value, fall back to origEF field
+                  const efStr = (field, origField) => {
+                    const val = ef[field];
+                    if (val === null || val === undefined || val === '') return origEF[origField || field] || null;
+                    if (typeof val === 'object' && val?.name) return val.name;
+                    return val;
+                  };
+
                   return {
                     name: c.name,
                     locationId: c.locationId,
@@ -2315,17 +2323,29 @@ const AlarmConfig = () => {
                     description: c.description,
                     onModuleGroup: c.onModuleGroup || false,
                     moduleGroupId: c.moduleGroupId || null,
+                    // ✅ conditionType: always string
                     conditionType: (typeof c.conditionType === 'object' && c.conditionType) ? c.conditionType.name : c.conditionType,
                     eventField: {
-                      id: ef.id,
-                      fieldName: ef.fieldName,
-                      displayName: ef.displayName,
-                      fieldType: (typeof ef.fieldType === 'object' && ef.fieldType) ? ef.fieldType.name : (ef.fieldType || origEF.fieldType || 'MODULE'),
-                      moduleTypeId: ef.moduleTypeId || origEF.moduleTypeId,
+                      id: ef.id || origEF.id,
+                      // ✅ Required fields — fallback to origEF if ef has null/undefined
+                      fieldName:    ef.fieldName    || origEF.fieldName    || '',
+                      displayName:  ef.displayName  || origEF.displayName  || '',
+                      // ✅ fieldType: string
+                      fieldType: efStr('fieldType') || origEF.fieldType || null,
+                      moduleTypeId:     ef.moduleTypeId     || origEF.moduleTypeId,
                       moduleTypeNumber: ef.moduleTypeNumber || origEF.moduleTypeNumber,
-                      moduleTypeName: ef.moduleTypeName || origEF.moduleTypeName,
-                      dataType: (typeof ef.dataType === 'object' && ef.dataType) ? ef.dataType.name : (ef.dataType || origEF.dataType),
-                      supportedValues: Array.isArray(ef.supportedValues) ? ef.supportedValues.join(',') : (ef.supportedValues ?? ''),
+                      moduleTypeName:   ef.moduleTypeName   || origEF.moduleTypeName,
+                      // ✅ dataType: always string (required by Sochiot Java enum)
+                      dataType: (() => {
+                        const dt = ef.dataType || origEF.dataType;
+                        if (!dt) return 'INTEGER';
+                        if (typeof dt === 'object' && dt?.name) return dt.name;
+                        return dt;
+                      })(),
+                      // ✅ supportedValues: always string
+                      supportedValues: Array.isArray(ef.supportedValues)
+                        ? ef.supportedValues.join(',')
+                        : (ef.supportedValues ?? (Array.isArray(origEF.supportedValues) ? origEF.supportedValues.join(',') : (origEF.supportedValues ?? ''))),
                       dateCreated: ef.dateCreated || origEF.dateCreated,
                       lastUpdated: ef.lastUpdated || origEF.lastUpdated,
                       deleted: ef.deleted || false
