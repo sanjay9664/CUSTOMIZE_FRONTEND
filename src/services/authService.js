@@ -340,9 +340,16 @@ export const deleteSochiotRule = async (ruleId) => {
     }, 20000);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Delete Rule API Error:', response.status, errorText);
-      throw new Error(`API Error ${response.status}: ${errorText}`);
+      let errorBody = {};
+      try { errorBody = await response.json(); } catch (_) {}
+      console.error('Delete Rule API Error:', response.status, errorBody);
+      // Create a typed error so callers can check err.status directly
+      const err = new Error(
+        errorBody?.message || `API Error ${response.status}`
+      );
+      err.status = response.status;
+      err.body = errorBody;
+      throw err;
     }
     // API returns { status: "OK", data: null, message: "Setting is deleted successfully." }
     return await response.json();

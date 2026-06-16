@@ -370,19 +370,16 @@ const AlarmConfig = () => {
 
         console.log('[Sync] Sochiot rules fetched:', sochiotRules.length, sochiotRules.map(r => ({ id: r.id, name: r.name, active: r.active })));
 
-        // Patch local alarms that have no sochiotRuleId
+        // Only patch alarms that have NO sochiotRuleId yet — never clear existing valid IDs
         const saved = JSON.parse(localStorage.getItem('admin_alarm_config') || '{}');
         let changed = false;
 
         Object.entries(saved).forEach(([catKey, alarms]) => {
           if (!Array.isArray(alarms)) return;
           alarms.forEach((alarm, idx) => {
-            if (alarm.sochiotRuleId) return; // already linked
+            if (alarm.sochiotRuleId) return; // already linked — do NOT overwrite
 
-            // Try to find a matching Sochiot rule:
-            // Rules created by our app have names like "MN2VRVVOL786"
-            // We match by checking if any rule was created recently (last 7 days)
-            // OR by name containing the param abbreviation
+            // Try to match by name abbreviation
             const paramAbbr = alarm.name.replace(/[^A-Za-z0-9]/g, '').substring(0, 3).toUpperCase();
             const matched = sochiotRules.find(r =>
               r.name && r.name.toUpperCase().includes(paramAbbr)
@@ -515,23 +512,27 @@ const AlarmConfig = () => {
               onModuleGroup: c.onModuleGroup || false,
               moduleGroupId: c.moduleGroupId || null,
               deleted: c.deleted || false,
-              conditionType: (typeof c.conditionType === 'object') ? {
-                name: energyCondition,
-                displayName: energyCondition.replace(/_/g, ' ').replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.substring(1).toLowerCase())
-              } : energyCondition,
+              // ✅ conditionType must be a plain string (Java enum) — NOT an object
+              conditionType: (typeof c.conditionType === 'object' && c.conditionType?.name)
+                ? c.conditionType.name
+                : (energyCondition || c.conditionType || 'IS_GREATER_THAN'),
               eventField: {
                 id: ef.id,
                 fieldName: ef.fieldName,
                 displayName: ef.displayName,
+                // ✅ fieldType must be a plain string — NOT an object
                 fieldType: (typeof ef.fieldType === 'object' && ef.fieldType) ? ef.fieldType.name : (ef.fieldType || null),
                 moduleTypeId: ef.moduleTypeId || 11,
                 moduleTypeNumber: ef.moduleTypeNumber || 11,
                 moduleTypeName: ef.moduleTypeName || "general_2023-01-11 14:28:03.234",
-                dataType: (typeof ef.dataType === 'object' && ef.dataType) ? ef.dataType : {
-                  name: "INTEGER",
-                  displayName: "Integer"
-                },
-                supportedValues: Array.isArray(ef.supportedValues) ? ef.supportedValues : [""],
+                // ✅ dataType must be a plain string — NOT an object
+                dataType: (typeof ef.dataType === 'object' && ef.dataType?.name)
+                  ? ef.dataType.name
+                  : (ef.dataType || 'INTEGER'),
+                // ✅ supportedValues must be a plain String — NOT an array
+                supportedValues: Array.isArray(ef.supportedValues)
+                  ? ef.supportedValues.join(',')
+                  : (ef.supportedValues || ''),
                 dateCreated: ef.dateCreated,
                 lastUpdated: ef.lastUpdated,
                 deleted: ef.deleted || false
@@ -552,11 +553,14 @@ const AlarmConfig = () => {
             cmdField: c.cmdField || "6,4516",
             cmdArg: c.cmdArg || "0",
             argValue: c.argValue !== undefined ? c.argValue : 0,
-            dataType: (typeof c.dataType === 'object' && c.dataType) ? c.dataType : {
-              name: "INTEGER",
-              displayName: "Integer"
-            },
-            supportedValues: Array.isArray(c.supportedValues) ? c.supportedValues : [""],
+            // ✅ dataType must be a plain string — NOT an object
+            dataType: (typeof c.dataType === 'object' && c.dataType?.name)
+              ? c.dataType.name
+              : (c.dataType || 'INTEGER'),
+            // ✅ supportedValues must be a plain String — NOT an array
+            supportedValues: Array.isArray(c.supportedValues)
+              ? c.supportedValues.join(',')
+              : (c.supportedValues || ''),
             dateCreated: c.dateCreated,
             lastUpdated: c.lastUpdated,
             description: c.description || "just text",
@@ -656,10 +660,20 @@ const AlarmConfig = () => {
         setTimeout(() => setAdminSaveMsg(null), 4000);
       } catch (err) {
         console.error('Failed to delete rule on Sochiot:', err);
-        setAdminSaveMsg({ type: 'error', text: `Failed to delete rule on Sochiot: ${err.message}` });
+        // If Sochiot says "not found" (400/404), the rule is already gone on server —
+        // still remove it locally so the user is not stuck.
+        const isNotFound = err.status === 400 || err.status === 404 || err.message?.toLowerCase().includes('not found');
+        if (isNotFound) {
+          console.warn('[Delete] Rule not found on Sochiot (already deleted or never synced). Removing locally.');
+          setAdminSaveMsg({ type: 'success', text: `Alarm removed locally (rule was not found on Sochiot).` });
+        } else {
+          // For other errors (network, 500, etc.) — still block and show error
+          setAdminSaveMsg({ type: 'error', text: `Failed to delete rule on Sochiot: ${err.message}` });
+          setTimeout(() => setAdminSaveMsg(null), 4000);
+          setIsCreatingRule(false);
+          return; // Stop — don't remove locally if remote delete failed for unknown reason
+        }
         setTimeout(() => setAdminSaveMsg(null), 4000);
-        setIsCreatingRule(false);
-        return; // Stop — don't remove locally if remote delete failed
       }
       setIsCreatingRule(false);
     }
@@ -748,10 +762,22 @@ const AlarmConfig = () => {
         setIsCreatingRule(false);
       }
     } else {
-      // No sochiotRuleId — only local state update
-      console.warn('[Toggle] No sochiotRuleId on alarm, only local state updated.');
-      setAdminSaveMsg({ type: 'success', text: `Status updated locally (no linked Sochiot rule).` });
-      setTimeout(() => setAdminSaveMsg(null), 4000);
+      // No sochiotRuleId — show clear warning to user
+      console.warn('[Toggle] No sochiotRuleId on alarm — cannot call Sochiot API.');
+      setAdminSaveMsg({
+        type: 'error',
+        text: `Cannot toggle: alarm "${alarm.name}" is not linked to any Sochiot rule. Please re-create this alarm.`
+      });
+      setTimeout(() => setAdminSaveMsg(null), 5000);
+      // Revert optimistic local update since we couldn't sync
+      setAdminAlarmValues(prev => {
+        const list = prev[catKey] || [];
+        const reverted = list.map(a => a.name === alarm.name ? { ...a, active: !newActive } : a);
+        const savedRev = JSON.parse(localStorage.getItem('admin_alarm_config') || '{}');
+        savedRev[catKey] = reverted;
+        localStorage.setItem('admin_alarm_config', JSON.stringify(savedRev));
+        return { ...prev, [catKey]: reverted };
+      });
     }
   };
 
