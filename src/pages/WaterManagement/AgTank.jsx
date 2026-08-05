@@ -440,7 +440,7 @@ const AgTank = () => {
 
   useEffect(() => {
     const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
-    const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'] });
+    const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'], autoConnect: false });
 
     socket.on('connect', () => {
       console.log('AgTank WebSocket Connected - Listening for Telemetry');

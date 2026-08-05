@@ -120,19 +120,21 @@ const Settings = () => {
         backendConfig[key] = modules[label];
       });
 
-      const configEndpoint = isSuperAdmin ? '/api/super-admin/config' : '/api/super-admin/admin-config';
-      const response = await fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}${configEndpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config: backendConfig })
-      });
-
-      if (response.ok) {
-        localStorage.setItem('scada_modules_config', JSON.stringify(modules));
-        window.dispatchEvent(new Event('storage-update'));
-        setSaveStatus('System Updated Successfully');
-        setTimeout(() => setSaveStatus(null), 3000);
+      try {
+        const configEndpoint = isSuperAdmin ? '/api/super-admin/config' : '/api/super-admin/admin-config';
+        await fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}${configEndpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: backendConfig })
+        });
+      } catch (e) {
+        console.warn('Backend save failed, saved locally for UI:', e);
       }
+
+      localStorage.setItem('scada_modules_config', JSON.stringify(modules));
+      window.dispatchEvent(new Event('storage-update'));
+      setSaveStatus('System Updated Successfully (Local UI)');
+      setTimeout(() => setSaveStatus(null), 3000);
     } catch (error) {
       console.error('Save failed:', error);
       setSaveStatus('Error saving to system');

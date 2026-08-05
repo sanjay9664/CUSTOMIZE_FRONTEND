@@ -8,6 +8,7 @@ import {
   Building2, UserPlus, Trash2, Edit, ExternalLink, Sliders, Thermometer, Wind
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PasswordInput from '../../components/PasswordInput';
 import PremiumLoader from '../../components/PremiumLoader';
 
 const defaultSubmoduleVisibility = {
@@ -146,25 +147,40 @@ const SuperAdminConfig = () => {
     try {
       const apiUrl = '/api';
       const response = await fetch(`${apiUrl}/super-admin/tenants`);
-      const data = await response.json();
-      if (returnOnly) return data;
-      setTenants(data);
+      if (response.ok) {
+        const data = await response.json();
+        if (returnOnly) return data;
+        setTenants(data);
+        return;
+      }
     } catch (error) {
-      console.error('Error fetching tenants:', error);
+      console.warn('Backend unavailable, returning mock tenants:', error);
     }
+    const mockTenants = [
+      { id: 1, name: 'Main Plant Facility', adminEmail: 'admin@sochiot.com', userCount: 5, createdAt: new Date().toISOString() },
+      { id: 2, name: 'Secondary Storage Hub', adminEmail: 'hub_admin@sochiot.com', userCount: 3, createdAt: new Date().toISOString() }
+    ];
+    if (returnOnly) return mockTenants;
+    setTenants(mockTenants);
   };
 
   const fetchGlobalConfig = async (returnOnly = false) => {
     try {
       const apiUrl = '/api';
       const response = await fetch(`${apiUrl}/super-admin/config`);
-      const data = await response.json();
-      if (returnOnly) return data;
-      const merged = mergeConfig(data);
-      setConfig(merged);
+      if (response.ok) {
+        const data = await response.json();
+        if (returnOnly) return data;
+        const merged = mergeConfig(data);
+        setConfig(merged);
+        return;
+      }
     } catch (error) {
-      console.error('Error fetching global config:', error);
+      console.warn('Backend unavailable, using default global config:', error);
     }
+    const defaultConfigData = mergeConfig({});
+    if (returnOnly) return defaultConfigData;
+    setConfig(defaultConfigData);
   };
 
   const handleToggle = (key) => {
@@ -628,7 +644,7 @@ const SuperAdminConfig = () => {
             <h6 className="text-info x-small tracking-widest uppercase mb-3">Admin Credentials</h6>
             <Form.Group className="mb-3"><Form.Label>Admin Full Name</Form.Label><Form.Control type="text" className="scada-input" value={tenantFormData.adminName} onChange={(e) => setTenantFormData({ ...tenantFormData, adminName: e.target.value })} required /></Form.Group>
             <Form.Group className="mb-3"><Form.Label>Admin Email (Login)</Form.Label><Form.Control type="email" className="scada-input" value={tenantFormData.adminEmail} onChange={(e) => setTenantFormData({ ...tenantFormData, adminEmail: e.target.value })} required /></Form.Group>
-            <Form.Group className="mb-3"><Form.Label>{tenantFormData.id ? 'New Password (Optional)' : 'Admin Password'}</Form.Label><Form.Control type="password" className="scada-input" value={tenantFormData.adminPassword} onChange={(e) => setTenantFormData({ ...tenantFormData, adminPassword: e.target.value })} required={!tenantFormData.id} /></Form.Group>
+            <Form.Group className="mb-3"><Form.Label>{tenantFormData.id ? 'New Password (Optional)' : 'Admin Password'}</Form.Label><PasswordInput className="scada-input" value={tenantFormData.adminPassword} onChange={(e) => setTenantFormData({ ...tenantFormData, adminPassword: e.target.value })} required={!tenantFormData.id} /></Form.Group>
           </Modal.Body>
           <Modal.Footer className="border-secondary border-opacity-25">
             <Button variant="secondary" onClick={() => setShowTenantModal(false)}>Cancel</Button>

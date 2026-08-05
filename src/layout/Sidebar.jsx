@@ -25,6 +25,27 @@ const Sidebar = ({ collapsed }) => {
 
   useEffect(() => {
     const fetchConfig = async () => {
+      const defaultAllModules = {
+        "Dashboard": true,
+        "Water Management": true,
+        "Motors": true,
+        "DG Set": true,
+        "Setting Templates": true,
+        "Alarm System": true,
+        "LT Panel": true,
+        "Transformer": true,
+        "Fire": true,
+        "Ticketing": true,
+        "Maintenance": true,
+        "Service History": true,
+        "Daily DPR": true,
+        "Energy Metering": true,
+        "VRV": true,
+        "AQI Sensor": true,
+        "HVAC": true,
+        "AC": true
+      };
+
       try {
         const configEndpoint = isSuperAdmin ? '/api/super-admin/config' : '/api/super-admin/admin-config';
         const response = await fetch(configEndpoint);
@@ -61,12 +82,18 @@ const Sidebar = ({ collapsed }) => {
           setModulesConfig(sidebarModules);
           setSubmodulesConfig(config.submoduleVisibility || {});
 
-          // Also update localStorage so it's ready for next reload
           localStorage.setItem('scada_modules_config', JSON.stringify(sidebarModules));
           localStorage.setItem('scada_submodules_config', JSON.stringify(config.submoduleVisibility || {}));
+          return;
         }
       } catch (error) {
-        console.error('Failed to fetch sidebar config:', error);
+        console.warn('Backend unavailable, using full module menu config:', error);
+      }
+
+      // Default UI mode fallback
+      if (!localStorage.getItem('scada_modules_config')) {
+        setModulesConfig(defaultAllModules);
+        localStorage.setItem('scada_modules_config', JSON.stringify(defaultAllModules));
       }
     };
 

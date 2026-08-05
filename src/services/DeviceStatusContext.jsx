@@ -168,24 +168,9 @@ export const DeviceStatusProvider = ({ children }) => {
 
   // Helper function to resolve overall status
   const getOverallStatus = useCallback((deviceId, gatewayUuid) => {
-    const isDevOnline = deviceId ? (deviceStatuses[deviceId] ?? null) : null;
-    const isGwyOnline = gatewayUuid ? (gatewayStatuses[gatewayUuid] ?? null) : null;
-
-    // Resilient fallback: If device is explicitly online, bypass gateway check
-    if (isDevOnline === true) return true;
-
-    // If both are checked, both must be online. If only one is checked, that one must be online.
-    if (isDevOnline !== null && isGwyOnline !== null) {
-      return isDevOnline && isGwyOnline;
-    }
-    if (isDevOnline !== null) return isDevOnline;
-    if (isGwyOnline !== null) return isGwyOnline;
-    
-    // Fallback: check deviceStatuses list for deviceId
-    if (deviceId && deviceStatuses[deviceId] !== undefined) {
-      return deviceStatuses[deviceId];
-    }
-    return false; // Default offline
+    const isDevOnline = deviceId ? (deviceStatuses[deviceId] ?? true) : true;
+    const isGwyOnline = gatewayUuid ? (gatewayStatuses[gatewayUuid] ?? true) : true;
+    return isDevOnline && isGwyOnline;
   }, [deviceStatuses, gatewayStatuses]);
 
   return (

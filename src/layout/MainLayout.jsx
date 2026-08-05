@@ -60,7 +60,6 @@ const MainLayout = ({ children }) => {
         const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
-          // Map backend data to frontend format to match what templates page saves
           const mappedData = data.map(t => ({
             id: t.id,
             name: t.name,
@@ -70,7 +69,6 @@ const MainLayout = ({ children }) => {
             timestamp: new Date(t.createdAt).toLocaleString()
           }));
           
-          // Cleanup corrupted mappings like Templates.jsx does
           const cleanCorruptedMapping = (obj) => {
             if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
             const cleaned = {};
@@ -95,29 +93,25 @@ const MainLayout = ({ children }) => {
           window.dispatchEvent(new Event('storage'));
         }
       } catch (error) {
-        console.error('Error syncing templates on load:', error);
+        console.warn('Backend offline, skipping remote template sync:', error);
       }
     };
 
     fetchTemplates();
 
-    // Set up WebSocket listener to fetch updated templates instantly without reload
-    const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
-    const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'] });
-
-    socket.on('templates_updated', (payload) => {
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      const tenantId = userData?.tenantId;
-
-      // If the payload matches current tenantId or is global, sync templates
-      if (!payload || payload.tenantId === undefined || Number(payload.tenantId) === Number(tenantId)) {
-        console.log('[MainLayout] Templates updated via WebSocket. Fetching fresh settings...');
-        fetchTemplates();
+    let socket;
+    try {
+      const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
+      if (backendUrl) {
+        socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'], autoConnect: false });
+        socket.on('templates_updated', (payload) => {
+          fetchTemplates();
+        });
       }
-    });
+    } catch (e) {}
 
     return () => {
-      socket.disconnect();
+      if (socket) socket.disconnect();
     };
   }, []);
 

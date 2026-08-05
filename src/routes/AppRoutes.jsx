@@ -18,6 +18,7 @@ import TicketingSystem from '../pages/Ticketing/Index';
 import ConfigTemplates from '../pages/Configuration/Templates';
 import SuperAdminConfig from '../pages/SuperAdmin/SuperAdminConfig';
 import UserManagement from '../pages/Admin/UserManagement';
+import AuditLogViewer from '../pages/Admin/AuditLogViewer';
 import MaintenancePage from '../pages/Maintenance/Index';
 
 // Energy Metering Pages
@@ -169,8 +170,11 @@ const AppRoutes = () => {
       />
 
       {/* Admin Routes */}
-      {userRole === 'ADMIN' && (
-        <Route path="/admin/manage-users" element={<UserManagement />} />
+      {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') && (
+        <>
+          <Route path="/admin/manage-users" element={<UserManagement />} />
+          <Route path="/admin/audit-logs" element={<AuditLogViewer />} />
+        </>
       )}
 
       {/* Maintenance & Service History */}
