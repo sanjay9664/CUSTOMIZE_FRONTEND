@@ -359,9 +359,6 @@ const AlarmConfig = () => {
       try {
         // Ensure token is valid
         let userData = await getSochiotUserMe();
-        if (!userData) {
-          await loginToSochiot("sa@ismartaccess.com", "I0t3ch");
-        }
 
         // Fetch rules from Sochiot (LOCATION nodeId=7)
         const rulesData = await getSochiotRules('LOCATION', '7', 1);
@@ -476,9 +473,6 @@ const AlarmConfig = () => {
       setIsCreatingRule(true);
       try {
         let userData = await getSochiotUserMe();
-        if (!userData) {
-          await loginToSochiot("sa@ismartaccess.com", "I0t3ch");
-        }
 
         const freshRule = await getSochiotRuleById(ruleIdToUpdate);
         if (!freshRule) throw new Error('Could not fetch latest rule data from Sochiot');
@@ -652,9 +646,6 @@ const AlarmConfig = () => {
       setIsCreatingRule(true);
       try {
         let userData = await getSochiotUserMe();
-        if (!userData) {
-          await loginToSochiot("sa@ismartaccess.com", "I0t3ch");
-        }
         await deleteSochiotRule(alarmToDelete.sochiotRuleId);
         setAdminSaveMsg({ type: 'success', text: `Rule deleted from Sochiot successfully!` });
         setTimeout(() => setAdminSaveMsg(null), 4000);
@@ -726,10 +717,6 @@ const AlarmConfig = () => {
       try {
         // Ensure Sochiot token is valid before making the API call
         let userData = await getSochiotUserMe();
-        if (!userData) {
-          console.log('[Toggle] Token expired, re-logging in to Sochiot...');
-          await loginToSochiot("sa@ismartaccess.com", "I0t3ch");
-        }
 
         // Call activate or de-activate endpoint — same as Super Admin toggleRuleActive
         if (newActive) {
@@ -833,9 +820,6 @@ const AlarmConfig = () => {
     setIsCreatingRule(true);
     try {
       let userData = await getSochiotUserMe();
-      if (!userData) {
-        await loginToSochiot("sa@ismartaccess.com", "I0t3ch");
-      }
 
       const mapping = template.mapping;
       const deviceUuid = mapping.deviceId;
@@ -1008,10 +992,6 @@ const AlarmConfig = () => {
     const initDynamicData = async () => {
       try {
         let userData = await getSochiotUserMe();
-        if (!userData) {
-          await loginToSochiot("sa@ismartaccess.com", "I0t3ch");
-          userData = await getSochiotUserMe();
-        }
 
         if (userData) {
           const companies = [];

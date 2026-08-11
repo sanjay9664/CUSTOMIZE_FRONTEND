@@ -489,14 +489,7 @@ const ConfigTemplates = () => {
   useEffect(() => {
     const initDynamicData = async () => {
       try {
-        // Try to get user data (if token exists)
         let userData = await getSochiotUserMe();
-
-        // If no data/token, perform dummy login as requested
-        if (!userData) {
-          await loginToSochiot("sa@ismartaccess.com", "I0t3ch");
-          userData = await getSochiotUserMe();
-        }
 
         if (userData) {
           const companies = [];

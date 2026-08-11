@@ -48,7 +48,7 @@ const MainLayout = ({ children }) => {
         } catch(e) {}
       }
 
-      window.location.href = '/super-admin';
+      window.location.href = '/dashboard';
     }
   };  useEffect(() => {
     const fetchTemplates = async () => {

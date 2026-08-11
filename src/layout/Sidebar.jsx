@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Droplets, Activity, Zap, Bell, Battery, ShieldAlert,
-  Settings, ClipboardList, PenTool, History, LayoutDashboard,
+  Droplets, Activity, Zap, Bell, Battery, ShieldAlert, Settings,
+  ClipboardList, PenTool, History, LayoutDashboard,
   ChevronRight, Gauge, Database, Lock, User, Wind, Leaf, Thermometer
 } from 'lucide-react';
 import { Accordion } from 'react-bootstrap';
@@ -25,6 +25,9 @@ const Sidebar = ({ collapsed }) => {
 
   useEffect(() => {
     const fetchConfig = async () => {
+      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+      if (!isAuthenticated) return;
+
       const defaultAllModules = {
         "Dashboard": true,
         "Water Management": true,
@@ -127,9 +130,7 @@ const Sidebar = ({ collapsed }) => {
       localStorage.removeItem('scada_submodules_config');
 
       // Navigate back to the appropriate management page
-      if (originalRole === 'SUPER_ADMIN') {
-        window.location.href = '/super-admin';
-      } else if (originalRole === 'ADMIN') {
+      if (originalRole === 'ADMIN') {
         window.location.href = '/admin/manage-users';
       } else {
         window.location.href = '/dashboard';
@@ -347,43 +348,21 @@ const Sidebar = ({ collapsed }) => {
 
         {/* Management & Admin Links */}
         <div className="mb-2">
-          {isSuperAdmin && !isImpersonating && (
-            <NavLink to="/super-admin" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              <ShieldAlert size={20} className="text-info" />
-              {!collapsed && <span className="ms-3 text-info">Super Admin Console</span>}
-            </NavLink>
-          )}
+          <NavLink to="/global-settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <Settings size={20} className="text-warning" />
+            {!collapsed && <span className="ms-3 text-warning fw-bold">Global Settings</span>}
+          </NavLink>
+
+          <NavLink to="/settings/users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <User size={20} className="text-info" />
+            {!collapsed && <span className="ms-3 text-info fw-bold">User Administration</span>}
+          </NavLink>
 
           {isAdmin && (
             <NavLink to="/admin/manage-users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
               <User size={20} className="text-success" />
               {!collapsed && <span className="ms-3 text-success">Manage Users</span>}
             </NavLink>
-          )}
-
-          {(isAdmin || isSuperAdmin) && (
-            <Accordion className="sidebar-accordion">
-              <Accordion.Item eventKey="admin-config" className="bg-transparent border-0">
-                <Accordion.Header className={`sidebar-link ${collapsed ? 'collapsed-header' : ''}`}>
-                  <div className="d-flex align-items-center w-100 position-relative">
-                    <span className="sidebar-icon"><Settings size={20} /></span>
-                    {!collapsed && <span className="sidebar-text ms-3 flex-grow-1">Advanced Settings</span>}
-                  </div>
-                </Accordion.Header>
-                {!collapsed && (
-                  <Accordion.Body className="p-0 ps-4">
-                    {(!modulesConfig || modulesConfig["Setting Templates"] !== false) && (
-                      <NavLink to="/config/templates" className={({ isActive }) => `sidebar-sub-link ${isActive ? 'active' : ''}`}>
-                        Setting Templates
-                      </NavLink>
-                    )}
-                    <NavLink to="/settings" className={({ isActive }) => `sidebar-sub-link ${isActive ? 'active' : ''}`}>
-                      Global Settings
-                    </NavLink>
-                  </Accordion.Body>
-                )}
-              </Accordion.Item>
-            </Accordion>
           )}
         </div>
 

@@ -89,14 +89,27 @@ const Login = () => {
   const navigate = useNavigate();
   
   // Login State
-  const [credentials, setCredentials] = useState({ identifier: '', password: '' });
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(() => {
+    return localStorage.getItem('remember_me') !== 'false';
+  });
+  const [credentials, setCredentials] = useState(() => {
+    const isRemembered = localStorage.getItem('remember_me') !== 'false';
+    const savedId = localStorage.getItem('remembered_identifier') || '';
+    const savedPw = localStorage.getItem('remembered_password') || '';
+    return {
+      identifier: isRemembered ? savedId : '',
+      password: isRemembered ? savedPw : ''
+    };
+  });
   
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   // ── TENANT BRANDING & THEME CUSTOMIZER STATE ─────────────────────────────
+  const logoInputRef = React.useRef(null);
+  const wallpaperInputRef = React.useRef(null);
+
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [tenantConfig, setTenantConfig] = useState(() => {
     try {
@@ -165,6 +178,7 @@ const Login = () => {
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
   };
 
   const handleWallpaperFileUpload = (e) => {
@@ -178,16 +192,35 @@ const Login = () => {
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
   };
 
   // Helper for storing auth session and configuring sidebar
   const storeSessionAndRedirect = (data) => {
-    localStorage.setItem('token',           data.token);
-    localStorage.setItem('userRole',         data.user.role);
-    localStorage.setItem('userData',         JSON.stringify(data.user));
+    const payloadData = data?.data || data;
+    const user = payloadData?.user || {};
+    const token = payloadData?.accessToken || payloadData?.token || '';
+
+    localStorage.setItem('token',           token);
+    localStorage.setItem('userRole',         user.role || 'ADMIN');
+    localStorage.setItem('userData',         JSON.stringify(user));
     localStorage.setItem('isAuthenticated', 'true');
 
-    const config = data.config || {};
+    if (rememberMe) {
+      localStorage.setItem('remember_me', 'true');
+      if (credentials.identifier) {
+        localStorage.setItem('remembered_identifier', credentials.identifier);
+      }
+      if (credentials.password) {
+        localStorage.setItem('remembered_password', credentials.password);
+      }
+    } else {
+      localStorage.setItem('remember_me', 'false');
+      localStorage.removeItem('remembered_identifier');
+      localStorage.removeItem('remembered_password');
+    }
+
+    const config = payloadData.config || {};
     const sidebarMapping = {
       "Dashboard":        config.showDashboard        ?? true,
       "Water Management": config.showWaterManagement  ?? true,
@@ -214,11 +247,7 @@ const Login = () => {
     window.dispatchEvent(new Event('storage-update'));
     setLoading(false);
 
-    if (data.user.role === 'SUPER_ADMIN') {
-      navigate('/super-admin');
-    } else {
-      navigate('/dashboard');
-    }
+    navigate('/dashboard');
   };
 
   // ── HANDLE LOGIN (Username or Email) ──────────────────────────────────────
@@ -249,7 +278,7 @@ const Login = () => {
       });
     } catch (primaryErr) {
       try {
-        response = await fetch('http://127.0.0.1:5000/api/v1/auth/login', {
+        response = await fetch('http://127.0.0.1:3001/api/v1/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -283,7 +312,7 @@ const Login = () => {
     setSuccessMsg(`Authenticating with ${provider}...`);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/v1/auth/oauth', {
+      const response = await fetch('http://127.0.0.1:3001/api/v1/auth/oauth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -622,10 +651,20 @@ const Login = () => {
                          placeholder="URL or Upload..."
                          className="cyber-modal-input-compact flex-grow-1"
                       />
-                      <label className="btn btn-outline-info btn-sm py-1 px-2 d-flex align-items-center gap-1 cursor-pointer flex-shrink-0 mb-0 fs-11 fw-bold">
+                      <button 
+                         type="button"
+                         className="btn btn-outline-info btn-sm py-1 px-2 d-flex align-items-center gap-1 cursor-pointer flex-shrink-0 mb-0 fs-11 fw-bold"
+                         onClick={() => logoInputRef.current?.click()}
+                      >
                          <Upload size={12} /> Browse
-                         <input type="file" accept="image/*" className="d-none" onChange={handleLogoFileUpload} />
-                      </label>
+                      </button>
+                      <input 
+                         ref={logoInputRef}
+                         type="file" 
+                         accept="image/*" 
+                         className="d-none" 
+                         onChange={handleLogoFileUpload} 
+                      />
                       {tenantConfig.logoUrl && (
                          <Button variant="outline-danger" size="sm" className="py-1 px-2 fs-11" onClick={() => {
                             const updated = { ...tenantConfig, logoUrl: '' };
@@ -661,10 +700,20 @@ const Login = () => {
                          placeholder="URL or Upload..."
                          className="cyber-modal-input-compact flex-grow-1"
                       />
-                      <label className="btn btn-outline-info btn-sm py-1 px-2 d-flex align-items-center gap-1 cursor-pointer flex-shrink-0 mb-0 fs-11 fw-bold">
+                      <button 
+                         type="button"
+                         className="btn btn-outline-info btn-sm py-1 px-2 d-flex align-items-center gap-1 cursor-pointer flex-shrink-0 mb-0 fs-11 fw-bold"
+                         onClick={() => wallpaperInputRef.current?.click()}
+                      >
                          <Upload size={12} /> Browse
-                         <input type="file" accept="image/*" className="d-none" onChange={handleWallpaperFileUpload} />
-                      </label>
+                      </button>
+                      <input 
+                         ref={wallpaperInputRef}
+                         type="file" 
+                         accept="image/*" 
+                         className="d-none" 
+                         onChange={handleWallpaperFileUpload} 
+                      />
                       {tenantConfig.bgWallpaperUrl && (
                          <Button variant="outline-danger" size="sm" className="py-1 px-2 fs-11" onClick={() => {
                             const updated = { ...tenantConfig, bgWallpaperUrl: '' };
@@ -831,10 +880,11 @@ const Login = () => {
         /* LEFT HERO SIDE */
         .hero-exact-side {
             width: 53%;
-            background: var(--dynamic-bg-color, #060a12);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            background: ${tenantConfig.bgWallpaperUrl ? 'rgba(6, 10, 18, 0.72)' : 'var(--dynamic-bg-color, #060a12)'};
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
             transition: background 0.4s ease;
+            backdrop-filter: ${tenantConfig.bgWallpaperUrl ? 'blur(12px)' : 'none'};
         }
 
         .hero-ambient-glow {
@@ -843,7 +893,7 @@ const Login = () => {
             left: 10%;
             width: 480px;
             height: 480px;
-            background: radial-gradient(circle, rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.18) 0%, rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.04) 50%, transparent 70%);
+            background: radial-gradient(circle, rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.22) 0%, rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.05) 50%, transparent 70%);
             filter: blur(110px);
             pointer-events: none;
             z-index: 1;
@@ -858,7 +908,7 @@ const Login = () => {
         }
 
         .hero-gradient-text {
-            background: var(--dynamic-gradient, linear-gradient(135deg, #38bdf8 0%, #a855f7 100%));
+            background: var(--dynamic-gradient, linear-gradient(90deg, #00f2fe 0%, #38bdf8 100%));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 600;
@@ -867,9 +917,9 @@ const Login = () => {
         .hero-underline-bar {
             width: 44px;
             height: 3px;
-            background: var(--dynamic-primary, #0284c7);
+            background: var(--dynamic-primary, #00f2fe);
             border-radius: 2px;
-            box-shadow: 0 0 8px rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.5);
+            box-shadow: 0 0 10px rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.6);
         }
 
         .hero-exact-subtext {
@@ -883,9 +933,10 @@ const Login = () => {
             width: 100%;
             min-height: 420px;
             max-height: 520px;
-            border: 1px solid rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.28);
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.18);
+            border: 1px solid rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.35);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.25);
             background: #090e1a;
+            transition: all 0.4s ease;
         }
 
         .hero-scada-image {
@@ -904,7 +955,7 @@ const Login = () => {
         .hero-image-overlay-gradient {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(180deg, rgba(6, 10, 18, 0.05) 0%, rgba(6, 10, 18, 0.55) 100%);
+            background: linear-gradient(180deg, rgba(6, 10, 18, 0.05) 0%, rgba(6, 10, 18, 0.65) 100%);
             pointer-events: none;
         }
 
@@ -920,20 +971,21 @@ const Login = () => {
             font-size: 0.74rem;
             font-weight: 700;
             letter-spacing: 0.06em;
-            color: var(--dynamic-primary, #38bdf8);
+            color: var(--dynamic-primary, #00f2fe);
             display: flex;
             align-items: center;
             gap: 8px;
             z-index: 5;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: all 0.4s ease;
         }
 
         .live-pulse-dot {
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background-color: var(--dynamic-primary, #38bdf8);
-            box-shadow: 0 0 8px var(--dynamic-primary, #38bdf8);
+            background-color: var(--dynamic-primary, #00f2fe);
+            box-shadow: 0 0 10px var(--dynamic-primary, #00f2fe);
             animation: livePulse 1.5s infinite;
         }
 
@@ -944,14 +996,16 @@ const Login = () => {
 
         .hero-badge-pill {
             background: rgba(15, 23, 42, 0.75);
-            border: 1px solid rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.2);
             color: #e2e8f0;
             font-size: 0.8rem;
             font-weight: 600;
+            transition: all 0.4s ease;
         }
 
         .text-cyan-exact {
-            color: var(--dynamic-primary, #00f2fe);
+            color: var(--dynamic-primary, #00f2fe) !important;
+            transition: color 0.4s ease;
         }
 
         .hero-copyright-text {
@@ -961,17 +1015,19 @@ const Login = () => {
 
         /* RIGHT GLASS AUTH CARD WITH RECTANGULAR EDGE BEAMS */
         .auth-exact-side {
-            background: var(--dynamic-bg-color, #060a12);
+            background: ${tenantConfig.bgWallpaperUrl ? 'rgba(6, 10, 18, 0.70)' : 'var(--dynamic-bg-color, #060a12)'};
             transition: background 0.4s ease;
+            backdrop-filter: ${tenantConfig.bgWallpaperUrl ? 'blur(12px)' : 'none'};
         }
 
         .exact-glass-card {
-            background: rgba(11, 17, 30, 0.94) !important;
-            border: 1px solid rgba(255, 255, 255, 0.09) !important;
-            box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95), 0 0 40px rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.08) !important;
+            background: rgba(11, 17, 30, 0.92) !important;
+            border: 1px solid rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.25) !important;
+            box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95), 0 0 45px rgba(var(--dynamic-primary-rgb, 0, 242, 254), 0.2) !important;
             border-radius: 28px !important;
             position: relative;
             overflow: hidden;
+            transition: all 0.4s ease;
         }
 
         /* 4 RECTANGULAR EDGE BEAMS STAYING STRICTLY ON BORDER EDGES */

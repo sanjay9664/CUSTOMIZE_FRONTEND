@@ -10,7 +10,8 @@ import ActiveAlarms from '../pages/AlarmSystem/Active';
 import AlarmConfig from '../pages/AlarmSystem/AlarmConfig';
 import MessageTemplateSetting from '../pages/AlarmSystem/MessageTemplateSetting';
 import TransformerOverview from '../pages/Transformer/Overview';
-import Settings from '../pages/Settings/Settings';
+import SettingsIndex from '../pages/Settings/SettingsIndex';
+import UserSettings from '../pages/Settings/UserSettings';
 import AgTank from '../pages/WaterManagement/AgTank';
 import UgTank from '../pages/WaterManagement/UgTank';
 import MotorsOverview from '../pages/Motors/Overview';
@@ -104,7 +105,7 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={userRole === 'SUPER_ADMIN' ? "/super-admin" : "/dashboard"} replace />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<Dashboard />} />
 
       {/* Water Management */}
@@ -132,7 +133,7 @@ const AppRoutes = () => {
       <Route path="/dg-set/report" element={<PlaceholderPage title="DG Set PDF Reports" />} />
 
       {/* Configuration Templates */}
-      <Route path="/config/templates" element={<ConfigTemplates />} />
+      <Route path="/config/templates" element={<Navigate to="/dashboard" replace />} />
 
       {/* Alarm System */}
       <Route path="/alarm-system/overview" element={<AlarmOverview />} />
@@ -160,14 +161,13 @@ const AppRoutes = () => {
       <Route path="/transformer/load" element={<PlaceholderPage title="Load / Temperature Monitoring" />} />
       <Route path="/transformer/report" element={<PlaceholderPage title="Transformer PDF Reports" />} />
 
-      {/* Settings */}
-      <Route path="/settings" element={<Settings />} />
+      {/* Settings & User Administration */}
+      <Route path="/global-settings" element={<SettingsIndex />} />
+      <Route path="/settings" element={<SettingsIndex />} />
+      <Route path="/settings/users" element={<SettingsIndex />} />
 
       {/* Super Admin Routes */}
-      <Route
-        path="/super-admin"
-        element={userRole === 'SUPER_ADMIN' ? <SuperAdminConfig /> : <Navigate to="/dashboard" replace />}
-      />
+      <Route path="/super-admin" element={<Navigate to="/dashboard" replace />} />
 
       {/* Admin Routes */}
       {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') && (
