@@ -386,15 +386,15 @@ const UserAdministration = () => {
 
     switch (roleKey) {
       case 'SUPER_ADMIN':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(147, 51, 234, 0.3)', color: '#c084fc', border: '1px solid #9333ea' }}>SUPER ADMIN</span>;
+        return <span className="scada-role-badge badge-super-admin" style={{ ...badgeStyle, backgroundColor: 'rgba(147, 51, 234, 0.3)', color: '#c084fc', border: '1px solid #9333ea' }}>SUPER ADMIN</span>;
       case 'ADMIN':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(37, 99, 235, 0.3)', color: '#60a5fa', border: '1px solid #2563eb' }}>ADMIN</span>;
+        return <span className="scada-role-badge badge-admin" style={{ ...badgeStyle, backgroundColor: 'rgba(37, 99, 235, 0.3)', color: '#60a5fa', border: '1px solid #2563eb' }}>ADMIN</span>;
       case 'OPERATOR':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(22, 163, 74, 0.3)', color: '#4ade80', border: '1px solid #16a34a' }}>OPERATOR</span>;
+        return <span className="scada-role-badge badge-operator" style={{ ...badgeStyle, backgroundColor: 'rgba(22, 163, 74, 0.3)', color: '#4ade80', border: '1px solid #16a34a' }}>OPERATOR</span>;
       case 'MANAGER':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(234, 88, 12, 0.3)', color: '#fbbf24', border: '1px solid #d97706' }}>MANAGER</span>;
+        return <span className="scada-role-badge badge-manager" style={{ ...badgeStyle, backgroundColor: 'rgba(234, 88, 12, 0.3)', color: '#fbbf24', border: '1px solid #d97706' }}>MANAGER</span>;
       default:
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(124, 58, 237, 0.3)', color: '#a78bfa', border: '1px solid #7c3aed' }}>VIEWER</span>;
+        return <span className="scada-role-badge badge-viewer" style={{ ...badgeStyle, backgroundColor: 'rgba(124, 58, 237, 0.3)', color: '#a78bfa', border: '1px solid #7c3aed' }}>VIEWER</span>;
     }
   };
 
@@ -418,7 +418,7 @@ const UserAdministration = () => {
     };
 
     return (
-      <span style={statusStyle}>
+      <span className={`scada-status-badge ${isAct ? 'badge-active' : 'badge-inactive'}`} style={statusStyle}>
         <span 
           style={{ 
             width: '6px', 
@@ -615,16 +615,22 @@ const UserAdministration = () => {
           color: #0f172a !important;
         }
         body.light-mode .detail-profile-card {
-          background-color: #f1f5f9 !important;
-          border-color: #cbd5e1 !important;
+          background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
         }
         body.light-mode .detail-profile-name {
           color: #0f172a !important;
           font-weight: 800 !important;
+          font-size: 1.2rem !important;
+        }
+        body.light-mode .detail-profile-email {
+          color: #0284c7 !important;
+          font-weight: 700 !important;
         }
         body.light-mode .detail-grid-box {
           background-color: #f8fafc !important;
-          border-color: #e2e8f0 !important;
+          border-color: #cbd5e1 !important;
         }
         body.light-mode .detail-grid-label {
           color: #475569 !important;
@@ -633,6 +639,58 @@ const UserAdministration = () => {
         body.light-mode .detail-grid-value {
           color: #0284c7 !important;
           font-weight: 700 !important;
+        }
+
+        /* LIGHT MODE ROLE & STATUS BADGES HIGH CONTRAST OVERRIDES */
+        body.light-mode .scada-role-badge.badge-super-admin {
+          background-color: #f3e8ff !important;
+          color: #7e22ce !important;
+          border: 1.5px solid #a855f7 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .scada-role-badge.badge-admin {
+          background-color: #dbeafe !important;
+          color: #1d4ed8 !important;
+          border: 1.5px solid #3b82f6 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .scada-role-badge.badge-operator {
+          background-color: #dcfce7 !important;
+          color: #15803d !important;
+          border: 1.5px solid #22c55e !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .scada-role-badge.badge-manager {
+          background-color: #fef3c7 !important;
+          color: #b45309 !important;
+          border: 1.5px solid #f59e0b !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .scada-role-badge.badge-viewer {
+          background-color: #f3e8ff !important;
+          color: #6b21a8 !important;
+          border: 1.5px solid #a855f7 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .scada-status-badge.badge-active {
+          background-color: #dcfce7 !important;
+          color: #15803d !important;
+          border: 1.5px solid #22c55e !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .scada-status-badge.badge-active span {
+          background-color: #16a34a !important;
+          box-shadow: 0 0 6px #16a34a !important;
+        }
+        body.light-mode .scada-status-badge.badge-inactive {
+          background-color: #fee2e2 !important;
+          color: #b91c1c !important;
+          border: 1.5px solid #ef4444 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .scada-status-badge.badge-inactive span {
+          background-color: #dc2626 !important;
+          box-shadow: 0 0 6px #dc2626 !important;
         }
         body.light-mode .btn-add-new-user {
           background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
@@ -1044,9 +1102,6 @@ const UserAdministration = () => {
                           <div className="user-email" style={{ color: '#94a3b8', fontSize: '0.84rem' }}>
                             {u.email}
                           </div>
-                          <div className="font-monospace mt-1" style={{ color: '#64748b', fontSize: '0.76rem' }} title={u.id}>
-                            ID: {u.id && u.id.length > 18 ? `${u.id.slice(0, 10)}...${u.id.slice(-4)}` : u.id}
-                          </div>
                         </div>
                       </div>
                     </td>
@@ -1383,7 +1438,7 @@ const UserAdministration = () => {
                 </div>
                 <div>
                   <h5 className="mb-0 fw-bold detail-profile-name" style={{ color: '#ffffff' }}>{selectedUser.name}</h5>
-                  <div className="fs-14 detail-grid-value" style={{ color: '#00bfff' }}>{selectedUser.email}</div>
+                  <div className="fs-14 detail-profile-email" style={{ color: '#00bfff' }}>{selectedUser.email}</div>
                   <div className="d-flex gap-2 mt-2">
                     {getRoleBadge(selectedUser.role)}
                     {getStatusBadge(selectedUser.status)}
@@ -1391,16 +1446,9 @@ const UserAdministration = () => {
                 </div>
               </div>
 
-              {/* Grid Metadata Details */}
+              {/* Grid Metadata Details - Clean 3-Column Layout without USER ID */}
               <Row className="g-3 mb-3">
-                <Col md={6}>
-                  <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
-                    <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>USER ID</small>
-                    <div className="font-monospace fw-bold fs-13 mt-1 detail-grid-value" style={{ color: '#00bfff' }}>{selectedUser.id}</div>
-                  </div>
-                </Col>
-
-                <Col md={6}>
+                <Col md={4}>
                   <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
                     <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>SCOPE TYPE</small>
                     <div className="font-monospace fw-bold fs-13 mt-1 detail-grid-value" style={{ color: '#38bdf8' }}>
@@ -1409,14 +1457,14 @@ const UserAdministration = () => {
                   </div>
                 </Col>
 
-                <Col md={6}>
+                <Col md={4}>
                   <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
                     <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>ORGANIZATION</small>
                     <div className="font-monospace fw-semibold fs-13 mt-1 detail-grid-value" style={{ color: '#00bfff' }}>{getTenantLabel(selectedUser)}</div>
                   </div>
                 </Col>
 
-                <Col md={6}>
+                <Col md={4}>
                   <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
                     <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>CREATED AT</small>
                     <div className="font-monospace fs-13 mt-1 detail-grid-value" style={{ color: '#e2e8f0' }}>
