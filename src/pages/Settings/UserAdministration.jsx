@@ -497,15 +497,15 @@ const UserAdministration = () => {
           background-color: rgba(2, 132, 199, 0.05) !important;
         }
 
-        /* LIGHT MODE OVERRIDES FOR USER ADMINISTRATION & MODALS */
+        /* EYE-CARE COMFORTABLE LIGHT MODE OVERRIDES */
         body.light-mode .user-admin-wrapper {
-          background-color: var(--scada-bg, #e2e8f0) !important;
-          color: #0f172a !important;
+          background-color: var(--scada-bg, #eef2f6) !important;
+          color: #1e293b !important;
         }
         body.light-mode .stat-tile-card {
-          background-color: #ffffff !important;
+          background-color: #f8fafc !important;
           border-color: #cbd5e1 !important;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04) !important;
         }
         body.light-mode .stat-tile-card .stat-tile-title {
           color: #475569 !important;
@@ -514,16 +514,16 @@ const UserAdministration = () => {
           color: #0f172a !important;
         }
         body.light-mode .scada-user-container {
-          background-color: #ffffff !important;
+          background-color: #f8fafc !important;
           border-color: #cbd5e1 !important;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+          box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
         }
         body.light-mode .scada-controls-header {
-          background-color: #f8fafc !important;
-          border-color: #e2e8f0 !important;
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
         }
         body.light-mode .scada-floating-label {
-          background-color: #f8fafc !important;
+          background-color: #f1f5f9 !important;
           color: #0284c7 !important;
         }
         body.light-mode .scada-search-input, 
@@ -531,28 +531,29 @@ const UserAdministration = () => {
         body.light-mode .scada-select-input {
           background-color: #ffffff !important;
           border-color: #cbd5e1 !important;
-          color: #0f172a !important;
+          color: #1e293b !important;
         }
         body.light-mode .scada-table-element {
-          background-color: #ffffff !important;
+          background-color: #f8fafc !important;
         }
         body.light-mode .scada-table-header,
         body.light-mode .scada-table-header th {
-          background-color: #f1f5f9 !important;
+          background-color: #e2e8f0 !important;
           border-color: #cbd5e1 !important;
-          color: #6b21a8 !important;
+          color: #334155 !important;
+          font-weight: 700 !important;
         }
         body.light-mode .scada-permissions-badge {
           background-color: #e2e8f0 !important;
           border-color: #cbd5e1 !important;
-          color: #0f172a !important;
+          color: #1e293b !important;
         }
         body.light-mode .user-table-row {
-          background-color: #ffffff !important;
+          background-color: #f8fafc !important;
           border-color: #e2e8f0 !important;
         }
         body.light-mode .user-table-row:nth-child(even) {
-          background-color: #f8fafc !important;
+          background-color: #f1f5f9 !important;
         }
         body.light-mode .user-table-row .user-name {
           color: #0f172a !important;
@@ -567,9 +568,9 @@ const UserAdministration = () => {
           font-weight: 700 !important;
         }
         body.light-mode .scada-pagination-footer {
-          background-color: #f8fafc !important;
+          background-color: #f1f5f9 !important;
           border-color: #cbd5e1 !important;
-          color: #0f172a !important;
+          color: #1e293b !important;
         }
         body.light-mode .scada-pagination-footer span,
         body.light-mode .scada-pagination-footer div {
