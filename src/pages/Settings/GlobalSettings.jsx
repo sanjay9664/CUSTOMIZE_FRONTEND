@@ -35,25 +35,25 @@ const GlobalSettings = () => {
         return JSON.parse(saved);
       } catch (e) {}
     }
-    // Default matching screenshot
+    // Default all 18 modules enabled matching user screenshot
     return {
       "Dashboard": true,
-      "Water Management": false,
-      "Motors": false,
-      "DG Set": false,
+      "Water Management": true,
+      "Motors": true,
+      "DG Set": true,
       "Setting Templates": true,
-      "Alarm System": false,
-      "LT Panel": false,
-      "Transformer": false,
-      "Fire": false,
-      "Ticketing": false,
-      "Maintenance": false,
-      "Service History": false,
-      "Daily DPR": false,
+      "Alarm System": true,
+      "LT Panel": true,
+      "Transformer": true,
+      "Fire": true,
+      "Ticketing": true,
+      "Maintenance": true,
+      "Service History": true,
+      "Daily DPR": true,
       "Energy Metering": true,
-      "VRV": false,
+      "VRV": true,
       "AQI Sensor": true,
-      "HVAC": false,
+      "HVAC": true,
       "AC": true,
     };
   });
@@ -66,8 +66,19 @@ const GlobalSettings = () => {
       } catch (e) {}
     }
     return {
+      showWaterManagement: { Overview: true, 'AG TANK': true, 'UG TANK': true },
+      showMotors: { Overview: true, 'Pump Room 1': true, 'Pump Room 2': true, 'VFD / DOL Status': true, 'PDF Report': true },
+      showDGSet: { Overview: true, 'DG Set-1': true, 'DG Set-2': true, 'DG Set-3': true },
+      showAlarms: { Overview: true, 'Active Alarms': true, 'Inactive Alarms': true, 'ACK (Acknowledge)': true, 'Alarm History': true, 'PDF Report': true },
+      showLTPanel: { Overview: true, 'LT Room-1': true, 'LT Room-2': true, 'LT Room-3': true, 'Incoming / Outgoing': true, 'Breaker Status': true, 'PDF Report': true },
+      showTransformers: { Overview: true, 'Transformer-1': true, 'Transformer-2': true, 'Load / Temp': true, 'PDF Report': true },
+      showFirePumps: { Overview: true, 'Pump Status': true, 'Header Pressure': true, 'Jockey / Main': true, 'PDF Report': true },
+      showMaintenance: { Scheduled: true, 'Pending Tasks': true, 'PDF Report': true },
+      showServiceHistory: { 'Equipment-wise': true, 'Service Records': true, 'PDF Report': true },
+      showDailyDPR: { 'Data Aggregation': true, 'Daily Logs': true, 'PDF Report': true },
       showEnergyMetering: { Overview: true, 'Main Meter': true, 'Sub Meters': true, Graphs: true, 'PDF Report': true },
       showAQISensor: { Overview: true, 'Temp & Humidity': true, 'PDF Report': true },
+      showHVAC: { Chiller: true, AHU: true, 'Cooling Tower': true, 'PDF Report': true },
       showAC: { Overview: true, 'PDF Report': true }
     };
   });
@@ -109,11 +120,36 @@ const GlobalSettings = () => {
   };
 
   return (
-    <Container fluid className="py-4 px-lg-4" style={{ backgroundColor: '#070605', minHeight: '100vh', color: '#fff' }}>
+    <Container fluid className="global-settings-wrapper py-4 px-lg-4" style={{ backgroundColor: '#070605', minHeight: '100vh', color: '#fff' }}>
+      <style>{`
+        body.light-mode .global-settings-wrapper {
+          background-color: var(--scada-bg, #e2e8f0) !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .global-settings-card {
+          background-color: #ffffff !important;
+          border: 1.5px solid #0284c7 !important;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+        }
+        body.light-mode .module-card-box {
+          background-color: #f8fafc !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .module-card-title {
+          color: #0f172a !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .submodule-pill-badge {
+          background-color: rgba(2, 132, 199, 0.12) !important;
+          border-color: #0284c7 !important;
+          color: #0284c7 !important;
+        }
+      `}</style>
       {/* Toast Notification */}
       <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }}>
-        <Toast onClose={() => setShowToast(false)} show={showToast} delay={3000} autohide bg="dark" className="border border-warning text-white">
-          <Toast.Header closeButton={false} className="bg-dark text-warning border-bottom border-secondary">
+        <Toast onClose={() => setShowToast(false)} show={showToast} delay={3000} autohide bg="dark" className="border border-info text-white">
+          <Toast.Header closeButton={false} className="bg-dark text-info border-bottom border-secondary">
             <ShieldCheck size={16} className="me-2" />
             <strong className="me-auto">Global Settings</strong>
             <small>Just now</small>
@@ -122,22 +158,22 @@ const GlobalSettings = () => {
         </Toast>
       </ToastContainer>
 
-      {/* Main Outer Dark Container matching Screenshot */}
+      {/* Main Outer Dark Container matching Sidebar Theme */}
       <div 
-        className="p-4 rounded-4 position-relative"
+        className="p-4 rounded-4 position-relative global-settings-card"
         style={{
-          backgroundColor: '#0a0806',
-          border: '2px solid #ea580c',
-          boxShadow: '0 0 25px rgba(234, 88, 12, 0.15)'
+          backgroundColor: '#070a0f',
+          border: '1px solid #00bfff',
+          boxShadow: '0 0 25px rgba(0, 191, 255, 0.2)'
         }}
       >
         {/* Outer Header */}
         <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary border-opacity-25">
           <div className="d-flex align-items-center gap-2">
-            <ShieldCheck size={22} style={{ color: '#ea580c' }} />
+            <ShieldCheck size={22} style={{ color: '#00bfff' }} />
             <h5 
               className="mb-0 fw-bold uppercase tracking-wider" 
-              style={{ color: '#ea580c', letterSpacing: '1px', fontSize: '1.1rem' }}
+              style={{ color: '#00bfff', letterSpacing: '1px', fontSize: '1.1rem' }}
             >
               Application Module Control
             </h5>
@@ -145,8 +181,8 @@ const GlobalSettings = () => {
 
           <Button 
             onClick={handleSave} 
-            className="d-flex align-items-center gap-2 rounded-pill px-4 py-2 fw-bold border-0"
-            style={{ backgroundColor: '#ea580c', color: '#fff', fontSize: '0.85rem' }}
+            className="d-flex align-items-center gap-2 rounded-pill px-4 py-2 fw-bold border-0 btn-save-global"
+            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#fff', fontSize: '0.85rem', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.4)' }}
           >
             <Save size={16} /> SAVE GLOBAL CONFIG
           </Button>
@@ -161,10 +197,10 @@ const GlobalSettings = () => {
             return (
               <Col key={mod.key} xl={3} lg={4} md={6} sm={12}>
                 <div
-                  className="p-3 rounded-4 h-100 transition-all d-flex flex-column justify-content-between"
+                  className="p-3 rounded-4 h-100 transition-all d-flex flex-column justify-content-between module-card-box"
                   style={{
-                    backgroundColor: isEnabled ? '#090807' : '#11100f',
-                    border: isEnabled ? '1.5px solid #2e2620' : '1px solid #1c1a18',
+                    backgroundColor: isEnabled ? '#090d16' : '#11141d',
+                    border: isEnabled ? '1.5px solid #1e293b' : '1px solid #161e2e',
                     boxShadow: isEnabled ? '0 4px 12px rgba(0,0,0,0.4)' : 'none'
                   }}
                 >
@@ -177,7 +213,7 @@ const GlobalSettings = () => {
                         style={{
                           width: 38,
                           height: 38,
-                          backgroundColor: isEnabled ? '#ea580c' : '#27272a',
+                          backgroundColor: isEnabled ? '#0284c7' : '#27272a',
                           color: isEnabled ? '#ffffff' : '#71717a'
                         }}
                       >
@@ -186,7 +222,7 @@ const GlobalSettings = () => {
 
                       {/* Module Title */}
                       <span 
-                        className="fw-bold"
+                        className="fw-bold module-card-title"
                         style={{
                           color: isEnabled ? '#ffffff' : '#a1a1aa',
                           fontSize: '0.92rem'
@@ -203,7 +239,7 @@ const GlobalSettings = () => {
                         width: 48,
                         height: 26,
                         borderRadius: 13,
-                        backgroundColor: isEnabled ? '#ea580c' : '#3f3f46',
+                        backgroundColor: isEnabled ? '#00bfff' : '#3f3f46',
                         padding: 3,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease-in-out'

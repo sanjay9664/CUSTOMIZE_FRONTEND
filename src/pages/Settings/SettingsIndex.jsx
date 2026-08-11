@@ -32,23 +32,40 @@ const SettingsIndex = () => {
   };
 
   return (
-    <div style={{ backgroundColor: '#070605', minHeight: '100vh' }}>
+    <div className="settings-page-wrapper" style={{ backgroundColor: '#070605', minHeight: '100vh' }}>
+      <style>{`
+        body.light-mode .settings-page-wrapper {
+          background-color: var(--scada-bg, #e2e8f0) !important;
+        }
+        body.light-mode .settings-tabs-header {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .settings-tab-link.active-tab {
+          background-color: #f1f5f9 !important;
+          color: #0284c7 !important;
+          border-bottom-color: #0284c7 !important;
+        }
+        body.light-mode .settings-tab-link.inactive-tab {
+          color: #64748b !important;
+        }
+      `}</style>
       {/* Sub-Header Tabs */}
-      <div className="border-bottom border-secondary border-opacity-25 px-4 pt-3 bg-black">
+      <div className="border-bottom border-secondary border-opacity-25 px-4 pt-3 bg-black settings-tabs-header">
         <Nav variant="tabs" activeKey={activeTab} onSelect={handleSelectTab} className="border-0">
           <Nav.Item>
             <Nav.Link 
               eventKey="global" 
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all ${activeTab === 'global' ? 'bg-dark text-warning border-bottom border-warning border-2' : 'text-slate-400 bg-transparent'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'global' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
             >
-              <Settings size={18} className={activeTab === 'global' ? 'text-warning' : 'text-slate-400'} />
+              <Settings size={18} className={activeTab === 'global' ? 'text-info' : 'text-slate-400'} />
               Global Settings
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link 
               eventKey="users" 
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all ${activeTab === 'users' ? 'bg-dark text-info border-bottom border-info border-2' : 'text-slate-400 bg-transparent'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'users' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
             >
               <Users size={18} className={activeTab === 'users' ? 'text-info' : 'text-slate-400'} />
               User Administration 

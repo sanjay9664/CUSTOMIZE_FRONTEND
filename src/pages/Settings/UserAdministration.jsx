@@ -458,6 +458,195 @@ const UserAdministration = () => {
         .user-table-row:hover {
           background-color: rgba(2, 132, 199, 0.05) !important;
         }
+
+        /* LIGHT MODE OVERRIDES FOR USER ADMINISTRATION & MODALS */
+        body.light-mode .user-admin-wrapper {
+          background-color: var(--scada-bg, #e2e8f0) !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .stat-tile-card {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.light-mode .stat-tile-card .stat-tile-title {
+          color: #475569 !important;
+        }
+        body.light-mode .stat-tile-card .stat-tile-number {
+          color: #0f172a !important;
+        }
+        body.light-mode .scada-user-container {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+        }
+        body.light-mode .scada-controls-header {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .scada-floating-label {
+          background-color: #f8fafc !important;
+          color: #0284c7 !important;
+        }
+        body.light-mode .scada-search-input, 
+        body.light-mode .scada-search-icon,
+        body.light-mode .scada-select-input {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .scada-table-element {
+          background-color: #ffffff !important;
+        }
+        body.light-mode .scada-table-header,
+        body.light-mode .scada-table-header th {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #6b21a8 !important;
+        }
+        body.light-mode .scada-permissions-badge {
+          background-color: #e2e8f0 !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .user-table-row {
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .user-table-row:nth-child(even) {
+          background-color: #f8fafc !important;
+        }
+        body.light-mode .user-table-row .user-name {
+          color: #0f172a !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .user-table-row .user-email {
+          color: #475569 !important;
+          font-weight: 600 !important;
+        }
+        body.light-mode .user-table-row .tenant-name {
+          color: #1e293b !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .scada-pagination-footer {
+          background-color: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .scada-pagination-footer span,
+        body.light-mode .scada-pagination-footer div {
+          color: #334155 !important;
+          font-weight: 600 !important;
+        }
+        body.light-mode .scada-page-size-select {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+
+        /* MODAL LIGHT MODE OVERRIDES */
+        body.light-mode .scada-animated-modal .modal-content,
+        body.light-mode .scada-animated-modal-edit .modal-content,
+        body.light-mode .scada-animated-modal-delete .modal-content {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
+        }
+        body.light-mode .modal-header {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .modal-body {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .modal-footer {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .modal-body label {
+          color: #0f172a !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .modal-body input,
+        body.light-mode .modal-body select {
+          background-color: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .detail-profile-card {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .detail-profile-name {
+          color: #0f172a !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .detail-grid-box {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .detail-grid-label {
+          color: #475569 !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .detail-grid-value {
+          color: #0284c7 !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .btn-add-new-user {
+          background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 14px rgba(168, 85, 247, 0.4) !important;
+        }
+        body.light-mode .btn-add-new-user * {
+          color: #ffffff !important;
+        }
+        body.light-mode .btn-refresh-scada {
+          background-color: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          color: #0f172a !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.light-mode .btn-refresh-scada:hover {
+          background-color: #f1f5f9 !important;
+          border-color: #a855f7 !important;
+          color: #7c3aed !important;
+        }
+
+        /* MODAL BUTTONS LIGHT MODE OVERRIDES */
+        body.light-mode .btn-modal-create {
+          background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+          color: #ffffff !important;
+          font-weight: 800 !important;
+          box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
+          opacity: 1 !important;
+        }
+        body.light-mode .btn-modal-cancel {
+          background-color: #f1f5f9 !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #334155 !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .btn-modal-save {
+          background-color: #f59e0b !important;
+          color: #000000 !important;
+          font-weight: 800 !important;
+          box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4) !important;
+        }
+        body.light-mode .btn-modal-close {
+          background-color: #e2e8f0 !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #0f172a !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .btn-modal-delete {
+          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+          color: #ffffff !important;
+          font-weight: 800 !important;
+        }
       `}</style>
 
       {/* Floating Animated Toast Notification */}
@@ -540,13 +729,13 @@ const UserAdministration = () => {
               <Users size={22} />
             </div>
             <div>
-              <div className="fw-bold uppercase fs-10" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
+              <div className="fw-bold uppercase fs-10 stat-tile-title" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
                 TOTAL USERS
               </div>
-              <div className="fw-black text-white fs-22 mt-0">
+              <div className="fw-black fs-22 mt-0 stat-tile-number" style={{ color: '#ffffff' }}>
                 {users.length}
               </div>
-              <div className="fs-11" style={{ color: '#6b7280' }}>All registered users</div>
+              <div className="fs-11 stat-tile-title" style={{ color: '#6b7280' }}>All registered users</div>
             </div>
           </div>
         </Col>
@@ -575,13 +764,13 @@ const UserAdministration = () => {
               <UserCheck size={22} />
             </div>
             <div>
-              <div className="fw-bold uppercase fs-10" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
+              <div className="fw-bold uppercase fs-10 stat-tile-title" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
                 ACTIVE USERS
               </div>
-              <div className="fw-black text-white fs-22 mt-0">
+              <div className="fw-black fs-22 mt-0 stat-tile-number" style={{ color: '#ffffff' }}>
                 {users.filter(u => u.status === 'ACTIVE').length}
               </div>
-              <div className="fs-11" style={{ color: '#6b7280' }}>Currently active</div>
+              <div className="fs-11 stat-tile-title" style={{ color: '#6b7280' }}>Currently active</div>
             </div>
           </div>
         </Col>
@@ -610,13 +799,13 @@ const UserAdministration = () => {
               <Shield size={22} />
             </div>
             <div>
-              <div className="fw-bold uppercase fs-10" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
+              <div className="fw-bold uppercase fs-10 stat-tile-title" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
                 ROLES
               </div>
-              <div className="fw-black text-white fs-22 mt-0">
+              <div className="fw-black fs-22 mt-0 stat-tile-number" style={{ color: '#ffffff' }}>
                 {new Set(users.map(u => u.role)).size || 4}
               </div>
-              <div className="fs-11" style={{ color: '#6b7280' }}>System roles</div>
+              <div className="fs-11 stat-tile-title" style={{ color: '#6b7280' }}>System roles</div>
             </div>
           </div>
         </Col>
@@ -645,13 +834,13 @@ const UserAdministration = () => {
               <Building size={22} />
             </div>
             <div>
-              <div className="fw-bold uppercase fs-10" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
+              <div className="fw-bold uppercase fs-10 stat-tile-title" style={{ letterSpacing: '0.8px', color: '#9ca3af' }}>
                 TENANTS
               </div>
-              <div className="fw-black text-white fs-22 mt-0">
+              <div className="fw-black fs-22 mt-0 stat-tile-number" style={{ color: '#ffffff' }}>
                 {tenants.length || 4}
               </div>
-              <div className="fs-11" style={{ color: '#6b7280' }}>Total tenants</div>
+              <div className="fs-11 stat-tile-title" style={{ color: '#6b7280' }}>Total tenants</div>
             </div>
           </div>
         </Col>
@@ -659,21 +848,22 @@ const UserAdministration = () => {
 
       {/* USER MANAGEMENT CONTAINER & SINGLE-ROW CONTROLS */}
       <div 
-        className="rounded-4 overflow-hidden shadow-lg" 
-        style={{ backgroundColor: '#090807', border: '1px solid #27231e' }}
+        className="rounded-4 overflow-hidden shadow-lg scada-user-container" 
+        style={{ backgroundColor: '#090b10', border: '1px solid #1c2333' }}
       >
         {/* Controls Header - Single Row Matching Screenshot */}
-        <div className="p-3 border-bottom border-secondary border-opacity-25" style={{ backgroundColor: '#110f0d' }}>
+        <div className="p-3 border-bottom border-secondary border-opacity-25 scada-controls-header" style={{ backgroundColor: '#0e121a' }}>
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
             
             {/* Left Controls: Search, Roles Filter, Status Filter */}
             <div className="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
               {/* Search Bar */}
               <InputGroup style={{ maxWidth: '300px' }}>
-                <InputGroup.Text style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#818cf8', paddingLeft: '12px', paddingRight: '8px' }}>
+                <InputGroup.Text className="scada-search-icon" style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#818cf8', paddingLeft: '12px', paddingRight: '8px' }}>
                   <Search size={15} />
                 </InputGroup.Text>
                 <Form.Control
+                  className="scada-search-input"
                   placeholder="Search user by name, email or ID..."
                   style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', boxShadow: 'none', fontSize: '0.86rem' }}
                   value={searchTerm}
@@ -684,11 +874,11 @@ const UserAdministration = () => {
               {/* Floating Filter Role Select */}
               <div className="position-relative">
                 <span 
-                  className="position-absolute px-1" 
+                  className="position-absolute px-1 scada-floating-label" 
                   style={{ 
                     top: '-9px', 
                     left: '12px', 
-                    backgroundColor: '#110f0d', 
+                    backgroundColor: '#0e121a', 
                     color: '#818cf8', 
                     fontSize: '0.68rem', 
                     fontWeight: 700, 
@@ -699,6 +889,7 @@ const UserAdministration = () => {
                   Filter Role
                 </span>
                 <Form.Select 
+                  className="scada-select-input"
                   style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
@@ -715,11 +906,11 @@ const UserAdministration = () => {
               {/* Floating Status Select */}
               <div className="position-relative">
                 <span 
-                  className="position-absolute px-1" 
+                  className="position-absolute px-1 scada-floating-label" 
                   style={{ 
                     top: '-9px', 
                     left: '12px', 
-                    backgroundColor: '#110f0d', 
+                    backgroundColor: '#0e121a', 
                     color: '#818cf8', 
                     fontSize: '0.68rem', 
                     fontWeight: 700, 
@@ -730,6 +921,7 @@ const UserAdministration = () => {
                   Status
                 </span>
                 <Form.Select 
+                  className="scada-select-input"
                   style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -747,7 +939,7 @@ const UserAdministration = () => {
                 variant="outline-light" 
                 size="sm" 
                 onClick={fetchUsers} 
-                className="rounded-3 px-3 py-1.5 d-flex align-items-center gap-1.5"
+                className="rounded-3 px-3 py-1.5 d-flex align-items-center gap-1.5 btn-refresh-scada"
                 style={{ backgroundColor: '#0d111a', borderColor: '#2d2738', color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}
               >
                 <RefreshCcw size={14} style={{ color: '#a855f7' }} className={loading ? 'spin-anim' : ''} /> Refresh
@@ -758,7 +950,7 @@ const UserAdministration = () => {
                   setFormData({ name: '', email: '', role: 'VIEWER', tenantId: 'cmshedsk40002zsvnhajul18y', status: 'ACTIVE', scopeType: 'ZONE', scopeId: '', permissions: 'read,write' });
                   setShowCreateModal(true);
                 }} 
-                className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2"
+                className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2 btn-add-new-user"
                 style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)' }}
               >
                 <UserPlus size={15} /> Add New User
@@ -772,7 +964,7 @@ const UserAdministration = () => {
         <div className="table-responsive">
           <table className="w-100 align-middle" style={{ backgroundColor: '#090b10', color: '#ffffff', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#0e121a', borderBottom: '1px solid #1e2638' }}>
+              <tr className="scada-table-header" style={{ backgroundColor: '#0e121a', borderBottom: '1px solid #1e2638' }}>
                 <th className="py-3 px-4 text-start fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>USER DETAILS</th>
                 <th className="py-3 text-start fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>ROLE & STATUS</th>
                 <th className="py-3 text-start fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>SCOPE / TENANT</th>
@@ -807,10 +999,10 @@ const UserAdministration = () => {
                           {(u.name || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="fw-bold" style={{ color: '#ffffff', fontSize: '0.95rem' }}>
+                          <div className="fw-bold user-name" style={{ color: '#ffffff', fontSize: '0.95rem' }}>
                             {u.name}
                           </div>
-                          <div style={{ color: '#94a3b8', fontSize: '0.84rem' }}>
+                          <div className="user-email" style={{ color: '#94a3b8', fontSize: '0.84rem' }}>
                             {u.email}
                           </div>
                           <div className="font-monospace mt-1" style={{ color: '#64748b', fontSize: '0.76rem' }} title={u.id}>
@@ -837,7 +1029,7 @@ const UserAdministration = () => {
                         >
                           {u.scopeType || 'ZONE'}
                         </span>
-                        <span className="font-monospace fw-semibold" style={{ color: '#cbd5e1', fontSize: '0.78rem' }}>
+                        <span className="font-monospace fw-semibold tenant-name" style={{ color: '#cbd5e1', fontSize: '0.78rem' }}>
                           {getTenantLabel(u)}
                         </span>
                       </div>
@@ -849,21 +1041,21 @@ const UserAdministration = () => {
                         {Array.isArray(u.permissions) ? u.permissions.slice(0, 3).map((p, pIdx) => (
                           <span 
                             key={pIdx} 
-                            className="px-3 py-1 rounded-3 font-monospace fw-semibold"
+                            className="px-3 py-1 rounded-3 font-monospace fw-semibold scada-permissions-badge"
                             style={{ backgroundColor: '#151c28', border: '1px solid #28354a', color: '#ffffff', fontSize: '0.78rem' }}
                           >
                             {p === 'read' || p === 'write' || p === '*' ? 'Standard' : p}
                           </span>
                         )) : (
                           <span 
-                            className="px-3 py-1 rounded-3 font-monospace fw-semibold"
+                            className="px-3 py-1 rounded-3 font-monospace fw-semibold scada-permissions-badge"
                             style={{ backgroundColor: '#151c28', border: '1px solid #28354a', color: '#ffffff', fontSize: '0.78rem' }}
                           >
                             Standard
                           </span>
                         )}
                         {Array.isArray(u.permissions) && u.permissions.length > 3 && (
-                          <span className="px-2 py-1 rounded text-muted fs-10" style={{ backgroundColor: '#151c28' }}>
+                          <span className="px-2 py-1 rounded text-muted fs-10 scada-permissions-badge" style={{ backgroundColor: '#151c28' }}>
                             +{u.permissions.length - 3}
                           </span>
                         )}
@@ -938,11 +1130,12 @@ const UserAdministration = () => {
         </div>
 
         {/* PAGINATION FOOTER MATCHING SCREENSHOT */}
-        <div className="p-3 border-top border-secondary border-opacity-25 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3" style={{ backgroundColor: '#0a0d14' }}>
+        <div className="p-3 border-top border-secondary border-opacity-25 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 scada-pagination-footer" style={{ backgroundColor: '#0a0d14' }}>
           <div className="d-flex align-items-center gap-2 text-slate-400 fs-13">
             <span>Show</span>
             <Form.Select 
               size="sm" 
+              className="scada-page-size-select"
               style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', width: 'auto', fontSize: '0.80rem', boxShadow: 'none' }}
               defaultValue={10}
             >
@@ -1026,8 +1219,8 @@ const UserAdministration = () => {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
-            <Button variant="outline-secondary" size="sm" className="rounded-3 px-3 border-secondary" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button type="submit" size="sm" className="rounded-3 fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.35)' }}>Create User</Button>
+            <Button variant="outline-secondary" size="sm" className="rounded-3 px-3 border-secondary btn-modal-cancel" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+            <Button type="submit" size="sm" className="rounded-3 fw-bold px-4 border-0 btn-modal-create" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.35)' }}>Create User</Button>
           </Modal.Footer>
         </Form>
       </Modal>
@@ -1082,8 +1275,8 @@ const UserAdministration = () => {
             </Row>
           </Modal.Body>
           <Modal.Footer style={{ backgroundColor: '#0a0d14', borderColor: '#1c2433' }}>
-            <Button variant="outline-secondary" size="sm" className="px-3 border-secondary" style={{ backgroundColor: 'transparent', borderColor: '#334155', color: '#cbd5e1', borderRadius: '8px', fontWeight: 600 }} onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button type="submit" size="sm" className="fw-bold px-4 border-0" style={{ backgroundColor: '#f59e0b', color: '#000000', borderRadius: '8px', fontWeight: 700, boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)' }}>Save Changes</Button>
+            <Button variant="outline-secondary" size="sm" className="px-3 border-secondary btn-modal-cancel" style={{ backgroundColor: 'transparent', borderColor: '#334155', color: '#cbd5e1', borderRadius: '8px', fontWeight: 600 }} onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button type="submit" size="sm" className="fw-bold px-4 border-0 btn-modal-save" style={{ backgroundColor: '#f59e0b', color: '#000000', borderRadius: '8px', fontWeight: 700, boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)' }}>Save Changes</Button>
           </Modal.Footer>
         </Form>
       </Modal>
@@ -1099,16 +1292,16 @@ const UserAdministration = () => {
           {selectedUser && (
             <div>
               {/* Profile Card Header */}
-              <div className="d-flex align-items-center gap-3 p-3.5 rounded-4 mb-4" style={{ backgroundColor: '#131924', border: '1px solid #1e293b' }}>
+              <div className="d-flex align-items-center gap-3 p-3.5 rounded-4 mb-4 detail-profile-card" style={{ backgroundColor: '#131924', border: '1px solid #1e293b' }}>
                 <div 
                   className="rounded-circle d-flex align-items-center justify-content-center fw-bold"
-                  style={{ width: 58, height: 58, backgroundColor: '#0284c7', color: '#ffffff', fontSize: '1.4rem', boxShadow: '0 0 20px rgba(2, 132, 199, 0.4)' }}
+                  style={{ width: 58, height: 58, backgroundColor: getAvatarColor(selectedUser.role, selectedUser.name), color: '#ffffff', fontSize: '1.4rem', boxShadow: '0 0 20px rgba(2, 132, 199, 0.4)' }}
                 >
                   {(selectedUser.name || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h5 className="mb-0 fw-bold text-white">{selectedUser.name}</h5>
-                  <div className="fs-14" style={{ color: '#00bfff' }}>{selectedUser.email}</div>
+                  <h5 className="mb-0 fw-bold detail-profile-name" style={{ color: '#ffffff' }}>{selectedUser.name}</h5>
+                  <div className="fs-14 detail-grid-value" style={{ color: '#00bfff' }}>{selectedUser.email}</div>
                   <div className="d-flex gap-2 mt-2">
                     {getRoleBadge(selectedUser.role)}
                     {getStatusBadge(selectedUser.status)}
@@ -1119,32 +1312,32 @@ const UserAdministration = () => {
               {/* Grid Metadata Details */}
               <Row className="g-3 mb-3">
                 <Col md={6}>
-                  <div className="p-3 rounded-3" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
-                    <small className="text-muted uppercase fw-bold fs-11" style={{ letterSpacing: '0.6px' }}>USER ID</small>
-                    <div className="font-monospace fw-bold fs-13 mt-1" style={{ color: '#00bfff' }}>{selectedUser.id}</div>
+                  <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
+                    <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>USER ID</small>
+                    <div className="font-monospace fw-bold fs-13 mt-1 detail-grid-value" style={{ color: '#00bfff' }}>{selectedUser.id}</div>
                   </div>
                 </Col>
 
                 <Col md={6}>
-                  <div className="p-3 rounded-3" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
-                    <small className="text-muted uppercase fw-bold fs-11" style={{ letterSpacing: '0.6px' }}>SCOPE TYPE</small>
-                    <div className="font-monospace fw-bold fs-13 mt-1" style={{ color: '#38bdf8' }}>
+                  <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
+                    <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>SCOPE TYPE</small>
+                    <div className="font-monospace fw-bold fs-13 mt-1 detail-grid-value" style={{ color: '#38bdf8' }}>
                       {selectedUser.scopeType || 'TENANT'}
                     </div>
                   </div>
                 </Col>
 
                 <Col md={6}>
-                  <div className="p-3 rounded-3" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
-                    <small className="text-muted uppercase fw-bold fs-11" style={{ letterSpacing: '0.6px' }}>ORGANIZATION</small>
-                    <div className="font-monospace fw-semibold fs-13 mt-1" style={{ color: '#00bfff' }}>{getTenantLabel(selectedUser)}</div>
+                  <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
+                    <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>ORGANIZATION</small>
+                    <div className="font-monospace fw-semibold fs-13 mt-1 detail-grid-value" style={{ color: '#00bfff' }}>{getTenantLabel(selectedUser)}</div>
                   </div>
                 </Col>
 
                 <Col md={6}>
-                  <div className="p-3 rounded-3" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
-                    <small className="text-muted uppercase fw-bold fs-11" style={{ letterSpacing: '0.6px' }}>CREATED AT</small>
-                    <div className="font-monospace text-slate-300 fs-13 mt-1">
+                  <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
+                    <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>CREATED AT</small>
+                    <div className="font-monospace fs-13 mt-1 detail-grid-value" style={{ color: '#e2e8f0' }}>
                       {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : 'N/A'}
                     </div>
                   </div>
@@ -1152,8 +1345,8 @@ const UserAdministration = () => {
               </Row>
 
               {/* Permissions Section */}
-              <div className="p-3 rounded-3" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
-                <small className="text-muted uppercase fw-bold fs-11" style={{ letterSpacing: '0.6px' }}>ASSIGNED PERMISSIONS</small>
+              <div className="p-3 rounded-3 detail-grid-box" style={{ backgroundColor: '#101520', border: '1px solid #1b2436' }}>
+                <small className="uppercase fw-bold fs-11 detail-grid-label" style={{ letterSpacing: '0.6px', color: '#9ca3af' }}>ASSIGNED PERMISSIONS</small>
                 <div className="d-flex flex-wrap gap-2 mt-2">
                   {Array.isArray(selectedUser.permissions) ? (
                     selectedUser.permissions.map((p, i) => (
@@ -1172,7 +1365,7 @@ const UserAdministration = () => {
           )}
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
-          <Button variant="outline-secondary" size="sm" className="rounded-3 px-4 border-secondary" onClick={() => setShowDetailModal(false)}>Close</Button>
+          <Button variant="outline-secondary" size="sm" className="rounded-3 px-4 border-secondary btn-modal-close" onClick={() => setShowDetailModal(false)}>Close</Button>
         </Modal.Footer>
       </Modal>
 
@@ -1189,8 +1382,8 @@ const UserAdministration = () => {
           </p>
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
-          <Button variant="outline-secondary" size="sm" className="rounded-3 px-3 border-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
-          <Button size="sm" onClick={handleDeleteUser} className="rounded-3 fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)' }}>Confirm Delete</Button>
+          <Button variant="outline-secondary" size="sm" className="rounded-3 px-3 border-secondary btn-modal-cancel" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleDeleteUser} className="rounded-3 fw-bold px-4 border-0 btn-modal-delete" style={{ background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)' }}>Confirm Delete</Button>
         </Modal.Footer>
       </Modal>
 
