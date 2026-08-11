@@ -314,6 +314,22 @@ const UserAdministration = () => {
     setShowDetailModal(true);
   };
 
+  const getAvatarColor = (role, name) => {
+    const roleKey = role === 'USER' ? 'VIEWER' : role;
+    const n = (name || '').toLowerCase();
+    if (n.includes('rahul')) return '#7c3aed';
+    if (n.includes('operator')) return '#16a34a';
+    if (n.includes('manager')) return '#ea580c';
+    if (n.includes('admin')) return '#2563eb';
+    switch (roleKey) {
+      case 'SUPER_ADMIN': return '#9333ea';
+      case 'ADMIN': return '#2563eb';
+      case 'OPERATOR': return '#16a34a';
+      case 'MANAGER': return '#ea580c';
+      default: return '#7c3aed';
+    }
+  };
+
   const getRoleBadge = (role) => {
     const roleKey = role === 'USER' ? 'VIEWER' : role;
     const badgeStyle = {
@@ -332,15 +348,15 @@ const UserAdministration = () => {
 
     switch (roleKey) {
       case 'SUPER_ADMIN':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(153, 27, 27, 0.25)', color: '#f87171', border: '1px solid #ef4444' }}>SUPER ADMIN</span>;
+        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(147, 51, 234, 0.3)', color: '#c084fc', border: '1px solid #9333ea' }}>SUPER ADMIN</span>;
       case 'ADMIN':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(2, 132, 199, 0.25)', color: '#38bdf8', border: '1px solid #0284c7' }}>ADMIN</span>;
+        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(37, 99, 235, 0.3)', color: '#60a5fa', border: '1px solid #2563eb' }}>ADMIN</span>;
       case 'OPERATOR':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(37, 99, 235, 0.25)', color: '#60a5fa', border: '1px solid #2563eb' }}>OPERATOR</span>;
+        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(22, 163, 74, 0.3)', color: '#4ade80', border: '1px solid #16a34a' }}>OPERATOR</span>;
       case 'MANAGER':
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(217, 119, 6, 0.25)', color: '#fbbf24', border: '1px solid #d97706' }}>MANAGER</span>;
+        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(234, 88, 12, 0.3)', color: '#fbbf24', border: '1px solid #d97706' }}>MANAGER</span>;
       default:
-        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(63, 63, 70, 0.3)', color: '#d4d4d8', border: '1px solid #71717a' }}>VIEWER</span>;
+        return <span style={{ ...badgeStyle, backgroundColor: 'rgba(124, 58, 237, 0.3)', color: '#a78bfa', border: '1px solid #7c3aed' }}>VIEWER</span>;
     }
   };
 
@@ -651,41 +667,78 @@ const UserAdministration = () => {
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
             
             {/* Left Controls: Search, Roles Filter, Status Filter */}
-            <div className="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+            <div className="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+              {/* Search Bar */}
               <InputGroup style={{ maxWidth: '300px' }}>
-                <InputGroup.Text style={{ backgroundColor: '#1a1714', borderColor: '#332d27', color: '#a1a1aa', paddingLeft: '12px', paddingRight: '8px' }}>
+                <InputGroup.Text style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#818cf8', paddingLeft: '12px', paddingRight: '8px' }}>
                   <Search size={15} />
                 </InputGroup.Text>
                 <Form.Control
                   placeholder="Search user by name, email or ID..."
-                  style={{ backgroundColor: '#1a1714', borderColor: '#332d27', color: '#ffffff', boxShadow: 'none', fontSize: '0.86rem' }}
+                  style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', boxShadow: 'none', fontSize: '0.86rem' }}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </InputGroup>
 
-              <Form.Select 
-                style={{ backgroundColor: '#1a1714', borderColor: '#332d27', color: '#ffffff', boxShadow: 'none', width: 'auto', fontSize: '0.86rem' }}
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              >
-                <option value="ALL">All Roles</option>
-                <option value="SUPER_ADMIN">SUPER ADMIN</option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="OPERATOR">OPERATOR</option>
-                <option value="VIEWER">VIEWER</option>
-                <option value="MANAGER">MANAGER</option>
-              </Form.Select>
+              {/* Floating Filter Role Select */}
+              <div className="position-relative">
+                <span 
+                  className="position-absolute px-1" 
+                  style={{ 
+                    top: '-9px', 
+                    left: '12px', 
+                    backgroundColor: '#110f0d', 
+                    color: '#818cf8', 
+                    fontSize: '0.68rem', 
+                    fontWeight: 700, 
+                    zIndex: 3,
+                    letterSpacing: '0.4px'
+                  }}
+                >
+                  Filter Role
+                </span>
+                <Form.Select 
+                  style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value="SUPER_ADMIN">SUPER ADMIN</option>
+                  <option value="ADMIN">ADMIN</option>
+                  <option value="OPERATOR">OPERATOR</option>
+                  <option value="VIEWER">VIEWER</option>
+                  <option value="MANAGER">MANAGER</option>
+                </Form.Select>
+              </div>
 
-              <Form.Select 
-                style={{ backgroundColor: '#1a1714', borderColor: '#332d27', color: '#ffffff', boxShadow: 'none', width: 'auto', fontSize: '0.86rem' }}
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="ALL">All Status</option>
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
-              </Form.Select>
+              {/* Floating Status Select */}
+              <div className="position-relative">
+                <span 
+                  className="position-absolute px-1" 
+                  style={{ 
+                    top: '-9px', 
+                    left: '12px', 
+                    backgroundColor: '#110f0d', 
+                    color: '#818cf8', 
+                    fontSize: '0.68rem', 
+                    fontWeight: 700, 
+                    zIndex: 3,
+                    letterSpacing: '0.4px'
+                  }}
+                >
+                  Status
+                </span>
+                <Form.Select 
+                  style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="INACTIVE">INACTIVE</option>
+                </Form.Select>
+              </div>
             </div>
 
             {/* Right Controls: Refresh & Add New User */}
@@ -694,10 +747,10 @@ const UserAdministration = () => {
                 variant="outline-light" 
                 size="sm" 
                 onClick={fetchUsers} 
-                className="rounded-3 px-3 py-1.5 d-flex align-items-center gap-1.5 border-0"
-                style={{ backgroundColor: '#1e293b', color: '#38bdf8', fontSize: '0.84rem', fontWeight: 600 }}
+                className="rounded-3 px-3 py-1.5 d-flex align-items-center gap-1.5"
+                style={{ backgroundColor: '#0d111a', borderColor: '#2d2738', color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}
               >
-                <RefreshCcw size={14} className={loading ? 'spin-anim' : ''} /> Refresh
+                <RefreshCcw size={14} style={{ color: '#a855f7' }} className={loading ? 'spin-anim' : ''} /> Refresh
               </Button>
               <Button 
                 size="sm" 
@@ -706,7 +759,7 @@ const UserAdministration = () => {
                   setShowCreateModal(true);
                 }} 
                 className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2"
-                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00d2ff 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(0, 210, 255, 0.35)' }}
+                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)' }}
               >
                 <UserPlus size={15} /> Add New User
               </Button>
@@ -717,20 +770,20 @@ const UserAdministration = () => {
 
         {/* Custom High-Contrast Table */}
         <div className="table-responsive">
-          <table className="w-100 align-middle" style={{ backgroundColor: '#090807', color: '#ffffff', borderCollapse: 'collapse' }}>
+          <table className="w-100 align-middle" style={{ backgroundColor: '#090b10', color: '#ffffff', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#14110f', borderBottom: '2px solid #2e2620' }}>
-                <th className="py-3 px-4 text-start fw-bold" style={{ color: '#38bdf8', fontSize: '0.78rem', letterSpacing: '1px' }}>USER DETAILS</th>
-                <th className="py-3 text-start fw-bold" style={{ color: '#38bdf8', fontSize: '0.78rem', letterSpacing: '1px' }}>ROLE & STATUS</th>
-                <th className="py-3 text-start fw-bold" style={{ color: '#38bdf8', fontSize: '0.78rem', letterSpacing: '1px' }}>SCOPE / TENANT</th>
-                <th className="py-3 text-start fw-bold" style={{ color: '#38bdf8', fontSize: '0.78rem', letterSpacing: '1px' }}>PERMISSIONS</th>
-                <th className="py-3 px-4 text-end fw-bold" style={{ color: '#38bdf8', fontSize: '0.78rem', letterSpacing: '1px' }}>ACTIONS</th>
+              <tr style={{ backgroundColor: '#0e121a', borderBottom: '1px solid #1e2638' }}>
+                <th className="py-3 px-4 text-start fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>USER DETAILS</th>
+                <th className="py-3 text-start fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>ROLE & STATUS</th>
+                <th className="py-3 text-start fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>SCOPE / TENANT</th>
+                <th className="py-3 text-start fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>PERMISSIONS</th>
+                <th className="py-3 px-4 text-end fw-bold" style={{ color: '#a855f7', fontSize: '0.78rem', letterSpacing: '1px' }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-5" style={{ backgroundColor: '#0d0b09', color: '#71717a' }}>
+                  <td colSpan={5} className="text-center py-5" style={{ backgroundColor: '#090b10', color: '#64748b' }}>
                     No users found matching query.
                   </td>
                 </tr>
@@ -740,8 +793,8 @@ const UserAdministration = () => {
                     key={u.id} 
                     className="user-table-row"
                     style={{ 
-                      backgroundColor: idx % 2 === 0 ? '#0b0908' : '#0e0c0a', 
-                      borderBottom: '1px solid #1c1917' 
+                      backgroundColor: idx % 2 === 0 ? '#090b10' : '#0c0f17', 
+                      borderBottom: '1px solid #161c2b' 
                     }}
                   >
                     {/* USER DETAILS */}
@@ -749,7 +802,7 @@ const UserAdministration = () => {
                       <div className="d-flex align-items-center gap-3">
                         <div 
                           className="rounded-circle d-flex align-items-center justify-content-center fw-bold" 
-                          style={{ width: 42, height: 42, backgroundColor: '#0284c7', color: '#ffffff', fontSize: '1rem', flexShrink: 0 }}
+                          style={{ width: 42, height: 42, backgroundColor: getAvatarColor(u.role, u.name), color: '#ffffff', fontSize: '1.05rem', flexShrink: 0, boxShadow: `0 0 12px ${getAvatarColor(u.role, u.name)}55` }}
                         >
                           {(u.name || 'U').charAt(0).toUpperCase()}
                         </div>
@@ -757,7 +810,7 @@ const UserAdministration = () => {
                           <div className="fw-bold" style={{ color: '#ffffff', fontSize: '0.95rem' }}>
                             {u.name}
                           </div>
-                          <div style={{ color: '#38bdf8', fontSize: '0.84rem' }}>
+                          <div style={{ color: '#94a3b8', fontSize: '0.84rem' }}>
                             {u.email}
                           </div>
                           <div className="font-monospace mt-1" style={{ color: '#64748b', fontSize: '0.76rem' }} title={u.id}>
@@ -779,12 +832,12 @@ const UserAdministration = () => {
                     <td className="py-3">
                       <div className="d-flex flex-column">
                         <span 
-                          className="px-2 py-0.5 rounded mb-1 fw-bold align-self-start"
-                          style={{ backgroundColor: 'rgba(2, 132, 199, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', fontSize: '0.70rem' }}
+                          className="px-2 py-0.5 rounded-pill mb-1 fw-bold align-self-start text-uppercase"
+                          style={{ backgroundColor: 'rgba(124, 58, 237, 0.3)', border: '1px solid #7c3aed', color: '#c084fc', fontSize: '0.68rem', letterSpacing: '0.5px' }}
                         >
-                          {u.scopeType || 'TENANT'}
+                          {u.scopeType || 'ZONE'}
                         </span>
-                        <span className="font-monospace fw-semibold" style={{ color: '#38bdf8', fontSize: '0.78rem' }}>
+                        <span className="font-monospace fw-semibold" style={{ color: '#cbd5e1', fontSize: '0.78rem' }}>
                           {getTenantLabel(u)}
                         </span>
                       </div>
@@ -796,21 +849,21 @@ const UserAdministration = () => {
                         {Array.isArray(u.permissions) ? u.permissions.slice(0, 3).map((p, pIdx) => (
                           <span 
                             key={pIdx} 
-                            className="px-2 py-1 rounded font-monospace"
-                            style={{ backgroundColor: '#1e1b18', border: '1px solid #3d352e', color: '#f3f4f6', fontSize: '0.72rem' }}
+                            className="px-3 py-1 rounded-3 font-monospace fw-semibold"
+                            style={{ backgroundColor: '#151c28', border: '1px solid #28354a', color: '#ffffff', fontSize: '0.78rem' }}
                           >
-                            {p}
+                            {p === 'read' || p === 'write' || p === '*' ? 'Standard' : p}
                           </span>
                         )) : (
                           <span 
-                            className="px-2 py-1 rounded font-monospace"
-                            style={{ backgroundColor: '#1e1b18', border: '1px solid #3d352e', color: '#f3f4f6', fontSize: '0.72rem' }}
+                            className="px-3 py-1 rounded-3 font-monospace fw-semibold"
+                            style={{ backgroundColor: '#151c28', border: '1px solid #28354a', color: '#ffffff', fontSize: '0.78rem' }}
                           >
-                            standard
+                            Standard
                           </span>
                         )}
                         {Array.isArray(u.permissions) && u.permissions.length > 3 && (
-                          <span className="px-2 py-1 rounded text-muted fs-10" style={{ backgroundColor: '#1a1714' }}>
+                          <span className="px-2 py-1 rounded text-muted fs-10" style={{ backgroundColor: '#151c28' }}>
                             +{u.permissions.length - 3}
                           </span>
                         )}
@@ -824,15 +877,15 @@ const UserAdministration = () => {
                           onClick={() => handleViewDetails(u)}
                           className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
                           style={{
-                            width: 34,
-                            height: 34,
-                            backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                            border: '1px solid #0284c7',
-                            color: '#38bdf8'
+                            width: 32,
+                            height: 32,
+                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                            border: '1px solid #3b82f6',
+                            color: '#3b82f6'
                           }}
                           title="View User Details"
                         >
-                          <Eye size={15} />
+                          <Eye size={14} />
                         </button>
                         <button 
                           onClick={() => {
@@ -851,29 +904,29 @@ const UserAdministration = () => {
                           }}
                           className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
                           style={{
-                            width: 34,
-                            height: 34,
-                            backgroundColor: 'rgba(217, 119, 6, 0.15)',
+                            width: 32,
+                            height: 32,
+                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
                             border: '1px solid #f59e0b',
-                            color: '#fbbf24'
+                            color: '#f59e0b'
                           }}
                           title="Edit User"
                         >
-                          <Edit size={15} />
+                          <Edit size={14} />
                         </button>
                         <button 
                           onClick={() => { setSelectedUser(u); setShowDeleteModal(true); }}
                           className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
                           style={{
-                            width: 34,
-                            height: 34,
-                            backgroundColor: 'rgba(220, 38, 38, 0.15)',
+                            width: 32,
+                            height: 32,
+                            backgroundColor: 'rgba(239, 68, 68, 0.15)',
                             border: '1px solid #ef4444',
-                            color: '#f87171'
+                            color: '#ef4444'
                           }}
                           title="Delete User"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -882,6 +935,40 @@ const UserAdministration = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* PAGINATION FOOTER MATCHING SCREENSHOT */}
+        <div className="p-3 border-top border-secondary border-opacity-25 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3" style={{ backgroundColor: '#0a0d14' }}>
+          <div className="d-flex align-items-center gap-2 text-slate-400 fs-13">
+            <span>Show</span>
+            <Form.Select 
+              size="sm" 
+              style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', width: 'auto', fontSize: '0.80rem', boxShadow: 'none' }}
+              defaultValue={10}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </Form.Select>
+            <span>entries per page</span>
+          </div>
+
+          <div className="d-flex align-items-center gap-3">
+            <span className="text-slate-400 fs-13">
+              Showing 1 to {filteredUsers.length} of {users.length} entries
+            </span>
+            <div className="d-flex align-items-center gap-1">
+              <Button variant="outline-secondary" size="sm" className="px-2.5 py-1 border-secondary" disabled style={{ backgroundColor: '#0d111a', color: '#64748b' }}>
+                &lt;
+              </Button>
+              <Button size="sm" className="px-3 py-1 fw-bold border-0" style={{ backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '6px' }}>
+                1
+              </Button>
+              <Button variant="outline-secondary" size="sm" className="px-2.5 py-1 border-secondary" disabled style={{ backgroundColor: '#0d111a', color: '#64748b' }}>
+                &gt;
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -947,25 +1034,25 @@ const UserAdministration = () => {
 
       {/* EDIT USER MODAL */}
       <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered className="scada-animated-modal-edit">
-        <Modal.Header closeButton style={{ backgroundColor: '#0c1017', color: '#ffffff', borderColor: '#1e293b' }}>
+        <Modal.Header closeButton style={{ backgroundColor: '#0a0d14', color: '#ffffff', borderColor: '#1c2433' }}>
           <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#f59e0b' }}>
             <Edit size={18} /> Update User
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleUpdateUser}>
-          <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff' }}>
+          <Modal.Body style={{ backgroundColor: '#0a0d14', color: '#ffffff' }}>
             <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Full Name</Form.Label>
-              <Form.Control type="text" style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+              <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Full Name</Form.Label>
+              <Form.Control type="text" style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Email Address</Form.Label>
-              <Form.Control type="email" style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+              <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Email Address</Form.Label>
+              <Form.Control type="email" style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Organization</Form.Label>
+              <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Organization</Form.Label>
               <Form.Select 
-                style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
+                style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} 
                 value={formData.tenantId} 
                 onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
               >
@@ -976,8 +1063,8 @@ const UserAdministration = () => {
             </Form.Group>
             <Row className="g-2 mb-3">
               <Col md={6}>
-                <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role</Form.Label>
-                <Form.Select style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+                <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Role</Form.Label>
+                <Form.Select style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
                   <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                   <option value="ADMIN">ADMIN</option>
                   <option value="OPERATOR">OPERATOR</option>
@@ -986,17 +1073,17 @@ const UserAdministration = () => {
                 </Form.Select>
               </Col>
               <Col md={6}>
-                <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Status</Form.Label>
-                <Form.Select style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
+                <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Status</Form.Label>
+                <Form.Select style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>
                 </Form.Select>
               </Col>
             </Row>
           </Modal.Body>
-          <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
-            <Button variant="outline-secondary" size="sm" className="rounded-3 px-3 border-secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button type="submit" size="sm" className="rounded-3 fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)' }}>Save Changes</Button>
+          <Modal.Footer style={{ backgroundColor: '#0a0d14', borderColor: '#1c2433' }}>
+            <Button variant="outline-secondary" size="sm" className="px-3 border-secondary" style={{ backgroundColor: 'transparent', borderColor: '#334155', color: '#cbd5e1', borderRadius: '8px', fontWeight: 600 }} onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button type="submit" size="sm" className="fw-bold px-4 border-0" style={{ backgroundColor: '#f59e0b', color: '#000000', borderRadius: '8px', fontWeight: 700, boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)' }}>Save Changes</Button>
           </Modal.Footer>
         </Form>
       </Modal>
