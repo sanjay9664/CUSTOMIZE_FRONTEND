@@ -24,6 +24,8 @@ const UserAdministration = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [selectedUser, setSelectedUser] = useState(null);
+  const [emailError, setEmailError] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -34,6 +36,19 @@ const UserAdministration = () => {
     scopeId: '',
     permissions: 'read,write'
   });
+
+  const checkDuplicateEmail = (emailVal, excludeUserId = null) => {
+    if (!emailVal || !emailVal.trim()) return '';
+    const normalized = emailVal.trim().toLowerCase();
+    const duplicate = users.find(u => 
+      String(u.id) !== String(excludeUserId) && 
+      (u.email || '').trim().toLowerCase() === normalized
+    );
+    if (duplicate) {
+      return 'Email address already exists';
+    }
+    return '';
+  };
 
   const purgeExpiredTokens = () => {
     localStorage.removeItem('token');
@@ -163,6 +178,14 @@ const UserAdministration = () => {
   // POST /api/users - Create User
   const handleCreateUser = async (e) => {
     if (e) e.preventDefault();
+
+    const dupErr = checkDuplicateEmail(formData.email);
+    if (dupErr) {
+      setEmailError(dupErr);
+      setMessage({ type: 'error', text: dupErr });
+      return;
+    }
+
     const validRole = formData.role === 'USER' ? 'VIEWER' : formData.role;
     const roleIdMap = { SUPER_ADMIN: 1, ADMIN: 2, OPERATOR: 3, VIEWER: 4, MANAGER: 5 };
     const selectedTenant = formData.tenantId || 'cmshedsk40002zsvnhajul18y';
@@ -193,6 +216,13 @@ const UserAdministration = () => {
       if (response.ok) {
         const resJson = await response.json();
         createdUser = resJson.data || resJson.user || resJson;
+      } else {
+        const resErr = await response.json();
+        if (resErr && resErr.message) {
+          setMessage({ type: 'error', text: resErr.message });
+          setEmailError(resErr.message);
+          return;
+        }
       }
     } catch (err) {
       console.warn('POST error:', err);
@@ -213,6 +243,7 @@ const UserAdministration = () => {
     });
 
     setMessage({ type: 'success', text: `User "${createdUser.name}" created successfully!` });
+    setEmailError('');
     setShowCreateModal(false);
   };
 
@@ -233,6 +264,13 @@ const UserAdministration = () => {
   const handleUpdateUser = async (e) => {
     if (e) e.preventDefault();
     if (!selectedUser) return;
+
+    const dupErr = checkDuplicateEmail(formData.email, selectedUser.id);
+    if (dupErr) {
+      setEmailError(dupErr);
+      setMessage({ type: 'error', text: dupErr });
+      return;
+    }
     const validRole = formData.role === 'USER' ? 'VIEWER' : formData.role;
     const payload = {
       name: formData.name,
@@ -948,6 +986,7 @@ const UserAdministration = () => {
                 size="sm" 
                 onClick={() => {
                   setFormData({ name: '', email: '', role: 'VIEWER', tenantId: 'cmshedsk40002zsvnhajul18y', status: 'ACTIVE', scopeType: 'ZONE', scopeId: '', permissions: 'read,write' });
+                  setEmailError('');
                   setShowCreateModal(true);
                 }} 
                 className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2 btn-add-new-user"
@@ -1092,6 +1131,7 @@ const UserAdministration = () => {
                               scopeId: u.scopeId || '',
                               permissions: Array.isArray(u.permissions) ? u.permissions.join(', ') : 'read'
                             });
+                            setEmailError('');
                             setShowEditModal(true);
                           }}
                           className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
@@ -1180,7 +1220,27 @@ const UserAdministration = () => {
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Email Address</Form.Label>
-              <Form.Control type="email" style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+              <Form.Control 
+                type="email" 
+                style={{ 
+                  backgroundColor: '#131924', 
+                  color: '#ffffff', 
+                  borderColor: emailError ? '#ef4444' : '#243044', 
+                  boxShadow: emailError ? '0 0 12px rgba(239, 68, 68, 0.4)' : 'none' 
+                }} 
+                value={formData.email} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({ ...formData, email: val });
+                  setEmailError(checkDuplicateEmail(val));
+                }} 
+                required 
+              />
+              {emailError && (
+                <div className="mt-1.5 fs-12 fw-bold d-flex align-items-center gap-1" style={{ color: '#ef4444' }}>
+                  <AlertTriangle size={14} /> {emailError}
+                </div>
+              )}
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Organization</Form.Label>
@@ -1220,7 +1280,7 @@ const UserAdministration = () => {
           </Modal.Body>
           <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
             <Button variant="outline-secondary" size="sm" className="rounded-3 px-3 border-secondary btn-modal-cancel" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button type="submit" size="sm" className="rounded-3 fw-bold px-4 border-0 btn-modal-create" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.35)' }}>Create User</Button>
+            <Button type="submit" size="sm" disabled={!!emailError} className="rounded-3 fw-bold px-4 border-0 btn-modal-create" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.35)' }}>Create User</Button>
           </Modal.Footer>
         </Form>
       </Modal>
@@ -1240,7 +1300,29 @@ const UserAdministration = () => {
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Email Address</Form.Label>
-              <Form.Control type="email" style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+              <Form.Control 
+                type="email" 
+                style={{ 
+                  backgroundColor: '#151c28', 
+                  color: '#ffffff', 
+                  borderColor: emailError ? '#ef4444' : '#243044', 
+                  boxShadow: emailError ? '0 0 12px rgba(239, 68, 68, 0.4)' : 'none', 
+                  borderRadius: '8px', 
+                  padding: '8px 12px' 
+                }} 
+                value={formData.email} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({ ...formData, email: val });
+                  setEmailError(checkDuplicateEmail(val, selectedUser?.id));
+                }} 
+                required 
+              />
+              {emailError && (
+                <div className="mt-1.5 fs-12 fw-bold d-flex align-items-center gap-1" style={{ color: '#ef4444' }}>
+                  <AlertTriangle size={14} /> {emailError}
+                </div>
+              )}
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Organization</Form.Label>

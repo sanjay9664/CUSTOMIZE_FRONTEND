@@ -113,6 +113,19 @@ window.fetch = async function (input, init) {
     if (method === 'POST') {
       try {
         const body = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {});
+        
+        // Duplicate email validation
+        const reqEmail = (body.email || '').trim().toLowerCase();
+        if (reqEmail) {
+          const duplicate = savedUsers.find(u => (u.email || '').trim().toLowerCase() === reqEmail);
+          if (duplicate) {
+            return createMockResponse({
+              success: false,
+              message: `User with email "${body.email}" already exists!`
+            }, 400);
+          }
+        }
+
         const roleIdMap = { SUPER_ADMIN: 1, ADMIN: 2, OPERATOR: 3, VIEWER: 4, MANAGER: 5 };
         const validRole = body.role === 'USER' ? 'VIEWER' : (body.role || 'VIEWER');
         const selectedTenant = body.tenantId || 'cmshedsk40002zsvnhajul18y';
