@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Droplets, Activity, Zap, Bell, Battery, ShieldAlert, Settings,
   ClipboardList, PenTool, History, LayoutDashboard,
@@ -9,6 +9,7 @@ import { Accordion } from 'react-bootstrap';
 import logo from "../assets/logo.png";
 
 const Sidebar = ({ collapsed }) => {
+  const location = useLocation();
   const [modulesConfig, setModulesConfig] = useState(() => {
     const saved = localStorage.getItem('scada_modules_config');
     return saved ? JSON.parse(saved) : null;
@@ -348,14 +349,9 @@ const Sidebar = ({ collapsed }) => {
 
         {/* Management & Admin Links */}
         <div className="mb-2">
-          <NavLink to="/global-settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <NavLink to="/settings" className={({ isActive }) => `sidebar-link ${isActive || location.pathname.includes('/settings') || location.pathname.includes('/global-settings') ? 'active' : ''}`}>
             <Settings size={20} className="text-warning" />
-            {!collapsed && <span className="ms-3 text-warning fw-bold">Global Settings</span>}
-          </NavLink>
-
-          <NavLink to="/settings/users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            <User size={20} className="text-info" />
-            {!collapsed && <span className="ms-3 text-info fw-bold">User Administration</span>}
+            {!collapsed && <span className="ms-3 text-warning fw-bold">Settings</span>}
           </NavLink>
 
           {isAdmin && (

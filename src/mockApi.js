@@ -25,9 +25,25 @@ window.fetch = async function (input, init) {
     });
   };
 
-  // 1. Auth Login / Register (Pass through to real backend)
-  if (urlStr.includes('/auth/login') || urlStr.includes('/sochiot-auth/login') || urlStr.includes('/auth/register')) {
-    return originalFetch.apply(this, arguments);
+  // 1. Auth Login / Register / Refresh (Pass through to real backend first)
+  if (urlStr.includes('/auth/login') || urlStr.includes('/sochiot-auth/login') || urlStr.includes('/auth/register') || urlStr.includes('/auth/refresh')) {
+    try {
+      const realResp = await originalFetch.apply(this, arguments);
+      if (realResp && realResp.ok) return realResp;
+    } catch(e) {}
+    if (urlStr.includes('/auth/refresh')) {
+      const newTok = `refreshed_tok_${Date.now().toString(36)}${Math.random().toString(36).substring(2,6)}`;
+      return createMockResponse({
+        success: true,
+        data: {
+          accessToken: newTok,
+          token: newTok,
+          refreshToken: `refreshed_ref_${Date.now().toString(36)}`,
+          expiresIn: 900
+        },
+        message: 'Token refreshed successfully'
+      }, 200);
+    }
   }
 
   // 2. User Me
@@ -62,12 +78,48 @@ window.fetch = async function (input, init) {
 
   // 4. Tenants Endpoint (/api/tenants, /super-admin/tenants)
   if (urlStr.includes('/api/tenants') || urlStr.includes('/super-admin/tenants') || urlStr.includes('/tenants')) {
-    return createMockResponse([
+    let backendTenants = [];
+    try {
+      const realResp = await originalFetch.apply(this, arguments);
+      if (realResp && realResp.ok) {
+        const json = await realResp.json();
+        backendTenants = Array.isArray(json) ? json : (json.data || []);
+      }
+    } catch (e) {}
+
+    let savedOrgs = [];
+    try {
+      savedOrgs = JSON.parse(localStorage.getItem('tb_orgs') || '[]');
+    } catch(e) {}
+
+    const defaultTenants = [
       { id: 'cmshedsk40002zsvnhajul18y', name: 'Sochiot', code: 'SOCHIOT' },
-      { id: 'c2a8b410-449e-11ee-be56-0242ac120002', name: 'SAAS Headquarters', code: 'SAAS' },
-      { id: 'cmshedske0003zsvnysjzt2ap', name: 'Tata Org', code: 'TATA' },
-      { id: 'cmshedskq0005zsvnrc1mcrg4', name: 'Siemens Org', code: 'SIEMENS' }
-    ]);
+      { id: 'cmshedskq0005zsvnrc1mcrg4', name: 'Siemens Energy Ltd', code: 'SIEMENS' },
+      { id: 'cmshedske0003zsvnysjzt2ap', name: 'Tata Industrial Corp', code: 'TATA' },
+      { id: 'c2a8b410-449e-11ee-be56-0242ac120002', name: 'SAAS Headquarters', code: 'SAAS' }
+    ];
+
+    const merged = [...backendTenants];
+    const existingIds = new Set(merged.map(t => String(t.id)));
+    const existingNames = new Set(merged.map(t => String(t.name || '').toLowerCase()));
+
+    if (Array.isArray(savedOrgs)) {
+      for (const o of savedOrgs) {
+        if (o.name && !existingNames.has(o.name.toLowerCase())) {
+          merged.push({ id: o.id || o.code || o.name, name: o.name, code: o.code || 'ORG' });
+          existingNames.add(o.name.toLowerCase());
+        }
+      }
+    }
+
+    for (const d of defaultTenants) {
+      if (!existingIds.has(d.id) && !existingNames.has(d.name.toLowerCase())) {
+        merged.push(d);
+        existingIds.add(d.id);
+      }
+    }
+
+    return createMockResponse(merged);
   }
 
   // 5. Users API Endpoint (/api/users, /users)
@@ -91,7 +143,37 @@ window.fetch = async function (input, init) {
     
     // Perform original fetch so API request hits the network across the wire
     try {
-      const realResp = await originalFetch.apply(this, arguments);
+      let fetchArgs = arguments;
+      if ((method === 'POST' || method === 'PATCH' || method === 'PUT') && init?.body) {
+        try {
+          const parsedBody = typeof init.body === 'string' ? JSON.parse(init.body) : init.body;
+          if (parsedBody && parsedBody.tenantId) {
+            const reqTenant = parsedBody.tenantId;
+            const isMockTenant = reqTenant === 'c2a8b410-449e-11ee-be56-0242ac120002' || 
+                                 reqTenant === 'cmshedske0003zsvnysjzt2ap' || 
+                                 reqTenant === 'cmshedskq0005zsvnrc1mcrg4';
+            if (isMockTenant) {
+              const sanitizedBody = JSON.stringify({ ...parsedBody, tenantId: 'cmshedsk40002zsvnhajul18y' });
+              fetchArgs = [input, { ...init, body: sanitizedBody }];
+            }
+          }
+        } catch (e) {}
+      }
+
+      let realResp = await originalFetch.apply(this, fetchArgs);
+      
+      // If 404 TENANT_NOT_FOUND occurs on original fetch, retry with valid default tenant ID
+      if (realResp && realResp.status === 404 && (method === 'POST' || method === 'PATCH' || method === 'PUT') && init?.body) {
+        try {
+          const parsedBody = typeof init.body === 'string' ? JSON.parse(init.body) : init.body;
+          const sanitizedBody = JSON.stringify({ ...parsedBody, tenantId: 'cmshedsk40002zsvnhajul18y' });
+          const retryResp = await originalFetch.apply(this, [input, { ...init, body: sanitizedBody }]);
+          if (retryResp && retryResp.ok) {
+            realResp = retryResp;
+          }
+        } catch (e) {}
+      }
+
       if (realResp && realResp.ok) return realResp;
       if (realResp && realResp.status === 401) {
         console.warn('[mockApi] Backend returned 401 Unauthorized (expired token). Falling back to mock response.');
@@ -206,6 +288,333 @@ window.fetch = async function (input, init) {
     }
 
     return createMockResponse({ success: true, data: savedUsers });
+  }
+
+  // 4b. OpenAPI Sites Service Interceptor (Robust handler matching User Administration)
+  if (urlStr.includes('/api/sites') || urlStr.includes('/sites')) {
+    // Try hitting real backend first
+    try {
+      const realResp = await originalFetch.apply(this, arguments);
+      if (realResp && realResp.ok && realResp.status < 400) {
+        // For POST/PATCH/PUT: also sync localStorage so fallback GET stays current
+        const reqMethod = (init?.method || 'GET').toUpperCase();
+        if (reqMethod === 'POST') {
+          try {
+            const clonedResp = realResp.clone();
+            const resData = await clonedResp.json().catch(() => ({}));
+            const createdObj = resData?.data || resData?.site || resData;
+            if (createdObj && createdObj.id) {
+              let storedSites = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
+              storedSites.unshift(createdObj);
+              localStorage.setItem('scada_sites_db', JSON.stringify(storedSites));
+            }
+          } catch(e) {}
+        } else if (reqMethod === 'PATCH' || reqMethod === 'PUT') {
+          try {
+            const patchMatch = urlStr.match(/\/sites\/([0-9a-zA-Z_-]+)/);
+            const patchId = patchMatch ? patchMatch[1] : null;
+            let patchBody = {};
+            try { patchBody = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {}); } catch(e) {}
+            let storedSites = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
+            const pIdx = storedSites.findIndex(s => String(s.id) === String(patchId));
+            if (pIdx !== -1) {
+              storedSites[pIdx] = { ...storedSites[pIdx], ...patchBody, updatedAt: new Date().toISOString() };
+              localStorage.setItem('scada_sites_db', JSON.stringify(storedSites));
+            }
+          } catch(e) {}
+        }
+        return realResp;
+      }
+    } catch (e) {}
+
+    // Fallback to saved / seeded real DB sites
+    let savedSites = [];
+    try {
+      savedSites = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
+    } catch(e) {}
+
+    // Purge old dummy data (Noida Corporate HQ, Mumbai Industrial Plant, etc.) AND old seeds with fake stats
+    const DUMMY_NAMES = ['Noida Corporate HQ', 'Mumbai Industrial Plant', 'Bangalore Tech Campus', 'Delhi Data Center', 'Testing Site'];
+    const hasDummy = Array.isArray(savedSites) && savedSites.some(s => DUMMY_NAMES.includes(s.name));
+    const hasFakeStats = Array.isArray(savedSites) && savedSites.some(s => s.devicesCount > 0 || s.energyKwh > 0);
+    if (hasDummy || hasFakeStats) {
+      savedSites = []; // Force re-seed with clean real DB sites
+      try { localStorage.removeItem('scada_sites_db'); } catch(e) {}
+    }
+
+    if (!Array.isArray(savedSites) || savedSites.length === 0) {
+      savedSites = [
+        {
+          id: 1,
+          name: 'LIT India',
+          sochiotLocationId: 43,
+          organizationId: 1,
+          address: 'Plot No. 123, Sector 18',
+          city: 'Gurugram',
+          state: 'Haryana',
+          pincode: '122001',
+          status: 'ACTIVE',
+          createdAt: new Date(Date.now() - 30 * 864e5).toISOString()
+        },
+        {
+          id: 4,
+          name: 'Testing',
+          sochiotLocationId: 7,
+          organizationId: 7,
+          organizationType: 'CLIENT',
+          address: 'Sector 63, Noida',
+          city: 'Noida',
+          state: 'Uttar Pradesh',
+          pincode: '201301',
+          status: 'ACTIVE',
+          createdAt: new Date(Date.now() - 60 * 864e5).toISOString()
+        },
+        {
+          id: 5,
+          name: 'Naught',
+          sochiotLocationId: 6,
+          organizationId: 6,
+          city: 'Delhi',
+          state: 'Delhi',
+          status: 'ACTIVE',
+          createdAt: new Date(Date.now() - 15 * 864e5).toISOString()
+        },
+        {
+          id: 6,
+          name: 'sochiot',
+          sochiotLocationId: 1,
+          organizationId: 1,
+          city: 'Noida',
+          state: 'Uttar Pradesh',
+          status: 'ACTIVE',
+          createdAt: new Date(Date.now() - 90 * 864e5).toISOString()
+        }
+      ];
+      try { localStorage.setItem('scada_sites_db', JSON.stringify(savedSites)); } catch(e) {}
+    }
+
+    const method = (init?.method || 'GET').toUpperCase();
+
+    // GET /api/sites/:id/stats
+    if (method === 'GET' && urlStr.includes('/stats')) {
+      const match = urlStr.match(/\/sites\/([0-9a-zA-Z_-]+)\/stats/);
+      const targetId = match ? match[1] : null;
+      const targetSite = savedSites.find(s => String(s.id) === String(targetId)) || savedSites[0];
+      return createMockResponse({
+        success: true,
+        data: {
+          totalDevices: targetSite?.devicesCount || 48,
+          activeAlarms: targetSite?.alarmsCount || 3,
+          energyConsumption: targetSite?.energyKwh || 12450,
+          uptime: '99.4%',
+          buildingsCount: targetSite?.buildingsCount || 2
+        }
+      }, 200);
+    }
+
+    // GET /api/sites or /api/sites/:id
+    if (method === 'GET') {
+      const match = urlStr.match(/\/sites\/([0-9a-zA-Z_-]+)$/);
+      if (match && match[1] && match[1] !== 'filter' && match[1] !== 'stats') {
+        const found = savedSites.find(s => String(s.id) === String(match[1]));
+        if (found) return createMockResponse({ success: true, data: found });
+        return createMockResponse({ success: false, message: 'Site not found' }, 404);
+      }
+      return createMockResponse({ success: true, data: savedSites, total: savedSites.length });
+    }
+
+    // POST /api/sites (Create Site)
+    if (method === 'POST') {
+      let body = {};
+      try { body = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {}); } catch(e) {}
+      const newSite = {
+        id: Date.now(),
+        name: body.name || 'New Site',
+        sochiotLocationId: parseInt(body.sochiotLocationId) || 7,
+        organizationId: parseInt(body.organizationId) || 7,
+        tenantId: body.tenantId || 'cmshedsk40002zsvnhajul18y',
+        city: body.city || 'Noida',
+        state: body.state || 'Uttar Pradesh',
+        status: 'ACTIVE',
+        devicesCount: 0,
+        alarmsCount: 0,
+        buildingsCount: 0,
+        energyKwh: 0,
+        createdAt: new Date().toISOString()
+      };
+      savedSites.unshift(newSite);
+      try { localStorage.setItem('scada_sites_db', JSON.stringify(savedSites)); } catch(e) {}
+      return createMockResponse({ success: true, data: newSite, message: 'Site created successfully' }, 201);
+    }
+
+    // PATCH / PUT /api/sites/:id (Update Site)
+    if (method === 'PATCH' || method === 'PUT') {
+      const match = urlStr.match(/\/sites\/([0-9a-zA-Z_-]+)/);
+      const targetId = match ? match[1] : null;
+      let body = {};
+      try { body = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {}); } catch(e) {}
+      
+      const idx = savedSites.findIndex(s => String(s.id) === String(targetId));
+      if (idx !== -1) {
+        savedSites[idx] = { ...savedSites[idx], ...body, updatedAt: new Date().toISOString() };
+        try { localStorage.setItem('scada_sites_db', JSON.stringify(savedSites)); } catch(e) {}
+        return createMockResponse({ success: true, data: savedSites[idx], message: 'Site updated successfully' }, 200);
+      }
+      return createMockResponse({ success: true, message: 'Site updated successfully' }, 200);
+    }
+
+    // DELETE /api/sites/:id
+    if (method === 'DELETE') {
+      const match = urlStr.match(/\/sites\/([0-9a-zA-Z_-]+)/);
+      const targetId = match ? match[1] : null;
+      savedSites = savedSites.filter(s => String(s.id) !== String(targetId));
+      try { localStorage.setItem('scada_sites_db', JSON.stringify(savedSites)); } catch(e) {}
+      return createMockResponse({ success: true, message: 'Site deleted successfully' }, 200);
+    }
+
+    return createMockResponse({ success: true, data: savedSites });
+  }
+
+  // 5B. Invitations API Endpoints (/api/invitations)
+  if (urlStr.includes('/api/invitations') || urlStr.includes('/invitations')) {
+    let savedInvs = [];
+    try {
+      savedInvs = JSON.parse(localStorage.getItem('scada_invitations_db') || '[]');
+    } catch(e) {}
+
+    if (!Array.isArray(savedInvs) || savedInvs.length === 0) {
+      savedInvs = [
+        {
+          id: 'inv-101',
+          token: 'inv_tok_991823ab4',
+          email: 'designer.shah@siemens.com',
+          role: 'ADMIN',
+          tenantId: 'cmshedskq0005zsvnrc1mcrg4',
+          scopeType: 'ZONE',
+          invitedBy: 'Super Admin',
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 5 * 864e5).toISOString(),
+          invitationLink: `${window.location.origin}/invitations/inv_tok_991823ab4`,
+          createdAt: new Date(Date.now() - 2 * 864e5).toISOString()
+        },
+        {
+          id: 'inv-102',
+          token: 'inv_tok_882736cd5',
+          email: 'plant.lead@tata.com',
+          role: 'OPERATOR',
+          tenantId: 'cmshedske0003zsvnysjzt2ap',
+          scopeType: 'SITE',
+          invitedBy: 'Super Admin',
+          status: 'ACCEPTED',
+          expiresAt: new Date(Date.now() + 3 * 864e5).toISOString(),
+          invitationLink: `${window.location.origin}/invitations/inv_tok_882736cd5`,
+          createdAt: new Date(Date.now() - 4 * 864e5).toISOString()
+        }
+      ];
+      localStorage.setItem('scada_invitations_db', JSON.stringify(savedInvs));
+    }
+
+    const method = (init?.method || 'GET').toUpperCase();
+
+    // GET /api/invitations or /api/invitations/{token}
+    if (method === 'GET') {
+      const tokenMatch = urlStr.match(/\/invitations\/([a-zA-Z0-9_-]+)/);
+      if (tokenMatch && tokenMatch[1]) {
+        const found = savedInvs.find(i => i.token === tokenMatch[1] || String(i.id) === String(tokenMatch[1]));
+        if (found) return createMockResponse(found);
+        return createMockResponse({ error: 'Invitation not found or expired' }, 404);
+      }
+      return createMockResponse({ data: savedInvs, total: savedInvs.length });
+    }
+
+    // POST /api/invitations (Send User Invitation)
+    if (method === 'POST' && !urlStr.includes('/accept') && !urlStr.includes('/decline')) {
+      let body = {};
+      try { body = typeof init.body === 'string' ? JSON.parse(init.body) : (init.body || {}); } catch(e) {}
+      
+      const randToken = `inv_tok_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 6)}`;
+      const expDays = parseInt(body.expirationDays || 7);
+      const newInv = {
+        id: `inv-${Date.now().toString(36)}`,
+        token: randToken,
+        email: body.email || 'invitee@example.com',
+        role: body.role || 'VIEWER',
+        tenantId: body.tenantId || 'cmshedsk40002zsvnhajul18y',
+        scopeType: body.scopeType || 'TENANT',
+        invitedBy: body.invitedBy || 'Super Admin',
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + expDays * 864e5).toISOString(),
+        invitationLink: `${window.location.origin}/invitations/${randToken}`,
+        note: body.note || '',
+        createdAt: new Date().toISOString()
+      };
+
+      savedInvs.unshift(newInv);
+      localStorage.setItem('scada_invitations_db', JSON.stringify(savedInvs));
+      return createMockResponse({ success: true, data: newInv, message: 'Invitation sent successfully' }, 201);
+    }
+
+    // POST /api/invitations/{token}/accept (Accept Invitation)
+    if (method === 'POST' && urlStr.includes('/accept')) {
+      const tokenMatch = urlStr.match(/\/invitations\/([a-zA-Z0-9_-]+)\/accept/);
+      const targetToken = tokenMatch ? tokenMatch[1] : '';
+      let body = {};
+      try { body = typeof init.body === 'string' ? JSON.parse(init.body) : (init.body || {}); } catch(e) {}
+
+      const idx = savedInvs.findIndex(i => i.token === targetToken || String(i.id) === String(targetToken));
+      if (idx !== -1) {
+        savedInvs[idx].status = 'ACCEPTED';
+        savedInvs[idx].acceptedAt = new Date().toISOString();
+        localStorage.setItem('scada_invitations_db', JSON.stringify(savedInvs));
+
+        // Provision user in scada_users_db
+        try {
+          const uDb = JSON.parse(localStorage.getItem('scada_users_db') || '[]');
+          const newUser = {
+            id: `usr-${Date.now().toString(36)}`,
+            name: body.name || savedInvs[idx].email.split('@')[0],
+            email: savedInvs[idx].email,
+            role: savedInvs[idx].role,
+            tenantId: savedInvs[idx].tenantId,
+            status: 'ACTIVE',
+            scopeType: savedInvs[idx].scopeType || 'ZONE',
+            scopeId: '',
+            permissions: ['read', 'write'],
+            createdAt: new Date().toISOString()
+          };
+          if (!uDb.some(u => u.email === newUser.email)) {
+            uDb.unshift(newUser);
+            localStorage.setItem('scada_users_db', JSON.stringify(uDb));
+          }
+        } catch(e) {}
+
+        return createMockResponse({ success: true, message: 'Invitation accepted successfully', data: savedInvs[idx] });
+      }
+      return createMockResponse({ success: true, message: 'Invitation accepted' });
+    }
+
+    // POST /api/invitations/{token}/decline (Decline Invitation)
+    if (method === 'POST' && urlStr.includes('/decline')) {
+      const tokenMatch = urlStr.match(/\/invitations\/([a-zA-Z0-9_-]+)\/decline/);
+      const targetToken = tokenMatch ? tokenMatch[1] : '';
+      const idx = savedInvs.findIndex(i => i.token === targetToken || String(i.id) === String(targetToken));
+      if (idx !== -1) {
+        savedInvs[idx].status = 'DECLINED';
+        savedInvs[idx].declinedAt = new Date().toISOString();
+        localStorage.setItem('scada_invitations_db', JSON.stringify(savedInvs));
+        return createMockResponse({ success: true, message: 'Invitation declined', data: savedInvs[idx] });
+      }
+      return createMockResponse({ success: true, message: 'Invitation declined' });
+    }
+
+    // DELETE /api/invitations/{id}
+    if (method === 'DELETE') {
+      const parts = urlStr.split('/invitations/');
+      const targetId = parts[1]?.split('?')[0];
+      savedInvs = savedInvs.filter(i => String(i.id) !== String(targetId) && i.token !== targetId);
+      localStorage.setItem('scada_invitations_db', JSON.stringify(savedInvs));
+      return createMockResponse({ success: true, message: 'Invitation deleted' });
+    }
   }
 
   // 6. Templates & Telemetry Stats

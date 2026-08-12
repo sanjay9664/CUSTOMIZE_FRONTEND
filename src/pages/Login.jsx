@@ -8,6 +8,7 @@ import {
   Upload, Trash2
 } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
+import { setAuthCookies } from '../utils/cookieUtils';
 import logo from "../assets/logo.png";
 import heroImg from "./scada_hero.png";
 
@@ -200,11 +201,20 @@ const Login = () => {
     const payloadData = data?.data || data;
     const user = payloadData?.user || {};
     const token = payloadData?.accessToken || payloadData?.token || '';
+    const refreshToken = payloadData?.refreshToken || '';
 
     localStorage.setItem('token',           token);
     localStorage.setItem('userRole',         user.role || 'ADMIN');
     localStorage.setItem('userData',         JSON.stringify(user));
     localStorage.setItem('isAuthenticated', 'true');
+
+    // Set Cookies for Session Management
+    setAuthCookies({
+      token,
+      refreshToken,
+      userRole: user.role || 'ADMIN',
+      userData: user
+    });
 
     if (rememberMe) {
       localStorage.setItem('remember_me', 'true');

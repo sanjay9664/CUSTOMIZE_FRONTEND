@@ -6,10 +6,17 @@ import Login from './pages/Login';
 import { DeviceStatusProvider } from './services/DeviceStatusContext';
 import { ThemeProvider } from './context/ThemeContext';
 
+import { getCookie, clearAuthCookies, setAuthCookies } from './utils/cookieUtils';
+import { startAutoTokenRefresh, stopAutoTokenRefresh } from './services/authRefreshService';
+
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    localStorage.getItem('isAuthenticated') === 'true'
-  );
+  const getInitialAuthStatus = () => {
+    const hasLocalAuth = localStorage.getItem('isAuthenticated') === 'true';
+    const hasAuthCookie = !!(getCookie('access_token') || getCookie('token') || getCookie('isAuthenticated'));
+    return hasLocalAuth && hasAuthCookie;
+  };
+
+  const [isAuthenticated, setIsAuthenticated] = useState(getInitialAuthStatus);
 
   // Auto-login from URL parameters (useful for iframe embedding)
   useEffect(() => {
@@ -22,6 +29,11 @@ function App() {
       localStorage.setItem('isAuthenticated', 'true');
       if (urlRole) localStorage.setItem('userRole', urlRole);
       
+      setAuthCookies({
+        token: urlToken,
+        userRole: urlRole || 'ADMIN'
+      });
+
       // Default sidebar config for bypass
       const sidebarMapping = {
         "Dashboard": true,
@@ -48,19 +60,48 @@ function App() {
     }
   }, []);
 
-  // Listen for storage changes (for login/logout across tabs if needed)
+  // Listen for cookie deletion & storage changes (Redirects to /login if cookies are deleted)
   useEffect(() => {
     const checkAuth = () => {
-      setIsAuthenticated(localStorage.getItem('isAuthenticated') === 'true');
+      const hasLocalAuth = localStorage.getItem('isAuthenticated') === 'true';
+      const hasAuthCookie = !!(getCookie('access_token') || getCookie('token') || getCookie('isAuthenticated'));
+
+      // If user deleted cookies in DevTools OR auth state was cleared
+      if (hasLocalAuth && !hasAuthCookie) {
+        console.warn('Authentication cookies deleted/missing. Purging session & redirecting to /login...');
+        clearAuthCookies();
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('userRole');
+        setIsAuthenticated(false);
+        return;
+      }
+
+      setIsAuthenticated(hasLocalAuth && hasAuthCookie);
     };
+
     window.addEventListener('storage', checkAuth);
-    // Periodically check local storage status to synchronize within the same tab
+    // Continuously monitor cookie status every 500ms
     const interval = setInterval(checkAuth, 500);
     return () => {
       window.removeEventListener('storage', checkAuth);
       clearInterval(interval);
     };
   }, []);
+
+  // Auto token refresh manager (Refreshes token 2 mins before 15-min expiry / Every 13 minutes)
+  useEffect(() => {
+    if (isAuthenticated) {
+      startAutoTokenRefresh();
+    } else {
+      stopAutoTokenRefresh();
+    }
+    return () => {
+      stopAutoTokenRefresh();
+    };
+  }, [isAuthenticated]);
 
   return (
     <ThemeProvider>
