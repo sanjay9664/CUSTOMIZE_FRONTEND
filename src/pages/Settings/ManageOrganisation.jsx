@@ -6,6 +6,7 @@ import {
   Sliders, Calendar, Award, Zap, AlertTriangle, Phone, Mail, ArrowLeft
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import SiteManagement from './SiteManagement';
 
 const API_BASE_URL = '/api';
 
@@ -48,6 +49,7 @@ const ManageOrganisation = () => {
   const [tenants, setTenants] = useState([]);
   const [zones, setZones] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -115,7 +117,7 @@ const ManageOrganisation = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['company', 'tenant', 'zone', 'area'].includes(tabParam)) {
+    if (tabParam && ['company', 'tenant', 'zone', 'area', 'site'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [location.search]);
@@ -181,11 +183,24 @@ const ManageOrganisation = () => {
     }
   }, [selectedZoneFilter, selectedTenantFilter]);
 
+  // Fetch Sites
+  const fetchSites = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/sites`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setSites(json.data || json.sites || (Array.isArray(json) ? json : []));
+      }
+    } catch (err) {
+      console.warn('Sites fetch err:', err);
+    }
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchCompanies(), fetchTenants(), fetchZones(), fetchAreas()]);
+    await Promise.all([fetchCompanies(), fetchTenants(), fetchZones(), fetchAreas(), fetchSites()]);
     setLoading(false);
-  }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas]);
+  }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites]);
 
   useEffect(() => {
     fetchAllData();
@@ -1013,10 +1028,16 @@ const ManageOrganisation = () => {
             <Layers size={18} /> Tenant Areas ({areas.length})
           </Nav.Link>
         </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="site">
+            <MapPin size={18} /> Site Management ({sites.length})
+          </Nav.Link>
+        </Nav.Item>
       </Nav>
 
       {/* Search Bar & Filter Controls */}
-      <Card className="bg-dark-card border-0 mb-4 p-3 shadow-sm">
+      {activeTab !== 'site' && (
+        <Card className="bg-dark-card border-0 mb-4 p-3 shadow-sm">
         <Row className="g-3 align-items-center">
           <Col xs={12} md={5}>
             <InputGroup>
@@ -1063,6 +1084,7 @@ const ManageOrganisation = () => {
           )}
         </Row>
       </Card>
+      )}
 
       {/* TAB CONTENT TABLES */}
       {loading ? (
@@ -1335,6 +1357,11 @@ const ManageOrganisation = () => {
             </div>
           )}
         </Card>
+      )}
+
+      {/* 5. SITE MANAGEMENT TAB */}
+      {activeTab === 'site' && (
+        <SiteManagement />
       )}
 
       {/* ================= MODAL DIALOGS ================= */}

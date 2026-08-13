@@ -26,6 +26,9 @@ const formatDate = (dateStr) => {
 
 const SiteManagement = () => {
   const [sites, setSites] = useState([]);
+  const [tenants, setTenants] = useState([]);
+  const [zones, setZones] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,6 +47,8 @@ const SiteManagement = () => {
     sochiotLocationId: '',
     organizationId: '',
     tenantId: '',
+    zoneId: '',
+    areaId: '',
     city: '',
     state: ''
   });
@@ -54,12 +59,40 @@ const SiteManagement = () => {
     sochiotLocationId: '',
     organizationId: '',
     tenantId: '',
+    zoneId: '',
+    areaId: '',
     city: '',
     state: '',
     status: 'ACTIVE'
   });
 
-  // Fetch sites strictly from backend API (Zero dummy data)
+  // Fetch hierarchy (Tenants, Zones, Tenant Areas)
+  const fetchHierarchyData = useCallback(async () => {
+    try {
+      const [tRes, zRes, aRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/tenants`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE_URL}/zones`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE_URL}/areas`, { headers: getAuthHeaders() })
+      ]);
+
+      if (tRes.ok) {
+        const json = await tRes.json();
+        setTenants(Array.isArray(json) ? json : (json.data || []));
+      }
+      if (zRes.ok) {
+        const json = await zRes.json();
+        setZones(Array.isArray(json) ? json : (json.data || []));
+      }
+      if (aRes.ok) {
+        const json = await aRes.json();
+        setAreas(Array.isArray(json) ? json : (json.data || []));
+      }
+    } catch (err) {
+      console.warn('Hierarchy fetch notice:', err);
+    }
+  }, []);
+
+  // Fetch sites strictly from backend API
   const fetchSites = useCallback(async () => {
     setLoading(true);
     try {
@@ -99,7 +132,8 @@ const SiteManagement = () => {
 
   useEffect(() => {
     fetchSites();
-  }, [fetchSites]);
+    fetchHierarchyData();
+  }, [fetchSites, fetchHierarchyData]);
 
   // Create site handler
   const handleCreateSite = async (e) => {
@@ -110,7 +144,6 @@ const SiteManagement = () => {
     }
     setSubmitting(true);
 
-    // Generate unique sochiotLocationId if not provided to avoid 409 Conflict with existing sites
     const locationId = parseInt(createForm.sochiotLocationId) || (Math.floor(Date.now() / 1000) % 89999 + 1000);
     const orgId = parseInt(createForm.organizationId) || 1;
 
@@ -120,7 +153,9 @@ const SiteManagement = () => {
       organizationId: orgId,
       city: createForm.city.trim() || 'Noida',
       state: createForm.state.trim() || 'Uttar Pradesh',
-      ...(createForm.tenantId?.trim() ? { tenantId: createForm.tenantId.trim() } : {})
+      ...(createForm.tenantId?.trim() ? { tenantId: createForm.tenantId.trim() } : {}),
+      ...(createForm.zoneId?.trim() ? { zoneId: createForm.zoneId.trim() } : {}),
+      ...(createForm.areaId?.trim() ? { areaId: createForm.areaId.trim() } : {})
     };
 
     let createdSiteFromDb = null;
@@ -143,17 +178,19 @@ const SiteManagement = () => {
     }
 
     const finalSite = {
-      id: createdSiteFromDb?.id || Date.now(),
+      id: createdSiteFromDb?.id || `site_${Date.now().toString(36)}`,
       name: payload.name,
       sochiotLocationId: payload.sochiotLocationId,
       organizationId: payload.organizationId,
+      tenantId: payload.tenantId || '',
+      zoneId: payload.zoneId || '',
+      areaId: payload.areaId || '',
       city: payload.city,
       state: payload.state,
       status: 'ACTIVE',
       createdAt: createdSiteFromDb?.createdAt || new Date().toISOString()
     };
 
-    // Update local state + localStorage directly
     setSites(prev => {
       const updated = [finalSite, ...prev];
       try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch(e) {}
@@ -162,7 +199,7 @@ const SiteManagement = () => {
 
     setMessage({ type: 'success', text: `Site "${finalSite.name}" created successfully!` });
     setShowCreateModal(false);
-    setCreateForm({ name: '', sochiotLocationId: '', organizationId: '', tenantId: '', city: '', state: '' });
+    setCreateForm({ name: '', sochiotLocationId: '', organizationId: '', tenantId: '', zoneId: '', areaId: '', city: '', state: '' });
     setSubmitting(false);
   };
 
@@ -176,6 +213,8 @@ const SiteManagement = () => {
       sochiotLocationId: site.sochiotLocationId || '',
       organizationId: site.organizationId || '',
       tenantId: site.tenantId || '',
+      zoneId: site.zoneId || '',
+      areaId: site.areaId || '',
       city: site.city || '',
       state: site.state || '',
       status: site.status || 'ACTIVE'
@@ -197,6 +236,8 @@ const SiteManagement = () => {
       sochiotLocationId: parseInt(editForm.sochiotLocationId) || 7,
       organizationId: parseInt(editForm.organizationId) || 7,
       tenantId: editForm.tenantId || undefined,
+      zoneId: editForm.zoneId || undefined,
+      areaId: editForm.areaId || undefined,
       city: editForm.city.trim(),
       state: editForm.state.trim(),
       status: editForm.status
@@ -624,38 +665,6 @@ const SiteManagement = () => {
         </div>
       </div>
 
-      {/* Stats Summary Bar */}
-      <Row className="g-3 mb-4">
-        {[
-          { icon: <Globe size={20} />, label: 'Total Sites', value: sites.length, color: '#06b6d4' },
-          { icon: <Server size={20} />, label: 'Total Devices', value: sites.reduce((a, s) => a + (s.devicesCount || 0), 0), color: '#8b5cf6' },
-          { icon: <AlertTriangle size={20} />, label: 'Active Alarms', value: sites.reduce((a, s) => a + (s.alarmsCount || 0), 0), color: '#f59e0b' },
-          { icon: <Zap size={20} />, label: 'Energy (kWh)', value: sites.reduce((a, s) => a + (s.energyKwh || 0), 0).toLocaleString(), color: '#10b981' }
-        ].map((stat, idx) => (
-          <Col xs={6} lg={3} key={idx}>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(30,30,36,0.9), rgba(20,20,25,0.85))',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: 14, padding: '18px 20px',
-              display: 'flex', alignItems: 'center', gap: 16
-            }} className="site-card-animated">
-              <div style={{
-                width: 44, height: 44, borderRadius: 12,
-                background: `${stat.color}15`, border: `1px solid ${stat.color}30`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: stat.color
-              }}>
-                {stat.icon}
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>{stat.label}</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#f1f5f9' }}>{stat.value}</div>
-              </div>
-            </div>
-          </Col>
-        ))}
-      </Row>
-
       {/* Loading State */}
       {loading ? (
         <div className="text-center py-5">
@@ -819,9 +828,79 @@ const SiteManagement = () => {
         <Modal.Body style={{ padding: '20px 28px 28px' }}>
           <Form onSubmit={handleCreateSite}>
             <Row className="g-3">
+              {/* 1. Organization / Tenant Select */}
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Organization / Tenant *</Form.Label>
+                  <Form.Select
+                    value={createForm.tenantId}
+                    onChange={e => {
+                      const tId = e.target.value;
+                      const selTenant = tenants.find(t => t.id === tId);
+                      setCreateForm(p => ({
+                        ...p,
+                        tenantId: tId,
+                        organizationId: selTenant?.sochiotOrgId || 1,
+                        zoneId: '',
+                        areaId: ''
+                      }));
+                    }}
+                    required
+                  >
+                    <option value="">Select Organization / Tenant...</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.email || t.subscription || 'Tenant'})</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              {/* 2. Geographic Zone Select */}
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>Site Name *</Form.Label>
+                  <Form.Label className="fw-semibold">Geographic Zone</Form.Label>
+                  <Form.Select
+                    value={createForm.zoneId}
+                    onChange={e => {
+                      const zId = e.target.value;
+                      setCreateForm(p => ({ ...p, zoneId: zId, areaId: '' }));
+                    }}
+                  >
+                    <option value="">Select Geographic Zone...</option>
+                    {zones
+                      .filter(z => !createForm.tenantId || z.tenantId === createForm.tenantId)
+                      .map(z => (
+                        <option key={z.id} value={z.id}>{z.name} ({z.region || 'Zone'})</option>
+                      ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              {/* 3. Tenant Area Select */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Tenant Area *</Form.Label>
+                  <Form.Select
+                    value={createForm.areaId}
+                    onChange={e => setCreateForm(p => ({ ...p, areaId: e.target.value }))}
+                  >
+                    <option value="">Select Tenant Area...</option>
+                    {areas
+                      .filter(a => {
+                        if (createForm.zoneId && a.zoneId !== createForm.zoneId) return false;
+                        if (createForm.tenantId && a.tenantId !== createForm.tenantId) return false;
+                        return true;
+                      })
+                      .map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Site Name *</Form.Label>
                   <Form.Control
                     placeholder="e.g. Noida Testing Site"
                     value={createForm.name}
@@ -832,39 +911,7 @@ const SiteManagement = () => {
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>Sochiot Location ID</Form.Label>
-                  <Form.Control
-                    type="number"
-                    placeholder="e.g. 7"
-                    value={createForm.sochiotLocationId}
-                    onChange={e => setCreateForm(p => ({ ...p, sochiotLocationId: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>Organization ID</Form.Label>
-                  <Form.Control
-                    type="number"
-                    placeholder="e.g. 7"
-                    value={createForm.organizationId}
-                    onChange={e => setCreateForm(p => ({ ...p, organizationId: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>Tenant ID</Form.Label>
-                  <Form.Control
-                    placeholder="Tenant ID"
-                    value={createForm.tenantId}
-                    onChange={e => setCreateForm(p => ({ ...p, tenantId: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>City</Form.Label>
+                  <Form.Label className="fw-semibold">City</Form.Label>
                   <Form.Control
                     placeholder="e.g. Noida"
                     value={createForm.city}
@@ -874,11 +921,22 @@ const SiteManagement = () => {
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>State</Form.Label>
+                  <Form.Label className="fw-semibold">State</Form.Label>
                   <Form.Control
                     placeholder="e.g. Uttar Pradesh"
                     value={createForm.state}
                     onChange={e => setCreateForm(p => ({ ...p, state: e.target.value }))}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Sochiot Location ID</Form.Label>
+                  <Form.Control
+                    type="number"
+                    placeholder="e.g. 7"
+                    value={createForm.sochiotLocationId}
+                    onChange={e => setCreateForm(p => ({ ...p, sochiotLocationId: e.target.value }))}
                   />
                 </Form.Group>
               </Col>
@@ -909,9 +967,70 @@ const SiteManagement = () => {
         <Modal.Body style={{ padding: '20px 28px 28px' }}>
           <Form onSubmit={handleUpdateSite}>
             <Row className="g-3">
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Organization / Tenant *</Form.Label>
+                  <Form.Select
+                    value={editForm.tenantId}
+                    onChange={e => {
+                      const tId = e.target.value;
+                      const selTenant = tenants.find(t => t.id === tId);
+                      setEditForm(p => ({
+                        ...p,
+                        tenantId: tId,
+                        organizationId: selTenant?.sochiotOrgId || p.organizationId,
+                        zoneId: '',
+                        areaId: ''
+                      }));
+                    }}
+                  >
+                    <option value="">Select Organization / Tenant...</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>Site Name *</Form.Label>
+                  <Form.Label className="fw-semibold">Geographic Zone</Form.Label>
+                  <Form.Select
+                    value={editForm.zoneId}
+                    onChange={e => setEditForm(p => ({ ...p, zoneId: e.target.value, areaId: '' }))}
+                  >
+                    <option value="">Select Geographic Zone...</option>
+                    {zones
+                      .filter(z => !editForm.tenantId || z.tenantId === editForm.tenantId)
+                      .map(z => (
+                        <option key={z.id} value={z.id}>{z.name}</option>
+                      ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Tenant Area</Form.Label>
+                  <Form.Select
+                    value={editForm.areaId}
+                    onChange={e => setEditForm(p => ({ ...p, areaId: e.target.value }))}
+                  >
+                    <option value="">Select Tenant Area...</option>
+                    {areas
+                      .filter(a => {
+                        if (editForm.zoneId && a.zoneId !== editForm.zoneId) return false;
+                        if (editForm.tenantId && a.tenantId !== editForm.tenantId) return false;
+                        return true;
+                      })
+                      .map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Site Name *</Form.Label>
                   <Form.Control
                     placeholder="Site Name"
                     value={editForm.name}
@@ -922,7 +1041,7 @@ const SiteManagement = () => {
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>Status (Enable/Disable)</Form.Label>
+                  <Form.Label className="fw-semibold">Status (Enable/Disable)</Form.Label>
                   <Form.Select
                     value={editForm.status}
                     onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))}
@@ -935,7 +1054,7 @@ const SiteManagement = () => {
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>City</Form.Label>
+                  <Form.Label className="fw-semibold">City</Form.Label>
                   <Form.Control
                     placeholder="City"
                     value={editForm.city}
@@ -945,40 +1064,11 @@ const SiteManagement = () => {
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>State</Form.Label>
+                  <Form.Label className="fw-semibold">State</Form.Label>
                   <Form.Control
                     placeholder="State"
                     value={editForm.state}
                     onChange={e => setEditForm(p => ({ ...p, state: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label>Sochiot Location ID</Form.Label>
-                  <Form.Control
-                    type="number"
-                    value={editForm.sochiotLocationId}
-                    onChange={e => setEditForm(p => ({ ...p, sochiotLocationId: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label>Organization ID</Form.Label>
-                  <Form.Control
-                    type="number"
-                    value={editForm.organizationId}
-                    onChange={e => setEditForm(p => ({ ...p, organizationId: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label>Tenant ID</Form.Label>
-                  <Form.Control
-                    value={editForm.tenantId}
-                    onChange={e => setEditForm(p => ({ ...p, tenantId: e.target.value }))}
                   />
                 </Form.Group>
               </Col>

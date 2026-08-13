@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, User, Bell, LayoutGrid, Sun, Building2, Shield, Users, Building, ChevronDown } from 'lucide-react';
+import { Menu, Search, User, Bell, LayoutGrid, Sun, Building2, Shield, Users, Building, ChevronDown, MapPin } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -18,25 +18,21 @@ const Header = ({ collapsed, toggleSidebar }) => {
         >
           <Menu size={24} />
         </Button>
-        <h5 className="mb-0 fw-bold tracking-tight d-none d-md-block">
-           Sochiot Smart Monitoring System
-        </h5>
-      </div>
 
-      <div className="header-center d-none d-lg-block">
-        <InputGroup className="header-search border-0">
-          <InputGroup.Text className="bg-transparent border-secondary border-opacity-25 text-muted">
+        {/* Global Search Bar */}
+        <InputGroup style={{ maxWidth: '400px' }}>
+          <InputGroup.Text className="bg-dark border-secondary border-opacity-25 text-muted">
             <Search size={18} />
           </InputGroup.Text>
-          <Form.Control
-            placeholder="Search systems..."
-            className="bg-transparent border-secondary border-opacity-25 text-white"
+          <Form.Control 
+            placeholder="Search telemetry, devices, alarms..." 
+            className="bg-dark border-secondary border-opacity-25 text-white shadow-none fs-14"
           />
         </InputGroup>
       </div>
 
       <div className="header-right d-flex align-items-center">
-        {/* Quick Access Admin / Organisation Button in Right Corner */}
+        {/* Quick Organisation Management Menu */}
         <Dropdown align="end" className="me-3">
           <Dropdown.Toggle 
             variant="info" 
@@ -73,7 +69,18 @@ const Header = ({ collapsed, toggleSidebar }) => {
               <Building2 size={16} className="text-cyan-400" />
               <div className="d-flex flex-column">
                 <span className="fw-semibold fs-13">Manage Organisation</span>
-                <small className="text-muted fs-11">Tenants, Zones & Tenant Areas</small>
+                <small className="text-muted fs-11">Tenants, Zones, Areas & Sites</small>
+              </div>
+            </Dropdown.Item>
+
+            <Dropdown.Item 
+              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
+              onClick={() => navigate('/manage-organisation?tab=site')}
+            >
+              <MapPin size={16} className="text-purple-400" />
+              <div className="d-flex flex-column">
+                <span className="fw-semibold fs-13">Site Management</span>
+                <small className="text-muted fs-11">Physical Sites & Location Controls</small>
               </div>
             </Dropdown.Item>
 

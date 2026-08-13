@@ -10,7 +10,7 @@ const SETTING_CARDS = [
   {
     key: 'org',
     title: 'Manage Organisation',
-    description: 'Manage SAAS Companies, Multi-tenant Organizations, Geographic Zones & Tenant Areas',
+    description: 'Manage SAAS Companies, Multi-tenant Organizations, Geographic Zones, Tenant Areas & Physical Sites',
     icon: <Building2 size={28} />,
     color: '#10b981',
     gradient: 'linear-gradient(135deg, #10b981, #059669)',
@@ -33,15 +33,6 @@ const SETTING_CARDS = [
     color: '#06b6d4',
     gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
     path: '/settings/users'
-  },
-  {
-    key: 'sites',
-    title: 'Site Management',
-    description: 'Create & manage physical sites, view device stats, alarms & energy metrics',
-    icon: <Building2 size={28} />,
-    color: '#8b5cf6',
-    gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-    path: '/settings/sites'
   }
 ];
 
@@ -50,7 +41,10 @@ const SettingsIndex = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState(() => {
-    if (location.pathname.includes('/settings/sites')) return 'sites';
+    if (location.pathname.includes('/settings/sites')) {
+      navigate('/manage-organisation?tab=site', { replace: true });
+      return 'hub';
+    }
     if (location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users')) return 'users';
     if (location.pathname.includes('/global-settings')) return 'global';
     return 'hub';
@@ -58,7 +52,7 @@ const SettingsIndex = () => {
 
   useEffect(() => {
     if (location.pathname.includes('/settings/sites')) {
-      setActiveTab('sites');
+      navigate('/manage-organisation?tab=site', { replace: true });
     } else if (location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users')) {
       setActiveTab('users');
     } else if (location.pathname.includes('/global-settings')) {
@@ -66,14 +60,14 @@ const SettingsIndex = () => {
     } else if (location.pathname === '/settings') {
       setActiveTab('hub');
     }
-  }, [location.pathname]);
+  }, [location.pathname, navigate]);
 
   const handleSelectTab = (tab) => {
     setActiveTab(tab);
     if (tab === 'hub') navigate('/settings');
     else if (tab === 'global') navigate('/settings');
     else if (tab === 'users') navigate('/settings/users');
-    else if (tab === 'sites') navigate('/settings/sites');
+    else if (tab === 'sites') navigate('/manage-organisation?tab=site');
   };
 
   const handleCardClick = (card) => {
@@ -187,15 +181,6 @@ const SettingsIndex = () => {
             >
               <Users size={18} className={activeTab === 'users' ? 'text-info' : 'text-slate-400'} />
               User Administration
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="sites"
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'sites' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
-            >
-              <Building2 size={18} className={activeTab === 'sites' ? 'text-info' : 'text-slate-400'} />
-              Site Management
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>

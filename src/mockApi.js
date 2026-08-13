@@ -27,7 +27,9 @@ window.fetch = async function (input, init) {
     } catch(e) {}
 
     // Resilient fallback if real backend returns error or is unreachable:
-    if (urlStr.includes('/tenants') || urlStr.includes('/api/tenants')) {
+    // IMPORTANT: Skip zone/area URLs — they look like /tenants/:id/zones but are NOT tenant operations
+    const isZoneOrAreaUrl = urlStr.includes('/zones') || urlStr.includes('/areas');
+    if (!isZoneOrAreaUrl && (urlStr.includes('/tenants') || urlStr.includes('/api/tenants'))) {
       let reqBody = {};
       try { reqBody = JSON.parse(init?.body || '{}'); } catch(e) {}
 
@@ -92,6 +94,189 @@ window.fetch = async function (input, init) {
         }, 200);
       }
     }
+
+    // Resilient fallback for ZONE non-GET requests (POST/PATCH/DELETE)
+    if (urlStr.includes('/zones')) {
+      let reqBody = {};
+      try { reqBody = JSON.parse(init?.body || '{}'); } catch(e) {}
+
+      let savedZones = [];
+      try { savedZones = JSON.parse(localStorage.getItem('tb_zones') || '[]'); } catch(e) {}
+
+      const urlClean = urlStr.split('?')[0].replace(/\/+$/, '');
+      const urlParts = urlClean.split('/');
+      const lastPart = urlParts[urlParts.length - 1];
+      const targetId = (lastPart && lastPart !== 'zones') ? lastPart : null;
+
+      if (reqMethod === 'POST') {
+        // Extract tenantId from URL path like /tenants/:tenantId/zones
+        let tenantId = reqBody.tenantId || '';
+        const tenantMatch = urlStr.match(/\/tenants\/([^/]+)\/zones/);
+        if (tenantMatch) tenantId = tenantMatch[1];
+
+        const newZone = {
+          id: `zone_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 6)}`,
+          tenantId: tenantId,
+          name: reqBody.name || 'New Zone',
+          region: reqBody.region || '',
+          timezone: reqBody.timezone || 'Asia/Kolkata',
+          country: reqBody.country || 'India',
+          description: reqBody.description || '',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          _count: { tenantAreas: 0, sites: 0 }
+        };
+
+        savedZones = savedZones.filter(z => z.name.toLowerCase() !== newZone.name.toLowerCase());
+        savedZones.unshift(newZone);
+        localStorage.setItem('tb_zones', JSON.stringify(savedZones));
+
+        return createMockResponse({ success: true, data: newZone }, 201);
+      }
+
+      if (reqMethod === 'PATCH' || reqMethod === 'PUT') {
+        if (targetId) {
+          const idx = savedZones.findIndex(z => String(z.id) === String(targetId));
+          if (idx !== -1) {
+            savedZones[idx] = { ...savedZones[idx], ...reqBody, id: targetId };
+          } else {
+            savedZones.unshift({ id: targetId, ...reqBody });
+          }
+          localStorage.setItem('tb_zones', JSON.stringify(savedZones));
+        }
+        return createMockResponse({ success: true, message: 'Zone updated successfully' }, 200);
+      }
+
+      if (reqMethod === 'DELETE') {
+        if (targetId) {
+          savedZones = savedZones.filter(z => String(z.id) !== String(targetId));
+          localStorage.setItem('tb_zones', JSON.stringify(savedZones));
+        }
+        return createMockResponse({ success: true, message: 'Zone deleted successfully' }, 200);
+      }
+    }
+
+    // Resilient fallback for AREA non-GET requests (POST/PATCH/DELETE)
+    if (urlStr.includes('/areas')) {
+      let reqBody = {};
+      try { reqBody = JSON.parse(init?.body || '{}'); } catch(e) {}
+
+      let savedAreas = [];
+      try { savedAreas = JSON.parse(localStorage.getItem('tb_areas') || '[]'); } catch(e) {}
+
+      const urlClean = urlStr.split('?')[0].replace(/\/+$/, '');
+      const urlParts = urlClean.split('/');
+      const lastPart = urlParts[urlParts.length - 1];
+      const targetId = (lastPart && lastPart !== 'areas') ? lastPart : null;
+
+      if (reqMethod === 'POST') {
+        let tenantId = reqBody.tenantId || '';
+        let zoneId = reqBody.zoneId || '';
+        const zoneMatch = urlStr.match(/\/zones\/([^/]+)\/areas/);
+        if (zoneMatch) zoneId = zoneMatch[1];
+        const tenantMatch = urlStr.match(/\/tenants\/([^/]+)\//);
+        if (tenantMatch) tenantId = tenantMatch[1];
+
+        const newArea = {
+          id: `area_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 6)}`,
+          tenantId: tenantId,
+          zoneId: zoneId,
+          name: reqBody.name || 'New Area',
+          description: reqBody.description || '',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          _count: { sites: 0 }
+        };
+
+        savedAreas = savedAreas.filter(a => a.name.toLowerCase() !== newArea.name.toLowerCase());
+        savedAreas.unshift(newArea);
+        localStorage.setItem('tb_areas', JSON.stringify(savedAreas));
+
+        return createMockResponse({ success: true, data: newArea }, 201);
+      }
+
+      if (reqMethod === 'PATCH' || reqMethod === 'PUT') {
+        if (targetId) {
+          const idx = savedAreas.findIndex(a => String(a.id) === String(targetId));
+          if (idx !== -1) {
+            savedAreas[idx] = { ...savedAreas[idx], ...reqBody, id: targetId };
+          } else {
+            savedAreas.unshift({ id: targetId, ...reqBody });
+          }
+          localStorage.setItem('tb_areas', JSON.stringify(savedAreas));
+        }
+        return createMockResponse({ success: true, message: 'Area updated successfully' }, 200);
+      }
+
+      if (reqMethod === 'DELETE') {
+        if (targetId) {
+          savedAreas = savedAreas.filter(a => String(a.id) !== String(targetId));
+          localStorage.setItem('tb_areas', JSON.stringify(savedAreas));
+        }
+        return createMockResponse({ success: true, message: 'Area deleted successfully' }, 200);
+      }
+    }
+
+    // Resilient fallback for SITE non-GET requests (POST/PATCH/DELETE)
+    if (urlStr.includes('/sites')) {
+      let reqBody = {};
+      try { reqBody = JSON.parse(init?.body || '{}'); } catch(e) {}
+
+      let savedSites = [];
+      try { savedSites = JSON.parse(localStorage.getItem('tb_sites') || '[]'); } catch(e) {}
+
+      const urlClean = urlStr.split('?')[0].replace(/\/+$/, '');
+      const urlParts = urlClean.split('/');
+      const lastPart = urlParts[urlParts.length - 1];
+      const targetId = (lastPart && lastPart !== 'sites' && lastPart !== 'stats') ? lastPart : null;
+
+      if (reqMethod === 'POST') {
+        const newSite = {
+          id: `site_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 6)}`,
+          name: reqBody.name || 'New Physical Site',
+          sochiotLocationId: reqBody.sochiotLocationId || Math.floor(Math.random() * 89999) + 1000,
+          organizationId: reqBody.organizationId || 1,
+          tenantId: reqBody.tenantId || '',
+          zoneId: reqBody.zoneId || '',
+          areaId: reqBody.areaId || '',
+          city: reqBody.city || 'Noida',
+          state: reqBody.state || 'Uttar Pradesh',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          devicesCount: 0,
+          buildingsCount: 1,
+          alarmsCount: 0,
+          energyKwh: 0
+        };
+
+        savedSites = savedSites.filter(s => s.name.toLowerCase() !== newSite.name.toLowerCase());
+        savedSites.unshift(newSite);
+        localStorage.setItem('tb_sites', JSON.stringify(savedSites));
+
+        return createMockResponse({ success: true, data: newSite }, 201);
+      }
+
+      if (reqMethod === 'PATCH' || reqMethod === 'PUT') {
+        if (targetId) {
+          const idx = savedSites.findIndex(s => String(s.id) === String(targetId));
+          if (idx !== -1) {
+            savedSites[idx] = { ...savedSites[idx], ...reqBody, id: targetId };
+          } else {
+            savedSites.unshift({ id: targetId, ...reqBody });
+          }
+          localStorage.setItem('tb_sites', JSON.stringify(savedSites));
+        }
+        return createMockResponse({ success: true, message: 'Site updated successfully' }, 200);
+      }
+
+      if (reqMethod === 'DELETE') {
+        if (targetId) {
+          savedSites = savedSites.filter(s => String(s.id) !== String(targetId));
+          localStorage.setItem('tb_sites', JSON.stringify(savedSites));
+        }
+        return createMockResponse({ success: true, message: 'Site deleted successfully' }, 200);
+      }
+    }
   }
 
   // Helper mock Response generator
@@ -154,7 +339,8 @@ window.fetch = async function (input, init) {
   }
 
   // 4. Tenants Endpoint (/api/tenants, /super-admin/tenants)
-  if (urlStr.includes('/api/tenants') || urlStr.includes('/super-admin/tenants') || urlStr.includes('/tenants')) {
+  // IMPORTANT: Skip zone/area URLs — they look like /tenants/:id/zones but are NOT tenant operations
+  if ((urlStr.includes('/api/tenants') || urlStr.includes('/super-admin/tenants') || urlStr.includes('/tenants')) && !urlStr.includes('/zones') && !urlStr.includes('/areas')) {
     let backendTenants = [];
     try {
       const realResp = await originalFetch.apply(this, arguments);
@@ -174,6 +360,91 @@ window.fetch = async function (input, init) {
     }
 
     return createMockResponse(savedOrgs);
+  }
+
+  // 4b. Zones GET Endpoint (/api/zones, /api/tenants/:id/zones)
+  if (urlStr.includes('/zones')) {
+    let backendZones = [];
+    try {
+      const realResp = await originalFetch.apply(this, arguments);
+      if (realResp && realResp.ok) {
+        const json = await realResp.json();
+        backendZones = Array.isArray(json) ? json : (json.data || []);
+      }
+    } catch (e) {}
+
+    if (backendZones && backendZones.length > 0) {
+      return createMockResponse({ success: true, data: backendZones, meta: { total: backendZones.length, page: 1, pageSize: 50, totalPages: 1 } });
+    }
+
+    // Fallback to localStorage
+    let savedZones = [];
+    try { savedZones = JSON.parse(localStorage.getItem('tb_zones') || '[]'); } catch(e) {}
+
+    // Filter by tenantId if present in URL query
+    const urlObj = new URL(urlStr, window.location.origin);
+    const filterTenantId = urlObj.searchParams.get('tenantId');
+    if (filterTenantId) {
+      savedZones = savedZones.filter(z => z.tenantId === filterTenantId);
+    }
+
+    return createMockResponse({ success: true, data: savedZones, meta: { total: savedZones.length, page: 1, pageSize: 50, totalPages: 1 } });
+  }
+
+  // 4c. Areas GET Endpoint (/api/areas, /api/tenants/:id/zones/:zoneId/areas)
+  if (urlStr.includes('/areas')) {
+    let backendAreas = [];
+    try {
+      const realResp = await originalFetch.apply(this, arguments);
+      if (realResp && realResp.ok) {
+        const json = await realResp.json();
+        backendAreas = Array.isArray(json) ? json : (json.data || []);
+      }
+    } catch (e) {}
+
+    if (backendAreas && backendAreas.length > 0) {
+      return createMockResponse({ success: true, data: backendAreas, meta: { total: backendAreas.length, page: 1, pageSize: 50, totalPages: 1 } });
+    }
+
+    // Fallback to localStorage
+    let savedAreas = [];
+    try { savedAreas = JSON.parse(localStorage.getItem('tb_areas') || '[]'); } catch(e) {}
+
+    const urlObj = new URL(urlStr, window.location.origin);
+    const filterZoneId = urlObj.searchParams.get('zoneId');
+    const filterTenantId = urlObj.searchParams.get('tenantId');
+    if (filterZoneId) {
+      savedAreas = savedAreas.filter(a => a.zoneId === filterZoneId);
+    }
+    if (filterTenantId) {
+      savedAreas = savedAreas.filter(a => a.tenantId === filterTenantId);
+    }
+
+    return createMockResponse({ success: true, data: savedAreas, meta: { total: savedAreas.length, page: 1, pageSize: 50, totalPages: 1 } });
+  }
+
+  // 4d. Sites GET Endpoint (/api/sites)
+  if (urlStr.includes('/sites')) {
+    let backendSites = [];
+    try {
+      const realResp = await originalFetch.apply(this, arguments);
+      if (realResp && realResp.ok) {
+        const json = await realResp.json();
+        backendSites = Array.isArray(json) ? json : (json.data || []);
+      }
+    } catch (e) {}
+
+    if (backendSites && backendSites.length > 0) {
+      return createMockResponse({ success: true, data: backendSites });
+    }
+
+    let savedSites = [];
+    try { savedSites = JSON.parse(localStorage.getItem('tb_sites') || '[]'); } catch(e) {}
+    if (!savedSites || savedSites.length === 0) {
+      try { savedSites = JSON.parse(localStorage.getItem('scada_sites_db') || '[]'); } catch(e) {}
+    }
+
+    return createMockResponse({ success: true, data: savedSites });
   }
 
   // 5. Users API Endpoint (/api/users, /users)
