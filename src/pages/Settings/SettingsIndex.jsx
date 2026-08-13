@@ -8,6 +8,15 @@ import SiteManagement from './SiteManagement';
 
 const SETTING_CARDS = [
   {
+    key: 'org',
+    title: 'Manage Organisation',
+    description: 'Manage SAAS Companies, Multi-tenant Organizations, Geographic Zones & Tenant Areas',
+    icon: <Building2 size={28} />,
+    color: '#10b981',
+    gradient: 'linear-gradient(135deg, #10b981, #059669)',
+    path: '/manage-organisation'
+  },
+  {
     key: 'global',
     title: 'Global Settings',
     description: 'Module visibility, feature toggles, system preferences & dashboard configuration',
@@ -187,6 +196,16 @@ const SettingsIndex = () => {
             >
               <Building2 size={18} className={activeTab === 'sites' ? 'text-info' : 'text-slate-400'} />
               Site Management
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="org"
+              onClick={() => navigate('/manage-organisation')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'org' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <Building2 size={18} className={activeTab === 'org' ? 'text-info' : 'text-slate-400'} />
+              Manage Organisation
             </Nav.Link>
           </Nav.Item>
         </Nav>

@@ -17,6 +17,83 @@ window.fetch = async function (input, init) {
     return originalFetch.apply(this, arguments);
   }
 
+  const reqMethod = (init && init.method ? init.method : 'GET').toUpperCase();
+
+  // For non-GET requests (POST, PUT, PATCH, DELETE), pass through directly to real backend!
+  if (reqMethod !== 'GET' && !urlStr.includes('/auth/refresh')) {
+    try {
+      const realResp = await originalFetch.apply(this, arguments);
+      if (realResp && realResp.ok) return realResp;
+    } catch(e) {}
+
+    // Resilient fallback if real backend returns error or is unreachable:
+    if (urlStr.includes('/tenants') || urlStr.includes('/api/tenants')) {
+      let reqBody = {};
+      try { reqBody = JSON.parse(init?.body || '{}'); } catch(e) {}
+
+      let savedOrgs = [];
+      try { savedOrgs = JSON.parse(localStorage.getItem('tb_orgs') || '[]'); } catch(e) {}
+
+      const urlClean = urlStr.split('?')[0].replace(/\/+$/, '');
+      const urlParts = urlClean.split('/');
+      const lastPart = urlParts[urlParts.length - 1];
+      const targetId = (lastPart && lastPart !== 'tenants') ? lastPart : null;
+
+      if (reqMethod === 'POST') {
+        const newTenant = {
+          id: reqBody.id || `tnt_${Date.now().toString(36)}`,
+          companyId: reqBody.companyId || 'cmshedsjg0001zsvnof6omhaw',
+          name: reqBody.name || 'New Organization',
+          email: reqBody.email || 'admin@org.com',
+          phone: reqBody.phone || '',
+          address: reqBody.address || '',
+          sochiotOrgId: reqBody.sochiotOrgId || Math.floor(Math.random() * 900) + 100,
+          subscription: reqBody.subscription || 'BASIC',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString()
+        };
+
+        // Remove existing item with same ID or same name to prevent duplicates
+        savedOrgs = savedOrgs.filter(o => o.id !== newTenant.id && o.name.toLowerCase() !== newTenant.name.toLowerCase());
+        savedOrgs.unshift(newTenant);
+        localStorage.setItem('tb_orgs', JSON.stringify(savedOrgs));
+
+        return createMockResponse({
+          success: true,
+          data: newTenant,
+          message: 'Organization created successfully'
+        }, 201);
+      }
+
+      if (reqMethod === 'PATCH' || reqMethod === 'PUT') {
+        if (targetId) {
+          const idx = savedOrgs.findIndex(o => String(o.id) === String(targetId));
+          if (idx !== -1) {
+            savedOrgs[idx] = { ...savedOrgs[idx], ...reqBody, id: targetId };
+          } else {
+            savedOrgs.unshift({ id: targetId, ...reqBody });
+          }
+          localStorage.setItem('tb_orgs', JSON.stringify(savedOrgs));
+        }
+        return createMockResponse({
+          success: true,
+          message: 'Organization updated successfully'
+        }, 200);
+      }
+
+      if (reqMethod === 'DELETE') {
+        if (targetId) {
+          savedOrgs = savedOrgs.filter(o => String(o.id) !== String(targetId));
+          localStorage.setItem('tb_orgs', JSON.stringify(savedOrgs));
+        }
+        return createMockResponse({
+          success: true,
+          message: 'Organization deleted successfully'
+        }, 200);
+      }
+    }
+  }
+
   // Helper mock Response generator
   const createMockResponse = (data, status = 200) => {
     return new Response(JSON.stringify(data), {
@@ -92,34 +169,11 @@ window.fetch = async function (input, init) {
       savedOrgs = JSON.parse(localStorage.getItem('tb_orgs') || '[]');
     } catch(e) {}
 
-    const defaultTenants = [
-      { id: 'cmshedsk40002zsvnhajul18y', name: 'Sochiot', code: 'SOCHIOT' },
-      { id: 'cmshedskq0005zsvnrc1mcrg4', name: 'Siemens Energy Ltd', code: 'SIEMENS' },
-      { id: 'cmshedske0003zsvnysjzt2ap', name: 'Tata Industrial Corp', code: 'TATA' },
-      { id: 'c2a8b410-449e-11ee-be56-0242ac120002', name: 'SAAS Headquarters', code: 'SAAS' }
-    ];
-
-    const merged = [...backendTenants];
-    const existingIds = new Set(merged.map(t => String(t.id)));
-    const existingNames = new Set(merged.map(t => String(t.name || '').toLowerCase()));
-
-    if (Array.isArray(savedOrgs)) {
-      for (const o of savedOrgs) {
-        if (o.name && !existingNames.has(o.name.toLowerCase())) {
-          merged.push({ id: o.id || o.code || o.name, name: o.name, code: o.code || 'ORG' });
-          existingNames.add(o.name.toLowerCase());
-        }
-      }
+    if (backendTenants && backendTenants.length > 0) {
+      return createMockResponse(backendTenants);
     }
 
-    for (const d of defaultTenants) {
-      if (!existingIds.has(d.id) && !existingNames.has(d.name.toLowerCase())) {
-        merged.push(d);
-        existingIds.add(d.id);
-      }
-    }
-
-    return createMockResponse(merged);
+    return createMockResponse(savedOrgs);
   }
 
   // 5. Users API Endpoint (/api/users, /users)

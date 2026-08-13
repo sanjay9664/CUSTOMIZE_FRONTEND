@@ -11,6 +11,7 @@ import AlarmConfig from '../pages/AlarmSystem/AlarmConfig';
 import MessageTemplateSetting from '../pages/AlarmSystem/MessageTemplateSetting';
 import TransformerOverview from '../pages/Transformer/Overview';
 import SettingsIndex from '../pages/Settings/SettingsIndex';
+import ManageOrganisation from '../pages/Settings/ManageOrganisation';
 import UserSettings from '../pages/Settings/UserSettings';
 import AgTank from '../pages/WaterManagement/AgTank';
 import UgTank from '../pages/WaterManagement/UgTank';
@@ -166,6 +167,7 @@ const AppRoutes = () => {
       <Route path="/settings" element={<SettingsIndex />} />
       <Route path="/settings/users" element={<SettingsIndex />} />
       <Route path="/settings/sites" element={<SettingsIndex />} />
+      <Route path="/manage-organisation" element={<ManageOrganisation />} />
 
       {/* Super Admin Routes */}
       <Route path="/super-admin" element={<Navigate to="/dashboard" replace />} />

@@ -37,6 +37,84 @@ body.light-mode .scada-header {
   border-bottom: 1px solid #e2e8f0;
 }
 
+/* Custom Theme Toggle Button - Rock Solid Dual Mode Styles */
+.theme-toggle-btn {
+  border-radius: 20px !important;
+  padding: 6px 16px !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  transition: all 0.25s ease-in-out !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Light Mode Theme Button */
+body.light-mode .theme-toggle-btn {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border: 1px solid #0f172a !important;
+}
+body.light-mode .theme-toggle-btn span {
+  color: #ffffff !important;
+}
+body.light-mode .theme-toggle-btn svg {
+  color: #38bdf8 !important;
+  stroke: #38bdf8 !important;
+}
+body.light-mode .theme-toggle-btn:hover,
+body.light-mode .theme-toggle-btn:focus,
+body.light-mode .theme-toggle-btn:active {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
+}
+body.light-mode .theme-toggle-btn:hover span,
+body.light-mode .theme-toggle-btn:focus span,
+body.light-mode .theme-toggle-btn:active span {
+  color: #ffffff !important;
+}
+body.light-mode .theme-toggle-btn:hover svg,
+body.light-mode .theme-toggle-btn:focus svg,
+body.light-mode .theme-toggle-btn:active svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Dark Mode Theme Button */
+body:not(.light-mode) .theme-toggle-btn {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+body:not(.light-mode) .theme-toggle-btn span {
+  color: #f8fafc !important;
+}
+body:not(.light-mode) .theme-toggle-btn svg {
+  color: #f59e0b !important;
+  stroke: #f59e0b !important;
+}
+body:not(.light-mode) .theme-toggle-btn:hover,
+body:not(.light-mode) .theme-toggle-btn:focus,
+body:not(.light-mode) .theme-toggle-btn:active {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
+}
+body:not(.light-mode) .theme-toggle-btn:hover span,
+body:not(.light-mode) .theme-toggle-btn:focus span,
+body:not(.light-mode) .theme-toggle-btn:active span {
+  color: #ffffff !important;
+}
+body:not(.light-mode) .theme-toggle-btn:hover svg,
+body:not(.light-mode) .theme-toggle-btn:focus svg,
+body:not(.light-mode) .theme-toggle-btn:active svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 body.light-mode .scada-table thead th {
   background-color: rgba(0, 0, 0, 0.04) !important;
   color: var(--scada-text-muted) !important;
@@ -1211,4 +1289,59 @@ body.light-mode .scada-card:hover,
 body.light-mode .VRV-room-card:hover {
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
     transform: translateY(-2px);
+}
+
+/* =========================================================
+   PREMIUM FLOATING TOAST NOTIFICATION STYLING
+   ========================================================= */
+
+@keyframes toastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-popup-premium {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.toast-popup-success {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(16, 185, 129, 0.3) !important;
+  color: #ffffff !important;
+}
+
+body.light-mode .toast-popup-success {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(16, 185, 129, 0.6) !important;
+  box-shadow: 0 16px 40px rgba(16, 185, 129, 0.18), 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .toast-popup-success .toast-text {
+  color: #0f172a !important;
+}
+
+.toast-popup-danger {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(244, 63, 94, 0.5) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(244, 63, 94, 0.3) !important;
+  color: #ffffff !important;
+}
+
+body.light-mode .toast-popup-danger {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(244, 63, 94, 0.6) !important;
+  box-shadow: 0 16px 40px rgba(244, 63, 94, 0.18), 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .toast-popup-danger .toast-text {
+  color: #0f172a !important;
 }
