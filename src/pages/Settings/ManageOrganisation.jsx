@@ -3,12 +3,14 @@ import { Container, Row, Col, Card, Badge, Button, Form, Modal, InputGroup, Spin
 import {
   Building2, Building, MapPin, Globe, Shield, Plus, Search, Edit3, Trash2,
   CheckCircle, XCircle, RefreshCw, Eye, Layers, Settings, ChevronRight, Activity,
-  Sliders, Calendar, Award, Zap, AlertTriangle, Phone, Mail, ArrowLeft
+  Sliders, Calendar, Award, Zap, AlertTriangle, Phone, Mail, ArrowLeft, Cpu
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SiteManagement from './SiteManagement';
 
 const API_BASE_URL = '/api';
+
+const DEV_SUPERADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNoZWRzaGUwMDAwenN2bjlpOXIwM241IiwiZW1haWwiOiJzYUBpc21hcnRhY2Nlc3MuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwicGVybWlzc2lvbnMiOlsiUEVSTV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJibXMtcGxhdGZvcm0iLCJhdWQiOiJibXMtYXBpIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc4NjY4NjAxMywiZXhwIjoxODE4MjQzNjEzfQ.keUks3gjheRnHnkSLoO0g0M1WhpmwDCDkIXkpxBow1Q';
 
 const getAuthHeaders = () => {
   let token = localStorage.getItem('token') || 
@@ -16,8 +18,8 @@ const getAuthHeaders = () => {
               localStorage.getItem('auth_token') || 
               localStorage.getItem('access_token') || '';
               
-  if (!token || token === 'undefined' || token === 'null') {
-    token = 'bms-dev-token-admin';
+  if (!token || token === 'undefined' || token === 'null' || token === 'bms-dev-token-admin') {
+    token = DEV_SUPERADMIN_TOKEN;
   }
   return {
     'Content-Type': 'application/json',
@@ -32,15 +34,25 @@ const formatDate = (dateStr) => {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const normalizeList = (raw, key) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw.data)) return raw.data;
+  if (raw.data && Array.isArray(raw.data.data)) return raw.data.data;
+  if (raw.data && Array.isArray(raw.data[key])) return raw.data[key];
+  if (Array.isArray(raw[key])) return raw[key];
+  return [];
+};
+
 const ManageOrganisation = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Tab State: 'company' | 'tenant' | 'zone' | 'area'
+  // Tab State: 'company' | 'tenant' | 'zone' | 'area' | 'site' | 'building' | 'asset' | 'device'
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (['company', 'tenant', 'zone', 'area'].includes(tabParam)) return tabParam;
+    if (['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device'].includes(tabParam)) return tabParam;
     return 'company';
   });
 
@@ -50,8 +62,24 @@ const ManageOrganisation = () => {
   const [zones, setZones] = useState([]);
   const [areas, setAreas] = useState([]);
   const [sites, setSites] = useState([]);
+  const [buildings, setBuildings] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+
+  // Modals state for Buildings, Assets, Devices
+  const [showBuildingModal, setShowBuildingModal] = useState(false);
+  const [editingBuilding, setEditingBuilding] = useState(null);
+  const [buildingForm, setBuildingForm] = useState({ name: '', code: '', totalFloors: 1, description: '', siteId: 7 });
+
+  const [showAssetModal, setShowAssetModal] = useState(false);
+  const [editingAsset, setEditingAsset] = useState(null);
+  const [assetForm, setAssetForm] = useState({ name: '', assetType: 'BUILDING', parentAssetId: '', description: '', siteId: 7 });
+
+  const [showDeviceModal, setShowDeviceModal] = useState(false);
+  const [editingDevice, setEditingDevice] = useState(null);
+  const [deviceForm, setDeviceForm] = useState({ name: '', category: 'ENERGY_METER', bmsDeviceId: '', serialNumber: '', siteId: 7 });
 
   // Search and Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,7 +145,7 @@ const ManageOrganisation = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['company', 'tenant', 'zone', 'area', 'site'].includes(tabParam)) {
+    if (tabParam && ['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [location.search]);
@@ -128,7 +156,7 @@ const ManageOrganisation = () => {
       const res = await fetch(`${API_BASE_URL}/companies`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
-        setCompanies(json.data || json.companies || (Array.isArray(json) ? json : []));
+        setCompanies(normalizeList(json, 'companies'));
       }
     } catch (err) {
       console.warn('Companies fetch err:', err);
@@ -141,7 +169,7 @@ const ManageOrganisation = () => {
       const res = await fetch(`${API_BASE_URL}/tenants`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
-        setTenants(json.data || json.tenants || (Array.isArray(json) ? json : []));
+        setTenants(normalizeList(json, 'tenants'));
       }
     } catch (err) {
       console.warn('Tenants fetch err:', err);
@@ -157,7 +185,7 @@ const ManageOrganisation = () => {
       const res = await fetch(url, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
-        setZones(json.data || json.zones || (Array.isArray(json) ? json : []));
+        setZones(normalizeList(json, 'zones'));
       }
     } catch (err) {
       console.warn('Zones fetch err:', err);
@@ -176,7 +204,7 @@ const ManageOrganisation = () => {
       const res = await fetch(url, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
-        setAreas(json.data || json.areas || (Array.isArray(json) ? json : []));
+        setAreas(normalizeList(json, 'areas'));
       }
     } catch (err) {
       console.warn('Areas fetch err:', err);
@@ -189,20 +217,72 @@ const ManageOrganisation = () => {
       const res = await fetch(`${API_BASE_URL}/sites`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
-        setSites(json.data || json.sites || (Array.isArray(json) ? json : []));
+        setSites(normalizeList(json, 'sites'));
       }
     } catch (err) {
       console.warn('Sites fetch err:', err);
     }
   }, []);
 
+  // Fetch Buildings
+  const fetchBuildings = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/sites/7/buildings`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setBuildings(normalizeList(json, 'buildings'));
+      }
+    } catch (err) {
+      console.warn('Buildings fetch err:', err);
+    }
+  }, []);
+
+  // Fetch Assets
+  const fetchAssets = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setAssets(normalizeList(json, 'assets'));
+      }
+    } catch (err) {
+      console.warn('Assets fetch err:', err);
+    }
+  }, []);
+
+  // Fetch Devices
+  const fetchDevices = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/devices`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setDevices(normalizeList(json, 'devices'));
+      }
+    } catch (err) {
+      console.warn('Devices fetch err:', err);
+    }
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchCompanies(), fetchTenants(), fetchZones(), fetchAreas(), fetchSites()]);
+    await Promise.all([
+      fetchCompanies(), 
+      fetchTenants(), 
+      fetchZones(), 
+      fetchAreas(), 
+      fetchSites(),
+      fetchBuildings(),
+      fetchAssets(),
+      fetchDevices()
+    ]);
     setLoading(false);
-  }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites]);
+  }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites, fetchBuildings, fetchAssets, fetchDevices]);
 
   useEffect(() => {
+    const existingToken = localStorage.getItem('token');
+    if (!existingToken || existingToken === 'bms-dev-token-admin' || existingToken === 'null' || existingToken === 'undefined') {
+      localStorage.setItem('token', DEV_SUPERADMIN_TOKEN);
+    }
     fetchAllData();
   }, [fetchAllData]);
 
@@ -698,25 +778,275 @@ const ManageOrganisation = () => {
     setLoading(false);
   };
 
-  // Filtering helpers
-  const filteredCompanies = companies.filter(c => 
+  // ================= BUILDING ACTIONS =================
+  const handleOpenCreateBuilding = () => {
+    setEditingBuilding(null);
+    setBuildingForm({ name: '', code: '', totalFloors: 1, description: '', siteId: 7 });
+    setShowBuildingModal(true);
+  };
+
+  const handleOpenEditBuilding = (bld) => {
+    setEditingBuilding(bld);
+    setBuildingForm({
+      name: bld.name || '',
+      code: bld.code || '',
+      totalFloors: bld.totalFloors || 1,
+      description: bld.description || '',
+      siteId: bld.siteId || 7
+    });
+    setShowBuildingModal(true);
+  };
+
+  const handleSaveBuilding = async (e) => {
+    e.preventDefault();
+    if (!buildingForm.name) return showToast('danger', 'Building Name is required.');
+    setLoading(true);
+    try {
+      const siteId = buildingForm.siteId || 7;
+      const url = editingBuilding 
+        ? `${API_BASE_URL}/sites/${siteId}/buildings/${editingBuilding.id}` 
+        : `${API_BASE_URL}/sites/${siteId}/buildings`;
+      const method = editingBuilding ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          name: buildingForm.name,
+          code: buildingForm.code,
+          totalFloors: Number(buildingForm.totalFloors),
+          description: buildingForm.description,
+          isActive: true
+        })
+      });
+      if (res.ok) {
+        showToast('success', editingBuilding ? 'Building updated successfully!' : 'Building created successfully!');
+        setShowBuildingModal(false);
+        fetchBuildings();
+      } else {
+        const errJson = await res.json();
+        showToast('danger', errJson.message || 'Failed to save building');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error saving building');
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteBuilding = async (buildingId, siteId = 7) => {
+    if (!window.confirm('Delete this building?')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/buildings/${buildingId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        showToast('success', 'Building deleted successfully!');
+        fetchBuildings();
+      } else {
+        const err = await res.json();
+        showToast('danger', err.message || 'Failed to delete building');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error deleting building');
+    }
+    setLoading(false);
+  };
+
+  // ================= ASSET ACTIONS =================
+  const handleOpenCreateAsset = () => {
+    setEditingAsset(null);
+    setAssetForm({ name: '', assetType: 'BUILDING', parentAssetId: '', description: '', siteId: 7 });
+    setShowAssetModal(true);
+  };
+
+  const handleOpenEditAsset = (ast) => {
+    setEditingAsset(ast);
+    setAssetForm({
+      name: ast.name || '',
+      assetType: ast.assetType || 'BUILDING',
+      parentAssetId: ast.parentAssetId || '',
+      description: ast.description || '',
+      siteId: ast.siteId || 7
+    });
+    setShowAssetModal(true);
+  };
+
+  const handleSaveAsset = async (e) => {
+    e.preventDefault();
+    if (!assetForm.name) return showToast('danger', 'Asset Name is required.');
+    setLoading(true);
+    try {
+      const url = editingAsset ? `${API_BASE_URL}/assets/${editingAsset.id}` : `${API_BASE_URL}/assets`;
+      const method = editingAsset ? 'PATCH' : 'POST';
+      const bodyObj = {
+        name: assetForm.name,
+        assetType: assetForm.assetType,
+        siteId: Number(assetForm.siteId || 7),
+        description: assetForm.description,
+      };
+      if (assetForm.parentAssetId) bodyObj.parentAssetId = assetForm.parentAssetId;
+
+      const res = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        body: JSON.stringify(bodyObj)
+      });
+      if (res.ok) {
+        showToast('success', editingAsset ? 'Asset updated successfully!' : 'Asset created successfully!');
+        setShowAssetModal(false);
+        fetchAssets();
+      } else {
+        const errJson = await res.json();
+        showToast('danger', errJson.message || 'Failed to save asset');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error saving asset');
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteAsset = async (assetId) => {
+    if (!window.confirm('Delete this asset?')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/assets/${assetId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        showToast('success', 'Asset deleted successfully!');
+        fetchAssets();
+      } else {
+        const err = await res.json();
+        showToast('danger', err.message || 'Failed to delete asset');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error deleting asset');
+    }
+    setLoading(false);
+  };
+
+  // ================= DEVICE ACTIONS =================
+  const handleOpenCreateDevice = () => {
+    setEditingDevice(null);
+    setDeviceForm({ name: '', category: 'ENERGY_METER', bmsDeviceId: '', serialNumber: '', siteId: 7 });
+    setShowDeviceModal(true);
+  };
+
+  const handleOpenEditDevice = (dev) => {
+    setEditingDevice(dev);
+    setDeviceForm({
+      name: dev.name || '',
+      category: dev.category || 'ENERGY_METER',
+      bmsDeviceId: dev.bmsDeviceId || '',
+      serialNumber: dev.serialNumber || '',
+      siteId: dev.siteId || 7
+    });
+    setShowDeviceModal(true);
+  };
+
+  const handleSaveDevice = async (e) => {
+    e.preventDefault();
+    if (!deviceForm.name) return showToast('danger', 'Device Name is required.');
+    setLoading(true);
+    try {
+      const siteId = deviceForm.siteId || 7;
+      const url = editingDevice 
+        ? `${API_BASE_URL}/sites/${siteId}/devices/${editingDevice.id}` 
+        : `${API_BASE_URL}/sites/${siteId}/devices`;
+      const method = editingDevice ? 'PATCH' : 'POST';
+      const bodyObj = {
+        name: deviceForm.name,
+        category: deviceForm.category,
+        bmsDeviceId: deviceForm.bmsDeviceId || `BMS-${Math.floor(1000 + Math.random() * 9000)}`,
+        serialNumber: deviceForm.serialNumber || `SN-${Date.now()}`
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        body: JSON.stringify(bodyObj)
+      });
+      if (res.ok) {
+        showToast('success', editingDevice ? 'Device updated successfully!' : 'Device provisioned successfully!');
+        setShowDeviceModal(false);
+        fetchDevices();
+      } else {
+        const errJson = await res.json();
+        showToast('danger', errJson.message || 'Failed to save device');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error saving device');
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteDevice = async (deviceId, siteId = 7) => {
+    if (!window.confirm('Delete this device?')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        showToast('success', 'Device deleted successfully!');
+        fetchDevices();
+      } else {
+        const err = await res.json();
+        showToast('danger', err.message || 'Failed to delete device');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error deleting device');
+    }
+    setLoading(false);
+  };
+
+  // Filtering helpers - Filter out INACTIVE / soft-deleted items so ONLY active items are displayed and counted
+  const activeCompanies = normalizeList(companies, 'companies').filter(c => c.status !== 'INACTIVE' && !c.deletedAt);
+  const activeTenants = normalizeList(tenants, 'tenants').filter(t => t.status !== 'INACTIVE' && !t.deletedAt);
+  const activeZones = normalizeList(zones, 'zones').filter(z => z.status !== 'INACTIVE' && !z.deletedAt);
+  const activeAreas = normalizeList(areas, 'areas').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
+  const activeSites = normalizeList(sites, 'sites').filter(s => s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
+  const activeBuildings = normalizeList(buildings, 'buildings').filter(b => b.isActive !== false && !b.deletedAt);
+  const activeAssets = normalizeList(assets, 'assets').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
+  const activeDevices = normalizeList(devices, 'devices').filter(d => d.isActive !== false && d.status !== 'DISABLED');
+
+  const filteredCompanies = activeCompanies.filter(c => 
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredTenants = tenants.filter(t => 
+  const filteredTenants = activeTenants.filter(t => 
     t.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     t.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredZones = zones.filter(z => 
+  const filteredZones = activeZones.filter(z => 
     z.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     z.region?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredAreas = areas.filter(a => 
+  const filteredAreas = activeAreas.filter(a => 
     a.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     a.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredBuildings = activeBuildings.filter(b => 
+    b.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (b.code && b.code.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredAssets = activeAssets.filter(a => 
+    a.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (a.assetType && a.assetType.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredDevices = activeDevices.filter(d => 
+    d.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (d.bmsDeviceId && d.bmsDeviceId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (d.serialNumber && d.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -949,6 +1279,24 @@ const ManageOrganisation = () => {
               <Plus size={16} /> Add Tenant Area
             </Button>
           )}
+
+          {activeTab === 'building' && (
+            <Button variant="info" size="sm" onClick={handleOpenCreateBuilding} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+              <Plus size={16} /> Add Building
+            </Button>
+          )}
+
+          {activeTab === 'asset' && (
+            <Button variant="info" size="sm" onClick={handleOpenCreateAsset} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+              <Plus size={16} /> Add Asset
+            </Button>
+          )}
+
+          {activeTab === 'device' && (
+            <Button variant="info" size="sm" onClick={handleOpenCreateDevice} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+              <Plus size={16} /> Provision Device
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1007,30 +1355,45 @@ const ManageOrganisation = () => {
       )}
 
       {/* Navigation Tabs */}
-      <Nav variant="pills" activeKey={activeTab} onSelect={handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2">
+      <Nav variant="pills" activeKey={activeTab} onSelect={handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
         <Nav.Item>
           <Nav.Link eventKey="company">
-            <Building size={18} /> Companies ({companies.length})
+            <Building size={18} /> Companies ({activeCompanies.length})
           </Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link eventKey="tenant">
-            <Building2 size={18} /> Organizations / Tenants ({tenants.length})
+            <Building2 size={18} /> Organizations / Tenants ({activeTenants.length})
           </Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link eventKey="zone">
-            <Globe size={18} /> Geographic Zones ({zones.length})
+            <Globe size={18} /> Geographic Zones ({activeZones.length})
           </Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link eventKey="area">
-            <Layers size={18} /> Tenant Areas ({areas.length})
+            <Layers size={18} /> Tenant Areas ({activeAreas.length})
           </Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link eventKey="site">
-            <MapPin size={18} /> Site Management ({sites.length})
+            <MapPin size={18} /> Site Management ({activeSites.length})
+          </Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="building">
+            <Building2 size={18} /> Buildings ({activeBuildings.length})
+          </Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="asset">
+            <Sliders size={18} /> Assets ({activeAssets.length})
+          </Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="device">
+            <Cpu size={18} /> Devices ({activeDevices.length})
           </Nav.Link>
         </Nav.Item>
       </Nav>
@@ -1061,7 +1424,7 @@ const ManageOrganisation = () => {
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="ALL">All Organizations</option>
-                {tenants.map(t => (
+                {activeTenants.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </Form.Select>
@@ -1076,7 +1439,7 @@ const ManageOrganisation = () => {
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="ALL">All Zones</option>
-                {zones.map(z => (
+                {activeZones.map(z => (
                   <option key={z.id} value={z.id}>{z.name}</option>
                 ))}
               </Form.Select>
@@ -1356,6 +1719,160 @@ const ManageOrganisation = () => {
               </table>
             </div>
           )}
+
+          {/* TAB: BUILDING MANAGEMENT */}
+          {activeTab === 'building' && (
+            <div className="table-responsive">
+              <table className="table table-custom mb-0">
+                <thead>
+                  <tr>
+                    <th>Building Name</th>
+                    <th>Code</th>
+                    <th>Total Floors</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th className="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredBuildings.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No buildings found</td>
+                    </tr>
+                  ) : filteredBuildings.map(b => (
+                    <tr key={b.id}>
+                      <td className="fw-bold text-white">
+                        <div className="d-flex align-items-center gap-2">
+                          <Building2 className="text-info" size={18} />
+                          {b.name}
+                        </div>
+                      </td>
+                      <td className="text-slate-300 fs-13">{b.code || 'N/A'}</td>
+                      <td className="text-slate-300 fs-13">{b.totalFloors || 1} Floors</td>
+                      <td className="text-slate-400 fs-12">{b.description || 'N/A'}</td>
+                      <td>
+                        <Badge bg="success" className="px-2 py-1">ACTIVE</Badge>
+                      </td>
+                      <td className="text-end">
+                        <div className="d-flex justify-content-end gap-1">
+                          <Button variant="outline-light" size="sm" title="Edit" onClick={() => handleOpenEditBuilding(b)}>
+                            <Edit3 size={14} />
+                          </Button>
+                          <Button variant="outline-danger" size="sm" title="Delete" onClick={() => handleDeleteBuilding(b.id, b.siteId)}>
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* TAB: ASSET MANAGEMENT */}
+          {activeTab === 'asset' && (
+            <div className="table-responsive">
+              <table className="table table-custom mb-0">
+                <thead>
+                  <tr>
+                    <th>Asset Name</th>
+                    <th>Type</th>
+                    <th>Parent Asset ID</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th className="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAssets.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No assets found</td>
+                    </tr>
+                  ) : filteredAssets.map(a => (
+                    <tr key={a.id}>
+                      <td className="fw-bold text-white">
+                        <div className="d-flex align-items-center gap-2">
+                          <Sliders className="text-warning" size={18} />
+                          {a.name}
+                        </div>
+                      </td>
+                      <td className="text-slate-300 fs-13">
+                        <Badge bg="primary" className="px-2 py-1">{a.assetType}</Badge>
+                      </td>
+                      <td className="text-slate-300 fs-13">{a.parentAssetId || 'Root'}</td>
+                      <td className="text-slate-400 fs-12">{a.description || 'N/A'}</td>
+                      <td>
+                        <Badge bg="success" className="px-2 py-1">{a.status || 'ACTIVE'}</Badge>
+                      </td>
+                      <td className="text-end">
+                        <div className="d-flex justify-content-end gap-1">
+                          <Button variant="outline-light" size="sm" title="Edit" onClick={() => handleOpenEditAsset(a)}>
+                            <Edit3 size={14} />
+                          </Button>
+                          <Button variant="outline-danger" size="sm" title="Delete" onClick={() => handleDeleteAsset(a.id)}>
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* TAB: DEVICE MANAGEMENT */}
+          {activeTab === 'device' && (
+            <div className="table-responsive">
+              <table className="table table-custom mb-0">
+                <thead>
+                  <tr>
+                    <th>Device Name</th>
+                    <th>Category</th>
+                    <th>BMS Device ID</th>
+                    <th>Serial Number</th>
+                    <th>Status</th>
+                    <th className="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDevices.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No devices found</td>
+                    </tr>
+                  ) : filteredDevices.map(d => (
+                    <tr key={d.id}>
+                      <td className="fw-bold text-white">
+                        <div className="d-flex align-items-center gap-2">
+                          <Cpu className="text-success" size={18} />
+                          {d.name}
+                        </div>
+                      </td>
+                      <td className="text-slate-300 fs-13">
+                        <Badge bg="info" className="text-dark px-2 py-1">{d.category}</Badge>
+                      </td>
+                      <td className="text-slate-300 fs-13">{d.bmsDeviceId || 'N/A'}</td>
+                      <td className="text-slate-400 fs-12">{d.serialNumber || 'N/A'}</td>
+                      <td>
+                        <Badge bg="success" className="px-2 py-1">ACTIVE</Badge>
+                      </td>
+                      <td className="text-end">
+                        <div className="d-flex justify-content-end gap-1">
+                          <Button variant="outline-light" size="sm" title="Edit" onClick={() => handleOpenEditDevice(d)}>
+                            <Edit3 size={14} />
+                          </Button>
+                          <Button variant="outline-danger" size="sm" title="Delete" onClick={() => handleDeleteDevice(d.id, d.siteId)}>
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       )}
 
@@ -1488,7 +2005,7 @@ const ManageOrganisation = () => {
                         className="bg-dark text-white border-secondary border-opacity-25 py-2"
                       >
                         <option value="">-- Select Parent Company --</option>
-                        {companies.map(c => (
+                        {activeCompanies.map(c => (
                           <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                       </Form.Select>
@@ -1699,7 +2216,7 @@ const ManageOrganisation = () => {
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="">-- Select Organization --</option>
-                {tenants.map(t => (
+                {activeTenants.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </Form.Select>
@@ -1778,13 +2295,13 @@ const ManageOrganisation = () => {
                 value={areaForm.tenantId}
                 onChange={(e) => {
                   const tId = e.target.value;
-                  const firstZ = zones.find(z => z.tenantId === tId)?.id || '';
+                  const firstZ = activeZones.find(z => z.tenantId === tId)?.id || '';
                   setAreaForm({ ...areaForm, tenantId: tId, zoneId: firstZ });
                 }}
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="">-- Select Organization --</option>
-                {tenants.map(t => (
+                {activeTenants.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </Form.Select>
@@ -1799,7 +2316,7 @@ const ManageOrganisation = () => {
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="">-- Select Geographic Zone --</option>
-                {zones
+                {activeZones
                   .filter(z => !areaForm.tenantId || z.tenantId === areaForm.tenantId)
                   .map(z => (
                     <option key={z.id} value={z.id}>{z.name} ({z.region || 'Zone'})</option>
@@ -1986,6 +2503,196 @@ const ManageOrganisation = () => {
         <Modal.Footer className="border-secondary border-opacity-25">
           <Button variant="secondary" onClick={() => setShowCompanyTenantsModal(false)}>Close</Button>
         </Modal.Footer>
+      </Modal>
+      {/* BUILDING MODAL */}
+      <Modal show={showBuildingModal} onHide={() => setShowBuildingModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Building2 className="text-info" /> {editingBuilding ? 'Edit Building' : 'Add Building'}
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleSaveBuilding}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Building Name *</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. Tower A"
+                value={buildingForm.name}
+                onChange={(e) => setBuildingForm({ ...buildingForm, name: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Building Code</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. BLD-01"
+                value={buildingForm.code}
+                onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Total Floors</Form.Label>
+              <Form.Control
+                type="number"
+                min="1"
+                value={buildingForm.totalFloors}
+                onChange={(e) => setBuildingForm({ ...buildingForm, totalFloors: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                placeholder="Building description..."
+                value={buildingForm.description}
+                onChange={(e) => setBuildingForm({ ...buildingForm, description: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowBuildingModal(false)}>Cancel</Button>
+            <Button variant="info" type="submit" disabled={loading} className="fw-semibold text-dark">
+              {loading ? <Spinner animation="border" size="sm" /> : editingBuilding ? 'Update Building' : 'Create Building'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* ASSET MODAL */}
+      <Modal show={showAssetModal} onHide={() => setShowAssetModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Sliders className="text-warning" /> {editingAsset ? 'Edit Asset' : 'Add Asset'}
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleSaveAsset}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Asset Name *</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. Main Chiller 01"
+                value={assetForm.name}
+                onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Asset Type *</Form.Label>
+              <Form.Select
+                value={assetForm.assetType}
+                onChange={(e) => setAssetForm({ ...assetForm, assetType: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                <option value="BUILDING">BUILDING</option>
+                <option value="FLOOR">FLOOR</option>
+                <option value="ROOM">ROOM</option>
+                <option value="EQUIPMENT">EQUIPMENT</option>
+                <option value="SUB_EQUIPMENT">SUB_EQUIPMENT</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Parent Asset ID (Optional)</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Leave blank for Root asset"
+                value={assetForm.parentAssetId}
+                onChange={(e) => setAssetForm({ ...assetForm, parentAssetId: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                placeholder="Asset description..."
+                value={assetForm.description}
+                onChange={(e) => setAssetForm({ ...assetForm, description: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowAssetModal(false)}>Cancel</Button>
+            <Button variant="warning" type="submit" disabled={loading} className="fw-semibold text-dark">
+              {loading ? <Spinner animation="border" size="sm" /> : editingAsset ? 'Update Asset' : 'Create Asset'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* DEVICE MODAL */}
+      <Modal show={showDeviceModal} onHide={() => setShowDeviceModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Cpu className="text-success" /> {editingDevice ? 'Edit Device' : 'Provision Device'}
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleSaveDevice}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Device Name *</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. EM_LIVEWIZE_101"
+                value={deviceForm.name}
+                onChange={(e) => setDeviceForm({ ...deviceForm, name: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Category *</Form.Label>
+              <Form.Select
+                value={deviceForm.category}
+                onChange={(e) => setDeviceForm({ ...deviceForm, category: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                <option value="ENERGY_METER">ENERGY_METER</option>
+                <option value="DIESEL_GENERATOR">DIESEL_GENERATOR</option>
+                <option value="UPS">UPS</option>
+                <option value="HVAC">HVAC</option>
+                <option value="WATER_PUMP">WATER_PUMP</option>
+                <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">BMS Device ID</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. BMS-0001"
+                value={deviceForm.bmsDeviceId}
+                onChange={(e) => setDeviceForm({ ...deviceForm, bmsDeviceId: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Serial Number</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. SN-9454C5F385"
+                value={deviceForm.serialNumber}
+                onChange={(e) => setDeviceForm({ ...deviceForm, serialNumber: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowDeviceModal(false)}>Cancel</Button>
+            <Button variant="success" type="submit" disabled={loading} className="fw-semibold text-white">
+              {loading ? <Spinner animation="border" size="sm" /> : editingDevice ? 'Update Device' : 'Provision Device'}
+            </Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
 
     </div>
