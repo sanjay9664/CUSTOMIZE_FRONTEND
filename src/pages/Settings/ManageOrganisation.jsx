@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SiteManagement from './SiteManagement';
+import PdfButton from '../../components/PdfButton';
+import UserPdfReportModal from '../../components/UserPdfReportModal';
+import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
 
 const API_BASE_URL = '/api';
 
@@ -2122,9 +2125,12 @@ const ManageOrganisation = () => {
                 <h5 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
                   <FileText className="text-info" /> Telemetry & DPR Async Reports
                 </h5>
-                <Button variant="info" size="sm" onClick={() => setShowReportModal(true)} className="fw-semibold text-dark px-3">
-                  <FileText size={15} /> Generate Async Report
-                </Button>
+                <div className="d-flex align-items-center gap-2">
+                  <PdfButton sites={sites} assets={assets} label="Download User PDF Report" />
+                  <Button variant="info" size="sm" onClick={() => setShowReportModal(true)} className="fw-semibold text-dark px-3 d-flex align-items-center gap-1">
+                    <FileText size={15} /> Custom PDF Generator
+                  </Button>
+                </div>
               </div>
               <div className="table-responsive">
                 <table className="table table-custom mb-0">
@@ -2137,12 +2143,13 @@ const ManageOrganisation = () => {
                       <th>Requested By</th>
                       <th>Status</th>
                       <th>Generated Date</th>
+                      <th className="text-end">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reportsList.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center py-4 empty-text fw-semibold">No generated reports available</td>
+                        <td colSpan={8} className="text-center py-4 empty-text fw-semibold">No generated reports available</td>
                       </tr>
                     ) : reportsList.map(r => (
                       <tr key={r.id}>
@@ -2153,6 +2160,23 @@ const ManageOrganisation = () => {
                         <td className="text-slate-400 fs-13">{r.requestedBy || 'Super Admin'}</td>
                         <td><Badge bg="success" className="px-2 py-1">{r.status}</Badge></td>
                         <td className="text-slate-400 fs-12">{formatDate(r.createdAt)}</td>
+                        <td className="text-end">
+                          <Button 
+                            variant="outline-info" 
+                            size="sm" 
+                            className="px-2 py-1 fs-12 d-inline-flex align-items-center gap-1"
+                            onClick={() => generateUserCustomPdfReport({
+                              title: r.title || 'Telemetry & Operational Report',
+                              subtitle: `Report Type: ${r.reportType}`,
+                              siteName: `Site #${r.siteId}`,
+                              userName: r.requestedBy || 'Super Admin',
+                              dateRange: 'Selected Range (Aug 10 - Aug 17, 2026)',
+                              fileName: `${(r.title || 'Report').replace(/[^a-zA-Z0-9]/g, '_')}_${r.id}.pdf`
+                            })}
+                          >
+                            <FileText size={14} /> Download PDF
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

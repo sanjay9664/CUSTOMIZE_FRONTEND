@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Row, Col, Card, Form, Table, Button, Badge } from 'react-bootstrap';
 import { FileText, Download, Calendar, ClipboardList, RefreshCw, Zap } from 'lucide-react';
 import PdfButton from '../../components/PdfButton';
+import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
 
 const EnergyPDFReport = () => {
   const [filter, setFilter] = useState({
@@ -141,7 +142,26 @@ const EnergyPDFReport = () => {
                     <td className="py-3 text-center text-secondary font-monospace">{row.avgPf}</td>
                     <td className="py-3 text-center text-success fw-bold">{row.cost}</td>
                     <td className="py-3 text-end">
-                      <Button variant="outline-info" size="sm" className="rounded-pill px-3 py-1 font-bold text-uppercase fs-12 d-flex align-items-center gap-2 float-end">
+                      <Button 
+                        variant="outline-info" 
+                        size="sm" 
+                        className="rounded-pill px-3 py-1 font-bold text-uppercase fs-12 d-flex align-items-center gap-2 float-end"
+                        onClick={() => generateUserCustomPdfReport({
+                          title: `Energy Billing Report - ${row.meter}`,
+                          subtitle: `Reference ID: ${row.id}`,
+                          siteName: 'Main Substation Grid',
+                          dateRange: row.date,
+                          kpis: [
+                            { label: 'Energy Consumed', value: row.consumption },
+                            { label: 'Peak Demand', value: row.peakDemand },
+                            { label: 'Avg Power Factor', value: row.avgPf },
+                            { label: 'Total Cost', value: row.cost }
+                          ],
+                          headers: ['Ref ID', 'Date', 'Meter Node', 'Consumption', 'Peak Load', 'Power Factor', 'Cost'],
+                          data: [[row.id, row.date, row.meter, row.consumption, row.peakDemand, row.avgPf, row.cost]],
+                          fileName: `${row.id}_Energy_Report.pdf`
+                        })}
+                      >
                         <Download size={12} /> Download PDF
                       </Button>
                     </td>
