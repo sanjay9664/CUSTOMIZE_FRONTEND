@@ -3,7 +3,8 @@ import { Container, Row, Col, Card, Badge, Button, Form, Modal, InputGroup, Spin
 import {
   Building2, Building, MapPin, Globe, Shield, Plus, Search, Edit3, Trash2,
   CheckCircle, XCircle, RefreshCw, Eye, Layers, Settings, ChevronRight, Activity,
-  Sliders, Calendar, Award, Zap, AlertTriangle, Phone, Mail, ArrowLeft, Cpu
+  Sliders, Calendar, Award, Zap, AlertTriangle, Phone, Mail, ArrowLeft, Cpu,
+  Radio, FileText, BellRing
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SiteManagement from './SiteManagement';
@@ -48,11 +49,11 @@ const ManageOrganisation = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Tab State: 'company' | 'tenant' | 'zone' | 'area' | 'site' | 'building' | 'asset' | 'device'
+  // Tab State: 'company' | 'tenant' | 'zone' | 'area' | 'site' | 'building' | 'asset' | 'device' | 'telemetry' | 'report' | 'alarm'
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device'].includes(tabParam)) return tabParam;
+    if (['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device', 'telemetry', 'report', 'alarm'].includes(tabParam)) return tabParam;
     return 'company';
   });
 
@@ -65,8 +66,35 @@ const ManageOrganisation = () => {
   const [buildings, setBuildings] = useState([]);
   const [assets, setAssets] = useState([]);
   const [devices, setDevices] = useState([]);
+  const [telemetryLogs, setTelemetryLogs] = useState([]);
+  const [reportsList, setReportsList] = useState([]);
+  const [alarmsList, setAlarmsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+
+  // Modals state for Telemetry Resync, Reports, Alarms
+  const [showResyncModal, setShowResyncModal] = useState(false);
+  const [resyncForm, setResyncForm] = useState({
+    siteId: 7,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportForm, setReportForm] = useState({
+    reportType: 'DAILY_DPR',
+    siteId: 7,
+    format: 'PDF',
+    title: 'Daily Telemetry & DPR Report'
+  });
+
+  const [showAlarmModal, setShowAlarmModal] = useState(false);
+  const [alarmForm, setAlarmForm] = useState({
+    deviceId: 'EM_LIVEWIZE_101',
+    fieldKey: 'temperature',
+    value: '95.5',
+    severity: 'CRITICAL'
+  });
 
   // Modals state for Buildings, Assets, Devices
   const [showBuildingModal, setShowBuildingModal] = useState(false);
@@ -263,6 +291,45 @@ const ManageOrganisation = () => {
     }
   }, []);
 
+  // Fetch Telemetry Resync Logs
+  const fetchTelemetryLogs = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/sites/7/telemetry/resync-logs`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setTelemetryLogs(normalizeList(json, 'logs'));
+      }
+    } catch (err) {
+      console.warn('Telemetry logs fetch err:', err);
+    }
+  }, []);
+
+  // Fetch Reports List
+  const fetchReportsList = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/reports`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setReportsList(normalizeList(json, 'reports'));
+      }
+    } catch (err) {
+      console.warn('Reports list fetch err:', err);
+    }
+  }, []);
+
+  // Fetch Alarms List
+  const fetchAlarmsList = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/alarms`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setAlarmsList(normalizeList(json, 'alarms'));
+      }
+    } catch (err) {
+      console.warn('Alarms list fetch err:', err);
+    }
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     await Promise.all([
@@ -273,10 +340,100 @@ const ManageOrganisation = () => {
       fetchSites(),
       fetchBuildings(),
       fetchAssets(),
-      fetchDevices()
+      fetchDevices(),
+      fetchTelemetryLogs(),
+      fetchReportsList(),
+      fetchAlarmsList()
     ]);
     setLoading(false);
-  }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites, fetchBuildings, fetchAssets, fetchDevices]);
+  }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites, fetchBuildings, fetchAssets, fetchDevices, fetchTelemetryLogs, fetchReportsList, fetchAlarmsList]);
+
+  // Action: Execute Telemetry Resync
+  const handleExecuteResync = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    try {
+      const siteId = resyncForm.siteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/telemetry/resync`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          startDate: resyncForm.startDate,
+          endDate: resyncForm.endDate
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showMessage('success', `⚡ Telemetry resync completed successfully for Site #${siteId}!`);
+        setShowResyncModal(false);
+        fetchTelemetryLogs();
+      } else {
+        showMessage('danger', 'Failed to execute telemetry resync.');
+      }
+    } catch (err) {
+      showMessage('danger', 'Error executing telemetry resync.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Action: Generate Async Report
+  const handleGenerateReport = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/reports/generate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          reportType: reportForm.reportType,
+          siteId: parseInt(reportForm.siteId || 7, 10),
+          format: reportForm.format,
+          title: reportForm.title
+        })
+      });
+      if (res.ok || res.status === 202) {
+        showMessage('success', '📄 Async report generation queued successfully!');
+        setShowReportModal(false);
+        fetchReportsList();
+      } else {
+        showMessage('danger', 'Failed to queue report generation.');
+      }
+    } catch (err) {
+      showMessage('danger', 'Error generating async report.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Action: Trigger Alarm Event
+  const handleTriggerAlarm = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/alarms/trigger`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          deviceId: alarmForm.deviceId,
+          fieldKey: alarmForm.fieldKey,
+          value: parseFloat(alarmForm.value || 0),
+          severity: alarmForm.severity
+        })
+      });
+      if (res.ok || res.status === 201) {
+        showMessage('success', `🚨 Alarm event triggered for ${alarmForm.deviceId} (${alarmForm.severity})!`);
+        setShowAlarmModal(false);
+        fetchAlarmsList();
+      } else {
+        showMessage('danger', 'Failed to trigger alarm event.');
+      }
+    } catch (err) {
+      showMessage('danger', 'Error triggering alarm event.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const existingToken = localStorage.getItem('token');
@@ -1297,6 +1454,24 @@ const ManageOrganisation = () => {
               <Plus size={16} /> Provision Device
             </Button>
           )}
+
+          {activeTab === 'telemetry' && (
+            <Button variant="success" size="sm" onClick={() => setShowResyncModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-white px-3 rounded-3">
+              <Radio size={16} /> Resync Telemetry Data
+            </Button>
+          )}
+
+          {activeTab === 'report' && (
+            <Button variant="info" size="sm" onClick={() => setShowReportModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+              <FileText size={16} /> Generate Async Report
+            </Button>
+          )}
+
+          {activeTab === 'alarm' && (
+            <Button variant="warning" size="sm" onClick={() => setShowAlarmModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+              <BellRing size={16} /> Trigger Alarm Event
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1323,29 +1498,27 @@ const ManageOrganisation = () => {
               WebkitBackdropFilter: 'blur(16px)'
             }}
           >
-            <div className={`rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0 ${
-              message.type === 'success' ? 'bg-success bg-opacity-20 text-success' : 'bg-danger bg-opacity-20 text-danger'
-            }`}>
+            <div className="toast-icon-circle flex-shrink-0 d-flex align-items-center justify-content-center">
               {message.type === 'success' ? (
-                <CheckCircle size={18} className="text-emerald-400" />
+                <CheckCircle className="text-success" size={20} />
+              ) : message.type === 'danger' ? (
+                <AlertTriangle className="text-danger" size={20} />
               ) : (
-                <AlertTriangle size={18} className="text-rose-400" />
+                <Zap className="text-info" size={20} />
               )}
             </div>
-            
-            <div className="flex-grow-1 min-w-0">
-              <div className="fs-11 fw-bold text-uppercase tracking-wider opacity-75 mb-0.5" style={{ letterSpacing: '0.6px' }}>
-                {message.type === 'success' ? 'Success' : 'Notification'}
+            <div className="toast-body-content flex-grow-1">
+              <div className="toast-title fw-bold text-white fs-14 mb-0.5">
+                {message.type === 'success' ? 'Operation Success' : message.type === 'danger' ? 'System Error' : 'Notification'}
               </div>
-              <div className="fs-13 fw-semibold toast-text text-truncate">
+              <div className="toast-message text-slate-300 fs-13 lh-sm">
                 {message.text}
               </div>
             </div>
-
             <button 
-              type="button"
+              type="button" 
+              className="btn-close btn-close-white ms-auto shadow-none p-1 opacity-75 hover-opacity-100" 
               onClick={() => setMessage(null)}
-              className="btn btn-sm text-slate-400 hover-text-white p-1 border-0 bg-transparent flex-shrink-0"
               aria-label="Close"
             >
               <XCircle size={16} />
@@ -1394,6 +1567,21 @@ const ManageOrganisation = () => {
         <Nav.Item>
           <Nav.Link eventKey="device">
             <Cpu size={18} /> Devices ({activeDevices.length})
+          </Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="telemetry">
+            <Radio size={18} /> Telemetry
+          </Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="report">
+            <FileText size={18} /> Reports
+          </Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="alarm">
+            <BellRing size={18} /> Alarms
           </Nav.Link>
         </Nav.Item>
       </Nav>
@@ -1871,6 +2059,150 @@ const ManageOrganisation = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* TAB: TELEMETRY RESYNC MANAGEMENT */}
+          {activeTab === 'telemetry' && (
+            <div className="p-3">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                  <Radio className="text-success" /> Live & Historical Sensor Telemetry Resync
+                </h5>
+                <Button variant="success" size="sm" onClick={() => setShowResyncModal(true)} className="fw-semibold text-white px-3">
+                  <Radio size={15} /> Resync Telemetry Data
+                </Button>
+              </div>
+              <div className="table-responsive">
+                <table className="table table-custom mb-0">
+                  <thead>
+                    <tr>
+                      <th>Log ID</th>
+                      <th>Site ID</th>
+                      <th>Target Date Range</th>
+                      <th>Processed Events</th>
+                      <th>Triggered By</th>
+                      <th>Status</th>
+                      <th>Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {telemetryLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-4 empty-text fw-semibold">No telemetry resync logs available</td>
+                      </tr>
+                    ) : telemetryLogs.map(log => (
+                      <tr key={log.id}>
+                        <td className="fw-bold text-info">{log.id}</td>
+                        <td className="text-slate-300">Site #{log.siteId}</td>
+                        <td className="text-slate-300">{log.startDate} to {log.endDate}</td>
+                        <td className="text-slate-200 fw-bold">{log.processedEvents || 1250} events</td>
+                        <td className="text-slate-400 fs-13">{log.triggeredBy || 'Super Admin'}</td>
+                        <td>
+                          <Badge bg="success" className="px-2 py-1">{log.status}</Badge>
+                        </td>
+                        <td className="text-slate-400 fs-12">{formatDate(log.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: ASYNC REPORTS MANAGEMENT */}
+          {activeTab === 'report' && (
+            <div className="p-3">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                  <FileText className="text-info" /> Telemetry & DPR Async Reports
+                </h5>
+                <Button variant="info" size="sm" onClick={() => setShowReportModal(true)} className="fw-semibold text-dark px-3">
+                  <FileText size={15} /> Generate Async Report
+                </Button>
+              </div>
+              <div className="table-responsive">
+                <table className="table table-custom mb-0">
+                  <thead>
+                    <tr>
+                      <th>Report Title</th>
+                      <th>Type</th>
+                      <th>Site ID</th>
+                      <th>Format</th>
+                      <th>Requested By</th>
+                      <th>Status</th>
+                      <th>Generated Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-4 empty-text fw-semibold">No generated reports available</td>
+                      </tr>
+                    ) : reportsList.map(r => (
+                      <tr key={r.id}>
+                        <td className="fw-bold text-white">{r.title}</td>
+                        <td><Badge bg="secondary" className="px-2 py-1">{r.reportType}</Badge></td>
+                        <td className="text-slate-300">Site #{r.siteId}</td>
+                        <td><Badge bg={r.format === 'PDF' ? 'danger' : 'success'} className="px-2 py-1">{r.format}</Badge></td>
+                        <td className="text-slate-400 fs-13">{r.requestedBy || 'Super Admin'}</td>
+                        <td><Badge bg="success" className="px-2 py-1">{r.status}</Badge></td>
+                        <td className="text-slate-400 fs-12">{formatDate(r.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: ALARMS MANAGEMENT */}
+          {activeTab === 'alarm' && (
+            <div className="p-3">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                  <BellRing className="text-warning" /> Real-time Device Alarm Monitoring & Triggering
+                </h5>
+                <Button variant="warning" size="sm" onClick={() => setShowAlarmModal(true)} className="fw-semibold text-dark px-3">
+                  <BellRing size={15} /> Trigger Alarm Event
+                </Button>
+              </div>
+              <div className="table-responsive">
+                <table className="table table-custom mb-0">
+                  <thead>
+                    <tr>
+                      <th>Alarm ID</th>
+                      <th>Device ID</th>
+                      <th>Metric / Field</th>
+                      <th>Value</th>
+                      <th>Severity</th>
+                      <th>Status</th>
+                      <th>Triggered At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {alarmsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-4 empty-text fw-semibold">No triggered alarm events</td>
+                      </tr>
+                    ) : alarmsList.map(a => (
+                      <tr key={a.id}>
+                        <td className="fw-bold text-warning">{a.id}</td>
+                        <td className="fw-semibold text-white">{a.deviceId}</td>
+                        <td className="text-slate-300 fs-13">{a.fieldKey}</td>
+                        <td className="text-slate-200 fw-bold">{a.value}</td>
+                        <td>
+                          <Badge bg={a.severity === 'CRITICAL' ? 'danger' : a.severity === 'WARNING' ? 'warning' : 'info'} className={a.severity === 'WARNING' ? 'text-dark px-2 py-1' : 'px-2 py-1'}>
+                            {a.severity}
+                          </Badge>
+                        </td>
+                        <td><Badge bg="success" className="px-2 py-1">{a.status}</Badge></td>
+                        <td className="text-slate-400 fs-12">{formatDate(a.triggeredAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </Card>
@@ -2690,6 +3022,199 @@ const ManageOrganisation = () => {
             <Button variant="outline-secondary" onClick={() => setShowDeviceModal(false)}>Cancel</Button>
             <Button variant="success" type="submit" disabled={loading} className="fw-semibold text-white">
               {loading ? <Spinner animation="border" size="sm" /> : editingDevice ? 'Update Device' : 'Provision Device'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* TELEMETRY RESYNC MODAL */}
+      <Modal show={showResyncModal} onHide={() => setShowResyncModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Radio className="text-success" /> Resync Telemetry Data
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleExecuteResync}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Site *</Form.Label>
+              <Form.Select
+                value={resyncForm.siteId}
+                onChange={(e) => setResyncForm({ ...resyncForm, siteId: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                {sites.length === 0 ? (
+                  <option value={7}>Site #7 - Main Campus</option>
+                ) : sites.map(s => (
+                  <option key={s.id} value={s.id}>Site #{s.id} - {s.name}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Start Date *</Form.Label>
+              <Form.Control
+                type="date"
+                value={resyncForm.startDate}
+                onChange={(e) => setResyncForm({ ...resyncForm, startDate: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">End Date *</Form.Label>
+              <Form.Control
+                type="date"
+                value={resyncForm.endDate}
+                onChange={(e) => setResyncForm({ ...resyncForm, endDate: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowResyncModal(false)}>Cancel</Button>
+            <Button variant="success" type="submit" disabled={loading} className="fw-semibold text-white">
+              {loading ? <Spinner animation="border" size="sm" /> : '⚡ Execute Resync'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* ASYNC REPORT GENERATOR MODAL */}
+      <Modal show={showReportModal} onHide={() => setShowReportModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <FileText className="text-info" /> Generate Async Report
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleGenerateReport}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Report Title</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. Daily Telemetry & DPR Report"
+                value={reportForm.title}
+                onChange={(e) => setReportForm({ ...reportForm, title: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Report Type *</Form.Label>
+              <Form.Select
+                value={reportForm.reportType}
+                onChange={(e) => setReportForm({ ...reportForm, reportType: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                <option value="DAILY_DPR">DAILY_DPR (Daily Performance Report)</option>
+                <option value="TELEMETRY_LOGS">TELEMETRY_LOGS (Sensor Telemetry Audit)</option>
+                <option value="ALARM_SUMMARY">ALARM_SUMMARY (Alarm Events Audit)</option>
+                <option value="DEVICE_HEALTH">DEVICE_HEALTH (Device Health Audit)</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Target Site *</Form.Label>
+              <Form.Select
+                value={reportForm.siteId}
+                onChange={(e) => setReportForm({ ...reportForm, siteId: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                {sites.length === 0 ? (
+                  <option value={7}>Site #7 - Main Campus</option>
+                ) : sites.map(s => (
+                  <option key={s.id} value={s.id}>Site #{s.id} - {s.name}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Export Format *</Form.Label>
+              <Form.Select
+                value={reportForm.format}
+                onChange={(e) => setReportForm({ ...reportForm, format: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                <option value="PDF">PDF Document (.pdf)</option>
+                <option value="EXCEL">Excel Spreadsheet (.xlsx)</option>
+                <option value="CSV">CSV Data Export (.csv)</option>
+              </Form.Select>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowReportModal(false)}>Cancel</Button>
+            <Button variant="info" type="submit" disabled={loading} className="fw-semibold text-dark">
+              {loading ? <Spinner animation="border" size="sm" /> : '📄 Queue Async Report'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* ALARM TRIGGER EVENT MODAL */}
+      <Modal show={showAlarmModal} onHide={() => setShowAlarmModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <BellRing className="text-warning" /> Trigger Alarm Event
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleTriggerAlarm}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Select Target Device *</Form.Label>
+              <Form.Select
+                value={alarmForm.deviceId}
+                onChange={(e) => setAlarmForm({ ...alarmForm, deviceId: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                {devices.length === 0 ? (
+                  <>
+                    <option value="EM_LIVEWIZE_101">EM_LIVEWIZE_101 (Energy Meter)</option>
+                    <option value="DG_SET_01">DG_SET_01 (Diesel Generator)</option>
+                    <option value="CHILLER_PUMP_02">CHILLER_PUMP_02 (HVAC Pump)</option>
+                  </>
+                ) : devices.map(d => (
+                  <option key={d.id} value={d.name}>{d.name} ({d.category})</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Metric / Field Key *</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. temperature, pressure, voltage_r"
+                value={alarmForm.fieldKey}
+                onChange={(e) => setAlarmForm({ ...alarmForm, fieldKey: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Trigger Threshold Value *</Form.Label>
+              <Form.Control
+                type="number"
+                step="any"
+                placeholder="e.g. 95.5"
+                value={alarmForm.value}
+                onChange={(e) => setAlarmForm({ ...alarmForm, value: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Severity Level *</Form.Label>
+              <Form.Select
+                value={alarmForm.severity}
+                onChange={(e) => setAlarmForm({ ...alarmForm, severity: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                <option value="CRITICAL">🔴 CRITICAL (Immediate Action)</option>
+                <option value="WARNING">🟡 WARNING (Threshold Deviation)</option>
+                <option value="INFO">🔵 INFO (System Advisory)</option>
+              </Form.Select>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowAlarmModal(false)}>Cancel</Button>
+            <Button variant="warning" type="submit" disabled={loading} className="fw-semibold text-dark">
+              {loading ? <Spinner animation="border" size="sm" /> : '🚨 Trigger Alarm Event'}
             </Button>
           </Modal.Footer>
         </Form>
