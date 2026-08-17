@@ -268,7 +268,10 @@ const ManageOrganisation = () => {
   // Fetch Assets
   const fetchAssets = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
+      let res = await fetch(`${API_BASE_URL}/sites/4/assets`, { headers: getAuthHeaders() });
+      if (!res.ok) {
+        res = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
+      }
       if (res.ok) {
         const json = await res.json();
         setAssets(normalizeList(json, 'assets'));
@@ -1034,13 +1037,15 @@ const ManageOrganisation = () => {
     if (!assetForm.name) return showToast('danger', 'Asset Name is required.');
     setLoading(true);
     try {
-      const url = editingAsset ? `${API_BASE_URL}/assets/${editingAsset.id}` : `${API_BASE_URL}/assets`;
+      const targetSiteId = Number(assetForm.siteId || 4);
+      const url = editingAsset 
+        ? `${API_BASE_URL}/assets/${editingAsset.id}` 
+        : `${API_BASE_URL}/sites/${targetSiteId}/assets`;
       const method = editingAsset ? 'PATCH' : 'POST';
       const bodyObj = {
         name: assetForm.name,
-        assetType: assetForm.assetType,
-        siteId: Number(assetForm.siteId || 7),
-        description: assetForm.description,
+        assetType: assetForm.assetType || 'BUILDING',
+        description: assetForm.description || '',
       };
       if (assetForm.parentAssetId) bodyObj.parentAssetId = assetForm.parentAssetId;
 
@@ -1054,8 +1059,8 @@ const ManageOrganisation = () => {
         setShowAssetModal(false);
         fetchAssets();
       } else {
-        const errJson = await res.json();
-        showToast('danger', errJson.message || 'Failed to save asset');
+        const errJson = await res.json().catch(() => ({}));
+        showToast('danger', errJson.message || errJson.error?.message || 'Failed to save asset');
       }
     } catch (err) {
       showToast('danger', err.message || 'Error saving asset');
@@ -2928,18 +2933,28 @@ const ManageOrganisation = () => {
                 <option value="FLOOR">FLOOR</option>
                 <option value="ROOM">ROOM</option>
                 <option value="EQUIPMENT">EQUIPMENT</option>
-                <option value="SUB_EQUIPMENT">SUB_EQUIPMENT</option>
+                <option value="HVAC">HVAC</option>
+                <option value="PUMP">PUMP</option>
+                <option value="PANEL">PANEL</option>
+                <option value="METER">METER</option>
+                <option value="GENERATOR">GENERATOR</option>
+                <option value="OTHER">OTHER</option>
               </Form.Select>
             </Form.Group>
             <Form.Group>
-              <Form.Label className="fs-13 fw-semibold text-slate-300">Parent Asset ID (Optional)</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Leave blank for Root asset"
-                value={assetForm.parentAssetId}
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Parent Asset (Optional)</Form.Label>
+              <Form.Select
+                value={assetForm.parentAssetId || ''}
                 onChange={(e) => setAssetForm({ ...assetForm, parentAssetId: e.target.value })}
                 className="bg-dark text-white border-secondary border-opacity-25"
-              />
+              >
+                <option value="">-- None (Root Asset) --</option>
+                {assets.filter(a => a.id !== editingAsset?.id).map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.assetType}) [ID: {a.id}]
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
             <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Description</Form.Label>

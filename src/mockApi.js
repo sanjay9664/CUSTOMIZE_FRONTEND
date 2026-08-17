@@ -44,7 +44,7 @@ window.fetch = async function (input, init) {
     try {
       const realArgs = prepareRealFetchArgs(input, init);
       const resp = await originalFetch.apply(this, realArgs);
-      if (resp) return resp;
+      if (resp && resp.ok && resp.status < 400) return resp;
     } catch (e) {
       console.warn('Real API fetch error:', e);
     }
@@ -1107,6 +1107,31 @@ window.fetch = async function (input, init) {
   // 7. Command Push / Rule Engine
   if (urlStr.includes('/api/command/push') || urlStr.includes('/api/rule-engine/apply')) {
     return createMockResponse({ status: 'OK', success: true, message: 'Action executed successfully in UI preview mode.' });
+  }
+
+  // Fallback for /buildings, /devices, /companies
+
+  if (urlStr.includes('/buildings')) {
+    const defaultBuildings = [
+      { id: 1, name: 'Block A - Main Tower', siteId: 1, floors: 12, status: 'ACTIVE', createdAt: '2026-07-18T10:00:00.000Z' },
+      { id: 2, name: 'Block B - Tech Hub', siteId: 4, floors: 8, status: 'ACTIVE', createdAt: '2026-07-20T10:00:00.000Z' }
+    ];
+    return createMockResponse({ success: true, data: defaultBuildings, total: defaultBuildings.length });
+  }
+
+  if (urlStr.includes('/devices')) {
+    const defaultDevices = [
+      { id: 1, name: 'Smart Energy Meter #01', deviceType: 'ENERGY_METER', status: 'ONLINE', siteId: 1, buildingId: 1 },
+      { id: 2, name: 'HVAC Temperature Sensor', deviceType: 'TEMP_SENSOR', status: 'ONLINE', siteId: 1, buildingId: 1 }
+    ];
+    return createMockResponse({ success: true, data: defaultDevices, total: defaultDevices.length });
+  }
+
+  if (urlStr.includes('/companies')) {
+    const defaultCompanies = [
+      { id: 1, name: 'iSmartAccess Operations Ltd', status: 'ACTIVE', type: 'CLIENT' }
+    ];
+    return createMockResponse({ success: true, data: defaultCompanies, total: defaultCompanies.length });
   }
 
   // 8. Default fallback for any other backend endpoint
