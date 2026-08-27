@@ -11,11 +11,11 @@ const API_BASE_URL = '/api';
 const DEV_SUPERADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNoZWRzaGUwMDAwenN2bjlpOXIwM241IiwiZW1haWwiOiJzYUBpc21hcnRhY2Nlc3MuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwicGVybWlzc2lvbnMiOlsiUEVSTV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJibXMtcGxhdGZvcm0iLCJhdWQiOiJibXMtYXBpIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc4NjY4NjAxMywiZXhwIjoxODE4MjQzNjEzfQ.keUks3gjheRnHnkSLoO0g0M1WhpmwDCDkIXkpxBow1Q';
 
 const getAuthHeaders = () => {
-  let token = localStorage.getItem('token') || 
-              localStorage.getItem('sochiot_token') || 
-              localStorage.getItem('auth_token') || 
-              localStorage.getItem('access_token') || '';
-              
+  let token = localStorage.getItem('token') ||
+    localStorage.getItem('sochiot_token') ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('access_token') || '';
+
   if (!token || token === 'undefined' || token === 'null' || token === 'bms-dev-token-admin') {
     token = DEV_SUPERADMIN_TOKEN;
   }
@@ -215,7 +215,7 @@ const SiteManagement = () => {
 
     setSites(prev => {
       const updated = [finalSite, ...prev];
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch(e) {}
+      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
       return updated;
     });
 
@@ -278,7 +278,7 @@ const SiteManagement = () => {
     // Update local state + localStorage directly (GET may return 500)
     setSites(prev => {
       const updated = prev.map(s => String(s.id) === String(editForm.id) ? { ...s, ...updatePayload, updatedAt: new Date().toISOString() } : s);
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch(e) {}
+      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
       return updated;
     });
 
@@ -306,7 +306,7 @@ const SiteManagement = () => {
     // Update local state + localStorage directly
     setSites(prev => {
       const updated = prev.map(s => String(s.id) === String(site.id) ? { ...s, status: newStatus } : s);
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch(e) {}
+      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
       return updated;
     });
 
@@ -621,6 +621,41 @@ const SiteManagement = () => {
           margin-bottom: 6px;
         }
         body.light-mode .site-modal .form-label { color: #475569 !important; }
+        .stat-val-text { color: #f1f5f9; }
+        body.light-mode .stat-val-text { color: #0f172a !important; }
+        .stat-lbl-text { color: #64748b; }
+        body.light-mode .stat-lbl-text { color: #475569 !important; }
+        .config-val-text { color: #e2e8f0; }
+        body.light-mode .config-val-text { color: #0f172a !important; }
+        .config-lbl-text { color: #64748b; }
+        body.light-mode .config-lbl-text { color: #475569 !important; }
+        .modal-subtitle-text { color: #94a3b8; }
+        body.light-mode .modal-subtitle-text { color: #475569 !important; }
+        .section-subtitle-text { color: #94a3b8; }
+        body.light-mode .section-subtitle-text { color: #334155 !important; }
+        .site-title-text { color: #f1f5f9; }
+        body.light-mode .site-title-text { color: #0f172a !important; }
+        .site-config-box {
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.06);
+        }
+        body.light-mode .site-config-box {
+          background: #f8fafc !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        .site-config-row {
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .site-config-row:last-child {
+          border-bottom: none;
+        }
+        body.light-mode .site-config-row {
+          border-bottom-color: #e2e8f0 !important;
+        }
+        body.light-mode .site-modal .btn-close {
+          filter: invert(0) !important;
+          opacity: 0.8 !important;
+        }
         @keyframes slideUpFadeIn {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -648,7 +683,7 @@ const SiteManagement = () => {
         <div>
           <h4 className="fw-bold mb-1" style={{ color: '#06b6d4' }}>
             <Building2 size={24} className="me-2" style={{ verticalAlign: 'text-bottom' }} />
-            Site Management
+            Site
           </h4>
           <p className="mb-0" style={{ color: '#64748b', fontSize: '0.9rem' }}>
             Create, edit, enable/disable & monitor physical sites across your organization
@@ -1123,7 +1158,7 @@ const SiteManagement = () => {
         <Modal.Body style={{ padding: '16px 28px 28px' }}>
           {selectedSite && (
             <>
-              <div className="d-flex flex-wrap align-items-center gap-3 mb-4" style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+              <div className="d-flex flex-wrap align-items-center gap-3 mb-4 modal-subtitle-text" style={{ fontSize: '0.9rem' }}>
                 <span><MapPin size={14} className="me-1" /> {selectedSite.city || 'N/A'}{selectedSite.state ? `, ${selectedSite.state}` : ''}</span>
                 <span>|</span>
                 {statusBadge(selectedSite.status)}
@@ -1132,7 +1167,7 @@ const SiteManagement = () => {
               </div>
 
               {/* Stats */}
-              <h6 className="fw-bold mb-3" style={{ color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <h6 className="fw-bold mb-3 section-subtitle-text" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 <Activity size={14} className="me-2" /> Site Stats & Metrics
               </h6>
               {siteStats ? (
@@ -1147,35 +1182,32 @@ const SiteManagement = () => {
                     <Col xs={6} md={4} lg key={i}>
                       <div className="detail-stat-card">
                         <div style={{ color: s.color, marginBottom: 8 }}>{s.icon}</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f1f5f9' }}>{s.value}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>{s.label}</div>
+                        <div className="stat-val-text" style={{ fontSize: '1.5rem', fontWeight: 700 }}>{s.value}</div>
+                        <div className="stat-lbl-text" style={{ fontSize: '0.75rem', marginTop: 4 }}>{s.label}</div>
                       </div>
                     </Col>
                   ))}
                 </Row>
               ) : (
                 <div className="text-center py-3">
-                  <Spinner size="sm" variant="info" /> <span className="ms-2" style={{ color: '#64748b' }}>Loading stats...</span>
+                  <Spinner size="sm" variant="info" /> <span className="ms-2 stat-lbl-text">Loading stats...</span>
                 </div>
               )}
 
               {/* Site Info */}
-              <h6 className="fw-bold mb-3" style={{ color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <h6 className="fw-bold mb-3 section-subtitle-text" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Site Configuration
               </h6>
-              <div style={{
-                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: 14, padding: 20
-              }}>
+              <div className="site-config-box" style={{ borderRadius: 14, padding: 20 }}>
                 {[
                   { label: 'Site ID', value: selectedSite.id },
                   { label: 'Sochiot Location ID', value: selectedSite.sochiotLocationId },
                   { label: 'Organization ID', value: selectedSite.organizationId },
                   { label: 'Tenant ID', value: selectedSite.tenantId }
                 ].map((item, i) => (
-                  <div key={i} className="d-flex justify-content-between py-2" style={{ borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                    <span style={{ color: '#64748b', fontSize: '0.85rem' }}>{item.label}</span>
-                    <span style={{ color: '#e2e8f0', fontWeight: 500, fontSize: '0.85rem', fontFamily: 'monospace' }}>{item.value || '—'}</span>
+                  <div key={i} className="d-flex justify-content-between py-2 site-config-row">
+                    <span className="config-lbl-text" style={{ fontSize: '0.85rem' }}>{item.label}</span>
+                    <span className="config-val-text" style={{ fontWeight: 500, fontSize: '0.85rem', fontFamily: 'monospace' }}>{item.value || '—'}</span>
                   </div>
                 ))}
               </div>

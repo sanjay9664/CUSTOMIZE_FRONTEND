@@ -4,7 +4,7 @@ import {
   Building2, Building, MapPin, Globe, Shield, Plus, Search, Edit3, Trash2,
   CheckCircle, XCircle, RefreshCw, Eye, Layers, Settings, ChevronRight, Activity,
   Sliders, Calendar, Award, Zap, AlertTriangle, Phone, Mail, ArrowLeft, Cpu,
-  Radio, FileText, BellRing
+  Radio, FileText, BellRing, Sparkles, Users
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SiteManagement from './SiteManagement';
@@ -17,11 +17,11 @@ const API_BASE_URL = '/api';
 const DEV_SUPERADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNoZWRzaGUwMDAwenN2bjlpOXIwM241IiwiZW1haWwiOiJzYUBpc21hcnRhY2Nlc3MuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwicGVybWlzc2lvbnMiOlsiUEVSTV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJibXMtcGxhdGZvcm0iLCJhdWQiOiJibXMtYXBpIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc4NjY4NjAxMywiZXhwIjoxODE4MjQzNjEzfQ.keUks3gjheRnHnkSLoO0g0M1WhpmwDCDkIXkpxBow1Q';
 
 const getAuthHeaders = () => {
-  let token = localStorage.getItem('token') || 
-              localStorage.getItem('sochiot_token') || 
-              localStorage.getItem('auth_token') || 
-              localStorage.getItem('access_token') || '';
-              
+  let token = localStorage.getItem('token') ||
+    localStorage.getItem('sochiot_token') ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('access_token') || '';
+
   if (!token || token === 'undefined' || token === 'null' || token === 'bms-dev-token-admin') {
     token = DEV_SUPERADMIN_TOKEN;
   }
@@ -207,11 +207,11 @@ const ManageOrganisation = () => {
     }
   }, []);
 
-  // Fetch Geographic Zones
+  // Fetch Zones
   const fetchZones = useCallback(async () => {
     try {
-      const url = selectedTenantFilter !== 'ALL' 
-        ? `${API_BASE_URL}/zones?tenantId=${selectedTenantFilter}` 
+      const url = selectedTenantFilter !== 'ALL'
+        ? `${API_BASE_URL}/zones?tenantId=${selectedTenantFilter}`
         : `${API_BASE_URL}/zones`;
       const res = await fetch(url, { headers: getAuthHeaders() });
       if (res.ok) {
@@ -339,10 +339,10 @@ const ManageOrganisation = () => {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     await Promise.all([
-      fetchCompanies(), 
-      fetchTenants(), 
-      fetchZones(), 
-      fetchAreas(), 
+      fetchCompanies(),
+      fetchTenants(),
+      fetchZones(),
+      fetchAreas(),
       fetchSites(),
       fetchBuildings(),
       fetchAssets(),
@@ -591,11 +591,11 @@ const ManageOrganisation = () => {
       const url = editingTenant ? `${API_BASE_URL}/tenants/${editingTenant.id}` : `${API_BASE_URL}/tenants`;
       const method = editingTenant ? 'PATCH' : 'POST';
 
-      const computedEmail = tenantForm.email && tenantForm.email.includes('@') 
-        ? tenantForm.email.trim() 
+      const computedEmail = tenantForm.email && tenantForm.email.includes('@')
+        ? tenantForm.email.trim()
         : `admin_${Date.now().toString().slice(-6)}@${tenantForm.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'org'}.com`;
 
-      const fullAddress = tenantForm.addAddress 
+      const fullAddress = tenantForm.addAddress
         ? [tenantForm.addressLine, tenantForm.city, tenantForm.state, tenantForm.country, tenantForm.zipCode].filter(Boolean).join(', ')
         : tenantForm.addressLine || '';
 
@@ -645,7 +645,7 @@ const ManageOrganisation = () => {
           } else if (errJson.message) {
             errorMsg = errJson.message;
           }
-        } catch (e) {}
+        } catch (e) { }
         showToast('danger', errorMsg);
       }
     } catch (err) {
@@ -798,8 +798,8 @@ const ManageOrganisation = () => {
     setLoading(true);
 
     try {
-      const url = editingZone 
-        ? `${API_BASE_URL}/zones/${editingZone.id}` 
+      const url = editingZone
+        ? `${API_BASE_URL}/zones/${editingZone.id}`
         : `${API_BASE_URL}/tenants/${zoneForm.tenantId}/zones`;
       const method = editingZone ? 'PATCH' : 'POST';
 
@@ -895,8 +895,8 @@ const ManageOrganisation = () => {
     setLoading(true);
 
     try {
-      const url = editingArea 
-        ? `${API_BASE_URL}/areas/${editingArea.id}` 
+      const url = editingArea
+        ? `${API_BASE_URL}/areas/${editingArea.id}`
         : `${API_BASE_URL}/tenants/${areaForm.tenantId}/zones/${areaForm.zoneId}/areas`;
       const method = editingArea ? 'PATCH' : 'POST';
 
@@ -966,8 +966,8 @@ const ManageOrganisation = () => {
     setLoading(true);
     try {
       const siteId = buildingForm.siteId || 7;
-      const url = editingBuilding 
-        ? `${API_BASE_URL}/sites/${siteId}/buildings/${editingBuilding.id}` 
+      const url = editingBuilding
+        ? `${API_BASE_URL}/sites/${siteId}/buildings/${editingBuilding.id}`
         : `${API_BASE_URL}/sites/${siteId}/buildings`;
       const method = editingBuilding ? 'PATCH' : 'POST';
       const res = await fetch(url, {
@@ -1041,8 +1041,8 @@ const ManageOrganisation = () => {
     setLoading(true);
     try {
       const targetSiteId = Number(assetForm.siteId || 4);
-      const url = editingAsset 
-        ? `${API_BASE_URL}/assets/${editingAsset.id}` 
+      const url = editingAsset
+        ? `${API_BASE_URL}/assets/${editingAsset.id}`
         : `${API_BASE_URL}/sites/${targetSiteId}/assets`;
       const method = editingAsset ? 'PATCH' : 'POST';
       const bodyObj = {
@@ -1117,8 +1117,8 @@ const ManageOrganisation = () => {
     setLoading(true);
     try {
       const siteId = deviceForm.siteId || 7;
-      const url = editingDevice 
-        ? `${API_BASE_URL}/sites/${siteId}/devices/${editingDevice.id}` 
+      const url = editingDevice
+        ? `${API_BASE_URL}/sites/${siteId}/devices/${editingDevice.id}`
         : `${API_BASE_URL}/sites/${siteId}/devices`;
       const method = editingDevice ? 'PATCH' : 'POST';
       const bodyObj = {
@@ -1178,41 +1178,64 @@ const ManageOrganisation = () => {
   const activeAssets = normalizeList(assets, 'assets').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
   const activeDevices = normalizeList(devices, 'devices').filter(d => d.isActive !== false && d.status !== 'DISABLED');
 
-  const filteredCompanies = activeCompanies.filter(c => 
-    c.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredCompanies = activeCompanies.filter(c =>
+    c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredTenants = activeTenants.filter(t => 
-    t.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredTenants = activeTenants.filter(t =>
+    t.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredZones = activeZones.filter(z => 
-    z.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredZones = activeZones.filter(z =>
+    z.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     z.region?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredAreas = activeAreas.filter(a => 
-    a.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredAreas = activeAreas.filter(a =>
+    a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     a.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredBuildings = activeBuildings.filter(b => 
-    b.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredBuildings = activeBuildings.filter(b =>
+    b.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (b.code && b.code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredAssets = activeAssets.filter(a => 
-    a.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredAssets = activeAssets.filter(a =>
+    a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.assetType && a.assetType.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredDevices = activeDevices.filter(d => 
-    d.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredDevices = activeDevices.filter(d =>
+    d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (d.bmsDeviceId && d.bmsDeviceId.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (d.serialNumber && d.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const isOrgGroup = ['company', 'tenant', 'building'].includes(activeTab);
+  const isLocationGroup = ['zone', 'area', 'telemetry', 'report', 'alarm'].includes(activeTab);
+  const isDeviceGroup = activeTab === 'device';
+  const isSiteGroup = ['site', 'asset'].includes(activeTab);
+
+  let pageTitle = "Organisation Management";
+  let pageSubtitle = "Multi-Tenant Administration Platform — Manage Companies, Organizations (Tenants) & Buildings";
+  let PageIcon = Building2;
+
+  if (isLocationGroup) {
+    pageTitle = "Location Management";
+    pageSubtitle = "Regional Zones, Tenant Areas, Telemetry & Alarm Reports";
+    PageIcon = MapPin;
+  } else if (isDeviceGroup) {
+    pageTitle = "Device Management";
+    pageSubtitle = "BMS IoT Device Provisioning, Serial Numbers & Telemetry Controls";
+    PageIcon = Cpu;
+  } else if (isSiteGroup) {
+    pageTitle = "Site Management";
+    pageSubtitle = "Physical Sites, Infrastructure Buildings & Asset Inventory";
+    PageIcon = Building;
+  }
 
   return (
     <div className="manage-organisation-page p-4">
@@ -1388,11 +1411,80 @@ const ManageOrganisation = () => {
         }
       `}</style>
 
+      {/* Sub-Header Tabs Row */}
+      <div className="border-bottom border-secondary border-opacity-25 px-4 pt-3 bg-black settings-tabs-header overflow-auto mb-4" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem' }}>
+        <Nav variant="tabs" activeKey={isLocationGroup ? 'location' : isSiteGroup ? 'sites' : isDeviceGroup ? 'device' : 'org'} className="border-0 flex-nowrap">
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => navigate('/settings')}
+              className="d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link text-slate-400 bg-transparent inactive-tab"
+            >
+              <Sparkles size={18} className="text-slate-400" />
+              Settings Hub
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => navigate('/settings')}
+              className="d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link text-slate-400 bg-transparent inactive-tab"
+            >
+              <Settings size={18} className="text-slate-400" />
+              Global Settings
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => navigate('/settings/users')}
+              className="d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link text-slate-400 bg-transparent inactive-tab"
+            >
+              <Users size={18} className="text-slate-400" />
+              User Administration
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect(isOrgGroup ? activeTab : 'company')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isOrgGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <Building2 size={18} className={isOrgGroup ? 'text-info' : 'text-slate-400'} />
+              Manage Organisation
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect(isLocationGroup ? activeTab : 'zone')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isLocationGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <MapPin size={18} className={isLocationGroup ? 'text-info' : 'text-slate-400'} />
+              Location Management
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect('device')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isDeviceGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <Cpu size={18} className={isDeviceGroup ? 'text-info' : 'text-slate-400'} />
+              Device
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect(isSiteGroup ? activeTab : 'site')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isSiteGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <Building size={18} className={isSiteGroup ? 'text-info' : 'text-slate-400'} />
+              Site
+            </Nav.Link>
+          </Nav.Item>
+        </Nav>
+      </div>
+
       {/* Header Banner */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-3">
         <div className="d-flex align-items-center gap-3">
-          <Button 
-            variant="outline-secondary" 
+          <Button
+            variant="outline-secondary"
             size="sm"
             onClick={() => navigate('/settings')}
             className="d-flex align-items-center gap-2 rounded-3 px-3 py-1-5 fw-semibold"
@@ -1401,18 +1493,18 @@ const ManageOrganisation = () => {
           </Button>
           <div>
             <div className="d-flex align-items-center gap-2 mb-1">
-              <Building2 className="text-info" size={28} />
-              <h2 className="fw-bold mb-0 org-header-title tracking-wide">Organisation Management</h2>
+              <PageIcon className="text-info" size={28} />
+              <h2 className="fw-bold mb-0 org-header-title tracking-wide">{pageTitle}</h2>
             </div>
             <p className="org-header-subtext mb-0 fs-14">
-              Multi-Tenant Administration Platform — Manage Companies, Organizations (Tenants), Geographic Zones & Areas
+              {pageSubtitle}
             </p>
           </div>
         </div>
 
         <div className="d-flex align-items-center gap-2">
-          <Button 
-            variant="outline-secondary" 
+          <Button
+            variant="outline-secondary"
             size="sm"
             onClick={fetchAllData}
             className="d-flex align-items-center gap-2 rounded-3 text-slate-300"
@@ -1485,18 +1577,17 @@ const ManageOrganisation = () => {
 
       {/* Premium Compact Floating Toast Popup */}
       {message && (
-        <div 
-          className="position-fixed top-0 end-0 p-4" 
+        <div
+          className="position-fixed top-0 end-0 p-4"
           style={{ zIndex: 1056, pointerEvents: 'none' }}
         >
-          <div 
-            className={`toast-popup-premium d-flex align-items-center gap-3 px-3 py-2.5 rounded-4 shadow-lg ${
-              message.type === 'success' 
-                ? 'toast-popup-success' 
-                : message.type === 'danger' 
-                ? 'toast-popup-danger' 
+          <div
+            className={`toast-popup-premium d-flex align-items-center gap-3 px-3 py-2.5 rounded-4 shadow-lg ${message.type === 'success'
+              ? 'toast-popup-success'
+              : message.type === 'danger'
+                ? 'toast-popup-danger'
                 : 'toast-popup-info'
-            }`}
+              }`}
             style={{
               pointerEvents: 'auto',
               minWidth: '280px',
@@ -1523,9 +1614,9 @@ const ManageOrganisation = () => {
                 {message.text}
               </div>
             </div>
-            <button 
-              type="button" 
-              className="btn-close btn-close-white ms-auto shadow-none p-1 opacity-75 hover-opacity-100" 
+            <button
+              type="button"
+              className="btn-close btn-close-white ms-auto shadow-none p-1 opacity-75 hover-opacity-100"
               onClick={() => setMessage(null)}
               aria-label="Close"
             >
@@ -1535,114 +1626,131 @@ const ManageOrganisation = () => {
         </div>
       )}
 
-      {/* Navigation Tabs */}
+      {/* Sub-Navigation Pills (Categorized by Top Header Section) */}
       <Nav variant="pills" activeKey={activeTab} onSelect={handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
-        <Nav.Item>
-          <Nav.Link eventKey="company">
-            <Building size={18} /> Companies ({activeCompanies.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="tenant">
-            <Building2 size={18} /> Organizations / Tenants ({activeTenants.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="zone">
-            <Globe size={18} /> Geographic Zones ({activeZones.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="area">
-            <Layers size={18} /> Tenant Areas ({activeAreas.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="site">
-            <MapPin size={18} /> Site Management ({activeSites.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="building">
-            <Building2 size={18} /> Buildings ({activeBuildings.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="asset">
-            <Sliders size={18} /> Assets ({activeAssets.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="device">
-            <Cpu size={18} /> Devices ({activeDevices.length})
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="telemetry">
-            <Radio size={18} /> Telemetry
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="report">
-            <FileText size={18} /> Reports
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="alarm">
-            <BellRing size={18} /> Alarms
-          </Nav.Link>
-        </Nav.Item>
+        {isOrgGroup && (
+          <>
+            <Nav.Item>
+              <Nav.Link eventKey="company">
+                <Building size={18} /> Companies ({activeCompanies.length})
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="tenant">
+                <Building2 size={18} /> Organizations / Tenants ({activeTenants.length})
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="building">
+                <Building2 size={18} /> Buildings ({activeBuildings.length})
+              </Nav.Link>
+            </Nav.Item>
+          </>
+        )}
+
+        {isLocationGroup && (
+          <>
+            <Nav.Item>
+              <Nav.Link eventKey="zone">
+                <Globe size={18} /> Zones ({activeZones.length})
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="area">
+                <Layers size={18} /> Tenant Areas ({activeAreas.length})
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="telemetry">
+                <Radio size={18} /> Telemetry
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="report">
+                <FileText size={18} /> Reports
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="alarm">
+                <BellRing size={18} /> Alarms
+              </Nav.Link>
+            </Nav.Item>
+          </>
+        )}
+
+        {isDeviceGroup && (
+          <Nav.Item>
+            <Nav.Link eventKey="device">
+              <Cpu size={18} /> Devices ({activeDevices.length})
+            </Nav.Link>
+          </Nav.Item>
+        )}
+
+        {isSiteGroup && (
+          <>
+            <Nav.Item>
+              <Nav.Link eventKey="site">
+                <MapPin size={18} />Site ({activeSites.length})
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="asset">
+                <Sliders size={18} /> Assets ({activeAssets.length})
+              </Nav.Link>
+            </Nav.Item>
+          </>
+        )}
       </Nav>
 
       {/* Search Bar & Filter Controls */}
       {activeTab !== 'site' && (
         <Card className="bg-dark-card border-0 mb-4 p-3 shadow-sm">
-        <Row className="g-3 align-items-center">
-          <Col xs={12} md={5}>
-            <InputGroup>
-              <InputGroup.Text className="bg-transparent border-secondary border-opacity-25 text-slate-400">
-                <Search size={18} />
-              </InputGroup.Text>
-              <Form.Control
-                placeholder={`Search ${activeTab}s...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent border-secondary border-opacity-25 text-white"
-              />
-            </InputGroup>
-          </Col>
-
-          {(activeTab === 'zone' || activeTab === 'area') && (
-            <Col xs={12} md={3}>
-              <Form.Select
-                value={selectedTenantFilter}
-                onChange={(e) => setSelectedTenantFilter(e.target.value)}
-                className="bg-dark text-white border-secondary border-opacity-25"
-              >
-                <option value="ALL">All Organizations</option>
-                {activeTenants.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </Form.Select>
+          <Row className="g-3 align-items-center">
+            <Col xs={12} md={5}>
+              <InputGroup>
+                <InputGroup.Text className="bg-transparent border-secondary border-opacity-25 text-slate-400">
+                  <Search size={18} />
+                </InputGroup.Text>
+                <Form.Control
+                  placeholder={`Search ${activeTab}s...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-transparent border-secondary border-opacity-25 text-white"
+                />
+              </InputGroup>
             </Col>
-          )}
 
-          {activeTab === 'area' && (
-            <Col xs={12} md={3}>
-              <Form.Select
-                value={selectedZoneFilter}
-                onChange={(e) => setSelectedZoneFilter(e.target.value)}
-                className="bg-dark text-white border-secondary border-opacity-25"
-              >
-                <option value="ALL">All Zones</option>
-                {activeZones.map(z => (
-                  <option key={z.id} value={z.id}>{z.name}</option>
-                ))}
-              </Form.Select>
-            </Col>
-          )}
-        </Row>
-      </Card>
+            {(activeTab === 'zone' || activeTab === 'area') && (
+              <Col xs={12} md={3}>
+                <Form.Select
+                  value={selectedTenantFilter}
+                  onChange={(e) => setSelectedTenantFilter(e.target.value)}
+                  className="bg-dark text-white border-secondary border-opacity-25"
+                >
+                  <option value="ALL">All Organizations</option>
+                  {activeTenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+            )}
+
+            {activeTab === 'area' && (
+              <Col xs={12} md={3}>
+                <Form.Select
+                  value={selectedZoneFilter}
+                  onChange={(e) => setSelectedZoneFilter(e.target.value)}
+                  className="bg-dark text-white border-secondary border-opacity-25"
+                >
+                  <option value="ALL">All Zones</option>
+                  {activeZones.map(z => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+            )}
+          </Row>
+        </Card>
       )}
 
       {/* TAB CONTENT TABLES */}
@@ -1792,7 +1900,7 @@ const ManageOrganisation = () => {
             </div>
           )}
 
-          {/* TAB 3: GEOGRAPHIC ZONES MANAGEMENT */}
+          {/* TAB 3: Zones MANAGEMENT */}
           {activeTab === 'zone' && (
             <div className="table-responsive">
               <table className="table table-custom mb-0">
@@ -2161,9 +2269,9 @@ const ManageOrganisation = () => {
                         <td><Badge bg="success" className="px-2 py-1">{r.status}</Badge></td>
                         <td className="text-slate-400 fs-12">{formatDate(r.createdAt)}</td>
                         <td className="text-end">
-                          <Button 
-                            variant="outline-info" 
-                            size="sm" 
+                          <Button
+                            variant="outline-info"
+                            size="sm"
                             className="px-2 py-1 fs-12 d-inline-flex align-items-center gap-1"
                             onClick={() => generateUserCustomPdfReport({
                               title: r.title || 'Telemetry & Operational Report',
@@ -2237,7 +2345,7 @@ const ManageOrganisation = () => {
         </Card>
       )}
 
-      {/* 5. SITE MANAGEMENT TAB */}
+      {/* 5.Site TAB */}
       {activeTab === 'site' && (
         <SiteManagement />
       )}
@@ -2297,7 +2405,7 @@ const ManageOrganisation = () => {
           <Modal.Footer className="border-secondary border-opacity-25">
             <Button variant="outline-secondary" onClick={() => setShowCompanyModal(false)}>Cancel</Button>
             <Button variant="info" type="submit" disabled={loading} className="text-dark fw-bold">
-              {loading ? <Spinner size="sm" animation="border"/> : editingCompany ? 'Save Changes' : 'Create Company'}
+              {loading ? <Spinner size="sm" animation="border" /> : editingCompany ? 'Save Changes' : 'Create Company'}
             </Button>
           </Modal.Footer>
         </Form>
@@ -2550,7 +2658,7 @@ const ManageOrganisation = () => {
           </Modal.Body>
           <Modal.Footer className="border-secondary border-opacity-25 justify-content-start gap-2">
             <Button variant="primary" type="submit" disabled={loading} className="fw-bold px-4" style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}>
-              {loading ? <Spinner size="sm" animation="border"/> : 'Save'}
+              {loading ? <Spinner size="sm" animation="border" /> : 'Save'}
             </Button>
             <Button variant="outline-light" onClick={() => setShowTenantModal(false)} className="px-4">
               Cancel
@@ -2634,7 +2742,7 @@ const ManageOrganisation = () => {
           <Modal.Footer className="border-secondary border-opacity-25">
             <Button variant="outline-secondary" onClick={() => setShowZoneModal(false)}>Cancel</Button>
             <Button variant="info" type="submit" disabled={loading} className="text-dark fw-bold">
-              {loading ? <Spinner size="sm" animation="border"/> : editingZone ? 'Save Changes' : 'Create Zone'}
+              {loading ? <Spinner size="sm" animation="border" /> : editingZone ? 'Save Changes' : 'Create Zone'}
             </Button>
           </Modal.Footer>
         </Form>
@@ -2711,7 +2819,7 @@ const ManageOrganisation = () => {
           <Modal.Footer className="border-secondary border-opacity-25">
             <Button variant="outline-secondary" onClick={() => setShowAreaModal(false)}>Cancel</Button>
             <Button variant="info" type="submit" disabled={loading} className="text-dark fw-bold">
-              {loading ? <Spinner size="sm" animation="border"/> : editingArea ? 'Save Changes' : 'Create Area'}
+              {loading ? <Spinner size="sm" animation="border" /> : editingArea ? 'Save Changes' : 'Create Area'}
             </Button>
           </Modal.Footer>
         </Form>

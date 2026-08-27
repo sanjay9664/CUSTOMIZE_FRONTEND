@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Nav, Row, Col } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles } from 'lucide-react';
+import { Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu, Building } from 'lucide-react';
 import GlobalSettings from './GlobalSettings';
 import UserAdministration from './UserAdministration';
 import SiteManagement from './SiteManagement';
@@ -10,7 +10,7 @@ const SETTING_CARDS = [
   {
     key: 'org',
     title: 'Manage Organisation',
-    description: 'Manage SAAS Companies, Multi-tenant Organizations, Geographic Zones, Tenant Areas & Physical Sites',
+    description: 'Manage SAAS Companies, Multi-tenant Organizations, Zones, Tenant Areas & Physical Sites',
     icon: <Building2 size={28} />,
     color: '#10b981',
     gradient: 'linear-gradient(135deg, #10b981, #059669)',
@@ -33,6 +33,33 @@ const SETTING_CARDS = [
     color: '#06b6d4',
     gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
     path: '/settings/users'
+  },
+  {
+    key: 'location',
+    title: 'Location Management',
+    description: 'Manage  Zones,  Areas & Regional Locations',
+    icon: <MapPin size={28} />,
+    color: '#8b5cf6',
+    gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    path: '/manage-organisation?tab=zone'
+  },
+  {
+    key: 'device',
+    title: 'Device',
+    description: 'Provision IoT devices, BMS Device IDs, and telemetry settings',
+    icon: <Cpu size={28} />,
+    color: '#ec4899',
+    gradient: 'linear-gradient(135deg, #ec4899, #db2777)',
+    path: '/manage-organisation?tab=device'
+  },
+  {
+    key: 'sites',
+    title: 'Site Management',
+    description: 'Physical site configuration, buildings, and site overview',
+    icon: <Building size={28} />,
+    color: '#3b82f6',
+    gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    path: '/manage-organisation?tab=site'
   }
 ];
 
@@ -41,32 +68,41 @@ const SettingsIndex = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState(() => {
-    if (location.pathname.includes('/settings/sites')) {
-      navigate('/manage-organisation?tab=site', { replace: true });
-      return 'hub';
-    }
+    if (location.pathname.includes('/settings/sites') || location.search.includes('tab=site')) return 'sites';
+    if (location.search.includes('tab=zone') || location.search.includes('tab=area')) return 'location';
+    if (location.search.includes('tab=device')) return 'device';
     if (location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users')) return 'users';
     if (location.pathname.includes('/global-settings')) return 'global';
+    if (location.pathname.includes('/manage-organisation')) return 'org';
     return 'hub';
   });
 
   useEffect(() => {
-    if (location.pathname.includes('/settings/sites')) {
-      navigate('/manage-organisation?tab=site', { replace: true });
+    if (location.pathname.includes('/settings/sites') || location.search.includes('tab=site')) {
+      setActiveTab('sites');
+    } else if (location.search.includes('tab=zone') || location.search.includes('tab=area')) {
+      setActiveTab('location');
+    } else if (location.search.includes('tab=device')) {
+      setActiveTab('device');
     } else if (location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users')) {
       setActiveTab('users');
     } else if (location.pathname.includes('/global-settings')) {
       setActiveTab('global');
+    } else if (location.pathname.includes('/manage-organisation')) {
+      setActiveTab('org');
     } else if (location.pathname === '/settings') {
       setActiveTab('hub');
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, location.search]);
 
   const handleSelectTab = (tab) => {
     setActiveTab(tab);
     if (tab === 'hub') navigate('/settings');
     else if (tab === 'global') navigate('/settings');
     else if (tab === 'users') navigate('/settings/users');
+    else if (tab === 'org') navigate('/manage-organisation');
+    else if (tab === 'location') navigate('/manage-organisation?tab=zone');
+    else if (tab === 'device') navigate('/manage-organisation?tab=device');
     else if (tab === 'sites') navigate('/manage-organisation?tab=site');
   };
 
@@ -133,6 +169,15 @@ const SettingsIndex = () => {
           box-shadow: 0 24px 48px rgba(0,0,0,0.08) !important;
           border-color: #cbd5e1 !important;
         }
+        body.light-mode .hub-title-text {
+          color: #0f172a !important;
+        }
+        body.light-mode .hub-card-title {
+          color: #0f172a !important;
+        }
+        body.light-mode .hub-sub-text {
+          color: #475569 !important;
+        }
         .hub-card-arrow {
           transition: all 0.3s;
           opacity: 0.4;
@@ -154,8 +199,8 @@ const SettingsIndex = () => {
       `}</style>
 
       {/* Sub-Header Tabs */}
-      <div className="border-bottom border-secondary border-opacity-25 px-4 pt-3 bg-black settings-tabs-header">
-        <Nav variant="tabs" activeKey={activeTab} onSelect={handleSelectTab} className="border-0">
+      <div className="border-bottom border-secondary border-opacity-25 px-4 pt-3 bg-black settings-tabs-header overflow-auto">
+        <Nav variant="tabs" activeKey={activeTab} onSelect={handleSelectTab} className="border-0 flex-nowrap">
           <Nav.Item>
             <Nav.Link
               eventKey="hub"
@@ -193,6 +238,36 @@ const SettingsIndex = () => {
               Manage Organisation
             </Nav.Link>
           </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="location"
+              onClick={() => navigate('/manage-organisation?tab=zone')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'location' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <MapPin size={18} className={activeTab === 'location' ? 'text-info' : 'text-slate-400'} />
+              Location Management
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="device"
+              onClick={() => navigate('/manage-organisation?tab=device')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'device' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <Cpu size={18} className={activeTab === 'device' ? 'text-info' : 'text-slate-400'} />
+              Device
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="sites"
+              onClick={() => navigate('/manage-organisation?tab=site')}
+              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'sites' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+            >
+              <Building size={18} className={activeTab === 'sites' ? 'text-info' : 'text-slate-400'} />
+              Site
+            </Nav.Link>
+          </Nav.Item>
         </Nav>
       </div>
 
@@ -209,14 +284,14 @@ const SettingsIndex = () => {
             }}>
               <Settings size={32} color="#fff" />
             </div>
-            <h3 className="fw-bold mb-2" style={{ color: '#f1f5f9' }}>System Settings</h3>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 500, margin: '0 auto' }}>
+            <h3 className="fw-bold mb-2 hub-title-text" style={{ color: '#f1f5f9' }}>System Settings</h3>
+            <p className="hub-sub-text" style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 500, margin: '0 auto' }}>
               Configure your BMS platform — manage modules, users, sites & permissions from one place
             </p>
           </div>
 
           {/* Setting Cards */}
-          <Row className="g-4 justify-content-center" style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <Row className="g-4 justify-content-center" style={{ maxWidth: 1100, margin: '0 auto' }}>
             {SETTING_CARDS.map((card, idx) => (
               <Col xs={12} md={4} key={card.key}>
                 <div
@@ -237,10 +312,10 @@ const SettingsIndex = () => {
                     <ChevronRight size={20} className="hub-card-arrow" style={{ color: card.color }} />
                   </div>
 
-                  <h5 className="fw-bold mb-2" style={{ color: '#f1f5f9', fontSize: '1.1rem' }}>
+                  <h5 className="fw-bold mb-2 hub-card-title" style={{ color: '#f1f5f9', fontSize: '1.1rem' }}>
                     {card.title}
                   </h5>
-                  <p className="mb-0" style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                  <p className="mb-0 hub-sub-text" style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: 1.6 }}>
                     {card.description}
                   </p>
                 </div>
@@ -260,3 +335,4 @@ const SettingsIndex = () => {
 };
 
 export default SettingsIndex;
+
