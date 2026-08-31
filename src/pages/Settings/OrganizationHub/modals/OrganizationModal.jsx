@@ -30,44 +30,42 @@ const OrganizationModal = ({
         </div>
       </Modal.Header>
       <Form onSubmit={onSubmit}>
-        <Modal.Body className="bg-dark text-white p-4">
-          <Row className="g-3">
-            {/* Parent Company Field: Locked Badge Card on Edit */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
-                  <Building size={13} className="me-1 text-primary" /> Parent Company <span className="text-danger">*</span>
-                </Form.Label>
-                {editingTenant ? (
-                  <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-2">
-                      <div className="p-1.5 rounded-2 bg-success bg-opacity-10 text-success">
-                        <Building size={16} />
-                      </div>
-                      <span className="fs-13 fw-semibold text-white">
-                        {companies.find(c => String(c.id) === String(editingTenant.companyId))?.name || editingTenant.companyName || 'octiot'}
-                      </span>
-                    </div>
-                    <Badge bg="dark" className="border border-secondary border-opacity-50 text-slate-400 font-monospace fs-11 px-2 py-0.5">
-                      Locked
-                    </Badge>
+        <Modal.Body className="bg-dark text-white p-4 d-flex flex-column gap-3">
+          {/* Parent Company Field: Locked Badge Card on Edit */}
+          <Form.Group>
+            <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
+              <Building size={13} className="me-1 text-primary" /> Parent Company {editingTenant ? '' : <span className="text-danger">*</span>}
+            </Form.Label>
+            {editingTenant ? (
+              <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="p-1.5 rounded-2 bg-success bg-opacity-10 text-success">
+                    <Building size={16} />
                   </div>
-                ) : (
-                  <Form.Select
-                    value={tenantForm.companyId}
-                    onChange={(e) => setTenantForm({ ...tenantForm, companyId: e.target.value })}
-                    required
-                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                  >
-                    <option value="">Select Parent Company...</option>
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </Form.Select>
-                )}
-              </Form.Group>
-            </Col>
+                  <span className="fs-13 fw-semibold text-white">
+                    {companies.find(c => String(c.id) === String(editingTenant.companyId))?.name || editingTenant.companyName || 'octiot'}
+                  </span>
+                </div>
+                <Badge bg="dark" className="border border-secondary border-opacity-50 text-slate-400 font-monospace fs-11 px-2 py-0.5">
+                  Locked
+                </Badge>
+              </div>
+            ) : (
+              <Form.Select
+                value={tenantForm.companyId}
+                onChange={(e) => setTenantForm({ ...tenantForm, companyId: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+              >
+                <option value="">Select Parent Company...</option>
+                {companies.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Form.Select>
+            )}
+          </Form.Group>
 
+          <Row className="g-3">
             <Col md={6}>
               <Form.Group>
                 <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
@@ -98,7 +96,9 @@ const OrganizationModal = ({
                 />
               </Form.Group>
             </Col>
+          </Row>
 
+          <Row className="g-3">
             <Col md={6}>
               <Form.Group>
                 <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
@@ -129,7 +129,9 @@ const OrganizationModal = ({
                 />
               </Form.Group>
             </Col>
+          </Row>
 
+          <Row className="g-3">
             <Col md={6}>
               <Form.Group>
                 <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
@@ -162,22 +164,36 @@ const OrganizationModal = ({
                 </Form.Select>
               </Form.Group>
             </Col>
-
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
-                  <MapPin size={13} className="me-1 text-danger" /> Address / Location
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Building / Street / City address"
-                  value={tenantForm.addressLine || ''}
-                  onChange={(e) => setTenantForm({ ...tenantForm, addressLine: e.target.value })}
-                  className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                />
-              </Form.Group>
-            </Col>
           </Row>
+
+          <Form.Group>
+            <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
+              Description
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={2}
+              placeholder="Enter organization description and operational scope..."
+              value={tenantForm.description || ''}
+              onChange={(e) => setTenantForm({ ...tenantForm, description: e.target.value })}
+              className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+            />
+          </Form.Group>
+
+          {/* Single Headquarters Address Textarea */}
+          <Form.Group>
+            <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400">
+              <MapPin size={13} className="me-1 text-danger" /> Headquarters Address
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={2}
+              placeholder="Enter full headquarters address (building, street, city, state, postal code)..."
+              value={tenantForm.address || ''}
+              onChange={(e) => setTenantForm({ ...tenantForm, address: e.target.value })}
+              className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+            />
+          </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary border-opacity-25 px-4 py-3">
           <Button variant="outline-secondary" size="sm" onClick={onHide} className="px-3">

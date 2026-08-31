@@ -46,6 +46,20 @@ const normalizeList = (raw, key) => {
   return [];
 };
 
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+];
+
+const INDIAN_UNION_TERRITORIES = [
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+];
+
 const ManageOrganisation = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -470,12 +484,7 @@ const ManageOrganisation = () => {
     phone: '',
     sochiotOrgId: '',
     subscription: 'BASIC',
-    addAddress: false,
-    addressLine: '',
-    country: 'India',
-    state: 'Uttar Pradesh',
-    city: 'Noida',
-    zipCode: ''
+    address: ''
   });
   const [zoneForm, setZoneForm] = useState({
     tenantId: '', name: '', region: '', timezone: 'Asia/Kolkata', country: 'India', description: ''
@@ -955,12 +964,7 @@ const ManageOrganisation = () => {
       phone: '',
       sochiotOrgId: '',
       subscription: 'BASIC',
-      addAddress: false,
-      addressLine: '',
-      country: 'India',
-      state: 'Uttar Pradesh',
-      city: 'Noida',
-      zipCode: ''
+      address: ''
     });
     setShowTenantModal(true);
   };
@@ -982,12 +986,7 @@ const ManageOrganisation = () => {
       phone: tn.phone || '',
       sochiotOrgId: tn.sochiotOrgId || '',
       subscription: resolvedSub,
-      addAddress: Boolean(tn.address),
-      addressLine: tn.address || '',
-      country: tn.country || 'India',
-      state: tn.state || 'Uttar Pradesh',
-      city: tn.city || 'Noida',
-      zipCode: tn.zipCode || ''
+      address: tn.address || tn.addressLine || ''
     });
     setShowTenantModal(true);
   };
@@ -1005,10 +1004,7 @@ const ManageOrganisation = () => {
       const method = editingTenant ? 'PATCH' : 'POST';
 
       const computedEmail = tenantForm.email.trim();
-
-      const fullAddress = tenantForm.addAddress
-        ? [tenantForm.addressLine, tenantForm.city, tenantForm.state, tenantForm.country, tenantForm.zipCode].filter(Boolean).join(', ')
-        : tenantForm.addressLine || '';
+      const computedAddress = (tenantForm.address || '').trim();
 
       let resolvedCompanyId = editingTenant ? (editingTenant.companyId || tenantForm.companyId) : tenantForm.companyId;
       if (!resolvedCompanyId || resolvedCompanyId.trim() === '') {
@@ -1034,8 +1030,8 @@ const ManageOrganisation = () => {
         companyId: resolvedCompanyId,
         name: tenantForm.name.trim(),
         email: computedEmail,
-        phone: tenantForm.phone ? tenantForm.phone.trim() : '+91-1234567890',
-        address: fullAddress || 'Sector 63, Noida',
+        ...(tenantForm.phone?.trim() ? { phone: tenantForm.phone.trim() } : {}),
+        ...(computedAddress ? { address: computedAddress } : { address: '' }),
         ...(resolvedSochiotOrgId ? { sochiotOrgId: resolvedSochiotOrgId } : {}),
         subscription: resolvedSubscription
       };
@@ -4978,7 +4974,7 @@ const ManageOrganisation = () => {
               />
             </Form.Group>
             <Form.Group>
-              <Form.Label className="fs-13 fw-semibold text-slate-300">Headquarters Address</Form.Label>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Full Address</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
@@ -4999,7 +4995,7 @@ const ManageOrganisation = () => {
       </Modal>
 
       {/* 2. TENANT / ORGANIZATION MODAL */}
-      <Modal show={showTenantModal} onHide={() => { setEditingTenant(null); setShowTenantModal(false); }} size={tenantForm.addAddress ? "xl" : "lg"} centered className="glass-modal">
+      <Modal show={showTenantModal} onHide={() => { setEditingTenant(null); setShowTenantModal(false); }} size="lg" centered className="glass-modal">
         <Modal.Header closeButton className="border-secondary border-opacity-25 pb-3">
           <Modal.Title className="fw-bold d-flex align-items-center gap-2 text-white fs-18">
             <div style={{
@@ -5013,319 +5009,193 @@ const ManageOrganisation = () => {
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSaveTenant}>
-          <Modal.Body className="p-4">
-            <Row className="g-4">
-              {/* Left Main Column */}
-              <Col xs={12} md={tenantForm.addAddress ? 6 : 12} className="d-flex flex-column gap-3">
-                <Row className="g-3">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Organization Name <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Control
-                        required
-                        placeholder="e.g. Sumilon Industries"
-                        value={tenantForm.name}
-                        onChange={(e) => setTenantForm({ ...tenantForm, name: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Server URL
-                      </Form.Label>
-                      <Form.Control
-                        placeholder="https://app.sochiot.com"
-                        value={tenantForm.serverUrl}
-                        onChange={(e) => setTenantForm({ ...tenantForm, serverUrl: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Row className="g-3">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Organization Type <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Select
-                        value={tenantForm.orgType}
-                        onChange={(e) => setTenantForm({ ...tenantForm, orgType: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                      >
-                        <option value="Company">Company</option>
-                        <option value="SAAS">SAAS</option>
-                        <option value="CLIENT">CLIENT</option>
-                        <option value="ENTERPRISE">ENTERPRISE</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Parent Company {editingTenant ? '' : <span className="text-danger">*</span>}
-                      </Form.Label>
-                      {editingTenant ? (
-                        <div
-                          className="p-2.5 rounded-3 d-flex align-items-center justify-content-between"
-                          style={{
-                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                            border: '1px solid rgba(148, 163, 184, 0.15)',
-                            height: '42px'
-                          }}
-                        >
-                          <div className="d-flex align-items-center gap-2">
-                            <div style={{
-                              width: 24, height: 24, borderRadius: 5,
-                              background: 'rgba(16, 185, 129, 0.15)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                              <Building className="text-emerald-400" size={13} />
-                            </div>
-                            <span className="text-white fw-bold fs-13">
-                              {activeCompanies.find(c => String(c.id) === String(editingTenant.companyId))?.name || editingTenant.companyName || 'octiot'}
-                            </span>
-                          </div>
-                          <Badge bg="dark" className="border border-secondary border-opacity-50 text-slate-400 font-monospace fs-11 px-2 py-0.5">
-                            
-                          </Badge>
-                        </div>
-                      ) : (
-                        <Form.Select
-                          value={tenantForm.companyId}
-                          onChange={(e) => setTenantForm({ ...tenantForm, companyId: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                        >
-                          <option value="">-- Select Parent Company --</option>
-                          {activeCompanies.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </Form.Select>
-                      )}
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Row className="g-3">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Contact Email
-                      </Form.Label>
-                      <Form.Control
-                        type="email"
-                        placeholder="admin@org.com"
-                        value={tenantForm.email}
-                        onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Phone Number
-                      </Form.Label>
-                      <Form.Control
-                        placeholder="+91-1234567890"
-                        value={tenantForm.phone}
-                        onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
+          <Modal.Body className="p-4 d-flex flex-column gap-3">
+            <Row className="g-3">
+              <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                    Description
+                    Organization Name <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Control
-                    as="textarea"
-                    rows={2}
-                    placeholder="Enter organization description and operational scope..."
-                    value={tenantForm.description}
-                    onChange={(e) => setTenantForm({ ...tenantForm, description: e.target.value })}
+                    required
+                    placeholder="e.g. Sumilon Industries"
+                    value={tenantForm.name}
+                    onChange={(e) => setTenantForm({ ...tenantForm, name: e.target.value })}
                     className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                   />
                 </Form.Group>
-
-                <Row className="g-3">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Sochiot Org ID
-                      </Form.Label>
-                      <Form.Control
-                        type="number"
-                        placeholder="e.g. 882"
-                        value={tenantForm.sochiotOrgId}
-                        onChange={(e) => setTenantForm({ ...tenantForm, sochiotOrgId: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                        Subscription Tier
-                      </Form.Label>
-                      <Form.Select
-                        value={tenantForm.subscription}
-                        onChange={(e) => setTenantForm({ ...tenantForm, subscription: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                      >
-                        <option value="BASIC">BASIC</option>
-                        <option value="PREMIUM">PREMIUM</option>
-                        <option value="FREE">FREE</option>
-                        <option value="TRIAL">TRIAL</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                {!tenantForm.addAddress && (
-                  <Form.Group>
-                    <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                      Primary Address
-                    </Form.Label>
-                    <Form.Control
-                      placeholder="e.g. Bangalore, Karnataka"
-                      value={tenantForm.addressLine}
-                      onChange={(e) => setTenantForm({ ...tenantForm, addressLine: e.target.value })}
-                      className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                    />
-                  </Form.Group>
-                )}
-
-                {/* ADDRESS BUILDER TOGGLE CARD */}
-                <div
-                  className="p-3 rounded-3 d-flex align-items-center justify-content-between mt-1"
-                  style={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                    border: '1px solid rgba(148, 163, 184, 0.15)'
-                  }}
-                >
-                  <div>
-                    <div className="text-white fs-13 fw-semibold">Detailed Address Builder</div>
-                    <small className="text-slate-400 fs-11">Configure Country, State, City and Postal Code</small>
-                  </div>
-                  <Form.Check
-                    type="switch"
-                    id="add-address-toggle"
-                    checked={tenantForm.addAddress}
-                    onChange={(e) => setTenantForm({ ...tenantForm, addAddress: e.target.checked })}
-                    className="fs-16 cursor-pointer"
-                  />
-                </div>
               </Col>
-
-              {/* Right Address Column - ONLY RENDERED WHEN addAddress IS TRUE */}
-              {tenantForm.addAddress && (
-                <Col xs={12} md={6} className="d-flex flex-column gap-3 border-start border-secondary border-opacity-25 ps-md-4">
-                  <div className="d-flex align-items-center gap-2 pb-1">
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 6,
-                      background: 'rgba(6, 182, 212, 0.15)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <MapPin className="text-cyan-400" size={15} />
-                    </div>
-                    <h6 className="fw-bold text-white mb-0 fs-14">Location & Regional Details</h6>
-                  </div>
-
-                  <Form.Group>
-                    <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                      Address Line <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      placeholder="e.g. 12th Main, Indiranagar"
-                      value={tenantForm.addressLine}
-                      onChange={(e) => setTenantForm({ ...tenantForm, addressLine: e.target.value })}
-                      className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                    />
-                  </Form.Group>
-
-                  <Row className="g-3">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                          Country <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Select
-                          value={tenantForm.country}
-                          onChange={(e) => setTenantForm({ ...tenantForm, country: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                        >
-                          <option value="">Please Select Country</option>
-                          <option value="India">India</option>
-                          <option value="United States">United States</option>
-                          <option value="United Kingdom">United Kingdom</option>
-                          <option value="UAE">UAE</option>
-                          <option value="Singapore">Singapore</option>
-                          <option value="Australia">Australia</option>
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                          State <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Select
-                          value={tenantForm.state}
-                          onChange={(e) => setTenantForm({ ...tenantForm, state: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                        >
-                          <option value="">Please Select State</option>
-                          <option value="Delhi">Delhi</option>
-                          <option value="Uttar Pradesh">Uttar Pradesh</option>
-                          <option value="Maharashtra">Maharashtra</option>
-                          <option value="Karnataka">Karnataka</option>
-                          <option value="Tamil Nadu">Tamil Nadu</option>
-                          <option value="Gujarat">Gujarat</option>
-                          <option value="Telangana">Telangana</option>
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <Row className="g-3">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                          City <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          placeholder="e.g. Bangalore"
-                          value={tenantForm.city}
-                          onChange={(e) => setTenantForm({ ...tenantForm, city: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                          Zip Code <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          placeholder="e.g. 560038"
-                          value={tenantForm.zipCode}
-                          onChange={(e) => setTenantForm({ ...tenantForm, zipCode: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                </Col>
-              )}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Server URL
+                  </Form.Label>
+                  <Form.Control
+                    placeholder="https://app.sochiot.com"
+                    value={tenantForm.serverUrl}
+                    onChange={(e) => setTenantForm({ ...tenantForm, serverUrl: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
+                  />
+                </Form.Group>
+              </Col>
             </Row>
+
+            <Row className="g-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Organization Type <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Select
+                    value={tenantForm.orgType}
+                    onChange={(e) => setTenantForm({ ...tenantForm, orgType: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+                  >
+                    <option value="Company">Company</option>
+                    <option value="SAAS">SAAS</option>
+                    <option value="CLIENT">CLIENT</option>
+                    <option value="ENTERPRISE">ENTERPRISE</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Parent Company {editingTenant ? '' : <span className="text-danger">*</span>}
+                  </Form.Label>
+                  {editingTenant ? (
+                    <div
+                      className="p-2.5 rounded-3 d-flex align-items-center justify-content-between"
+                      style={{
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(148, 163, 184, 0.15)',
+                        height: '42px'
+                      }}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        <div style={{
+                          width: 24, height: 24, borderRadius: 5,
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <Building className="text-emerald-400" size={13} />
+                        </div>
+                        <span className="text-white fw-bold fs-13">
+                          {activeCompanies.find(c => String(c.id) === String(editingTenant.companyId))?.name || editingTenant.companyName || 'octiot'}
+                        </span>
+                      </div>
+                      <Badge bg="dark" className="border border-secondary border-opacity-50 text-slate-400 font-monospace fs-11 px-2 py-0.5">
+                        
+                      </Badge>
+                    </div>
+                  ) : (
+                    <Form.Select
+                      value={tenantForm.companyId}
+                      onChange={(e) => setTenantForm({ ...tenantForm, companyId: e.target.value })}
+                      className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+                    >
+                      <option value="">-- Select Parent Company --</option>
+                      {activeCompanies.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </Form.Select>
+                  )}
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="g-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Contact Email
+                  </Form.Label>
+                  <Form.Control
+                    type="email"
+                    placeholder="admin@org.com"
+                    value={tenantForm.email}
+                    onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Phone Number
+                  </Form.Label>
+                  <Form.Control
+                    placeholder="+91-1234567890"
+                    value={tenantForm.phone}
+                    onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="g-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Sochiot Org ID
+                  </Form.Label>
+                  <Form.Control
+                    type="number"
+                    placeholder="e.g. 882"
+                    value={tenantForm.sochiotOrgId}
+                    onChange={(e) => setTenantForm({ ...tenantForm, sochiotOrgId: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Subscription Tier
+                  </Form.Label>
+                  <Form.Select
+                    value={tenantForm.subscription}
+                    onChange={(e) => setTenantForm({ ...tenantForm, subscription: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+                  >
+                    <option value="BASIC">BASIC</option>
+                    <option value="PREMIUM">PREMIUM</option>
+                    <option value="FREE">FREE</option>
+                    <option value="TRIAL">TRIAL</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Form.Group>
+              <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                Description
+              </Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                placeholder="Enter organization description and operational scope..."
+                value={tenantForm.description}
+                onChange={(e) => setTenantForm({ ...tenantForm, description: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+              />
+            </Form.Group>
+
+            {/* Single Headquarters Address Textarea */}
+            <Form.Group>
+              <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                Headquarters Address
+              </Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                placeholder="Enter full headquarters address (building, street, city, state, postal code)..."
+                value={tenantForm.address || ''}
+                onChange={(e) => setTenantForm({ ...tenantForm, address: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25 fs-13"
+              />
+            </Form.Group>
           </Modal.Body>
           <Modal.Footer className="border-secondary border-opacity-25 justify-content-end gap-2 pt-3">
             <Button variant="outline-secondary" onClick={() => setShowTenantModal(false)} className="px-3 py-1.5">
