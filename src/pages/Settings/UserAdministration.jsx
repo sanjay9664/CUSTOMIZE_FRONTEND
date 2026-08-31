@@ -1866,7 +1866,8 @@ const UserAdministration = () => {
             <Form.Group className="mb-3">
               <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Organization</Form.Label>
               <Form.Select 
-                style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} 
+                disabled
+                style={{ backgroundColor: '#151c28', color: '#94a3b8', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'not-allowed', opacity: 0.7 }} 
                 value={formData.tenantId} 
                 onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
               >
@@ -1874,6 +1875,9 @@ const UserAdministration = () => {
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </Form.Select>
+              <Form.Text style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                User organization cannot be changed after creation.
+              </Form.Text>
             </Form.Group>
             <Row className="g-2 mb-3">
               <Col md={6}>
