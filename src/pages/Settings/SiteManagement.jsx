@@ -785,17 +785,7 @@ const SiteManagement = () => {
                   </div>
 
                   {/* Card Actions & Footer */}
-                  <div className="d-flex justify-content-between align-items-center pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    {/* Enable / Disable Toggle */}
-                    <div
-                      className={`toggle-switch-pill ${isEnabled ? 'enabled' : 'disabled'}`}
-                      onClick={(e) => handleToggleSiteStatus(site, e)}
-                      title={isEnabled ? 'Click to Disable Site' : 'Click to Enable Site'}
-                    >
-                      <Power size={13} />
-                      {isEnabled ? 'Enabled' : 'Disabled'}
-                    </div>
-
+                  <div className="d-flex justify-content-end align-items-center pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                     <div className="d-flex align-items-center gap-2">
                       {/* Edit Button */}
                       <OverlayTrigger placement="top" overlay={<Tooltip>Edit Site</Tooltip>}>
@@ -832,7 +822,7 @@ const SiteManagement = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                {['Site Name', 'Location', 'Status', 'Enable/Disable', 'Devices', 'Alarms', 'Energy', 'Actions'].map(h => (
+                {['Site Name', 'Location', 'Status', 'Devices', 'Alarms', 'Energy', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '14px 18px', color: '#64748b', fontSize: '0.78rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {h}
                   </th>
@@ -841,7 +831,6 @@ const SiteManagement = () => {
             </thead>
             <tbody>
               {filteredSites.map(site => {
-                const isEnabled = site.status === 'ACTIVE';
                 return (
                   <tr key={site.id} className="site-table-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                     <td style={{ padding: '14px 18px', fontWeight: 600, color: '#f1f5f9' }}>{site.name}</td>
@@ -849,15 +838,6 @@ const SiteManagement = () => {
                       <MapPin size={13} className="me-1" /> {site.city || 'N/A'}{site.state ? `, ${site.state}` : ''}
                     </td>
                     <td style={{ padding: '14px 18px' }}>{statusBadge(site.status)}</td>
-                    <td style={{ padding: '14px 18px' }}>
-                      <div
-                        className={`toggle-switch-pill ${isEnabled ? 'enabled' : 'disabled'}`}
-                        onClick={(e) => handleToggleSiteStatus(site, e)}
-                      >
-                        <Power size={13} />
-                        {isEnabled ? 'Enabled' : 'Disabled'}
-                      </div>
-                    </td>
                     <td style={{ padding: '14px 18px', color: '#8b5cf6', fontWeight: 600 }}>{site.devicesCount || 0}</td>
                     <td style={{ padding: '14px 18px', color: (site.alarmsCount || 0) > 5 ? '#ef4444' : '#f59e0b', fontWeight: 600 }}>{site.alarmsCount || 0}</td>
                     <td style={{ padding: '14px 18px', color: '#10b981', fontWeight: 600 }}>{(site.energyKwh || 0).toLocaleString()} kWh</td>
