@@ -96,10 +96,11 @@ const Login = () => {
   const [credentials, setCredentials] = useState(() => {
     const isRemembered = localStorage.getItem('remember_me') !== 'false';
     const savedId = localStorage.getItem('remembered_identifier') || '';
-    const savedPw = localStorage.getItem('remembered_password') || '';
+    // Clean up any legacy remembered_password from localStorage
+    localStorage.removeItem('remembered_password');
     return {
       identifier: isRemembered ? savedId : '',
-      password: isRemembered ? savedPw : ''
+      password: ''
     };
   });
   
@@ -216,18 +217,17 @@ const Login = () => {
       userData: user
     });
 
+    // Remove any legacy stored passwords for security
+    localStorage.removeItem('remembered_password');
+
     if (rememberMe) {
       localStorage.setItem('remember_me', 'true');
       if (credentials.identifier) {
         localStorage.setItem('remembered_identifier', credentials.identifier);
       }
-      if (credentials.password) {
-        localStorage.setItem('remembered_password', credentials.password);
-      }
     } else {
       localStorage.setItem('remember_me', 'false');
       localStorage.removeItem('remembered_identifier');
-      localStorage.removeItem('remembered_password');
     }
 
     const config = payloadData.config || {};

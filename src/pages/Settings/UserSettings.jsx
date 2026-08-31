@@ -6,6 +6,7 @@ import {
   Zap, Eye, Bell, Settings as SettingsIcon, Crown, User, Lock, Mail, CheckSquare,
   ChevronDown, Folder, FolderOpen, CheckCircle, XCircle, Globe, Shield
 } from 'lucide-react';
+import PasswordInput from '../../components/PasswordInput';
 
 const ALL_SCADA_MODULES = [
   'Dashboard', 'Water Management', 'Motors', 'DG Set', 'Alarm System',
@@ -447,7 +448,7 @@ const UserSettings = () => {
                         <Globe size={18} className="text-info me-2" /> {cmp.name} <Badge bg="dark" className="ms-2 text-info border border-info">{cmp.code}</Badge>
                       </td>
                       <td className="font-monospace text-info fs-12 fw-bold">📧 {cmp.email || 'sa@company.com'}</td>
-                      <td className="font-monospace text-warning fs-12 fw-bold">🔑 {cmp.password || 'password123'}</td>
+                      <td className="font-monospace text-muted fs-12">••••••••</td>
                       <td>
                         <Badge bg="success" className="fs-11 px-3 py-1">{cmp.allowedModules?.length || ALL_SCADA_MODULES.length} Modules</Badge>
                       </td>
@@ -516,7 +517,7 @@ const UserSettings = () => {
                         </td>
                         <td className="text-slate-300 fs-12 fw-bold">{parentCmp ? parentCmp.name : 'Unassigned'}</td>
                         <td className="font-monospace text-info fs-12 fw-bold">📧 {org.email || 'admin@tata.com'}</td>
-                        <td className="font-monospace text-warning fs-12 fw-bold">🔑 {org.password || 'password123'}</td>
+                        <td className="font-monospace text-muted fs-12">••••••••</td>
                         <td>
                           <Badge bg="primary" className="fs-11 px-3 py-1">{org.allowedModules?.length || ALL_SCADA_MODULES.length} Modules</Badge>
                         </td>
@@ -1092,7 +1093,7 @@ const UserSettings = () => {
             </Col>
             <Col md={6}>
               <Form.Label>Login Password</Form.Label>
-              <Form.Control type="text" placeholder="e.g. password123" value={companyForm.password} onChange={e => setCompanyForm({ ...companyForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
+              <PasswordInput placeholder="Enter company password" value={companyForm.password} onChange={e => setCompanyForm({ ...companyForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
             </Col>
           </Row>
 
@@ -1157,7 +1158,7 @@ const UserSettings = () => {
             </Col>
             <Col md={6}>
               <Form.Label>Login Password</Form.Label>
-              <Form.Control type="text" placeholder="e.g. password123" value={orgForm.password} onChange={e => setOrgForm({ ...orgForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
+              <PasswordInput placeholder="Enter organization password" value={orgForm.password} onChange={e => setOrgForm({ ...orgForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
             </Col>
           </Row>
 
@@ -1218,7 +1219,7 @@ const UserSettings = () => {
             </Col>
             <Col md={6}>
               <Form.Label>Login Password</Form.Label>
-              <Form.Control type="text" placeholder="e.g. password123" value={zoneForm.password} onChange={e => setZoneForm({ ...zoneForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
+              <PasswordInput placeholder="Enter zone password" value={zoneForm.password} onChange={e => setZoneForm({ ...zoneForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
             </Col>
           </Row>
 
@@ -1279,7 +1280,7 @@ const UserSettings = () => {
             </Col>
             <Col md={6}>
               <Form.Label>Login Password</Form.Label>
-              <Form.Control type="text" placeholder="e.g. password123" value={areaForm.password} onChange={e => setAreaForm({ ...areaForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
+              <PasswordInput placeholder="Enter area password" value={areaForm.password} onChange={e => setAreaForm({ ...areaForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
             </Col>
           </Row>
 
@@ -1340,7 +1341,7 @@ const UserSettings = () => {
             </Col>
             <Col md={6}>
               <Form.Label>Login Password</Form.Label>
-              <Form.Control type="text" placeholder="e.g. password123" value={locForm.password} onChange={e => setLocForm({ ...locForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
+              <PasswordInput placeholder="Enter location password" value={locForm.password} onChange={e => setLocForm({ ...locForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
             </Col>
           </Row>
 
@@ -1401,7 +1402,7 @@ const UserSettings = () => {
             </Col>
             <Col md={6}>
               <Form.Label>Login Password</Form.Label>
-              <Form.Control type="text" placeholder="e.g. password123" value={uhForm.password} onChange={e => setUhForm({ ...uhForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
+              <PasswordInput placeholder="Enter unit head password" value={uhForm.password} onChange={e => setUhForm({ ...uhForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
             </Col>
           </Row>
 
@@ -1462,7 +1463,7 @@ const UserSettings = () => {
             </Col>
             <Col md={6}>
               <Form.Label>Login Password</Form.Label>
-              <Form.Control type="text" placeholder="e.g. password123" value={opForm.password} onChange={e => setOpForm({ ...opForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
+              <PasswordInput placeholder="Enter operator password" value={opForm.password} onChange={e => setOpForm({ ...opForm, password: e.target.value })} className="cyber-modal-input-compact font-monospace" />
             </Col>
           </Row>
 

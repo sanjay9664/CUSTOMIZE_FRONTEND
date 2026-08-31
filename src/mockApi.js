@@ -1,8 +1,3 @@
-// Standalone Frontend UI Mock API Interceptor
-// Intercepts network calls to /api/* and /sochiot-* to prevent ERR_CONNECTION_REFUSED errors in browser console.
-
-const DEV_SUPERADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNoZWRzaGUwMDAwenN2bjlpOXIwM241IiwiZW1haWwiOiJzYUBpc21hcnRhY2Nlc3MuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwicGVybWlzc2lvbnMiOlsiUEVSTV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJibXMtcGxhdGZvcm0iLCJhdWQiOiJibXMtYXBpIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc4NjY4NjAxMywiZXhwIjoxODE4MjQzNjEzfQ.keUks3gjheRnHnkSLoO0g0M1WhpmwDCDkIXkpxBow1Q';
-
 function prepareRealFetchArgs(input, init) {
   let headersObj = {};
   if (init && init.headers) {
@@ -17,7 +12,10 @@ function prepareRealFetchArgs(input, init) {
 
   let auth = headersObj['Authorization'] || headersObj['authorization'];
   if (!auth || auth.includes('bms-dev-token-admin') || auth === 'Bearer ' || auth === 'Bearer null' || auth === 'Bearer undefined') {
-    headersObj['Authorization'] = `Bearer ${DEV_SUPERADMIN_TOKEN}`;
+    const userTok = localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+    if (userTok) {
+      headersObj['Authorization'] = `Bearer ${userTok}`;
+    }
   }
 
   return [input, { ...(init || {}), headers: headersObj }];
@@ -39,8 +37,8 @@ window.fetch = async function (input, init) {
     return originalFetch.apply(this, arguments);
   }
 
-  // Handle all /companies, /buildings, /assets, /devices routes directly against real backend with SuperAdmin token
-  if (urlStr.includes('/companies') || urlStr.includes('/buildings') || urlStr.includes('/assets') || urlStr.includes('/devices')) {
+  // Handle all /companies, /assets, /devices routes directly against real backend with user token
+  if (urlStr.includes('/companies') || urlStr.includes('/assets') || urlStr.includes('/devices')) {
     try {
       const realArgs = prepareRealFetchArgs(input, init);
       const resp = await originalFetch.apply(this, realArgs);
@@ -269,19 +267,21 @@ window.fetch = async function (input, init) {
       try { reqBody = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {}); } catch(e) {}
       const tokenToRefresh = reqBody?.refreshToken || '';
 
-      // If token is a local dummy token, resolve directly with valid token to avoid 401 Network error in DevTools
+      // If token is a local dummy token, resolve with active user session token
       if (!tokenToRefresh || tokenToRefresh.startsWith('ref_') || tokenToRefresh.startsWith('refreshed_ref_')) {
-        const newTok = DEV_SUPERADMIN_TOKEN;
-        return createMockResponse({
-          success: true,
-          data: {
-            accessToken: newTok,
-            token: newTok,
-            refreshToken: `refreshed_ref_${Date.now().toString(36)}`,
-            expiresIn: 900
-          },
-          message: 'Token refreshed successfully'
-        }, 200);
+        const currentTok = localStorage.getItem('token') || localStorage.getItem('access_token');
+        if (currentTok) {
+          return createMockResponse({
+            success: true,
+            data: {
+              accessToken: currentTok,
+              token: currentTok,
+              refreshToken: `refreshed_ref_${Date.now().toString(36)}`,
+              expiresIn: 900
+            },
+            message: 'Token refreshed successfully'
+          }, 200);
+        }
       }
     }
 
@@ -307,19 +307,25 @@ window.fetch = async function (input, init) {
       }, 503);
     }
 
-    // Token refresh handling: Prevent TOKEN_REUSE_DETECTED logouts by returning valid token fallback
+    // Token refresh handling: Forward to real backend or return standard error if unavailable
     if (urlStr.includes('/auth/refresh')) {
-      const newTok = DEV_SUPERADMIN_TOKEN;
+      const currentTok = localStorage.getItem('token') || localStorage.getItem('access_token');
+      if (currentTok) {
+        return createMockResponse({
+          success: true,
+          data: {
+            accessToken: currentTok,
+            token: currentTok,
+            refreshToken: `refreshed_ref_${Date.now().toString(36)}`,
+            expiresIn: 900
+          },
+          message: 'Token refreshed successfully'
+        }, 200);
+      }
       return createMockResponse({
-        success: true,
-        data: {
-          accessToken: newTok,
-          token: newTok,
-          refreshToken: `refreshed_ref_${Date.now().toString(36)}`,
-          expiresIn: 900
-        },
-        message: 'Token refreshed successfully'
-      }, 200);
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'No valid session token found' }
+      }, 401);
     }
   }
 
@@ -493,19 +499,6 @@ window.fetch = async function (input, init) {
       }
 
       if (realResp && realResp.ok) return realResp;
-      if (realResp && realResp.status === 401 && !urlStr.includes('/auth/refresh')) {
-        console.warn('[mockApi] Backend returned 401 Unauthorized. Retrying with SuperAdmin token...');
-        try {
-          const authHeaders = {
-            ...(init?.headers || {}),
-            'Authorization': `Bearer ${DEV_SUPERADMIN_TOKEN}`
-          };
-          const retryResp = await originalFetch.apply(this, [input, { ...init, headers: authHeaders }]);
-          if (retryResp && retryResp.ok) {
-            return retryResp;
-          }
-        } catch (retryErr) {}
-      }
     } catch (e) {}
 
     if (method === 'GET') {
@@ -616,6 +609,146 @@ window.fetch = async function (input, init) {
     }
 
     return createMockResponse({ success: true, data: savedUsers });
+  }
+
+  // 4a. OpenAPI Buildings Service Interceptor (/api/sites/:siteId/buildings)
+  if (urlStr.includes('/buildings')) {
+    // Try hitting real backend first
+    try {
+      const realArgs = prepareRealFetchArgs(input, init);
+      const realResp = await originalFetch.apply(this, realArgs);
+      if (realResp && realResp.ok && realResp.status < 400) {
+        return realResp;
+      }
+    } catch(e) {}
+
+    let savedBuildings = [];
+    try {
+      savedBuildings = JSON.parse(localStorage.getItem('scada_buildings_db') || '[]');
+    } catch(e) {}
+
+    if (!Array.isArray(savedBuildings) || savedBuildings.length === 0) {
+      savedBuildings = [
+        {
+          id: 'bld_101',
+          siteId: 7,
+          name: 'Main Tower Alpha',
+          code: 'BLD-A',
+          totalFloors: 6,
+          description: 'Primary corporate administration & operations facility',
+          isActive: true,
+          displayOrder: 1,
+          createdAt: new Date(Date.now() - 180 * 864e5).toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'bld_102',
+          siteId: 7,
+          name: 'West Wing Processing Plant',
+          code: 'BLD-B',
+          totalFloors: 3,
+          description: 'Hydraulic systems, chiller units and HVAC central plant',
+          isActive: true,
+          displayOrder: 2,
+          createdAt: new Date(Date.now() - 120 * 864e5).toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'bld_103',
+          siteId: 4,
+          name: 'Bengaluru Innovation Center',
+          code: 'BLD-BIC',
+          totalFloors: 8,
+          description: 'R&D facility with high-density server rooms',
+          isActive: true,
+          displayOrder: 1,
+          createdAt: new Date(Date.now() - 90 * 864e5).toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'bld_104',
+          siteId: 1,
+          name: 'Cyber Tower Alpha',
+          code: 'BLD-CTA',
+          totalFloors: 12,
+          description: 'Multi-tenant high-rise industrial tower',
+          isActive: true,
+          displayOrder: 1,
+          createdAt: new Date(Date.now() - 60 * 864e5).toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      try { localStorage.setItem('scada_buildings_db', JSON.stringify(savedBuildings)); } catch(e) {}
+    }
+
+    const method = (init?.method || 'GET').toUpperCase();
+    const siteMatch = urlStr.match(/\/sites\/([0-9a-zA-Z_-]+)\/buildings/);
+    const siteIdFromUrl = siteMatch ? siteMatch[1] : null;
+    const bldMatch = urlStr.match(/\/buildings\/([0-9a-zA-Z_-]+)/);
+    const bldIdFromUrl = bldMatch ? bldMatch[1] : null;
+
+    // GET /sites/:siteId/buildings/:buildingId
+    if (method === 'GET' && bldIdFromUrl) {
+      const found = savedBuildings.find(b => String(b.id) === String(bldIdFromUrl));
+      if (found) return createMockResponse({ success: true, data: found });
+      return createMockResponse({ success: false, error: { message: 'Building not found' } }, 404);
+    }
+
+    // GET /sites/:siteId/buildings
+    if (method === 'GET') {
+      const filtered = siteIdFromUrl && siteIdFromUrl !== 'ALL'
+        ? savedBuildings.filter(b => String(b.siteId) === String(siteIdFromUrl))
+        : savedBuildings;
+      return createMockResponse({ success: true, data: filtered, total: filtered.length });
+    }
+
+    // POST /sites/:siteId/buildings
+    if (method === 'POST') {
+      let body = {};
+      try { body = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {}); } catch(e) {}
+      const targetSiteId = siteIdFromUrl || body.siteId || 7;
+      const newBld = {
+        id: `bld_${Date.now().toString(36)}`,
+        siteId: isNaN(Number(targetSiteId)) ? targetSiteId : Number(targetSiteId),
+        name: body.name || 'New Building',
+        code: body.code || `BLD-${Math.floor(Math.random() * 900 + 100)}`,
+        totalFloors: Number(body.totalFloors) || 1,
+        description: body.description || '',
+        isActive: body.isActive !== false,
+        displayOrder: Number(body.displayOrder) || 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      savedBuildings.unshift(newBld);
+      try { localStorage.setItem('scada_buildings_db', JSON.stringify(savedBuildings)); } catch(e) {}
+      return createMockResponse({ success: true, data: newBld, message: 'Building created successfully' }, 201);
+    }
+
+    // PATCH / PUT /sites/:siteId/buildings/:buildingId
+    if ((method === 'PATCH' || method === 'PUT') && bldIdFromUrl) {
+      let body = {};
+      try { body = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {}); } catch(e) {}
+      const idx = savedBuildings.findIndex(b => String(b.id) === String(bldIdFromUrl));
+      if (idx !== -1) {
+        savedBuildings[idx] = {
+          ...savedBuildings[idx],
+          ...body,
+          ...(body.totalFloors !== undefined ? { totalFloors: Number(body.totalFloors) } : {}),
+          ...(body.displayOrder !== undefined ? { displayOrder: Number(body.displayOrder) } : {}),
+          updatedAt: new Date().toISOString()
+        };
+        try { localStorage.setItem('scada_buildings_db', JSON.stringify(savedBuildings)); } catch(e) {}
+        return createMockResponse({ success: true, data: savedBuildings[idx], message: 'Building updated successfully' }, 200);
+      }
+      return createMockResponse({ success: false, error: { message: 'Building not found' } }, 404);
+    }
+
+    // DELETE /sites/:siteId/buildings/:buildingId
+    if (method === 'DELETE' && bldIdFromUrl) {
+      savedBuildings = savedBuildings.filter(b => String(b.id) !== String(bldIdFromUrl));
+      try { localStorage.setItem('scada_buildings_db', JSON.stringify(savedBuildings)); } catch(e) {}
+      return createMockResponse({ success: true, message: 'Building deleted successfully' }, 200);
+    }
   }
 
   // 4b. OpenAPI Sites Service Interceptor (Robust handler matching User Administration)

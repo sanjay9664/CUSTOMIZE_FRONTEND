@@ -55,11 +55,20 @@ const SETTING_CARDS = [
   {
     key: 'sites',
     title: 'Site Management',
-    description: 'Physical site configuration, buildings, and site overview',
+    description: 'Physical site configuration, geo-locations & infrastructure status',
     icon: <Building size={28} />,
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     path: '/manage-organisation?tab=site'
+  },
+  {
+    key: 'buildings',
+    title: 'Building Settings',
+    description: 'Hierarchical building management with dynamic site selector, floor counts & codes',
+    icon: <Building2 size={28} />,
+    color: '#06b6d4',
+    gradient: 'linear-gradient(135deg, #06b6d4, #0284c7)',
+    path: '/manage-organisation?tab=building'
   }
 ];
 
@@ -68,6 +77,7 @@ const SettingsIndex = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState(() => {
+    if (location.search.includes('tab=building')) return 'buildings';
     if (location.pathname.includes('/settings/sites') || location.search.includes('tab=site')) return 'sites';
     if (location.search.includes('tab=zone') || location.search.includes('tab=area')) return 'location';
     if (location.search.includes('tab=device')) return 'device';
@@ -78,7 +88,9 @@ const SettingsIndex = () => {
   });
 
   useEffect(() => {
-    if (location.pathname.includes('/settings/sites') || location.search.includes('tab=site')) {
+    if (location.search.includes('tab=building')) {
+      setActiveTab('buildings');
+    } else if (location.pathname.includes('/settings/sites') || location.search.includes('tab=site')) {
       setActiveTab('sites');
     } else if (location.search.includes('tab=zone') || location.search.includes('tab=area')) {
       setActiveTab('location');
@@ -104,6 +116,7 @@ const SettingsIndex = () => {
     else if (tab === 'location') navigate('/manage-organisation?tab=zone');
     else if (tab === 'device') navigate('/manage-organisation?tab=device');
     else if (tab === 'sites') navigate('/manage-organisation?tab=site');
+    else if (tab === 'buildings') navigate('/manage-organisation?tab=building');
   };
 
   const handleCardClick = (card) => {
@@ -274,6 +287,17 @@ const SettingsIndex = () => {
             >
               <Building size={16} />
               Site
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="buildings"
+              onClick={() => navigate('/manage-organisation?tab=building')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'buildings' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Building2 size={16} />
+              Buildings
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>

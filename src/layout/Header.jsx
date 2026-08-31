@@ -3,6 +3,7 @@ import { Menu, Search, User, Bell, LayoutGrid, Sun, Building2, Shield, Users, Bu
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { clearAuthCookies } from '../utils/cookieUtils';
 
 const Header = ({ collapsed, toggleSidebar }) => {
   const { isDark, toggleTheme } = useTheme();
@@ -86,6 +87,17 @@ const Header = ({ collapsed, toggleSidebar }) => {
 
             <Dropdown.Item 
               className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
+              onClick={() => navigate('/manage-organisation?tab=building')}
+            >
+              <Building2 size={16} className="text-info" />
+              <div className="d-flex flex-column">
+                <span className="fw-semibold fs-13">Building Settings</span>
+                <small className="text-muted fs-11">Manage Buildings & Site Selector</small>
+              </div>
+            </Dropdown.Item>
+
+            <Dropdown.Item 
+              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
               onClick={() => navigate('/settings/users')}
             >
               <Shield size={16} className="text-amber-400" />
@@ -151,8 +163,18 @@ const Header = ({ collapsed, toggleSidebar }) => {
             <Dropdown.Item 
               className="text-danger hover-bg-secondary fw-bold"
               onClick={() => {
-                localStorage.removeItem('isAuthenticated');
+                clearAuthCookies();
+                localStorage.removeItem('token');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                localStorage.removeItem('sochiot_token');
+                localStorage.removeItem('userData');
                 localStorage.removeItem('userRole');
+                localStorage.removeItem('isAuthenticated');
+                localStorage.removeItem('remembered_password');
+                localStorage.removeItem('impersonator_backup_user');
+                localStorage.removeItem('impersonator_backup_role');
+                sessionStorage.clear();
                 window.location.href = '/login';
               }}
             >

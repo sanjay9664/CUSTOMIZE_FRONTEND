@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Form, Modal, InputGroup, Spinner, Alert, Nav, Dropdown } from 'react-bootstrap';
 import {
   Building2, Building, MapPin, Globe, Shield, Plus, Search, Edit3, Trash2,
@@ -14,20 +14,15 @@ import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
 
 const API_BASE_URL = '/api';
 
-const DEV_SUPERADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNoZWRzaGUwMDAwenN2bjlpOXIwM241IiwiZW1haWwiOiJzYUBpc21hcnRhY2Nlc3MuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwicGVybWlzc2lvbnMiOlsiUEVSTV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJibXMtcGxhdGZvcm0iLCJhdWQiOiJibXMtYXBpIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc4NjY4NjAxMywiZXhwIjoxODE4MjQzNjEzfQ.keUks3gjheRnHnkSLoO0g0M1WhpmwDCDkIXkpxBow1Q';
-
 const getAuthHeaders = () => {
-  let token = localStorage.getItem('token') ||
+  const token = localStorage.getItem('token') ||
+    localStorage.getItem('access_token') ||
     localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') ||
-    localStorage.getItem('access_token') || '';
+    localStorage.getItem('auth_token') || '';
 
-  if (!token || token === 'undefined' || token === 'null' || token === 'bms-dev-token-admin') {
-    token = DEV_SUPERADMIN_TOKEN;
-  }
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
 
@@ -100,9 +95,18 @@ const ManageOrganisation = () => {
   });
 
   // Modals state for Buildings, Assets, Devices
+  const [selectedBuildingSiteId, setSelectedBuildingSiteId] = useState('ALL');
   const [showBuildingModal, setShowBuildingModal] = useState(false);
   const [editingBuilding, setEditingBuilding] = useState(null);
-  const [buildingForm, setBuildingForm] = useState({ name: '', code: '', totalFloors: 1, description: '', siteId: 7 });
+  const [buildingForm, setBuildingForm] = useState({
+    name: '',
+    code: '',
+    totalFloors: 1,
+    description: '',
+    isActive: true,
+    displayOrder: 0,
+    siteId: ''
+  });
 
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
@@ -472,8 +476,12 @@ const ManageOrganisation = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
+    const siteParam = params.get('siteId');
     if (tabParam && ['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device', 'widgets', 'rules', 'commands'].includes(tabParam)) {
       setActiveTab(tabParam);
+    }
+    if (siteParam) {
+      setSelectedBuildingSiteId(siteParam);
     }
   }, [location.search]);
 
@@ -504,10 +512,11 @@ const ManageOrganisation = () => {
   }, []);
 
   // Fetch Zones
-  const fetchZones = useCallback(async () => {
+  const fetchZones = useCallback(async (tenantFilterArg) => {
     try {
-      const url = selectedTenantFilter !== 'ALL'
-        ? `${API_BASE_URL}/zones?tenantId=${selectedTenantFilter}`
+      const targetFilter = tenantFilterArg !== undefined ? tenantFilterArg : selectedTenantFilter;
+      const url = targetFilter && targetFilter !== 'ALL'
+        ? `${API_BASE_URL}/zones?tenantId=${targetFilter}`
         : `${API_BASE_URL}/zones`;
       const res = await fetch(url, { headers: getAuthHeaders() });
       if (res.ok) {
@@ -517,15 +526,17 @@ const ManageOrganisation = () => {
     } catch (err) {
       console.warn('Zones fetch err:', err);
     }
-  }, [selectedTenantFilter]);
+  }, []);
 
   // Fetch Tenant Areas
-  const fetchAreas = useCallback(async () => {
+  const fetchAreas = useCallback(async (zoneFilterArg, tenantFilterArg) => {
     try {
+      const zFilter = zoneFilterArg !== undefined ? zoneFilterArg : selectedZoneFilter;
+      const tFilter = tenantFilterArg !== undefined ? tenantFilterArg : selectedTenantFilter;
       let url = `${API_BASE_URL}/areas`;
       const query = [];
-      if (selectedZoneFilter !== 'ALL') query.push(`zoneId=${selectedZoneFilter}`);
-      if (selectedTenantFilter !== 'ALL') query.push(`tenantId=${selectedTenantFilter}`);
+      if (zFilter && zFilter !== 'ALL') query.push(`zoneId=${zFilter}`);
+      if (tFilter && tFilter !== 'ALL') query.push(`tenantId=${tFilter}`);
       if (query.length) url += `?${query.join('&')}`;
 
       const res = await fetch(url, { headers: getAuthHeaders() });
@@ -536,7 +547,7 @@ const ManageOrganisation = () => {
     } catch (err) {
       console.warn('Areas fetch err:', err);
     }
-  }, [selectedZoneFilter, selectedTenantFilter]);
+  }, []);
 
   // Fetch Sites
   const fetchSites = useCallback(async () => {
@@ -552,12 +563,42 @@ const ManageOrganisation = () => {
   }, []);
 
   // Fetch Buildings
-  const fetchBuildings = useCallback(async () => {
+  const fetchBuildings = useCallback(async (siteIdArg) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/sites/7/buildings`, { headers: getAuthHeaders() });
-      if (res.ok) {
-        const json = await res.json();
-        setBuildings(normalizeList(json, 'buildings'));
+      const targetSiteId = siteIdArg !== undefined ? siteIdArg : selectedBuildingSiteId;
+      if (targetSiteId && targetSiteId !== 'ALL') {
+        const res = await fetch(`${API_BASE_URL}/sites/${targetSiteId}/buildings`, { headers: getAuthHeaders() });
+        if (res.ok) {
+          const json = await res.json();
+          const list = normalizeList(json, 'buildings');
+          setBuildings(list.map(b => ({
+            ...b,
+            siteId: targetSiteId
+          })));
+        }
+      } else {
+        const res = await fetch(`${API_BASE_URL}/sites`, { headers: getAuthHeaders() });
+        let siteList = [];
+        if (res.ok) {
+          const json = await res.json();
+          siteList = normalizeList(json, 'sites');
+        }
+        if (!siteList.length) {
+          siteList = [{ id: 7, name: 'Noida Testing Site' }, { id: 4, name: 'Testing' }, { id: 1, name: 'LIT India' }];
+        }
+        const buildingPromises = siteList.slice(0, 10).map(async (s) => {
+          try {
+            const bRes = await fetch(`${API_BASE_URL}/sites/${s.id}/buildings`, { headers: getAuthHeaders() });
+            if (bRes.ok) {
+              const bJson = await bRes.json();
+              const list = normalizeList(bJson, 'buildings');
+              return list.map(b => ({ ...b, siteId: s.id, siteName: s.name }));
+            }
+          } catch(e) {}
+          return [];
+        });
+        const results = await Promise.all(buildingPromises);
+        setBuildings(results.flat());
       }
     } catch (err) {
       console.warn('Buildings fetch err:', err);
@@ -634,21 +675,26 @@ const ManageOrganisation = () => {
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([
-      fetchCompanies(),
-      fetchTenants(),
-      fetchZones(),
-      fetchAreas(),
-      fetchSites(),
-      fetchBuildings(),
-      fetchAssets(),
-      fetchDevices(),
-      fetchTelemetryLogs(),
-      fetchReportsList(),
-      fetchAlarmsList()
-    ]);
-    setLoading(false);
-  }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites, fetchBuildings, fetchAssets, fetchDevices, fetchTelemetryLogs, fetchReportsList, fetchAlarmsList]);
+    try {
+      await Promise.all([
+        fetchCompanies(),
+        fetchTenants(),
+        fetchZones(),
+        fetchAreas(),
+        fetchSites(),
+        fetchBuildings(),
+        fetchAssets(),
+        fetchDevices(),
+        fetchTelemetryLogs(),
+        fetchReportsList(),
+        fetchAlarmsList()
+      ]);
+    } catch (e) {
+      console.warn('Initial fetchAllData err:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Run on initial mount
 
   // Action: Execute Telemetry Resync
   const handleExecuteResync = async (e) => {
@@ -737,13 +783,34 @@ const ManageOrganisation = () => {
     }
   };
 
+  const isInitialMount = useRef(true);
+
+  // Initial load
   useEffect(() => {
-    const existingToken = localStorage.getItem('token');
-    if (!existingToken || existingToken === 'bms-dev-token-admin' || existingToken === 'null' || existingToken === 'undefined') {
-      localStorage.setItem('token', DEV_SUPERADMIN_TOKEN);
-    }
     fetchAllData();
-  }, [fetchAllData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reactive load on filter changes (skip initial mount to prevent duplicate fetch)
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    if (activeTab === 'building') {
+      fetchBuildings(selectedBuildingSiteId);
+    }
+  }, [selectedBuildingSiteId, activeTab, fetchBuildings]);
+
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    if (activeTab === 'zone') fetchZones(selectedTenantFilter);
+  }, [selectedTenantFilter, activeTab, fetchZones]);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (activeTab === 'area') fetchAreas(selectedZoneFilter, selectedTenantFilter);
+  }, [selectedZoneFilter, selectedTenantFilter, activeTab, fetchAreas]);
 
   // Handle Tab Switch
   const handleTabSelect = (key) => {
@@ -858,6 +925,11 @@ const ManageOrganisation = () => {
 
   const handleOpenEditTenant = (tn) => {
     setEditingTenant(tn);
+    const validSubs = ['PREMIUM', 'BASIC', 'FREE', 'TRIAL'];
+    const resolvedSub = tn.subscription && validSubs.includes(tn.subscription.toUpperCase())
+      ? tn.subscription.toUpperCase()
+      : 'BASIC';
+
     setTenantForm({
       companyId: tn.companyId || companies[0]?.id || '',
       name: tn.name || '',
@@ -867,7 +939,7 @@ const ManageOrganisation = () => {
       email: tn.email || '',
       phone: tn.phone || '',
       sochiotOrgId: tn.sochiotOrgId || '',
-      subscription: tn.subscription || 'BASIC',
+      subscription: resolvedSub,
       addAddress: Boolean(tn.address),
       addressLine: tn.address || '',
       country: tn.country || 'India',
@@ -909,6 +981,11 @@ const ManageOrganisation = () => {
         resolvedSochiotOrgId = Math.floor(Math.random() * 900) + 100;
       }
 
+      const validSubs = ['PREMIUM', 'BASIC', 'FREE', 'TRIAL'];
+      const resolvedSubscription = tenantForm.subscription && validSubs.includes(tenantForm.subscription.toUpperCase())
+        ? tenantForm.subscription.toUpperCase()
+        : 'BASIC';
+
       const payload = {
         companyId: resolvedCompanyId,
         name: tenantForm.name.trim(),
@@ -916,7 +993,7 @@ const ManageOrganisation = () => {
         phone: tenantForm.phone ? tenantForm.phone.trim() : '+91-1234567890',
         address: fullAddress || 'Sector 63, Noida',
         sochiotOrgId: resolvedSochiotOrgId,
-        subscription: tenantForm.subscription || 'BASIC'
+        subscription: resolvedSubscription
       };
 
       const res = await fetch(url, {
@@ -1029,8 +1106,13 @@ const ManageOrganisation = () => {
 
   const handleOpenSubModal = (tn) => {
     setSelectedTenantForSub(tn);
+    const validSubs = ['PREMIUM', 'BASIC', 'FREE', 'TRIAL'];
+    const resolvedSub = tn.subscription && validSubs.includes(tn.subscription.toUpperCase())
+      ? tn.subscription.toUpperCase()
+      : 'BASIC';
+
     setSubForm({
-      subscription: tn.subscription || 'BASIC',
+      subscription: resolvedSub,
       subscriptionPeriod: tn.subscriptionPeriod || 'YEARLY',
       licenseValidity: tn.licenseValidity ? tn.licenseValidity.substring(0, 10) : ''
     });
@@ -1042,10 +1124,18 @@ const ManageOrganisation = () => {
     if (!selectedTenantForSub) return;
     setLoading(true);
     try {
+      const validSubs = ['PREMIUM', 'BASIC', 'FREE', 'TRIAL'];
+      const resolvedSub = subForm.subscription && validSubs.includes(subForm.subscription.toUpperCase())
+        ? subForm.subscription.toUpperCase()
+        : 'BASIC';
+
       const res = await fetch(`${API_BASE_URL}/tenants/${selectedTenantForSub.id}/subscription`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify(subForm)
+        body: JSON.stringify({
+          ...subForm,
+          subscription: resolvedSub
+        })
       });
       if (res.ok) {
         showToast('success', 'Tenant subscription updated successfully!');
@@ -1237,10 +1327,21 @@ const ManageOrganisation = () => {
     setLoading(false);
   };
 
-  // ================= BUILDING ACTIONS =================
+  // ================= BUILDING ACTIONS (OpenAPI Compliant) =================
   const handleOpenCreateBuilding = () => {
     setEditingBuilding(null);
-    setBuildingForm({ name: '', code: '', totalFloors: 1, description: '', siteId: 7 });
+    const defaultSite = (selectedBuildingSiteId && selectedBuildingSiteId !== 'ALL')
+      ? selectedBuildingSiteId
+      : (activeSites[0]?.id || 7);
+    setBuildingForm({
+      name: '',
+      code: '',
+      totalFloors: 1,
+      description: '',
+      isActive: true,
+      displayOrder: 0,
+      siteId: defaultSite
+    });
     setShowBuildingModal(true);
   };
 
@@ -1251,39 +1352,44 @@ const ManageOrganisation = () => {
       code: bld.code || '',
       totalFloors: bld.totalFloors || 1,
       description: bld.description || '',
-      siteId: bld.siteId || 7
+      isActive: bld.isActive !== false,
+      displayOrder: bld.displayOrder || 0,
+      siteId: bld.siteId || selectedBuildingSiteId || activeSites[0]?.id || 7
     });
     setShowBuildingModal(true);
   };
 
   const handleSaveBuilding = async (e) => {
     e.preventDefault();
-    if (!buildingForm.name) return showToast('danger', 'Building Name is required.');
+    if (!buildingForm.name?.trim()) return showToast('danger', 'Building Name is required.');
+    const siteId = (editingBuilding && editingBuilding.siteId) ? editingBuilding.siteId : buildingForm.siteId;
+    if (!siteId) return showToast('danger', 'Please select a parent Site for this building.');
     setLoading(true);
     try {
-      const siteId = buildingForm.siteId || 7;
       const url = editingBuilding
         ? `${API_BASE_URL}/sites/${siteId}/buildings/${editingBuilding.id}`
         : `${API_BASE_URL}/sites/${siteId}/buildings`;
       const method = editingBuilding ? 'PATCH' : 'POST';
+      const payload = {
+        name: buildingForm.name.trim(),
+        ...(buildingForm.code ? { code: buildingForm.code.trim() } : {}),
+        totalFloors: parseInt(buildingForm.totalFloors, 10) || 1,
+        description: buildingForm.description?.trim() || '',
+        isActive: Boolean(buildingForm.isActive),
+        displayOrder: parseInt(buildingForm.displayOrder, 10) || 0
+      };
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          name: buildingForm.name,
-          code: buildingForm.code,
-          totalFloors: Number(buildingForm.totalFloors),
-          description: buildingForm.description,
-          isActive: true
-        })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         showToast('success', editingBuilding ? 'Building updated successfully!' : 'Building created successfully!');
         setShowBuildingModal(false);
         fetchBuildings();
       } else {
-        const errJson = await res.json();
-        showToast('danger', errJson.message || 'Failed to save building');
+        const errJson = await res.json().catch(() => ({}));
+        showToast('danger', errJson.error?.message || errJson.message || 'Failed to save building');
       }
     } catch (err) {
       showToast('danger', err.message || 'Error saving building');
@@ -1291,11 +1397,12 @@ const ManageOrganisation = () => {
     setLoading(false);
   };
 
-  const handleDeleteBuilding = async (buildingId, siteId = 7) => {
-    if (!window.confirm('Delete this building?')) return;
+  const handleDeleteBuilding = async (buildingId, siteId) => {
+    if (!window.confirm('Are you sure you want to delete this building?')) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/buildings/${buildingId}`, {
+      const targetSiteId = siteId || selectedBuildingSiteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${targetSiteId}/buildings/${buildingId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -1303,8 +1410,8 @@ const ManageOrganisation = () => {
         showToast('success', 'Building deleted successfully!');
         fetchBuildings();
       } else {
-        const err = await res.json();
-        showToast('danger', err.message || 'Failed to delete building');
+        const err = await res.json().catch(() => ({}));
+        showToast('danger', err.error?.message || err.message || 'Failed to delete building');
       }
     } catch (err) {
       showToast('danger', err.message || 'Error deleting building');
@@ -2214,10 +2321,17 @@ const ManageOrganisation = () => {
     a.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredBuildings = activeBuildings.filter(b =>
-    b.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (b.code && b.code.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredBuildings = activeBuildings.filter(b => {
+    const matchesSearch = !searchTerm ||
+      b.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (b.code && b.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (b.description && b.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (b.siteName && b.siteName.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesSite = !selectedBuildingSiteId || selectedBuildingSiteId === 'ALL' || String(b.siteId) === String(selectedBuildingSiteId);
+
+    return matchesSearch && matchesSite;
+  });
 
   const filteredAssets = activeAssets.filter(a =>
     a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -2857,7 +2971,7 @@ const ManageOrganisation = () => {
       {activeTab !== 'site' && (
         <Card className="bg-dark-card border-0 mb-4 p-3 shadow-sm">
           <Row className="g-3 align-items-center">
-            <Col xs={12} md={5}>
+            <Col xs={12} md={activeTab === 'zone' || activeTab === 'area' ? 5 : 6}>
               <InputGroup>
                 <InputGroup.Text className="bg-transparent border-secondary border-opacity-25 text-slate-400">
                   <Search size={18} />
@@ -3175,53 +3289,138 @@ const ManageOrganisation = () => {
             </div>
           )}
 
-          {/* TAB: BUILDING MANAGEMENT */}
+          {/* TAB: BUILDING MANAGEMENT (OpenAPI Hierarchical Building System) */}
           {activeTab === 'building' && (
-            <div className="table-responsive">
-              <table className="table table-custom mb-0">
-                <thead>
-                  <tr>
-                    <th>Building Name</th>
-                    <th>Code</th>
-                    <th>Total Floors</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                    <th className="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredBuildings.length === 0 ? (
+            <div>
+              {/* Site Selector & Metric Summary Banner */}
+              <div className="p-3 mb-3 border-bottom border-secondary border-opacity-25 d-flex flex-wrap align-items-center justify-content-between gap-3" style={{ background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(30, 41, 59, 0.6))' }}>
+                <div className="d-flex align-items-center gap-3 flex-wrap">
+                  <div className="d-flex align-items-center gap-2">
+                    <MapPin className="text-info" size={18} />
+                    <span className="fw-bold fs-13 text-slate-200">Active Site:</span>
+                  </div>
+                  <Form.Select
+                    size="sm"
+                    value={selectedBuildingSiteId}
+                    onChange={(e) => setSelectedBuildingSiteId(e.target.value)}
+                    style={{ minWidth: '240px', maxWidth: '320px' }}
+                    className="bg-dark text-white border-info border-opacity-50 fw-semibold"
+                  >
+                    <option value="ALL">🏢 All Physical Sites ({activeSites.length})</option>
+                    {activeSites.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} (Site #{s.id}{s.city ? ` • ${s.city}` : ''})
+                      </option>
+                    ))}
+                  </Form.Select>
+                  {selectedBuildingSiteId !== 'ALL' && (
+                    <Badge bg="info" className="text-dark fw-bold px-2 py-1 fs-12">
+                      Site ID: {selectedBuildingSiteId}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="d-flex align-items-center gap-2">
+                  <Badge bg="dark" className="border border-secondary px-3 py-2 fs-12 text-slate-300">
+                    Total Buildings: <span className="text-info fw-bold">{filteredBuildings.length}</span>
+                  </Badge>
+                  <Badge bg="dark" className="border border-secondary px-3 py-2 fs-12 text-slate-300">
+                    Total Floors: <span className="text-emerald-400 fw-bold">{filteredBuildings.reduce((acc, b) => acc + (parseInt(b.totalFloors, 10) || 1), 0)}</span>
+                  </Badge>
+                  <Button variant="info" size="sm" onClick={handleOpenCreateBuilding} className="fw-bold d-flex align-items-center gap-1.5 text-dark">
+                    <Plus size={15} /> Add Building
+                  </Button>
+                </div>
+              </div>
+
+              <div className="table-responsive">
+                <table className="table table-custom mb-0">
+                  <thead>
                     <tr>
-                      <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No buildings found</td>
+                      <th>Building Name</th>
+                      <th>Code</th>
+                      <th>Parent Site</th>
+                      <th>Total Floors</th>
+                      <th>Display Order</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th className="text-end">Actions</th>
                     </tr>
-                  ) : filteredBuildings.map(b => (
-                    <tr key={b.id}>
-                      <td className="fw-bold text-white">
-                        <div className="d-flex align-items-center gap-2">
-                          <Building2 className="text-info" size={18} />
-                          {b.name}
-                        </div>
-                      </td>
-                      <td className="text-slate-300 fs-13">{b.code || 'N/A'}</td>
-                      <td className="text-slate-300 fs-13">{b.totalFloors || 1} Floors</td>
-                      <td className="text-slate-400 fs-12">{b.description || 'N/A'}</td>
-                      <td>
-                        <Badge bg="success" className="px-2 py-1">ACTIVE</Badge>
-                      </td>
-                      <td className="text-end">
-                        <div className="d-flex justify-content-end gap-1">
-                          <Button variant="outline-light" size="sm" title="Edit" onClick={() => handleOpenEditBuilding(b)}>
-                            <Edit3 size={14} />
-                          </Button>
-                          <Button variant="outline-danger" size="sm" title="Delete" onClick={() => handleDeleteBuilding(b.id, b.siteId)}>
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredBuildings.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="text-center py-5 text-muted">
+                          <Building2 size={36} className="text-slate-500 mb-2 d-block mx-auto opacity-50" />
+                          <div className="fw-semibold">No buildings found for the selected site.</div>
+                          <small className="text-slate-400">Click "Add Building" to create the first building under this site.</small>
+                        </td>
+                      </tr>
+                    ) : filteredBuildings.map(b => {
+                      const matchedSite = sites.find(s => String(s.id) === String(b.siteId));
+                      const isInactive = b.isActive === false || b.status === 'INACTIVE' || b.deletedAt;
+                      return (
+                        <tr key={b.id}>
+                          <td className="fw-bold text-white">
+                            <div className="d-flex align-items-center gap-2">
+                              <div style={{
+                                width: 34, height: 34, borderRadius: 8,
+                                background: 'rgba(6, 182, 212, 0.15)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}>
+                                <Building2 className="text-info" size={18} />
+                              </div>
+                              <div>
+                                <div className="text-white fs-14 fw-bold">{b.name}</div>
+                                {b.code && <small className="text-muted font-monospace">{b.code}</small>}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <Badge bg="dark" className="border border-info border-opacity-50 text-cyan-300 font-monospace fs-12 px-2 py-1">
+                              {b.code || 'BLD-N/A'}
+                            </Badge>
+                          </td>
+                          <td>
+                            <div className="d-flex align-items-center gap-1.5 text-slate-300 fs-13">
+                              <MapPin size={13} className="text-purple-400" />
+                              <span>{b.siteName || matchedSite?.name || `Site #${b.siteId || '7'}`}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <Badge bg="secondary" className="bg-opacity-25 text-slate-200 fs-12 px-2.5 py-1 fw-semibold">
+                              {b.totalFloors || 1} Floors
+                            </Badge>
+                          </td>
+                          <td className="text-slate-400 fs-13">
+                            #{b.displayOrder || 0}
+                          </td>
+                          <td className="text-slate-400 fs-12" style={{ maxWidth: '200px' }}>
+                            <div className="text-truncate" title={b.description || ''}>
+                              {b.description || <span className="text-muted fst-italic">No description</span>}
+                            </div>
+                          </td>
+                          <td>
+                            <Badge bg={isInactive ? 'secondary' : 'success'} className="px-2 py-1 fs-11">
+                              {isInactive ? 'INACTIVE' : 'ACTIVE'}
+                            </Badge>
+                          </td>
+                          <td className="text-end">
+                            <div className="d-flex justify-content-end gap-1">
+                              <Button variant="outline-light" size="sm" title="Edit Building" onClick={() => handleOpenEditBuilding(b)}>
+                                <Edit3 size={14} />
+                              </Button>
+                              <Button variant="outline-danger" size="sm" title="Delete Building" onClick={() => handleDeleteBuilding(b.id, b.siteId)}>
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -4729,7 +4928,8 @@ const ManageOrganisation = () => {
                       >
                         <option value="BASIC">BASIC</option>
                         <option value="PREMIUM">PREMIUM</option>
-                        <option value="ENTERPRISE">ENTERPRISE</option>
+                        <option value="FREE">FREE</option>
+                        <option value="TRIAL">TRIAL</option>
                       </Form.Select>
                     </Form.Group>
                   </Col>
@@ -5080,7 +5280,8 @@ const ManageOrganisation = () => {
               >
                 <option value="BASIC">BASIC</option>
                 <option value="PREMIUM">PREMIUM</option>
-                <option value="ENTERPRISE">ENTERPRISE</option>
+                <option value="FREE">FREE</option>
+                <option value="TRIAL">TRIAL</option>
               </Form.Select>
             </Form.Group>
             <Form.Group>
@@ -5159,61 +5360,129 @@ const ManageOrganisation = () => {
           <Button variant="secondary" onClick={() => setShowCompanyTenantsModal(false)}>Close</Button>
         </Modal.Footer>
       </Modal>
-      {/* BUILDING MODAL */}
+      {/* 8. BUILDING MODAL (OpenAPI 3.0.3 Compliant) */}
       <Modal show={showBuildingModal} onHide={() => setShowBuildingModal(false)} centered className="glass-modal">
         <Modal.Header closeButton className="border-secondary border-opacity-25">
           <Modal.Title className="fw-bold d-flex align-items-center gap-2">
-            <Building2 className="text-info" /> {editingBuilding ? 'Edit Building' : 'Add Building'}
+            <Building2 className="text-info" /> {editingBuilding ? 'Edit Building Details' : 'Create Building in Site'}
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSaveBuilding}>
           <Modal.Body className="d-flex flex-column gap-3">
             <Form.Group>
-              <Form.Label className="fs-13 fw-semibold text-slate-300">Building Name *</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="e.g. Tower A"
-                value={buildingForm.name}
-                onChange={(e) => setBuildingForm({ ...buildingForm, name: e.target.value })}
+              <Form.Label className="fs-13 fw-semibold text-slate-300 d-flex justify-content-between align-items-center">
+                <span>Parent Physical Site <span className="text-danger">*</span></span>
+                {editingBuilding && (
+                  <Badge bg="dark" className="border border-secondary border-opacity-50 text-slate-400 font-monospace fs-11 py-1 px-2">
+                    {/* 🔒 Locked (Immutable) */}
+                  </Badge>
+                )}
+              </Form.Label>
+              <Form.Select
                 required
-                className="bg-dark text-white border-secondary border-opacity-25"
-              />
+                disabled={!!editingBuilding}
+                value={buildingForm.siteId}
+                onChange={(e) => setBuildingForm({ ...buildingForm, siteId: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                style={editingBuilding ? { opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'rgba(15, 23, 42, 0.6)' } : {}}
+              >
+                <option value="">-- Select Parent Site --</option>
+                {activeSites.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} (Site #{s.id}{s.city ? ` • ${s.city}, ${s.state || ''}` : ''})
+                  </option>
+                ))}
+              </Form.Select>
+              {editingBuilding && (
+                <Form.Text className="text-muted fs-11 mt-1 d-block">
+                  Buildings belong strictly to their parent site and cannot be moved across sites.
+                </Form.Text>
+              )}
             </Form.Group>
-            <Form.Group>
-              <Form.Label className="fs-13 fw-semibold text-slate-300">Building Code</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="e.g. BLD-01"
-                value={buildingForm.code}
-                onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value })}
-                className="bg-dark text-white border-secondary border-opacity-25"
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label className="fs-13 fw-semibold text-slate-300">Total Floors</Form.Label>
-              <Form.Control
-                type="number"
-                min="1"
-                value={buildingForm.totalFloors}
-                onChange={(e) => setBuildingForm({ ...buildingForm, totalFloors: e.target.value })}
-                className="bg-dark text-white border-secondary border-opacity-25"
-              />
-            </Form.Group>
+
+            <Row className="g-3">
+              <Col md={7}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Building Name <span className="text-danger">*</span></Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="e.g. Main Tower Alpha"
+                    value={buildingForm.name}
+                    onChange={(e) => setBuildingForm({ ...buildingForm, name: e.target.value })}
+                    required
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={5}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Building Code</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="e.g. BLD-A"
+                    value={buildingForm.code}
+                    onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 font-monospace"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="g-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Total Floors</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 5"
+                    value={buildingForm.totalFloors}
+                    onChange={(e) => setBuildingForm({ ...buildingForm, totalFloors: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Display Order</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={buildingForm.displayOrder}
+                    onChange={(e) => setBuildingForm({ ...buildingForm, displayOrder: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
             <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Description</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
-                placeholder="Building description..."
+                placeholder="Primary corporate office tower, facilities, etc."
                 value={buildingForm.description}
                 onChange={(e) => setBuildingForm({ ...buildingForm, description: e.target.value })}
                 className="bg-dark text-white border-secondary border-opacity-25"
               />
             </Form.Group>
+
+            <Form.Group className="pt-1">
+              <Form.Check
+                type="switch"
+                id="building-active-toggle"
+                label="Building Active Status (Online / Operational)"
+                checked={buildingForm.isActive}
+                onChange={(e) => setBuildingForm({ ...buildingForm, isActive: e.target.checked })}
+                className="fw-semibold text-info fs-14"
+              />
+            </Form.Group>
           </Modal.Body>
           <Modal.Footer className="border-secondary border-opacity-25">
             <Button variant="outline-secondary" onClick={() => setShowBuildingModal(false)}>Cancel</Button>
-            <Button variant="info" type="submit" disabled={loading} className="fw-semibold text-dark">
+            <Button variant="info" type="submit" disabled={loading} className="fw-semibold text-dark px-4">
               {loading ? <Spinner animation="border" size="sm" /> : editingBuilding ? 'Update Building' : 'Create Building'}
             </Button>
           </Modal.Footer>
