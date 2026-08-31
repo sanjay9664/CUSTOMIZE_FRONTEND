@@ -4,7 +4,7 @@
  */
 import { getCookie, setAuthCookies } from '../utils/cookieUtils';
 
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const REFRESH_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
 
 let refreshTimer = null;
 let activeRefreshPromise = null;

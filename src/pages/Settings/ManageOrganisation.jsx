@@ -11,11 +11,14 @@ import SiteManagement from './SiteManagement';
 import PdfButton from '../../components/PdfButton';
 import UserPdfReportModal from '../../components/UserPdfReportModal';
 import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
+import { getCookie } from '../../utils/cookieUtils';
 
 const API_BASE_URL = '/api';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') ||
+  const token = getCookie('access_token') ||
+    getCookie('token') ||
+    localStorage.getItem('token') ||
     localStorage.getItem('access_token') ||
     localStorage.getItem('sochiot_token') ||
     localStorage.getItem('auth_token') || '';
@@ -47,6 +50,10 @@ const ManageOrganisation = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Role-Based Access Control (RBAC) Security Check
+  const userRole = (localStorage.getItem('userRole') || getCookie('userRole') || 'USER').toUpperCase();
+  const isAdmin = ['SUPERADMIN', 'ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(userRole);
+
   // Tab State: 'company' | 'tenant' | 'zone' | 'area' | 'site' | 'building' | 'asset' | 'device' | 'telemetry' | 'report' | 'alarm'
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search);
@@ -69,6 +76,17 @@ const ManageOrganisation = () => {
   const [alarmsList, setAlarmsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+
+  // Active Entity Helpers (Declared early to prevent TDZ ReferenceErrors)
+  const activeCompanies = normalizeList(companies, 'companies').filter(c => c.status !== 'INACTIVE' && !c.deletedAt);
+  const activeTenants = normalizeList(tenants, 'tenants').filter(t => t.status !== 'INACTIVE' && !t.deletedAt);
+  const activeZones = normalizeList(zones, 'zones').filter(z => z.status !== 'INACTIVE' && !z.deletedAt);
+  const activeAreas = normalizeList(areas, 'areas').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
+  const activeSites = normalizeList(sites, 'sites').filter(s => s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
+  const activeBuildings = normalizeList(buildings, 'buildings').filter(b => b.isActive !== false && !b.deletedAt);
+  const activeAssets = normalizeList(assets, 'assets').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
+  const rawActiveDevices = normalizeList(devices, 'devices').filter(d => d.isActive !== false && d.status !== 'DISABLED');
+  const activeDevices = rawActiveDevices;
 
   // Modals state for Telemetry Resync, Reports, Alarms
   const [showResyncModal, setShowResyncModal] = useState(false);
@@ -608,10 +626,7 @@ const ManageOrganisation = () => {
   // Fetch Assets
   const fetchAssets = useCallback(async () => {
     try {
-      let res = await fetch(`${API_BASE_URL}/sites/4/assets`, { headers: getAuthHeaders() });
-      if (!res.ok) {
-        res = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
-      }
+      const res = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         setAssets(normalizeList(json, 'assets'));
@@ -642,7 +657,8 @@ const ManageOrganisation = () => {
   // Fetch Telemetry Resync Logs
   const fetchTelemetryLogs = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/sites/7/telemetry/resync-logs`, { headers: getAuthHeaders() });
+      const targetSite = (activeSites && activeSites[0]?.id) || 1;
+      const res = await fetch(`${API_BASE_URL}/sites/${targetSite}/telemetry/resync-logs`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         setTelemetryLogs(normalizeList(json, 'logs'));
@@ -659,7 +675,7 @@ const ManageOrganisation = () => {
       ];
       setTelemetryLogs(fallbackLogs);
     }
-  }, []);
+  }, [activeSites]);
 
   // Fetch Reports List
   const fetchReportsList = useCallback(async () => {
@@ -880,6 +896,7 @@ const ManageOrganisation = () => {
   };
 
   const handleDeleteCompany = async (id) => {
+    if (!isAdmin) return showToast('danger', 'Unauthorized: Administrative privileges required to delete companies.');
     if (!window.confirm('Are you sure you want to delete this company?')) return;
     setLoading(true);
     try {
@@ -966,33 +983,35 @@ const ManageOrganisation = () => {
 
   const handleSaveTenant = async (e) => {
     e.preventDefault();
-    if (!tenantForm.name) return showToast('danger', 'Organization name is required');
+    if (!tenantForm.name?.trim()) return showToast('danger', 'Organization name is required');
+    if (!tenantForm.email || !tenantForm.email.includes('@')) {
+      return showToast('danger', 'Please enter a valid administrative contact email address.');
+    }
     setLoading(true);
 
     try {
       const url = editingTenant ? `${API_BASE_URL}/tenants/${editingTenant.id}` : `${API_BASE_URL}/tenants`;
       const method = editingTenant ? 'PATCH' : 'POST';
 
-      const computedEmail = tenantForm.email && tenantForm.email.includes('@')
-        ? tenantForm.email.trim()
-        : `admin_${Date.now().toString().slice(-6)}@${tenantForm.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'org'}.com`;
+      const computedEmail = tenantForm.email.trim();
 
       const fullAddress = tenantForm.addAddress
         ? [tenantForm.addressLine, tenantForm.city, tenantForm.state, tenantForm.country, tenantForm.zipCode].filter(Boolean).join(', ')
         : tenantForm.addressLine || '';
 
-      let resolvedCompanyId = tenantForm.companyId;
+      let resolvedCompanyId = editingTenant ? (editingTenant.companyId || tenantForm.companyId) : tenantForm.companyId;
       if (!resolvedCompanyId || resolvedCompanyId.trim() === '') {
         if (companies && companies.length > 0 && companies[0].id) {
           resolvedCompanyId = companies[0].id;
         } else {
-          resolvedCompanyId = 'cmshedsjg0001zsvnof6omhaw';
+          setLoading(false);
+          return showToast('danger', 'Please select a valid parent Company.');
         }
       }
 
       let resolvedSochiotOrgId = Number(tenantForm.sochiotOrgId);
       if (!tenantForm.sochiotOrgId || isNaN(resolvedSochiotOrgId) || resolvedSochiotOrgId <= 0) {
-        resolvedSochiotOrgId = Math.floor(Math.random() * 900) + 100;
+        resolvedSochiotOrgId = undefined;
       }
 
       const validSubs = ['PREMIUM', 'BASIC', 'FREE', 'TRIAL'];
@@ -1006,7 +1025,7 @@ const ManageOrganisation = () => {
         email: computedEmail,
         phone: tenantForm.phone ? tenantForm.phone.trim() : '+91-1234567890',
         address: fullAddress || 'Sector 63, Noida',
-        sochiotOrgId: resolvedSochiotOrgId,
+        ...(resolvedSochiotOrgId ? { sochiotOrgId: resolvedSochiotOrgId } : {}),
         subscription: resolvedSubscription
       };
 
@@ -1022,11 +1041,11 @@ const ManageOrganisation = () => {
         setShowTenantModal(false);
         fetchTenants();
       } else {
-        let errorMsg = 'Failed to save organization';
+        let errorMsg = 'Failed to save organization. Please verify your input.';
         try {
           const errJson = await res.json();
           if (errJson.errors && Array.isArray(errJson.errors)) {
-            errorMsg = errJson.errors.map(e => `${e.path?.join('.') || 'field'}: ${e.message}`).join(', ');
+            errorMsg = errJson.errors.map(e => e.message || 'Validation error').join(', ');
           } else if (errJson.error?.message) {
             errorMsg = errJson.error.message;
           } else if (errJson.message) {
@@ -1042,6 +1061,7 @@ const ManageOrganisation = () => {
   };
 
   const handleDeleteTenant = async (id) => {
+    if (!isAdmin) return showToast('danger', 'Unauthorized: Administrative privileges required to delete organizations.');
     if (!window.confirm('Soft delete this organization? Zones and Areas will be inactivated.')) return;
     setLoading(true);
     try {
@@ -1224,6 +1244,7 @@ const ManageOrganisation = () => {
   };
 
   const handleDeleteZone = async (id) => {
+    if (!isAdmin) return showToast('danger', 'Unauthorized: Administrative privileges required to delete zones.');
     if (!window.confirm('Delete this zone? Associated areas will also be inactivated.')) return;
     setLoading(true);
     try {
@@ -1321,6 +1342,7 @@ const ManageOrganisation = () => {
   };
 
   const handleDeleteArea = async (id) => {
+    if (!isAdmin) return showToast('danger', 'Unauthorized: Administrative privileges required to delete areas.');
     if (!window.confirm('Delete this area?')) return;
     setLoading(true);
     try {
@@ -1411,11 +1433,12 @@ const ManageOrganisation = () => {
     setLoading(false);
   };
 
-  const handleDeleteBuilding = async (buildingId, siteId) => {
+  const handleDeleteBuilding = async (siteId, buildingId) => {
+    if (!isAdmin) return showToast('danger', 'Unauthorized: Administrative privileges required to delete buildings.');
     if (!window.confirm('Are you sure you want to delete this building?')) return;
     setLoading(true);
     try {
-      const targetSiteId = siteId || selectedBuildingSiteId || 7;
+      const targetSiteId = siteId || selectedBuildingSiteId;
       const res = await fetch(`${API_BASE_URL}/sites/${targetSiteId}/buildings/${buildingId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
@@ -1580,11 +1603,13 @@ const ManageOrganisation = () => {
     setLoading(false);
   };
 
-  const handleDeleteDevice = async (deviceId, siteId = 7) => {
+  const handleDeleteDevice = async (deviceId, siteId) => {
+    if (!isAdmin) return showToast('danger', 'Unauthorized: Administrative privileges required to delete devices.');
     if (!window.confirm('Delete this device?')) return;
+    const targetSiteId = siteId || (selectedBuildingSiteId && selectedBuildingSiteId !== 'ALL' ? selectedBuildingSiteId : (activeSites[0]?.id || 1));
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}`, {
+      const res = await fetch(`${API_BASE_URL}/sites/${targetSiteId}/devices/${deviceId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -2235,7 +2260,7 @@ const ManageOrganisation = () => {
 
   const handleSyncSpecificRuleByFields = async (ruleId) => {
     try {
-      const siteId = 7;
+      const siteId = (selectedBuildingSiteId && selectedBuildingSiteId !== 'ALL') ? selectedBuildingSiteId : (activeSites[0]?.id || 1);
       const deviceId = selectedDeviceForRulesTab || 1;
       showToast('info', `Syncing specific rule ${ruleId} by Field Names...`);
       await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/${ruleId}/sync-with-fields`, {
@@ -2251,7 +2276,7 @@ const ManageOrganisation = () => {
   // ================= COMMANDS MICROSERVICE API HANDLERS =================
   const handleFetchCommandHistory = async (deviceId = selectedDeviceForCommandsTab) => {
     try {
-      const siteId = 7;
+      const siteId = (selectedBuildingSiteId && selectedBuildingSiteId !== 'ALL') ? selectedBuildingSiteId : (activeSites[0]?.id || 1);
       const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/commands`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
@@ -2267,8 +2292,9 @@ const ManageOrganisation = () => {
 
   const handleSendCommandSubmit = async (e) => {
     e.preventDefault();
+    if (!isAdmin) return showToast('danger', 'Unauthorized: Admin privileges required to dispatch hardware commands.');
     try {
-      const siteId = 7;
+      const siteId = (selectedBuildingSiteId && selectedBuildingSiteId !== 'ALL') ? selectedBuildingSiteId : (activeSites[0]?.id || 1);
       const deviceId = selectedDeviceForCommandsTab || 1;
       const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/commands`, {
         method: 'POST',
@@ -2320,17 +2346,7 @@ const ManageOrganisation = () => {
     } catch (e) {}
   };
 
-  // Filtering helpers - Filter out INACTIVE / soft-deleted items so ONLY active items are displayed and counted
-  const activeCompanies = normalizeList(companies, 'companies').filter(c => c.status !== 'INACTIVE' && !c.deletedAt);
-  const activeTenants = normalizeList(tenants, 'tenants').filter(t => t.status !== 'INACTIVE' && !t.deletedAt);
-  const activeZones = normalizeList(zones, 'zones').filter(z => z.status !== 'INACTIVE' && !z.deletedAt);
-  const activeAreas = normalizeList(areas, 'areas').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
-  const activeSites = normalizeList(sites, 'sites').filter(s => s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
-  const activeBuildings = normalizeList(buildings, 'buildings').filter(b => b.isActive !== false && !b.deletedAt);
-  const activeAssets = normalizeList(assets, 'assets').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
-  const rawActiveDevices = normalizeList(devices, 'devices').filter(d => d.isActive !== false && d.status !== 'DISABLED');
-  const activeDevices = rawActiveDevices;
-
+  // Search Filter Helpers
   const filteredCompanies = activeCompanies.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -4948,9 +4964,16 @@ const ManageOrganisation = () => {
 
       {/* 2. TENANT / ORGANIZATION MODAL */}
       <Modal show={showTenantModal} onHide={() => { setEditingTenant(null); setShowTenantModal(false); }} size={tenantForm.addAddress ? "xl" : "lg"} centered className="glass-modal">
-        <Modal.Header closeButton className="border-secondary border-opacity-25">
-          <Modal.Title className="fw-bold d-flex align-items-center gap-2 text-white">
-            <Building2 className="text-info" /> {editingTenant ? 'Edit Organization' : 'Add Organization'}
+        <Modal.Header closeButton className="border-secondary border-opacity-25 pb-3">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2 text-white fs-18">
+            <div style={{
+              width: 34, height: 34, borderRadius: 8,
+              background: 'rgba(6, 182, 212, 0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Building2 className="text-info" size={18} />
+            </div>
+            <span>{editingTenant ? 'Edit Organization Details' : 'Add New Organization'}</span>
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSaveTenant}>
@@ -4961,24 +4984,28 @@ const ManageOrganisation = () => {
                 <Row className="g-3">
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Name <span className="text-danger">*</span></Form.Label>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Organization Name <span className="text-danger">*</span>
+                      </Form.Label>
                       <Form.Control
                         required
-                        placeholder="Organization Name"
+                        placeholder="e.g. Sumilon Industries"
                         value={tenantForm.name}
                         onChange={(e) => setTenantForm({ ...tenantForm, name: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                       />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Server URL</Form.Label>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Server URL
+                      </Form.Label>
                       <Form.Control
-                        placeholder="Server URL"
+                        placeholder="https://app.sochiot.com"
                         value={tenantForm.serverUrl}
                         onChange={(e) => setTenantForm({ ...tenantForm, serverUrl: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
                       />
                     </Form.Group>
                   </Col>
@@ -4987,11 +5014,13 @@ const ManageOrganisation = () => {
                 <Row className="g-3">
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Organization Type <span className="text-danger">*</span></Form.Label>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Organization Type <span className="text-danger">*</span>
+                      </Form.Label>
                       <Form.Select
                         value={tenantForm.orgType}
                         onChange={(e) => setTenantForm({ ...tenantForm, orgType: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                       >
                         <option value="Company">Company</option>
                         <option value="SAAS">SAAS</option>
@@ -5002,17 +5031,46 @@ const ManageOrganisation = () => {
                   </Col>
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Parent Company</Form.Label>
-                      <Form.Select
-                        value={tenantForm.companyId}
-                        onChange={(e) => setTenantForm({ ...tenantForm, companyId: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
-                      >
-                        <option value="">-- Select Parent Company --</option>
-                        {activeCompanies.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </Form.Select>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Parent Company {editingTenant ? '' : <span className="text-danger">*</span>}
+                      </Form.Label>
+                      {editingTenant ? (
+                        <div
+                          className="p-2.5 rounded-3 d-flex align-items-center justify-content-between"
+                          style={{
+                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(148, 163, 184, 0.15)',
+                            height: '42px'
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-2">
+                            <div style={{
+                              width: 24, height: 24, borderRadius: 5,
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              <Building className="text-emerald-400" size={13} />
+                            </div>
+                            <span className="text-white fw-bold fs-13">
+                              {activeCompanies.find(c => String(c.id) === String(editingTenant.companyId))?.name || editingTenant.companyName || 'octiot'}
+                            </span>
+                          </div>
+                          <Badge bg="dark" className="border border-secondary border-opacity-50 text-slate-400 font-monospace fs-11 px-2 py-0.5">
+                            
+                          </Badge>
+                        </div>
+                      ) : (
+                        <Form.Select
+                          value={tenantForm.companyId}
+                          onChange={(e) => setTenantForm({ ...tenantForm, companyId: e.target.value })}
+                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
+                        >
+                          <option value="">-- Select Parent Company --</option>
+                          {activeCompanies.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </Form.Select>
+                      )}
                     </Form.Group>
                   </Col>
                 </Row>
@@ -5020,61 +5078,71 @@ const ManageOrganisation = () => {
                 <Row className="g-3">
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Contact Email</Form.Label>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Contact Email
+                      </Form.Label>
                       <Form.Control
                         type="email"
                         placeholder="admin@org.com"
                         value={tenantForm.email}
                         onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                       />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Phone</Form.Label>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Phone Number
+                      </Form.Label>
                       <Form.Control
                         placeholder="+91-1234567890"
                         value={tenantForm.phone}
                         onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
                       />
                     </Form.Group>
                   </Col>
                 </Row>
 
                 <Form.Group>
-                  <Form.Label className="fs-13 fw-semibold text-slate-200">Description</Form.Label>
+                  <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                    Description
+                  </Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={2}
-                    placeholder="Enter organization description..."
+                    placeholder="Enter organization description and operational scope..."
                     value={tenantForm.description}
                     onChange={(e) => setTenantForm({ ...tenantForm, description: e.target.value })}
-                    className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                    className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                   />
                 </Form.Group>
 
                 <Row className="g-3">
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Sochiot Org ID</Form.Label>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Sochiot Org ID
+                      </Form.Label>
                       <Form.Control
                         type="number"
-                        placeholder="e.g. 7"
+                        placeholder="e.g. 882"
                         value={tenantForm.sochiotOrgId}
                         onChange={(e) => setTenantForm({ ...tenantForm, sochiotOrgId: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
                       />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fs-13 fw-semibold text-slate-200">Subscription Tier</Form.Label>
+                      <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                        Subscription Tier
+                      </Form.Label>
                       <Form.Select
                         value={tenantForm.subscription}
                         onChange={(e) => setTenantForm({ ...tenantForm, subscription: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                        className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                       >
                         <option value="BASIC">BASIC</option>
                         <option value="PREMIUM">PREMIUM</option>
@@ -5087,24 +5155,36 @@ const ManageOrganisation = () => {
 
                 {!tenantForm.addAddress && (
                   <Form.Group>
-                    <Form.Label className="fs-13 fw-semibold text-slate-200">Address</Form.Label>
+                    <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                      Primary Address
+                    </Form.Label>
                     <Form.Control
-                      placeholder="e.g. Sector 63, Noida"
+                      placeholder="e.g. Bangalore, Karnataka"
                       value={tenantForm.addressLine}
                       onChange={(e) => setTenantForm({ ...tenantForm, addressLine: e.target.value })}
-                      className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                      className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                     />
                   </Form.Group>
                 )}
 
-                <div className="pt-2">
+                {/* ADDRESS BUILDER TOGGLE CARD */}
+                <div
+                  className="p-3 rounded-3 d-flex align-items-center justify-content-between mt-1"
+                  style={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    border: '1px solid rgba(148, 163, 184, 0.15)'
+                  }}
+                >
+                  <div>
+                    <div className="text-white fs-13 fw-semibold">Detailed Address Builder</div>
+                    <small className="text-slate-400 fs-11">Configure Country, State, City and Postal Code</small>
+                  </div>
                   <Form.Check
                     type="switch"
                     id="add-address-toggle"
-                    label="Detailed Address Builder (Country/State/City)"
                     checked={tenantForm.addAddress}
                     onChange={(e) => setTenantForm({ ...tenantForm, addAddress: e.target.checked })}
-                    className="fw-bold text-info fs-14"
+                    className="fs-16 cursor-pointer"
                   />
                 </div>
               </Col>
@@ -5112,26 +5192,39 @@ const ManageOrganisation = () => {
               {/* Right Address Column - ONLY RENDERED WHEN addAddress IS TRUE */}
               {tenantForm.addAddress && (
                 <Col xs={12} md={6} className="d-flex flex-column gap-3 border-start border-secondary border-opacity-25 ps-md-4">
-                  <h6 className="fw-bold text-info mb-1">Organization Location / Address Details</h6>
+                  <div className="d-flex align-items-center gap-2 pb-1">
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 6,
+                      background: 'rgba(6, 182, 212, 0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <MapPin className="text-cyan-400" size={15} />
+                    </div>
+                    <h6 className="fw-bold text-white mb-0 fs-14">Location & Regional Details</h6>
+                  </div>
 
                   <Form.Group>
-                    <Form.Label className="fs-13 fw-semibold text-slate-200">Address Line <span className="text-danger">*</span></Form.Label>
+                    <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                      Address Line <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
-                      placeholder="Address"
+                      placeholder="e.g. 12th Main, Indiranagar"
                       value={tenantForm.addressLine}
                       onChange={(e) => setTenantForm({ ...tenantForm, addressLine: e.target.value })}
-                      className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                      className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                     />
                   </Form.Group>
 
                   <Row className="g-3">
                     <Col md={6}>
                       <Form.Group>
-                        <Form.Label className="fs-13 fw-semibold text-slate-200">Country <span className="text-danger">*</span></Form.Label>
+                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                          Country <span className="text-danger">*</span>
+                        </Form.Label>
                         <Form.Select
                           value={tenantForm.country}
                           onChange={(e) => setTenantForm({ ...tenantForm, country: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                         >
                           <option value="">Please Select Country</option>
                           <option value="India">India</option>
@@ -5145,11 +5238,13 @@ const ManageOrganisation = () => {
                     </Col>
                     <Col md={6}>
                       <Form.Group>
-                        <Form.Label className="fs-13 fw-semibold text-slate-200">State <span className="text-danger">*</span></Form.Label>
+                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                          State <span className="text-danger">*</span>
+                        </Form.Label>
                         <Form.Select
                           value={tenantForm.state}
                           onChange={(e) => setTenantForm({ ...tenantForm, state: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                         >
                           <option value="">Please Select State</option>
                           <option value="Delhi">Delhi</option>
@@ -5167,23 +5262,27 @@ const ManageOrganisation = () => {
                   <Row className="g-3">
                     <Col md={6}>
                       <Form.Group>
-                        <Form.Label className="fs-13 fw-semibold text-slate-200">City <span className="text-danger">*</span></Form.Label>
+                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                          City <span className="text-danger">*</span>
+                        </Form.Label>
                         <Form.Control
-                          placeholder="Please enter City"
+                          placeholder="e.g. Bangalore"
                           value={tenantForm.city}
                           onChange={(e) => setTenantForm({ ...tenantForm, city: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13"
                         />
                       </Form.Group>
                     </Col>
                     <Col md={6}>
                       <Form.Group>
-                        <Form.Label className="fs-13 fw-semibold text-slate-200">Zip Code <span className="text-danger">*</span></Form.Label>
+                        <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
+                          Zip Code <span className="text-danger">*</span>
+                        </Form.Label>
                         <Form.Control
-                          placeholder="Please enter Zip Code"
+                          placeholder="e.g. 560038"
                           value={tenantForm.zipCode}
                           onChange={(e) => setTenantForm({ ...tenantForm, zipCode: e.target.value })}
-                          className="bg-dark text-white border-secondary border-opacity-25 py-2"
+                          className="bg-dark text-white border-secondary border-opacity-25 py-2 fs-13 font-monospace"
                         />
                       </Form.Group>
                     </Col>
@@ -5192,12 +5291,12 @@ const ManageOrganisation = () => {
               )}
             </Row>
           </Modal.Body>
-          <Modal.Footer className="border-secondary border-opacity-25 justify-content-start gap-2">
-            <Button variant="primary" type="submit" disabled={loading} className="fw-bold px-4" style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}>
-              {loading ? <Spinner size="sm" animation="border" /> : 'Save'}
-            </Button>
-            <Button variant="outline-light" onClick={() => setShowTenantModal(false)} className="px-4">
+          <Modal.Footer className="border-secondary border-opacity-25 justify-content-end gap-2 pt-3">
+            <Button variant="outline-secondary" onClick={() => setShowTenantModal(false)} className="px-3 py-1.5">
               Cancel
+            </Button>
+            <Button variant="info" type="submit" disabled={loading} className="fw-semibold text-dark px-4 py-1.5 shadow-sm">
+              {loading ? <Spinner size="sm" animation="border" /> : editingTenant ? 'Update Organization' : 'Create Organization'}
             </Button>
           </Modal.Footer>
         </Form>
