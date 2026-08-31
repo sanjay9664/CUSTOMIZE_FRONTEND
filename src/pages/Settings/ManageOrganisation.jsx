@@ -5185,7 +5185,7 @@ const ManageOrganisation = () => {
             {/* Single Headquarters Address Textarea */}
             <Form.Group>
               <Form.Label className="fs-12 text-uppercase fw-bold text-slate-400 mb-1.5" style={{ letterSpacing: '0.04em' }}>
-                Headquarters Address
+                Address
               </Form.Label>
               <Form.Control
                 as="textarea"
