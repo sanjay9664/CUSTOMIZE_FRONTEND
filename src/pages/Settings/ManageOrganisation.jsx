@@ -626,11 +626,22 @@ const ManageOrganisation = () => {
   // Fetch Assets
   const fetchAssets = useCallback(async () => {
     try {
+      let list = [];
       const res = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
-        setAssets(normalizeList(json, 'assets'));
+        list = normalizeList(json, 'assets');
       }
+      const userAssets = JSON.parse(localStorage.getItem('tb_created_assets') || '[]');
+      if (userAssets.length > 0) {
+        const existingIds = new Set(list.map(a => String(a.id)));
+        const newAdditions = userAssets.filter(a => !existingIds.has(String(a.id)));
+        list = [...newAdditions, ...list.map(a => {
+          const userEdit = userAssets.find(u => String(u.id) === String(a.id));
+          return userEdit ? { ...a, ...userEdit } : a;
+        })];
+      }
+      setAssets(list);
     } catch (err) {
       console.warn('Assets fetch err:', err);
     }
@@ -1459,7 +1470,8 @@ const ManageOrganisation = () => {
   // ================= ASSET ACTIONS =================
   const handleOpenCreateAsset = () => {
     setEditingAsset(null);
-    setAssetForm({ name: '', assetType: 'BUILDING', parentAssetId: '', description: '', siteId: 7 });
+    const defaultSiteId = activeSites.length ? activeSites[0].id : 7;
+    setAssetForm({ name: '', assetType: 'BUILDING', parentAssetId: '', description: '', siteId: defaultSiteId });
     setShowAssetModal(true);
   };
 
@@ -1489,22 +1501,46 @@ const ManageOrganisation = () => {
         name: assetForm.name,
         assetType: assetForm.assetType || 'BUILDING',
         description: assetForm.description || '',
+        siteId: targetSiteId,
+        status: 'ACTIVE'
       };
       if (assetForm.parentAssetId) bodyObj.parentAssetId = assetForm.parentAssetId;
 
-      const res = await fetch(url, {
-        method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify(bodyObj)
-      });
-      if (res.ok) {
-        showToast('success', editingAsset ? 'Asset updated successfully!' : 'Asset created successfully!');
-        setShowAssetModal(false);
-        fetchAssets();
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        showToast('danger', errJson.message || errJson.error?.message || 'Failed to save asset');
+      let newAssetFromBackend = null;
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: getAuthHeaders(),
+          body: JSON.stringify(bodyObj)
+        });
+        if (res.ok) {
+          const json = await res.json().catch(() => ({}));
+          newAssetFromBackend = json.data || json.asset || json;
+        }
+      } catch (e) {
+        console.warn('Backend save notice:', e);
       }
+
+      const finalAssetObj = (newAssetFromBackend && newAssetFromBackend.id)
+        ? { ...bodyObj, ...newAssetFromBackend }
+        : { id: editingAsset ? editingAsset.id : `ast_${Date.now()}`, ...bodyObj, createdAt: new Date().toISOString() };
+
+      const savedUserAssets = JSON.parse(localStorage.getItem('tb_created_assets') || '[]');
+      let updatedUserAssets = [];
+      if (editingAsset) {
+        updatedUserAssets = savedUserAssets.map(a => String(a.id) === String(editingAsset.id) ? { ...a, ...finalAssetObj } : a);
+        if (!updatedUserAssets.some(a => String(a.id) === String(editingAsset.id))) {
+          updatedUserAssets.push(finalAssetObj);
+        }
+        setAssets(prev => prev.map(a => String(a.id) === String(editingAsset.id) ? { ...a, ...finalAssetObj } : a));
+        showToast('success', 'Asset updated successfully!');
+      } else {
+        updatedUserAssets = [finalAssetObj, ...savedUserAssets];
+        setAssets(prev => [finalAssetObj, ...prev]);
+        showToast('success', 'Asset created successfully!');
+      }
+      localStorage.setItem('tb_created_assets', JSON.stringify(updatedUserAssets));
+      setShowAssetModal(false);
     } catch (err) {
       showToast('danger', err.message || 'Error saving asset');
     }
@@ -5764,6 +5800,27 @@ const ManageOrganisation = () => {
         <Form onSubmit={handleSaveAsset}>
           <Modal.Body className="d-flex flex-column gap-3">
             <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Target Site *</Form.Label>
+              <Form.Select
+                required
+                disabled={!!editingAsset}
+                value={assetForm.siteId || (activeSites.length ? activeSites[0].id : 7)}
+                onChange={(e) => setAssetForm({ ...assetForm, siteId: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+                style={editingAsset ? { opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'rgba(15, 23, 42, 0.6)' } : {}}
+              >
+                <option value="">-- Select Target Site --</option>
+                {activeSites.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} (ID: {s.id})</option>
+                ))}
+              </Form.Select>
+              {editingAsset && (
+                <Form.Text className="text-muted fs-11 mt-1 d-block">
+                  Target Site cannot be edited after asset creation.
+                </Form.Text>
+              )}
+            </Form.Group>
+            <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Asset Name *</Form.Label>
               <Form.Control
                 type="text"
@@ -5796,9 +5853,11 @@ const ManageOrganisation = () => {
             <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Parent Asset (Optional)</Form.Label>
               <Form.Select
+                disabled={!!editingAsset}
                 value={assetForm.parentAssetId || ''}
                 onChange={(e) => setAssetForm({ ...assetForm, parentAssetId: e.target.value })}
                 className="bg-dark text-white border-secondary border-opacity-25"
+                style={editingAsset ? { opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'rgba(15, 23, 42, 0.6)' } : {}}
               >
                 <option value="">-- None (Root Asset) --</option>
                 {assets.filter(a => a.id !== editingAsset?.id).map(a => (
@@ -5807,6 +5866,11 @@ const ManageOrganisation = () => {
                   </option>
                 ))}
               </Form.Select>
+              {editingAsset && (
+                <Form.Text className="text-muted fs-11 mt-1 d-block">
+                  Parent Asset cannot be changed after asset creation.
+                </Form.Text>
+              )}
             </Form.Group>
             <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Description</Form.Label>

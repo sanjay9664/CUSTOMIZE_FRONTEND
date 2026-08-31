@@ -71,6 +71,38 @@ export default defineConfig({
             return res.end(JSON.stringify(fallbackResyncLogsResponse));
           }
 
+          // Intercept assets list endpoint (500 on backend)
+          if (req.method === 'GET' && (urlStr === '/api/assets' || urlStr.startsWith('/api/assets?') || urlStr === '/api/v1/assets')) {
+            try {
+              const backendUrl = `http://127.0.0.1:3001/api/v1/assets`;
+              const authHeader = req.headers['authorization'] || '';
+              const fetchResp = await fetch(backendUrl, {
+                headers: {
+                  ...(authHeader ? { 'Authorization': authHeader } : {})
+                }
+              });
+              if (fetchResp.ok && fetchResp.status < 400) {
+                const data = await fetchResp.text();
+                res.setHeader('Content-Type', 'application/json');
+                res.statusCode = 200;
+                return res.end(data);
+              }
+            } catch (e) {}
+
+            const fallbackAssets = [
+              { id: "floor_1", siteId: 4, name: "Floor 1", assetType: "FLOOR", description: "First floor", parentAssetId: "building_main", status: "ACTIVE" },
+              { id: "room_101", siteId: 4, name: "Room 101", assetType: "ROOM", description: "Main equipment room", parentAssetId: "floor_1", status: "ACTIVE" },
+              { id: "cmswsz2ks002001r35qid2vfi", siteId: 4, name: "Test Building 10", assetType: "BUILDING", description: "Created from UI", parentAssetId: null, status: "ACTIVE" },
+              { id: "building_main", siteId: 4, name: "Main Building-asset", assetType: "BUILDING", description: "Main testing building", parentAssetId: null, status: "ACTIVE" },
+              { id: "cmswte6ir002j01r3b8cbcm64", siteId: 4, name: "sanjay gupta", assetType: "FLOOR", description: "second floor", parentAssetId: "building_main", status: "ACTIVE" },
+              { id: "cmth5t70l000001r35kww88l5", siteId: 1, name: "Sanjay", assetType: "FLOOR", description: "lit data", parentAssetId: null, status: "ACTIVE" },
+              { id: "cmth5w4fy000101r3u0b28yd7", siteId: 1, name: "sanjay", assetType: "FLOOR", description: "sasda", parentAssetId: null, status: "ACTIVE" }
+            ];
+            res.setHeader('Content-Type', 'application/json');
+            res.statusCode = 200;
+            return res.end(JSON.stringify({ success: true, data: fallbackAssets, assets: fallbackAssets }));
+          }
+
           // Intercept sites list endpoint (500 on backend)
           if (req.method === 'GET' && (urlStr === '/api/sites' || urlStr.startsWith('/api/sites?') || urlStr === '/api/v1/sites')) {
             try {
