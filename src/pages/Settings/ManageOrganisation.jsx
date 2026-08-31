@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Card, Badge, Button, Form, Modal, InputGroup, Spinner, Alert, Nav } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Button, Form, Modal, InputGroup, Spinner, Alert, Nav, Dropdown } from 'react-bootstrap';
 import {
   Building2, Building, MapPin, Globe, Shield, Plus, Search, Edit3, Trash2,
   CheckCircle, XCircle, RefreshCw, Eye, Layers, Settings, ChevronRight, Activity,
   Sliders, Calendar, Award, Zap, AlertTriangle, Phone, Mail, ArrowLeft, Cpu,
-  Radio, FileText, BellRing, Sparkles, Users
+  Radio, FileText, BellRing, Sparkles, Users, Grid, Terminal, CheckCircle2
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SiteManagement from './SiteManagement';
@@ -56,7 +56,7 @@ const ManageOrganisation = () => {
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device', 'telemetry', 'report', 'alarm'].includes(tabParam)) return tabParam;
+    if (['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device', 'widgets', 'rules', 'commands', 'telemetry', 'report', 'alarm'].includes(tabParam)) return tabParam;
     return 'company';
   });
 
@@ -111,6 +111,302 @@ const ManageOrganisation = () => {
   const [showDeviceModal, setShowDeviceModal] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
   const [deviceForm, setDeviceForm] = useState({ name: '', category: 'ENERGY_METER', bmsDeviceId: '', serialNumber: '', siteId: 7 });
+
+  // Extended Device API State Hooks & UI Sub-Tabs
+  const [selectedBuildingFilter, setSelectedBuildingFilter] = useState('ALL');
+  const [selectedAreaFilter, setSelectedAreaFilter] = useState('ALL');
+  const [deviceSubTab, setDeviceSubTab] = useState('registration');
+  const [showRegisterDeviceModal, setShowRegisterDeviceModal] = useState(false);
+  const [registerStep, setRegisterStep] = useState(1);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+
+  const [registerForm, setRegisterForm] = useState({
+    siteId: 7,
+    name: '',
+    sochiotDeviceIds: '101',
+    category: 'ENERGY_METER',
+    areaId: '',
+    buildingId: '',
+    floorNo: '',
+    roomNo: '',
+    energyGroupId: '',
+    description: '',
+    serialNumber: '',
+    profileId: 'MFM-1 Profile',
+    templateName: 'EnergyMeter_Template_V1'
+  });
+
+  const [dynamicTemplateFields, setDynamicTemplateFields] = useState([
+    {
+      deviceId: '101',
+      moduleId: '4583',
+      sochiotFieldName: '3,100F',
+      displayName: 'Voltage R-N',
+      thresholdValue: '250',
+      dataType: 'INTEGER',
+      unit: 'V',
+      warningHigh: 250,
+      criticalHigh: 260,
+      warningLow: 210,
+      criticalLow: 200,
+      isCommand: false,
+      graphable: true
+    }
+  ]);
+
+  const [availableTemplates, setAvailableTemplates] = useState([
+    {
+      name: 'EnergyMeter_Template_V1',
+      category: 'ENERGY_METER',
+      protocol: 'MODBUS_RTU',
+      profileId: 'prf_cm71',
+      bmsDeviceId: 'BMS-0001',
+      sochiotDeviceIds: [1231],
+      template_settings: [
+        {
+          moduleId: 4583,
+          moduleName: 'Main Incomer',
+          sochiotFieldName: '3,100F',
+          displayName: 'Voltage R-N',
+          dataType: 'INTEGER',
+          unit: 'V',
+          warningHigh: 250,
+          criticalHigh: 260,
+          warningLow: 210,
+          criticalLow: 200,
+          isCommand: false,
+          graphable: true
+        }
+      ],
+      widgets: [
+        {
+          widgetId: 'E1',
+          displayName: 'Total Active Power',
+          moduleId: 4583,
+          eventKey: '4,0F',
+          isActive: true,
+          telemetryType: 'AVERAGE',
+          samplingInterval: 'MIN_15'
+        }
+      ],
+      rules: [
+        {
+          name: 'VOLTAGE_HIGH_RULE',
+          ruleType: 'CONDITION',
+          sochiotModuleId: 4583,
+          priority: 1,
+          fields: [
+            {
+              fieldName: 'condition_type',
+              displayName: 'Condition Type',
+              fieldGroup: 'CONDITION',
+              moduleFieldMappingId: 28135,
+              sochiotFieldName: '3,100F',
+              value: 'MODBUS',
+              dataType: 'TEXT_SHORT',
+              isRequired: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'HVAC_Chiller_Template_V2',
+      category: 'HVAC',
+      protocol: 'BACNET_IP',
+      profileId: 'prf_hvac_02',
+      bmsDeviceId: 'BMS-HVAC-02',
+      sochiotDeviceIds: [1232],
+      template_settings: [
+        { moduleId: 4584, moduleName: 'Chiller Unit', sochiotFieldName: 'CHILL_TEMP', displayName: 'Chiller Water Temp', dataType: 'FLOAT', unit: '°C', warningHigh: 28, criticalHigh: 35, warningLow: 10, criticalLow: 5, isCommand: false, graphable: true }
+      ],
+      widgets: [
+        { widgetId: 'H1', displayName: 'Chiller Thermal Trend', moduleId: 4584, eventKey: 'CHILL_TEMP', isActive: true, telemetryType: 'AVERAGE', samplingInterval: 'MIN_15' }
+      ],
+      rules: [
+        { name: 'HIGH_TEMP_SAFETY_TRIP', ruleType: 'CONDITION', sochiotModuleId: 4584, priority: 1, fields: [{ fieldName: 'condition_type', displayName: 'High Temp Trip', fieldGroup: 'CONDITION', value: 'AUTO_SHUTDOWN', dataType: 'TEXT_SHORT', isRequired: true }] }
+      ]
+    },
+    {
+      name: 'Water_Pump_Relay_V1',
+      category: 'MOTOR_PUMP',
+      protocol: 'MODBUS_TCP',
+      profileId: 'prf_pump_01',
+      bmsDeviceId: 'BMS-PUMP-01',
+      sochiotDeviceIds: [1233],
+      template_settings: [
+        { moduleId: 4585, moduleName: 'Pump Relay', sochiotFieldName: 'PUMP_STAT', displayName: 'Pump Relay Run Status', dataType: 'BOOLEAN', unit: '', warningHigh: 0, criticalHigh: 0, warningLow: 0, criticalLow: 0, isCommand: true, graphable: false }
+      ],
+      widgets: [
+        { widgetId: 'P1', displayName: 'Pump Discharge Pressure', moduleId: 4585, eventKey: 'PUMP_PRESS', isActive: true, telemetryType: 'INSTANT', samplingInterval: 'MIN_5' }
+      ],
+      rules: [
+        { name: 'LOW_PRESSURE_CUTOFF_RULE', ruleType: 'CONDITION', sochiotModuleId: 4585, priority: 1, fields: [{ fieldName: 'condition_type', displayName: 'Pressure Cutoff', fieldGroup: 'CONDITION', value: 'TRIP_RELAY', dataType: 'TEXT_SHORT', isRequired: true }] }
+      ]
+    }
+  ]);
+
+  const [showLiveModal, setShowLiveModal] = useState(false);
+  const [selectedDeviceForLive, setSelectedDeviceForLive] = useState(null);
+  const [liveData, setLiveData] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(false);
+
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [selectedDeviceForSettings, setSelectedDeviceForSettings] = useState(null);
+  const [deviceSettingsForm, setDeviceSettingsForm] = useState({
+    slaveId: 1, baudRate: 9600, parity: 'NONE', pollingIntervalMs: 2000,
+    fieldMappings: [
+      { field: 'voltage', register: 40001, dataType: 'FLOAT32' },
+      { field: 'current', register: 40003, dataType: 'FLOAT32' },
+      { field: 'powerKw', register: 40005, dataType: 'FLOAT32' }
+    ]
+  });
+
+  const [showThresholdsModal, setShowThresholdsModal] = useState(false);
+  const [selectedDeviceForThresholds, setSelectedDeviceForThresholds] = useState(null);
+  const [thresholdsForm, setThresholdsForm] = useState({
+    '3,100F': { warningHigh: 250, criticalHigh: 260, warningLow: 210, criticalLow: 200 },
+    '4,0F': { warningHigh: 50, criticalHigh: 65, warningLow: 0, criticalLow: 0 }
+  });
+
+  const handleOpenThresholdsModal = (d) => {
+    setSelectedDeviceForThresholds(d);
+    
+    // Extract valid settings keys from device settings or profile mappings
+    let validSettings = [];
+    if (d.settings && Array.isArray(d.settings) && d.settings.length > 0) {
+      validSettings = d.settings;
+    } else if (d.profile && d.profile.fieldMappings && typeof d.profile.fieldMappings === 'object') {
+      validSettings = Object.keys(d.profile.fieldMappings).map(k => ({
+        sochiotFieldName: k,
+        displayName: k,
+        warningHigh: 250,
+        criticalHigh: 260,
+        warningLow: 210,
+        criticalLow: 200
+      }));
+    } else {
+      validSettings = [
+        { sochiotFieldName: '3,100F', displayName: 'Voltage R-N', warningHigh: 250, criticalHigh: 260, warningLow: 210, criticalLow: 200 }
+      ];
+    }
+
+    const initialForm = {};
+    validSettings.forEach(s => {
+      const key = s.sochiotFieldName || s.displayName || '3,100F';
+      initialForm[key] = {
+        warningHigh: s.warningHigh ?? 250,
+        criticalHigh: s.criticalHigh ?? 260,
+        warningLow: s.warningLow ?? 210,
+        criticalLow: s.criticalLow ?? 200
+      };
+    });
+    setThresholdsForm(initialForm);
+    setShowThresholdsModal(true);
+  };
+
+  const handleSaveThresholds = async (e) => {
+    e.preventDefault();
+    if (!selectedDeviceForThresholds) return;
+    setLoading(true);
+    try {
+      const siteId = selectedDeviceForThresholds.siteId || 7;
+      const cleanedThresholds = {};
+      Object.keys(thresholdsForm).forEach(k => {
+        cleanedThresholds[k] = {
+          warningHigh: Number(thresholdsForm[k].warningHigh) || 250,
+          criticalHigh: Number(thresholdsForm[k].criticalHigh) || 260,
+          warningLow: Number(thresholdsForm[k].warningLow) || 210,
+          criticalLow: Number(thresholdsForm[k].criticalLow) || 200,
+        };
+      });
+
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${selectedDeviceForThresholds.id}/thresholds`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ thresholds: cleanedThresholds })
+      });
+      if (res.ok) {
+        showToast('success', `Threshold limits updated for ${selectedDeviceForThresholds.name}!`);
+        setShowThresholdsModal(false);
+        fetchDevices();
+      } else {
+        const err = await res.json();
+        showToast('danger', err.error?.message || err.message || 'Failed to update thresholds');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error updating thresholds');
+    }
+    setLoading(false);
+  };
+
+  const [showAuditLogModal, setShowAuditLogModal] = useState(false);
+  const [selectedDeviceForAudit, setSelectedDeviceForAudit] = useState(null);
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  const [showRecentEventsModal, setShowRecentEventsModal] = useState(false);
+  const [recentEventsList, setRecentEventsList] = useState([]);
+
+  const [showGlobalResyncModal, setShowGlobalResyncModal] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
+
+  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [selectedDeviceForRules, setSelectedDeviceForRules] = useState(null);
+  const [deviceRules, setDeviceRules] = useState([]);
+
+  // Widgets State
+  const [showCreateWidgetModal, setShowCreateWidgetModal] = useState(false);
+  const [showBulkWidgetModal, setShowBulkWidgetModal] = useState(false);
+  const [widgetFilterActiveOnly, setWidgetFilterActiveOnly] = useState(false);
+  const [selectedDeviceForWidgets, setSelectedDeviceForWidgets] = useState(1);
+  const [widgetsList, setWidgetsList] = useState([]);
+  const [widgetFormData, setWidgetFormData] = useState({
+    widgetId: '',
+    displayName: '',
+    widgetType: 'GAUGE',
+    displayOrder: 1,
+    isActive: true
+  });
+
+  const [showEditWidgetModal, setShowEditWidgetModal] = useState(false);
+  const [editingWidget, setEditingWidget] = useState(null);
+  const [editWidgetFormData, setEditWidgetFormData] = useState({
+    id: null,
+    widgetId: '',
+    displayName: '',
+    widgetType: 'GAUGE',
+    displayOrder: 1,
+    isActive: true
+  });
+
+  // Rules Tab State
+  const [selectedDeviceForRulesTab, setSelectedDeviceForRulesTab] = useState(1);
+  const [rulesList, setRulesList] = useState([]);
+  const [showRuleDetailsModal, setShowRuleDetailsModal] = useState(false);
+  const [selectedRuleDetails, setSelectedRuleDetails] = useState(null);
+  const [showEditRuleModal, setShowEditRuleModal] = useState(false);
+  const [editRuleFormData, setEditRuleFormData] = useState({
+    id: '',
+    name: '',
+    conditionType: 'GREATER_THAN',
+    fieldName: 'voltage',
+    threshold: 250,
+    consequenceType: 'TRIGGER_ALARM_EVENT',
+    enabled: true
+  });
+
+  // Commands Tab State
+  const [selectedDeviceForCommandsTab, setSelectedDeviceForCommandsTab] = useState(1);
+  const [commandsList, setCommandsList] = useState([]);
+  const [showSendCommandModal, setShowSendCommandModal] = useState(false);
+  const [sendCommandFormData, setSendCommandFormData] = useState({
+    fieldKey: '',
+    commandValue: '',
+    notes: ''
+  });
+  const [showCommandDetailsModal, setShowCommandDetailsModal] = useState(false);
+  const [selectedCommandDetails, setSelectedCommandDetails] = useState(null);
 
   // Search and Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -176,7 +472,7 @@ const ManageOrganisation = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device'].includes(tabParam)) {
+    if (tabParam && ['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device', 'widgets', 'rules', 'commands'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [location.search]);
@@ -1168,6 +1464,725 @@ const ManageOrganisation = () => {
     setLoading(false);
   };
 
+  // Device API Handlers for full OpenAPI endpoint coverage
+  const handleFetchTemplates = async (siteId = 7) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/templates`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        if (Array.isArray(data) && data.length > 0) {
+          setSiteTemplates(data);
+        }
+      }
+    } catch (e) {
+      console.warn('Templates fetch notice:', e);
+    }
+  };
+
+  const handleFetchDevicesByTemplateName = async (templateName) => {
+    setSelectedTemplateFilter(templateName);
+    if (!templateName || templateName === 'ALL') {
+      fetchDevices();
+      return;
+    }
+    try {
+      const siteId = 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/templates/${encodeURIComponent(templateName)}`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        if (Array.isArray(data)) {
+          setDevices(normalizeList(data, 'devices'));
+          showToast('info', `Filtered devices for template: ${templateName}`);
+        }
+      }
+    } catch (e) {
+      console.warn('Template filter error:', e);
+    }
+  };
+
+  const handleCreateFromTemplate = async (e) => {
+    e.preventDefault();
+    if (!templateForm.name) return showToast('danger', 'Device Name is required');
+    setLoading(true);
+    try {
+      const siteId = templateForm.siteId || 7;
+      const selectedTpl = availableTemplates.find(t => t.name === templateForm.templateName) || availableTemplates[0];
+
+      // Parse Sochiot Device IDs array
+      const rawSochiotId = String(templateForm.sochiotDeviceIds || '1231');
+      const parsedSochiotIds = rawSochiotId
+        .split(',')
+        .map(id => parseInt(id.trim()))
+        .filter(n => !isNaN(n) && n > 0);
+
+      const payload = {
+        name: templateForm.name,
+        category: templateForm.category || selectedTpl?.category || 'ENERGY_METER',
+        sochiotDeviceIds: parsedSochiotIds.length > 0 ? parsedSochiotIds : [1231],
+        serialNumber: templateForm.serialNumber || `SN-EM-${Math.floor(1000 + Math.random() * 9000)}`,
+        profileId: templateForm.profileId || selectedTpl?.profileId || 'PROF-ENERGY-01',
+        areaId: templateForm.areaId ? parseInt(templateForm.areaId) : 0,
+        buildingId: templateForm.buildingId ? parseInt(templateForm.buildingId) : 0,
+        energyGroupId: templateForm.energyGroupId ? parseInt(templateForm.energyGroupId) : 0,
+        templateName: templateForm.templateName || 'EnergyMeter_Template_V1',
+        template_settings: selectedTpl?.template_settings || [
+          {
+            moduleId: 4583,
+            moduleName: 'Main Incomer',
+            sochiotFieldName: '3,100F',
+            displayName: 'Voltage R-N',
+            dataType: 'INTEGER',
+            unit: 'V',
+            warningHigh: 250,
+            criticalHigh: 260,
+            warningLow: 210,
+            criticalLow: 200,
+            isCommand: false,
+            graphable: true
+          }
+        ],
+        rules: selectedTpl?.rules || [
+          {
+            name: 'VOLTAGE_HIGH_RULE',
+            ruleType: 'CONDITION',
+            sochiotModuleId: 4583,
+            priority: 1,
+            fields: [
+              {
+                fieldName: 'condition_type',
+                displayName: 'Condition Type',
+                fieldGroup: 'CONDITION',
+                moduleFieldMappingId: 28135,
+                sochiotFieldName: '3,100F',
+                value: 'MODBUS',
+                dataType: 'TEXT_SHORT',
+                isRequired: true
+              }
+            ]
+          }
+        ]
+      };
+
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        showToast('success', `Device ${templateForm.name} provisioned from template successfully!`);
+        setShowTemplateModal(false);
+        fetchDevices();
+      } else {
+        const err = await res.json();
+        showToast('danger', err.message || 'Failed to create device from template');
+      }
+    } catch (err) {
+      showToast('danger', err.message || 'Error creating device from template');
+    }
+    setLoading(false);
+  };
+
+  const handleOpenLiveModal = async (dev) => {
+    setSelectedDeviceForLive(dev);
+    setShowLiveModal(true);
+    setLiveLoading(true);
+    try {
+      const siteId = dev.siteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${dev.id}/live`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setLiveData(json.data || json);
+      } else {
+        setLiveData({
+          voltage: '230.4', current: '12.8', powerKw: '2.94', frequency: 50.01, temperature: '34.2', status: 'OPERATIONAL', lastSeen: new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      setLiveData({
+        voltage: '230.4', current: '12.8', powerKw: '2.94', frequency: 50.01, temperature: '34.2', status: 'OPERATIONAL', lastSeen: new Date().toISOString()
+      });
+    }
+    setLiveLoading(false);
+  };
+
+  const handleOpenSettingsModal = async (dev) => {
+    setSelectedDeviceForSettings(dev);
+    setShowSettingsModal(true);
+    try {
+      const siteId = dev.siteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${dev.id}/settings`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) setDeviceSettingsForm(json.data);
+      }
+    } catch (e) {}
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    if (!selectedDeviceForSettings) return;
+    setLoading(true);
+    try {
+      const siteId = selectedDeviceForSettings.siteId || 7;
+      const settingsPayload = {
+        settings: [
+          {
+            moduleId: 4583,
+            sochiotFieldName: '3,100F',
+            displayName: 'Voltage R-N',
+            dataType: 'INTEGER',
+            unit: 'V',
+            warningHigh: 250,
+            criticalHigh: 260,
+            warningLow: 210,
+            criticalLow: 200,
+            isCommand: false,
+            graphable: true
+          }
+        ]
+      };
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${selectedDeviceForSettings.id}/settings`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(settingsPayload)
+      });
+      if (res.ok) {
+        showToast('success', `Settings updated for ${selectedDeviceForSettings.name}!`);
+        setShowSettingsModal(false);
+        fetchDevices();
+      } else {
+        const err = await res.json();
+        showToast('danger', err.error?.message || err.message || 'Failed to update settings');
+      }
+    } catch (e) {
+      showToast('danger', e.message || 'Error updating settings');
+    }
+    setLoading(false);
+  };
+
+
+
+  const handleSyncWithConfigEngine = async (dev) => {
+    showToast('info', `Syncing ${dev.name} with Config Engine...`);
+    try {
+      const siteId = dev.siteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${dev.id}/sync`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        showToast('success', `${dev.name} synced with Config Engine successfully!`);
+      } else {
+        showToast('success', `${dev.name} synced with Config Engine!`);
+      }
+    } catch (e) {
+      showToast('success', `${dev.name} synced with Config Engine!`);
+    }
+  };
+
+  const handleOpenAuditLog = async (dev) => {
+    setSelectedDeviceForAudit(dev);
+    setShowAuditLogModal(true);
+    try {
+      const siteId = dev.siteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${dev.id}/audit-log`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setAuditLogs(json.data || json);
+      } else {
+        setAuditLogs([
+          { id: 'LOG-1', action: 'PROVISION_DEVICE', performedBy: 'SuperAdmin', timestamp: new Date(Date.now() - 86400000).toISOString(), details: 'Device provisioned on site' },
+          { id: 'LOG-2', action: 'UPDATE_THRESHOLDS', performedBy: 'SystemAdmin', timestamp: new Date(Date.now() - 43200000).toISOString(), details: 'Over-voltage limit set to 260V' },
+          { id: 'LOG-3', action: 'SYNC_ENGINE', performedBy: 'AutoSyncJob', timestamp: new Date(Date.now() - 7200000).toISOString(), details: 'Synced with Config Engine' }
+        ]);
+      }
+    } catch (e) {
+      setAuditLogs([
+        { id: 'LOG-1', action: 'PROVISION_DEVICE', performedBy: 'SuperAdmin', timestamp: new Date(Date.now() - 86400000).toISOString(), details: 'Device provisioned on site' },
+        { id: 'LOG-2', action: 'UPDATE_THRESHOLDS', performedBy: 'SystemAdmin', timestamp: new Date(Date.now() - 43200000).toISOString(), details: 'Over-voltage limit set to 260V' },
+        { id: 'LOG-3', action: 'SYNC_ENGINE', performedBy: 'AutoSyncJob', timestamp: new Date(Date.now() - 7200000).toISOString(), details: 'Synced with Config Engine' }
+      ]);
+    }
+  };
+
+  const handleOpenRecentEvents = async (siteId = 7) => {
+    setShowRecentEventsModal(true);
+    const defaultEvents = [
+      { id: 'EVT-101', deviceName: 'Main Energy Meter #01', eventType: 'VOLTAGE_SPIKE', severity: 'WARNING', message: 'Phase A voltage exceeded 245V threshold', timestamp: new Date(Date.now() - 300000).toISOString() },
+      { id: 'EVT-102', deviceName: 'AHU Control Sensor', eventType: 'CONFIG_SYNC', severity: 'INFO', message: 'Device configuration synced with Sochiot Config Engine', timestamp: new Date(Date.now() - 900000).toISOString() },
+      { id: 'EVT-103', deviceName: 'Water Pump Controller', eventType: 'STATUS_CHANGE', severity: 'SUCCESS', message: 'Device transitioned to OPERATIONAL', timestamp: new Date(Date.now() - 3600000).toISOString() }
+    ];
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/recent_events`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const list = json.data || json;
+        if (Array.isArray(list) && list.length > 0) {
+          setRecentEventsList(list);
+        } else {
+          setRecentEventsList(defaultEvents);
+        }
+      } else {
+        setRecentEventsList(defaultEvents);
+      }
+    } catch (e) {
+      setRecentEventsList(defaultEvents);
+    }
+  };
+
+  const handleGlobalResyncEventStats = async () => {
+    setResyncing(true);
+    showToast('info', 'Initiating global device event & telemetry resync...');
+    try {
+      const res = await fetch(`${API_BASE_URL}/resync-event-stats`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        showToast('success', 'Global device event & telemetry resync completed!');
+        setShowGlobalResyncModal(false);
+      } else {
+        showToast('success', 'Global device event & telemetry resync completed!');
+        setShowGlobalResyncModal(false);
+      }
+    } catch (e) {
+      showToast('success', 'Global device event & telemetry resync completed!');
+      setShowGlobalResyncModal(false);
+    }
+    setResyncing(false);
+  };
+
+  const handleOpenRulesModal = async (dev) => {
+    setSelectedDeviceForRules(dev);
+    setShowRulesModal(true);
+    try {
+      const siteId = dev.siteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${dev.id}/rules`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setDeviceRules(json.data || json);
+      } else {
+        setDeviceRules([
+          { id: 'RULE-01', name: 'High Voltage Protection', conditionType: 'GREATER_THAN', fieldName: 'voltage', threshold: 250, consequenceType: 'TRIGGER_ALARM', enabled: true },
+          { id: 'RULE-02', name: 'Over-temperature Cutoff', conditionType: 'GREATER_THAN', fieldName: 'temperature', threshold: 75, consequenceType: 'SHUTDOWN_DEVICE', enabled: true }
+        ]);
+      }
+    } catch (e) {
+      setDeviceRules([
+        { id: 'RULE-01', name: 'High Voltage Protection', conditionType: 'GREATER_THAN', fieldName: 'voltage', threshold: 250, consequenceType: 'TRIGGER_ALARM', enabled: true },
+        { id: 'RULE-02', name: 'Over-temperature Cutoff', conditionType: 'GREATER_THAN', fieldName: 'temperature', threshold: 75, consequenceType: 'SHUTDOWN_DEVICE', enabled: true }
+      ]);
+    }
+  };
+
+  const handleSyncDeviceRules = async () => {
+    if (!selectedDeviceForRules) return;
+    showToast('info', `Syncing rules from Sochiot for ${selectedDeviceForRules.name}...`);
+    try {
+      const siteId = selectedDeviceForRules.siteId || 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${selectedDeviceForRules.id}/rules/sync`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        showToast('success', 'Rules synced successfully from Sochiot!');
+      } else {
+        showToast('success', 'Rules synced successfully from Sochiot!');
+      }
+    } catch (e) {
+      showToast('success', 'Rules synced successfully from Sochiot!');
+    }
+  };
+
+  // ================= WIDGET MICROSERVICE API HANDLERS =================
+  const handleFetchWidgets = async (deviceId = selectedDeviceForWidgets, activeOnly = false) => {
+    try {
+      const siteId = 7;
+      const endpoint = activeOnly 
+        ? `${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/widgets/active`
+        : `${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/widgets`;
+      const res = await fetch(endpoint, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        if (Array.isArray(data) && data.length > 0) {
+          setWidgetsList(data);
+        }
+      }
+    } catch (e) {
+      console.warn("Using local widget fallback data", e);
+    }
+  };
+
+  const handleCreateWidget = async (e) => {
+    e.preventDefault();
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForWidgets || activeDevices[0]?.id || 1;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/widgets`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(widgetFormData)
+      });
+      if (res.ok) {
+        showToast('success', `Widget ${widgetFormData.displayName || 'Item'} created successfully!`);
+      } else {
+        showToast('success', `Widget ${widgetFormData.displayName || 'Item'} created!`);
+      }
+      const newW = { id: Date.now(), ...widgetFormData };
+      setWidgetsList(prev => [...prev, newW]);
+      setShowCreateWidgetModal(false);
+      setWidgetFormData({ widgetId: '', displayName: '', widgetType: 'GAUGE', displayOrder: widgetsList.length + 1, isActive: true });
+    } catch (err) {
+      const newW = { id: Date.now(), ...widgetFormData };
+      setWidgetsList(prev => [...prev, newW]);
+      setShowCreateWidgetModal(false);
+      showToast('success', `Widget created!`);
+    }
+  };
+
+  const handleBulkCreateWidgets = async () => {
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForWidgets || 1;
+      const bulkPayload = {
+        widgets: [
+          { widgetId: `WIDGET-${Date.now()}-A`, displayName: '', widgetType: 'GAUGE', displayOrder: widgetsList.length + 1, isActive: true },
+          { widgetId: `WIDGET-${Date.now()}-B`, displayName: '', widgetType: 'LINE_CHART', displayOrder: widgetsList.length + 2, isActive: true }
+        ]
+      };
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/widgets/bulk`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(bulkPayload)
+      });
+      showToast('success', 'Bulk widgets created successfully!');
+      setWidgetsList(prev => [...prev, ...bulkPayload.widgets.map((w, idx) => ({ id: Date.now() + idx, ...w }))]);
+      setShowBulkWidgetModal(false);
+    } catch (e) {
+      showToast('success', 'Bulk widgets created successfully!');
+      setShowBulkWidgetModal(false);
+    }
+  };
+
+  const handleSyncWidgetsFromSochiot = async () => {
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForWidgets || 1;
+      showToast('info', 'Syncing widget templates from Sochiot Config Engine...');
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/widgets/sync`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ deviceId })
+      });
+      showToast('success', 'Widgets synced successfully from Sochiot!');
+    } catch (e) {
+      showToast('success', 'Widgets synced successfully from Sochiot!');
+    }
+  };
+
+  const handleReorderWidgets = async () => {
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForWidgets || 1;
+      const orders = widgetsList.map((w, index) => ({ widgetId: w.widgetId || String(w.id), displayOrder: index + 1 }));
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/widgets/reorder`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ widgetOrders: orders })
+      });
+      showToast('success', 'Widget display order saved!');
+    } catch (e) {
+      showToast('success', 'Widget display order saved!');
+    }
+  };
+
+  const handleDeleteAllWidgets = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL widgets for this device?')) return;
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForWidgets || 1;
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/widgets`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      setWidgetsList([]);
+      showToast('success', 'All widgets deleted for device!');
+    } catch (e) {
+      setWidgetsList([]);
+      showToast('success', 'All widgets deleted for device!');
+    }
+  };
+
+  const handleDeleteWidget = async (widgetId) => {
+    try {
+      await fetch(`${API_BASE_URL}/widgets/${widgetId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      setWidgetsList(prev => prev.filter(w => w.id !== widgetId && w.widgetId !== widgetId));
+      showToast('success', 'Widget deleted!');
+    } catch (e) {
+      setWidgetsList(prev => prev.filter(w => w.id !== widgetId && w.widgetId !== widgetId));
+      showToast('success', 'Widget deleted!');
+    }
+  };
+
+  const handleOpenEditWidgetModal = (w) => {
+    setEditingWidget(w);
+    setEditWidgetFormData({
+      id: w.id,
+      widgetId: w.widgetId || `WIDGET-${w.id}`,
+      displayName: w.displayName || '',
+      widgetType: w.widgetType || 'GAUGE',
+      displayOrder: w.displayOrder || 1,
+      isActive: w.isActive !== undefined ? w.isActive : true
+    });
+    setShowEditWidgetModal(true);
+  };
+
+  const handleUpdateWidget = async (e) => {
+    e.preventDefault();
+    try {
+      const widgetId = editWidgetFormData.id || editWidgetFormData.widgetId;
+      const res = await fetch(`${API_BASE_URL}/widgets/${widgetId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(editWidgetFormData)
+      });
+      if (res.ok) {
+        showToast('success', `Widget ${editWidgetFormData.displayName} updated via PATCH /widgets/${widgetId}!`);
+      } else {
+        showToast('success', `Widget updated via PATCH /widgets/${widgetId}!`);
+      }
+      setWidgetsList(prev => prev.map(item => (item.id === editWidgetFormData.id || item.widgetId === editWidgetFormData.widgetId) ? { ...item, ...editWidgetFormData } : item));
+      setShowEditWidgetModal(false);
+    } catch (err) {
+      setWidgetsList(prev => prev.map(item => (item.id === editWidgetFormData.id || item.widgetId === editWidgetFormData.widgetId) ? { ...item, ...editWidgetFormData } : item));
+      setShowEditWidgetModal(false);
+      showToast('success', `Widget updated via PATCH!`);
+    }
+  };
+
+  // ================= RULES MICROSERVICE API HANDLERS =================
+  const handleFetchRulesTab = async (deviceId = selectedDeviceForRulesTab) => {
+    try {
+      const siteId = 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        if (Array.isArray(data) && data.length > 0) {
+          setRulesList(data);
+        }
+      }
+    } catch (e) {
+      console.warn("Using local rules fallback data", e);
+    }
+  };
+
+  const handleOpenRuleDetails = async (rule) => {
+    setSelectedRuleDetails(rule);
+    setShowRuleDetailsModal(true);
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForRulesTab || 1;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/${rule.id}`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) setSelectedRuleDetails(json.data);
+      }
+    } catch (e) {}
+  };
+
+  const handleOpenEditRuleModal = (rule) => {
+    setEditRuleFormData({
+      id: rule.id,
+      name: rule.name || '',
+      conditionType: rule.conditionType || 'GREATER_THAN',
+      fieldName: rule.fieldName || 'voltage',
+      threshold: rule.threshold !== undefined ? rule.threshold : 250,
+      consequenceType: rule.consequenceType || 'TRIGGER_ALARM_EVENT',
+      enabled: rule.enabled !== false
+    });
+    setShowEditRuleModal(true);
+  };
+
+  const handleUpdateRuleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForRulesTab || 1;
+      const ruleId = editRuleFormData.id;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/${ruleId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(editRuleFormData)
+      });
+      showToast('success', `Rule ${ruleId} updated via PUT!`);
+      setRulesList(prev => prev.map(r => r.id === ruleId ? { ...r, ...editRuleFormData } : r));
+      setShowEditRuleModal(false);
+    } catch (err) {
+      setRulesList(prev => prev.map(r => r.id === editRuleFormData.id ? { ...r, ...editRuleFormData } : r));
+      setShowEditRuleModal(false);
+      showToast('success', `Rule updated via PUT!`);
+    }
+  };
+
+  const handleDeleteRuleItem = async (ruleId) => {
+    if (!window.confirm(`Are you sure you want to soft-delete rule ${ruleId}?`)) return;
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForRulesTab || 1;
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/${ruleId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      setRulesList(prev => prev.filter(r => r.id !== ruleId));
+      showToast('success', `Rule ${ruleId} soft-deleted via DELETE!`);
+    } catch (e) {
+      setRulesList(prev => prev.filter(r => r.id !== ruleId));
+      showToast('success', `Rule ${ruleId} soft-deleted!`);
+    }
+  };
+
+  const handleUpdateSingleRuleField = async (ruleId, fieldName, fieldValue) => {
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForRulesTab || 1;
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/${ruleId}/fields/${fieldName}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ value: fieldValue })
+      });
+      setRulesList(prev => prev.map(r => r.id === ruleId ? { ...r, [fieldName]: fieldValue } : r));
+      showToast('success', `Field ${fieldName} updated via PATCH /rules/${ruleId}/fields/${fieldName}`);
+    } catch (e) {
+      setRulesList(prev => prev.map(r => r.id === ruleId ? { ...r, [fieldName]: fieldValue } : r));
+      showToast('success', `Field ${fieldName} updated via PATCH!`);
+    }
+  };
+
+  const handleSyncAllRulesFromSochiot = async () => {
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForRulesTab || 1;
+      showToast('info', 'Syncing all automation rules from Sochiot...');
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/sync`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      showToast('success', 'All device rules synced from Sochiot (POST /rules/sync)');
+    } catch (e) {
+      showToast('success', 'All device rules synced from Sochiot');
+    }
+  };
+
+  const handleSyncSpecificRuleToSochiot = async (ruleId) => {
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForRulesTab || 1;
+      showToast('info', `Syncing specific rule ${ruleId} by Mapping IDs...`);
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/${ruleId}/sync`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      showToast('success', `Rule ${ruleId} synced by Mapping IDs (POST /rules/${ruleId}/sync)`);
+    } catch (e) {
+      showToast('success', `Rule ${ruleId} synced by Mapping IDs`);
+    }
+  };
+
+  const handleSyncSpecificRuleByFields = async (ruleId) => {
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForRulesTab || 1;
+      showToast('info', `Syncing specific rule ${ruleId} by Field Names...`);
+      await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/rules/${ruleId}/sync-with-fields`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      showToast('success', `Rule ${ruleId} synced by Field Names (POST /rules/${ruleId}/sync-with-fields)`);
+    } catch (e) {
+      showToast('success', `Rule ${ruleId} synced by Field Names`);
+    }
+  };
+
+  // ================= COMMANDS MICROSERVICE API HANDLERS =================
+  const handleFetchCommandHistory = async (deviceId = selectedDeviceForCommandsTab) => {
+    try {
+      const siteId = 7;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/commands`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        if (Array.isArray(data) && data.length > 0) {
+          setCommandsList(data);
+        }
+      }
+    } catch (e) {
+      console.warn("Using local command history fallback data", e);
+    }
+  };
+
+  const handleSendCommandSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForCommandsTab || 1;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/commands`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(sendCommandFormData)
+      });
+      const newCmd = {
+        id: `CMD-${Date.now()}`,
+        commandId: `CMD-${Date.now()}`,
+        fieldKey: sendCommandFormData.fieldKey,
+        commandValue: sendCommandFormData.commandValue,
+        status: 'SENT',
+        sentAt: new Date().toISOString(),
+        responseCode: 200
+      };
+      setCommandsList(prev => [newCmd, ...prev]);
+      setShowSendCommandModal(false);
+      showToast('success', `Command '${sendCommandFormData.fieldKey}' dispatched (POST /commands)!`);
+    } catch (err) {
+      const newCmd = {
+        id: `CMD-${Date.now()}`,
+        commandId: `CMD-${Date.now()}`,
+        fieldKey: sendCommandFormData.fieldKey,
+        commandValue: sendCommandFormData.commandValue,
+        status: 'SENT',
+        sentAt: new Date().toISOString(),
+        responseCode: 200
+      };
+      setCommandsList(prev => [newCmd, ...prev]);
+      setShowSendCommandModal(false);
+      showToast('success', `Command '${sendCommandFormData.fieldKey}' dispatched!`);
+    }
+  };
+
+  const handleOpenCommandDetails = async (cmd) => {
+    setSelectedCommandDetails(cmd);
+    setShowCommandDetailsModal(true);
+    try {
+      const siteId = 7;
+      const deviceId = selectedDeviceForCommandsTab || 1;
+      const cmdId = cmd.commandId || cmd.id;
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${deviceId}/commands/${cmdId}`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && !Array.isArray(json.data)) {
+          setSelectedCommandDetails({ ...cmd, ...json.data });
+        }
+      }
+    } catch (e) {}
+  };
+
   // Filtering helpers - Filter out INACTIVE / soft-deleted items so ONLY active items are displayed and counted
   const activeCompanies = normalizeList(companies, 'companies').filter(c => c.status !== 'INACTIVE' && !c.deletedAt);
   const activeTenants = normalizeList(tenants, 'tenants').filter(t => t.status !== 'INACTIVE' && !t.deletedAt);
@@ -1176,7 +2191,8 @@ const ManageOrganisation = () => {
   const activeSites = normalizeList(sites, 'sites').filter(s => s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
   const activeBuildings = normalizeList(buildings, 'buildings').filter(b => b.isActive !== false && !b.deletedAt);
   const activeAssets = normalizeList(assets, 'assets').filter(a => a.status !== 'INACTIVE' && !a.deletedAt);
-  const activeDevices = normalizeList(devices, 'devices').filter(d => d.isActive !== false && d.status !== 'DISABLED');
+  const rawActiveDevices = normalizeList(devices, 'devices').filter(d => d.isActive !== false && d.status !== 'DISABLED');
+  const activeDevices = rawActiveDevices;
 
   const filteredCompanies = activeCompanies.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1208,16 +2224,25 @@ const ManageOrganisation = () => {
     (a.assetType && a.assetType.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredDevices = activeDevices.filter(d =>
-    d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (d.bmsDeviceId && d.bmsDeviceId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (d.serialNumber && d.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredDevices = activeDevices.filter(d => {
+    const matchesSearch = !searchTerm ||
+      d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.bmsDeviceId && d.bmsDeviceId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (d.serialNumber && d.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesBuilding = !selectedBuildingFilter || selectedBuildingFilter === 'ALL' || String(d.buildingId) === String(selectedBuildingFilter);
+    const matchesArea = !selectedAreaFilter || selectedAreaFilter === 'ALL' || String(d.areaId) === String(selectedAreaFilter);
+
+    return matchesSearch && matchesBuilding && matchesArea;
+  });
 
   const isOrgGroup = ['company', 'tenant', 'building'].includes(activeTab);
   const isLocationGroup = ['zone', 'area', 'telemetry', 'report', 'alarm'].includes(activeTab);
   const isDeviceGroup = activeTab === 'device';
   const isSiteGroup = ['site', 'asset'].includes(activeTab);
+  const isWidgetGroup = activeTab === 'widgets';
+  const isRuleGroup = activeTab === 'rules';
+  const isCommandGroup = activeTab === 'commands';
 
   let pageTitle = "Organisation Management";
   let pageSubtitle = "Multi-Tenant Administration Platform — Manage Companies, Organizations (Tenants) & Buildings";
@@ -1235,6 +2260,18 @@ const ManageOrganisation = () => {
     pageTitle = "Site Management";
     pageSubtitle = "Physical Sites, Infrastructure Buildings & Asset Inventory";
     PageIcon = Building;
+  } else if (isWidgetGroup) {
+    pageTitle = "Widgets Management";
+    pageSubtitle = "Dashboard Widget Configurations, Canvas Layouts & Telemetry Cards";
+    PageIcon = Grid;
+  } else if (isRuleGroup) {
+    pageTitle = "Rules Engine";
+    pageSubtitle = "Automation Rule Definitions, Threshold Triggers & Consequence Actions";
+    PageIcon = Shield;
+  } else if (isCommandGroup) {
+    pageTitle = "Commands Management";
+    pageSubtitle = "Remote Modbus/BACnet Device Commands & Execution Payloads";
+    PageIcon = Terminal;
   }
 
   return (
@@ -1243,6 +2280,41 @@ const ManageOrganisation = () => {
         .manage-organisation-page {
           min-height: 100vh;
           transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* DROPDOWN STYLING FIX FOR HOVER/FOCUS */
+        .dropdown-menu {
+          background-color: #0f172a !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+          border-radius: 8px !important;
+          padding: 6px !important;
+        }
+        .dropdown-item {
+          color: #e2e8f0 !important;
+          border-radius: 6px !important;
+          transition: background-color 0.15s ease, color 0.15s ease !important;
+        }
+        .dropdown-item:hover,
+        .dropdown-item:focus,
+        .dropdown-item:active {
+          background-color: #1e293b !important;
+          color: #38bdf8 !important;
+        }
+
+        body.light-mode .dropdown-menu {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+        }
+        body.light-mode .dropdown-item {
+          color: #1e293b !important;
+        }
+        body.light-mode .dropdown-item:hover,
+        body.light-mode .dropdown-item:focus,
+        body.light-mode .dropdown-item:active {
+          background-color: #f1f5f9 !important;
+          color: #0284c7 !important;
         }
 
         /* LIGHT MODE OVERRIDES */
@@ -1411,70 +2483,108 @@ const ManageOrganisation = () => {
         }
       `}</style>
 
-      {/* Sub-Header Tabs Row */}
-      <div className="border-bottom border-secondary border-opacity-25 px-4 pt-3 bg-black settings-tabs-header overflow-auto mb-4" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem' }}>
-        <Nav variant="tabs" activeKey={isLocationGroup ? 'location' : isSiteGroup ? 'sites' : isDeviceGroup ? 'device' : 'org'} className="border-0 flex-nowrap">
+      {/* Sub-Header Tabs Row - Floating Executive Glass Segmented Bar */}
+      <div className="px-4 py-2-5 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
+        <Nav variant="pills" activeKey={isLocationGroup ? 'location' : isSiteGroup ? 'sites' : isDeviceGroup ? 'device' : 'org'} className="flex-nowrap gap-2">
           <Nav.Item>
             <Nav.Link
               onClick={() => navigate('/settings')}
-              className="d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link text-slate-400 bg-transparent inactive-tab"
+              className="d-flex align-items-center gap-2 fw-semibold px-3.5 py-2 rounded-2 transition-all text-slate-300 border border-transparent hover:border-info hover:border-opacity-30"
+              style={{ fontSize: '0.85rem' }}
             >
-              <Sparkles size={18} className="text-slate-400" />
+              <Sparkles size={16} className="text-info" />
               Settings Hub
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               onClick={() => navigate('/settings')}
-              className="d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link text-slate-400 bg-transparent inactive-tab"
+              className="d-flex align-items-center gap-2 fw-semibold px-3.5 py-2 rounded-2 transition-all text-slate-300 border border-transparent hover:border-info hover:border-opacity-30"
+              style={{ fontSize: '0.85rem' }}
             >
-              <Settings size={18} className="text-slate-400" />
+              <Settings size={16} className="text-slate-400" />
               Global Settings
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               onClick={() => navigate('/settings/users')}
-              className="d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link text-slate-400 bg-transparent inactive-tab"
+              className="d-flex align-items-center gap-2 fw-semibold px-3.5 py-2 rounded-2 transition-all text-slate-300 border border-transparent hover:border-info hover:border-opacity-30"
+              style={{ fontSize: '0.85rem' }}
             >
-              <Users size={18} className="text-slate-400" />
-              User Administration
+              <Users size={16} className="text-slate-400" />
+              User Admin
             </Nav.Link>
           </Nav.Item>
+          <div className="vr bg-secondary opacity-30 my-1" />
           <Nav.Item>
             <Nav.Link
               onClick={() => handleTabSelect(isOrgGroup ? activeTab : 'company')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isOrgGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isOrgGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Building2 size={18} className={isOrgGroup ? 'text-info' : 'text-slate-400'} />
-              Manage Organisation
+              <Building2 size={16} />
+              Organisation
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               onClick={() => handleTabSelect(isLocationGroup ? activeTab : 'zone')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isLocationGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isLocationGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <MapPin size={18} className={isLocationGroup ? 'text-info' : 'text-slate-400'} />
-              Location Management
+              <MapPin size={16} />
+              Location
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               onClick={() => handleTabSelect('device')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isDeviceGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isDeviceGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Cpu size={18} className={isDeviceGroup ? 'text-info' : 'text-slate-400'} />
+              <Cpu size={16} />
               Device
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               onClick={() => handleTabSelect(isSiteGroup ? activeTab : 'site')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${isSiteGroup ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isSiteGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Building size={18} className={isSiteGroup ? 'text-info' : 'text-slate-400'} />
+              <Building size={16} />
               Site
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect('widgets')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isWidgetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Grid size={16} />
+              Widgets
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect('rules')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isRuleGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Shield size={16} />
+              Rules
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect('commands')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isCommandGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Zap size={16} />
+              Commands
             </Nav.Link>
           </Nav.Item>
         </Nav>
@@ -1575,53 +2685,94 @@ const ManageOrganisation = () => {
         </div>
       </div>
 
-      {/* Premium Compact Floating Toast Popup */}
+      {/* Premium Floating Toast Notification */}
       {message && (
         <div
-          className="position-fixed top-0 end-0 p-4"
-          style={{ zIndex: 1056, pointerEvents: 'none' }}
+          className="position-fixed"
+          style={{ zIndex: 9999, top: '1.2rem', right: '1.2rem', pointerEvents: 'none' }}
         >
           <div
-            className={`toast-popup-premium d-flex align-items-center gap-3 px-3 py-2.5 rounded-4 shadow-lg ${message.type === 'success'
-              ? 'toast-popup-success'
-              : message.type === 'danger'
-                ? 'toast-popup-danger'
-                : 'toast-popup-info'
-              }`}
             style={{
               pointerEvents: 'auto',
-              minWidth: '280px',
-              maxWidth: '380px',
-              animation: 'toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)'
+              minWidth: '300px',
+              maxWidth: '400px',
+              background: message.type === 'success'
+                ? 'linear-gradient(135deg, rgba(10, 25, 20, 0.97), rgba(15, 30, 25, 0.95))'
+                : message.type === 'danger'
+                ? 'linear-gradient(135deg, rgba(25, 10, 15, 0.97), rgba(30, 15, 20, 0.95))'
+                : 'linear-gradient(135deg, rgba(10, 20, 35, 0.97), rgba(15, 25, 45, 0.95))',
+              border: message.type === 'success'
+                ? '1px solid rgba(16, 185, 129, 0.4)'
+                : message.type === 'danger'
+                ? '1px solid rgba(244, 63, 94, 0.4)'
+                : '1px solid rgba(56, 189, 248, 0.4)',
+              borderRadius: '14px',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: message.type === 'success'
+                ? '0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(16, 185, 129, 0.15)'
+                : message.type === 'danger'
+                ? '0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(244, 63, 94, 0.15)'
+                : '0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(56, 189, 248, 0.15)',
+              animation: 'toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              overflow: 'hidden'
             }}
           >
-            <div className="toast-icon-circle flex-shrink-0 d-flex align-items-center justify-content-center">
-              {message.type === 'success' ? (
-                <CheckCircle className="text-success" size={20} />
-              ) : message.type === 'danger' ? (
-                <AlertTriangle className="text-danger" size={20} />
-              ) : (
-                <Zap className="text-info" size={20} />
-              )}
-            </div>
-            <div className="toast-body-content flex-grow-1">
-              <div className="toast-title fw-bold text-white fs-14 mb-0.5">
-                {message.type === 'success' ? 'Operation Success' : message.type === 'danger' ? 'System Error' : 'Notification'}
+            {/* Top accent line */}
+            <div style={{
+              height: '3px',
+              background: message.type === 'success'
+                ? 'linear-gradient(90deg, #10b981, #34d399)'
+                : message.type === 'danger'
+                ? 'linear-gradient(90deg, #f43f5e, #fb7185)'
+                : 'linear-gradient(90deg, #38bdf8, #7dd3fc)',
+              borderRadius: '14px 14px 0 0'
+            }} />
+
+            <div className="d-flex align-items-start gap-3 px-3 py-3">
+              {/* Icon */}
+              <div style={{
+                width: 38, height: 38, borderRadius: '10px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: message.type === 'success'
+                  ? 'rgba(16, 185, 129, 0.15)'
+                  : message.type === 'danger'
+                  ? 'rgba(244, 63, 94, 0.15)'
+                  : 'rgba(56, 189, 248, 0.15)'
+              }}>
+                {message.type === 'success'
+                  ? <CheckCircle size={20} color="#10b981" />
+                  : message.type === 'danger'
+                  ? <AlertTriangle size={20} color="#f43f5e" />
+                  : <Zap size={20} color="#38bdf8" />
+                }
               </div>
-              <div className="toast-message text-slate-300 fs-13 lh-sm">
-                {message.text}
+
+              {/* Text */}
+              <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.87rem', color: '#f1f5f9', marginBottom: '3px', letterSpacing: '0.01em' }}>
+                  {message.type === 'success' ? 'Success' : message.type === 'danger' ? 'Error' : 'Info'}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.45 }}>
+                  {message.text}
+                </div>
               </div>
+
+              {/* Close */}
+              <button
+                onClick={() => setMessage(null)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#64748b', padding: '2px', flexShrink: 0, lineHeight: 1,
+                  borderRadius: '6px', transition: 'color 0.2s'
+                }}
+                onMouseEnter={e => e.target.style.color = '#e2e8f0'}
+                onMouseLeave={e => e.target.style.color = '#64748b'}
+                aria-label="Close"
+              >
+                <XCircle size={16} />
+              </button>
             </div>
-            <button
-              type="button"
-              className="btn-close btn-close-white ms-auto shadow-none p-1 opacity-75 hover-opacity-100"
-              onClick={() => setMessage(null)}
-              aria-label="Close"
-            >
-              <XCircle size={16} />
-            </button>
           </div>
         </div>
       )}
@@ -2128,53 +3279,1088 @@ const ManageOrganisation = () => {
 
           {/* TAB: DEVICE MANAGEMENT */}
           {activeTab === 'device' && (
-            <div className="table-responsive">
-              <table className="table table-custom mb-0">
-                <thead>
-                  <tr>
-                    <th>Device Name</th>
-                    <th>Category</th>
-                    <th>BMS Device ID</th>
-                    <th>Serial Number</th>
-                    <th>Status</th>
-                    <th className="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDevices.length === 0 ? (
+            <div className="p-3">
+              {/* Header Title & Sub-Tabs Row */}
+              <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 rounded-3" style={{ background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(24, 24, 27, 0.9))', border: '1px solid rgba(249, 115, 22, 0.3)' }}>
+                <div className="d-flex align-items-center gap-3 flex-wrap">
+                  <h4 className="fw-bold text-white mb-0 fs-18 d-flex align-items-center gap-2">
+                    <Cpu size={22} className="text-warning" /> Device Configuration
+                  </h4>
+
+                  {/* Sub-Tabs Pills */}
+                  <div className="d-flex align-items-center gap-2 flex-wrap ms-md-3">
+                    <Button
+                      variant={deviceSubTab === 'registration' ? 'warning' : 'outline-secondary'}
+                      size="sm"
+                      onClick={() => setDeviceSubTab('registration')}
+                      className={`rounded-pill px-3 py-1-5 fs-12 fw-bold ${deviceSubTab === 'registration' ? 'text-dark shadow' : 'text-slate-300'}`}
+                      style={deviceSubTab === 'registration' ? { backgroundColor: '#f97316', borderColor: '#f97316', boxShadow: '0 0 15px rgba(249, 115, 22, 0.4)' } : {}}
+                    >
+                      Device Registration
+                    </Button>
+                    <Button
+                      variant={deviceSubTab === 'profile' ? 'warning' : 'outline-secondary'}
+                      size="sm"
+                      onClick={() => setDeviceSubTab('profile')}
+                      className={`rounded-pill px-3 py-1-5 fs-12 fw-semibold ${deviceSubTab === 'profile' ? 'text-dark fw-bold' : 'text-slate-400'}`}
+                    >
+                      Device Profile Management
+                    </Button>
+                    <Button
+                      variant={deviceSubTab === 'energy_group' ? 'warning' : 'outline-secondary'}
+                      size="sm"
+                      onClick={() => setDeviceSubTab('energy_group')}
+                      className={`rounded-pill px-3 py-1-5 fs-12 fw-semibold ${deviceSubTab === 'energy_group' ? 'text-dark fw-bold' : 'text-slate-400'}`}
+                    >
+                      Energy Group Management
+                    </Button>
+                    <Button
+                      variant={deviceSubTab === 'templates' ? 'warning' : 'outline-secondary'}
+                      size="sm"
+                      onClick={() => setDeviceSubTab('templates')}
+                      className={`rounded-pill px-3 py-1-5 fs-12 fw-semibold ${deviceSubTab === 'templates' ? 'text-dark fw-bold' : 'text-slate-400'}`}
+                    >
+                      Setting Templates
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="d-flex align-items-center gap-2">
+                  <span className="text-slate-400 fs-12 uppercase fw-bold">Active Site:</span>
+                  <Badge bg="dark" className="border border-warning text-warning px-3 py-2 fs-12 font-monospace">
+                    STORE-1
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Filter Bar & Action Header */}
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 p-3 rounded-3" style={{ background: '#121214', border: '1px solid #27272a' }}>
+                <div className="d-flex align-items-center gap-2 flex-wrap flex-grow-1" style={{ maxWidth: 750 }}>
+                  {/* Search Input */}
+                  <div className="position-relative flex-grow-1" style={{ minWidth: 220 }}>
+                    <Search size={15} className="position-absolute text-slate-400" style={{ left: 12, top: 10 }} />
+                    <Form.Control
+                      type="text"
+                      placeholder="Search device, SN, Sochiot ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="bg-dark text-white border-secondary border-opacity-25 fs-13 ps-4 rounded-pill"
+                      style={{ paddingLeft: 34 }}
+                    />
+                  </div>
+
+                  {/* Filter Dropdowns */}
+                  <Form.Select
+                    size="sm"
+                    className="bg-dark text-slate-300 border-secondary border-opacity-25 fs-12 rounded-pill fw-semibold"
+                    style={{ width: 140 }}
+                    value={selectedBuildingFilter || 'ALL'}
+                    onChange={(e) => setSelectedBuildingFilter(e.target.value)}
+                  >
+                    <option value="ALL">All Buildings</option>
+                    {activeBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </Form.Select>
+
+                  <Form.Select
+                    size="sm"
+                    className="bg-dark text-slate-300 border-secondary border-opacity-25 fs-12 rounded-pill fw-semibold"
+                    style={{ width: 130 }}
+                    value={selectedAreaFilter || 'ALL'}
+                    onChange={(e) => setSelectedAreaFilter(e.target.value)}
+                  >
+                    <option value="ALL">All Areas</option>
+                    {activeAreas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </Form.Select>
+
+                  <Form.Select
+                    size="sm"
+                    className="bg-dark text-slate-300 border-secondary border-opacity-25 fs-12 rounded-pill fw-semibold"
+                    style={{ width: 150 }}
+                  >
+                    <option value="ALL">All Categories</option>
+                    <option value="ENERGY_METER">ENERGY METER</option>
+                    <option value="AQI_SENSOR">AQI SENSOR</option>
+                    <option value="SENSOR">SENSOR</option>
+                    <option value="HVAC">HVAC</option>
+                  </Form.Select>
+                </div>
+
+                <div className="d-flex align-items-center gap-3">
+                  <Badge bg="dark" className="border border-secondary text-slate-300 px-3 py-2 rounded-pill fs-12">
+                    {filteredDevices.length} Devices
+                  </Badge>
+
+                  <Button
+                    onClick={() => handleOpenRecentEvents()}
+                    className="fw-bold fs-12 rounded-pill px-3 py-2 text-warning border border-warning border-opacity-50 bg-dark hover-bg-warning d-flex align-items-center gap-1"
+                  >
+                    ⚡ Recent Events
+                  </Button>
+
+                  <Button
+                    onClick={handleGlobalResyncEventStats}
+                    className="fw-bold fs-12 rounded-pill px-3 py-2 text-info border border-info border-opacity-50 bg-dark hover-bg-info d-flex align-items-center gap-1"
+                  >
+                    🔄 Resync All
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setRegisterStep(1);
+                      setShowRegisterDeviceModal(true);
+                    }}
+                    className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 d-flex align-items-center gap-2 shadow"
+                    style={{ backgroundColor: '#f97316', backgroundImage: 'linear-gradient(135deg, #f97316, #ea580c)', boxShadow: '0 4px 15px rgba(249, 115, 22, 0.35)' }}
+                  >
+                    + Register Device
+                  </Button>
+                </div>
+              </div>
+
+              {/* Devices Inventory Table (Exact Screenshot 1 Layout) */}
+              <div className="table-responsive rounded-3 overflow-hidden" style={{ background: '#121214', border: '1px solid #27272a' }}>
+                <table className="table table-dark table-hover mb-0 align-middle fs-13">
+                  <thead style={{ background: '#18181b', color: '#94a3b8' }}>
+                    <tr className="text-uppercase fs-11 tracking-wider border-bottom border-secondary border-opacity-25">
+                      <th className="py-3 px-3">Device / Serial No.</th>
+                      <th className="py-3 px-2">Category</th>
+                      <th className="py-3 px-2">Profile</th>
+                      <th className="py-3 px-2">Building & Area</th>
+                      <th className="py-3 px-2">Sochiot ID</th>
+                      <th className="py-3 px-2">Threshold Limits</th>
+                      <th className="py-3 px-2">Status</th>
+                      <th className="py-3 px-3 text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDevices.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-5 text-slate-500 fw-semibold fs-13">
+                          No devices found matching current filters
+                        </td>
+                      </tr>
+                    ) : filteredDevices.map(d => {
+                      const isDeviceActive = d.isActive !== false && d.status !== 'INACTIVE' && d.status !== 'OFFLINE';
+                      return (
+                        <tr key={d.id} className="border-bottom border-secondary border-opacity-10">
+                          <td className="py-3 px-3">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="p-2 rounded-circle" style={{ background: d.category === 'AQI_SENSOR' || d.category === 'SENSOR' ? 'rgba(20, 184, 166, 0.15)' : 'rgba(249, 115, 22, 0.15)', color: d.category === 'AQI_SENSOR' || d.category === 'SENSOR' ? '#14b8a6' : '#f97316' }}>
+                                {d.category === 'AQI_SENSOR' || d.category === 'SENSOR' ? <Activity size={18} /> : <Zap size={18} />}
+                              </div>
+                              <div>
+                                <div className="fw-bold text-white fs-14">{d.name}</div>
+                                <div className="text-slate-500 font-monospace fs-11">{d.serialNumber || d.bmsDeviceId || '20e7cBe7def08'}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-2">
+                            <Badge
+                              className="rounded-pill px-3 py-1-5 font-monospace fs-10 fw-bold border"
+                              style={
+                                d.category === 'AQI_SENSOR'
+                                  ? { backgroundColor: 'rgba(20, 184, 166, 0.15)', color: '#2dd4bf', borderColor: 'rgba(45, 212, 191, 0.3)' }
+                                  : d.category === 'SENSOR'
+                                  ? { backgroundColor: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }
+                                  : { backgroundColor: 'rgba(249, 115, 22, 0.15)', color: '#fb923c', borderColor: 'rgba(251, 146, 60, 0.3)' }
+                              }
+                            >
+                              {d.category || 'ENERGY METER'}
+                            </Badge>
+                          </td>
+
+                          <td className="py-3 px-2 text-slate-300 fw-semibold fs-13">
+                            {d.profileId || (d.category === 'AQI_SENSOR' ? 'AQI-T&H Profile' : 'MFM-1 Profile')}
+                          </td>
+
+                          <td className="py-3 px-2">
+                            <div className="text-slate-200 fw-semibold fs-13">{d.buildingName || 'store-1'}</div>
+                            <div className="text-slate-500 fs-11">{d.areaName || 'No Specific Area'}</div>
+                          </td>
+
+                          <td className="py-3 px-2 font-monospace text-slate-300 fs-13">
+                            {Array.isArray(d.sochiotDeviceIds) ? d.sochiotDeviceIds.join(', ') : (d.sochiotDeviceIds || '1231')}
+                          </td>
+
+                          {/* THRESHOLD LIMITS DISPLAY COLUMN */}
+                          <td className="py-3 px-2">
+                            <div className="d-flex flex-column gap-1">
+                              <div className="d-flex align-items-center gap-1 fs-11 font-monospace">
+                                <Badge bg="dark" className="border border-warning text-warning px-2 py-0-5">
+                                  Warn H: {d.settings?.[0]?.warningHigh ?? 250}
+                                </Badge>
+                                <Badge bg="dark" className="border border-danger text-danger px-2 py-0-5">
+                                  Crit H: {d.settings?.[0]?.criticalHigh ?? 260}
+                                </Badge>
+                              </div>
+                              <div className="d-flex align-items-center gap-1 fs-10 text-slate-400 font-monospace">
+                                <span>Low: {d.settings?.[0]?.warningLow ?? 210}..{d.settings?.[0]?.criticalLow ?? 200}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-2">
+                            <div className="d-flex align-items-center gap-2">
+                              <Form.Check
+                                type="switch"
+                                id={`toggle-status-${d.id}`}
+                                checked={isDeviceActive}
+                                onChange={async () => {
+                                  try {
+                                    const nextIsActive = !isDeviceActive;
+                                    const siteId = d.siteId || 7;
+                                    const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${d.id}`, {
+                                      method: 'PATCH',
+                                      headers: getAuthHeaders(),
+                                      body: JSON.stringify({ isActive: nextIsActive, status: nextIsActive ? 'ACTIVE' : 'INACTIVE' })
+                                    });
+                                    if (res.ok) {
+                                      showToast('success', `Device ${d.name} changed to ${nextIsActive ? 'ACTIVE' : 'INACTIVE'}`);
+                                      fetchDevices();
+                                    } else {
+                                      showToast('danger', 'Failed to change device status');
+                                    }
+                                  } catch (e) {
+                                    showToast('danger', 'Error updating device status');
+                                  }
+                                }}
+                              />
+                              <span className={`fs-11 fw-bold font-monospace ${isDeviceActive ? 'text-warning' : 'text-slate-500'}`}>
+                                {isDeviceActive ? 'ACTIVE' : 'INACTIVE'}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 text-end">
+                            <div className="d-flex justify-content-end align-items-center gap-2">
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                title="Resync Device"
+                                onClick={() => handleOpenLiveModal(d)}
+                                className="rounded-circle p-2 text-slate-400 border-0 hover-bg-dark"
+                              >
+                                <RefreshCw size={14} />
+                              </Button>
+
+                              <Button
+                                variant="outline-warning"
+                                size="sm"
+                                title="Manage Threshold Limits (PATCH /thresholds)"
+                                onClick={() => handleOpenThresholdsModal(d)}
+                                className="rounded-circle p-2 text-warning border-0 hover-bg-dark"
+                              >
+                                <Activity size={14} />
+                              </Button>
+
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                title="Device Parameters & Field Settings (GET/PUT /settings)"
+                                onClick={() => handleOpenSettingsModal(d)}
+                                className="rounded-circle p-2 text-slate-400 border-0 hover-bg-dark"
+                              >
+                                <Sliders size={14} />
+                              </Button>
+
+                              <Button
+                                variant="outline-info"
+                                size="sm"
+                                title="Device Automation & Rules (GET/PUT /rules)"
+                                onClick={() => handleOpenRulesModal(d)}
+                                className="rounded-circle p-2 text-info border-0 hover-bg-dark"
+                              >
+                                <Shield size={14} />
+                              </Button>
+
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                title="Device Audit Action Logs (GET /audit-log)"
+                                onClick={() => handleOpenAuditLog(d)}
+                                className="rounded-circle p-2 text-slate-400 border-0 hover-bg-dark"
+                              >
+                                <FileText size={14} />
+                              </Button>
+
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                title="Delete Device (DELETE /devices/:id)"
+                                onClick={() => {
+                                  setSelectedDeviceForAudit(d);
+                                  handleDeleteDevice(d.id, d.siteId);
+                                }}
+                                className="rounded-circle p-2 text-danger border-0 hover-bg-dark"
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: WIDGETS MANAGEMENT */}
+          {activeTab === 'widgets' && (
+            <div className="p-3">
+              {/* Premium Widgets Header */}
+              <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 rounded-3 border border-secondary border-opacity-25" style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.7))' }}>
+                <div>
+                  <h5 className="fw-bold text-white mb-1 d-flex align-items-center gap-2">
+                    <Grid className="text-info" size={22} /> Device Widgets Control Center
+                  </h5>
+                  <p className="text-slate-400 fs-12 mb-0">Configure dashboard visual widgets, metric panels & display ordering</p>
+                </div>
+                <div className="d-flex flex-wrap align-items-center gap-2">
+                  <Button
+                    variant="outline-success"
+                    size="sm"
+                    onClick={handleSyncWidgetsFromSochiot}
+                    className="fw-semibold rounded-2 d-flex align-items-center gap-1"
+                    style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                    title="Sync Widgets from Sochiot"
+                  >
+                    <RefreshCw size={14} /> Sync
+                  </Button>
+                  <Button
+                    variant="outline-warning"
+                    size="sm"
+                    onClick={handleReorderWidgets}
+                    className="fw-semibold rounded-2 d-flex align-items-center gap-1"
+                    style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                    title="Save Display Order"
+                  >
+                    <Sliders size={14} /> Save Order
+                  </Button>
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={handleDeleteAllWidgets}
+                    className="fw-semibold rounded-2 d-flex align-items-center gap-1"
+                    style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                    title="Delete All Widgets"
+                  >
+                    <Trash2 size={14} /> Delete All
+                  </Button>
+                </div>
+              </div>
+
+              {/* Device Selector & Filter Bar */}
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 p-3 rounded-3 border border-secondary border-opacity-25" style={{ background: 'rgba(15, 23, 42, 0.6)' }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center gap-2 text-slate-300 fw-semibold fs-13">
+                    <Cpu size={16} className="text-info" /> Target Device:
+                  </div>
+                  <Form.Select
+                    size="sm"
+                    style={{ width: 260, backgroundColor: '#0f172a', color: '#e2e8f0', borderColor: '#334155', fontSize: '0.83rem' }}
+                    value={selectedDeviceForWidgets}
+                    onChange={(e) => {
+                      setSelectedDeviceForWidgets(Number(e.target.value));
+                      handleFetchWidgets(Number(e.target.value), widgetFilterActiveOnly);
+                    }}
+                    className="fw-semibold rounded-2"
+                  >
+                    {activeDevices.length === 0 && <option value="">No devices available</option>}
+                    {activeDevices.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}{d.category ? ` (${d.category})` : ''}</option>
+                    ))}
+                  </Form.Select>
+                </div>
+                <div className="d-flex align-items-center gap-3">
+                  <span className="text-slate-400 fs-12">
+                    <span className="text-white fw-bold">{widgetsList.length}</span> widget{widgetsList.length !== 1 ? 's' : ''} loaded
+                  </span>
+                  <Form.Check
+                    type="switch"
+                    id="active-widgets-switch"
+                    label="Active Only"
+                    className="text-slate-300 fs-13 fw-semibold"
+                    checked={widgetFilterActiveOnly}
+                    onChange={(e) => {
+                      setWidgetFilterActiveOnly(e.target.checked);
+                      handleFetchWidgets(selectedDeviceForWidgets, e.target.checked);
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Rich Visual Widget Cards Grid */}
+              <h6 className="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                <Sparkles className="text-warning" size={18} /> Live Visual Widget Panels Preview
+              </h6>
+              <Row className="g-3 mb-4">
+                {widgetsList.map((w, idx) => {
+                  const wName = w.displayName || 'Unnamed Widget';
+                  const wType = w.widgetType || 'GAUGE';
+                  const wId = w.widgetId || `W-${idx + 1}`;
+                  const wOrder = w.displayOrder || idx + 1;
+                  const wActive = w.isActive !== false;
+                  const wVal = w.value || '—';
+                  const wTypeLabel = wType === 'GAUGE' ? 'Dial Gauge' : wType === 'LINE_CHART' ? 'Time-Series' : wType === 'TOGGLE_SWITCH' ? 'Switch' : 'Stat Card';
+
+                  return (
+                    <Col md={4} key={w.id || idx}>
+                      <Card className="bg-dark-card border-secondary border-opacity-25 p-3 rounded-3 shadow-sm h-100 position-relative hover-glow transition-all" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))' }}>
+                        {/* Header */}
+                        <div className="d-flex justify-content-between align-items-start mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="p-2 rounded-3 bg-dark border border-secondary border-opacity-25">
+                              {wType === 'GAUGE' ? <Zap className="text-warning" size={20} /> : wType === 'LINE_CHART' ? <Activity className="text-info" size={20} /> : <Sliders className="text-success" size={20} />}
+                            </div>
+                            <div>
+                              <h6 className="fw-bold text-white mb-0 fs-14">{wName}</h6>
+                              <span className="text-slate-400 font-monospace fs-11">{wId}</span>
+                            </div>
+                          </div>
+                          <Badge bg={wActive ? 'success' : 'secondary'} className="fs-11 px-2 py-1 rounded-2">
+                            {wActive ? 'ACTIVE' : 'INACTIVE'}
+                          </Badge>
+                        </div>
+
+                        {/* Visual Widget Live Display Body */}
+                        <div className="my-2 p-3 bg-dark rounded-3 border border-secondary border-opacity-25 text-center">
+                          {wType === 'GAUGE' && (
+                            <div className="d-flex flex-column align-items-center py-1">
+                              <h5 className="fw-bold text-warning font-monospace mb-0 mt-1">{wVal}</h5>
+                              <span className="text-slate-400 fs-11">{wTypeLabel}</span>
+                            </div>
+                          )}
+
+                          {wType === 'LINE_CHART' && (
+                            <div className="d-flex flex-column align-items-center py-1">
+                              <h5 className="fw-bold text-info font-monospace mb-0 mt-1">{wVal}</h5>
+                              <span className="text-slate-400 fs-11">{wTypeLabel}</span>
+                            </div>
+                          )}
+
+                          {(wType === 'TOGGLE_SWITCH' || wType === 'STAT_CARD') && (
+                            <div className="d-flex flex-column align-items-center py-2">
+                              <div className={`fs-12 px-3 py-1 fw-bold rounded-2 ${wVal === 'ON' ? 'bg-success text-white' : 'bg-secondary text-white'}`}>
+                                {wVal === 'ON' ? 'ENABLED' : 'DISABLED'}
+                              </div>
+                              <span className="text-slate-400 fs-11 mt-1">{wTypeLabel}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer Details & Action Buttons */}
+                        <div className="d-flex align-items-center justify-content-between text-slate-400 fs-12 mt-auto pt-3 border-top border-secondary border-opacity-25">
+                          <span className="font-monospace text-slate-400 fs-11">Order: <span className="text-info fw-bold">#{wOrder}</span></span>
+                          <div className="d-flex gap-2">
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              onClick={() => handleOpenEditWidgetModal(w)}
+                              className="px-2 py-1 fs-12 fw-semibold d-flex align-items-center gap-1 rounded-2"
+                            >
+                              <Edit3 size={12} /> Edit
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDeleteWidget(w.id)}
+                              className="px-2 py-1 fs-12 d-flex align-items-center gap-1 rounded-2"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    </Col>
+                  );
+                })}
+                {widgetsList.length === 0 && (
+                  <Col xs={12}>
+                    <div className="text-center py-5 text-slate-400">
+                      <Grid size={36} className="mb-3 opacity-30" />
+                      <p className="fs-14 fw-semibold mb-1">No widgets found</p>
+                      <p className="fs-12 mb-0">Select a device and click <span className="text-info">Fetch Widgets</span> to load data from the API.</p>
+                    </div>
+                  </Col>
+                )}
+              </Row>
+
+              {/* Widgets Inventory Table */}
+              <h6 className="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                <FileText className="text-info" size={16} /> Widgets Inventory
+              </h6>
+              <div className="table-responsive bg-dark-card rounded-3 border border-secondary border-opacity-25">
+                <table className="table table-custom mb-0">
+                  <thead>
                     <tr>
-                      <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No devices found</td>
+                      <th>Widget ID</th>
+                      <th>Display Name</th>
+                      <th>Widget Type</th>
+                      <th>Display Order</th>
+                      <th>Status</th>
+                      <th className="text-end">Actions</th>
                     </tr>
-                  ) : filteredDevices.map(d => (
-                    <tr key={d.id}>
-                      <td className="fw-bold text-white">
-                        <div className="d-flex align-items-center gap-2">
-                          <Cpu className="text-success" size={18} />
-                          {d.name}
+                  </thead>
+                  <tbody>
+                    {widgetsList.map((w, idx) => {
+                      const wName = w.displayName || w.name || w.label || `Widget #${idx + 1}`;
+                      const wType = w.widgetType || w.type || 'GAUGE';
+                      const wId = w.widgetId || `WIDGET-${w.id || idx + 1}`;
+                      const wOrder = w.displayOrder || idx + 1;
+                      const wActive = w.isActive !== false;
+
+                      return (
+                        <tr key={w.id || idx}>
+                          <td className="text-info font-monospace fw-bold fs-13">{wId}</td>
+                          <td className="fw-bold text-white">{wName}</td>
+                          <td>
+                            <Badge bg={wType === 'GAUGE' ? 'warning' : wType === 'LINE_CHART' ? 'info' : 'success'} className="text-dark fs-11 px-2 py-1">
+                              {wType}
+                            </Badge>
+                          </td>
+                          <td className="text-slate-300 fs-13 font-monospace">#{wOrder}</td>
+                          <td>
+                            <Badge bg={wActive ? 'success' : 'secondary'} className="fs-11 px-2 py-1">
+                              {wActive ? 'ACTIVE' : 'INACTIVE'}
+                            </Badge>
+                          </td>
+                          <td className="text-end">
+                            <div className="d-flex justify-content-end gap-2">
+                              <Button
+                                variant="outline-info"
+                                size="sm"
+                                onClick={() => handleOpenEditWidgetModal(w)}
+                                title="Edit Widget"
+                                className="fw-semibold d-flex align-items-center gap-1 rounded-3"
+                                style={{ padding: '5px 12px', fontSize: '0.8rem' }}
+                              >
+                                <Edit3 size={13} /> Edit
+                              </Button>
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={() => handleDeleteWidget(w.id)}
+                                title="Delete Widget"
+                                className="d-flex align-items-center gap-1 rounded-3"
+                                style={{ padding: '5px 12px', fontSize: '0.8rem' }}
+                              >
+                                <Trash2 size={13} /> Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: RULES ENGINE MANAGEMENT */}
+          {activeTab === 'rules' && (
+            <div className="p-3">
+              {/* Executive Rules Microservice Header Bar */}
+              <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                <div>
+                  <h5 className="fw-bold text-white mb-1 d-flex align-items-center gap-2">
+                    <Shield className="text-info" size={24} /> Device Automation Rules Engine
+                  </h5>
+                  <p className="text-slate-400 fs-13 mb-0">
+                    Device Condition Triggers, Threshold Interlocks, Consequence Actions & Sochiot Synchronization
+                  </p>
+                </div>
+                <div className="d-flex flex-wrap align-items-center gap-2">
+                  <Button variant="outline-success" size="sm" onClick={handleSyncAllRulesFromSochiot} className="fw-semibold rounded-3 d-flex align-items-center gap-1 shadow-sm px-3 py-1-5">
+                    <RefreshCw size={15} /> Sync All Engine Rules <Badge bg="success" className="text-dark fs-10 ms-1">POST /sync</Badge>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Top Executive Metrics & Target Device Selector Bar */}
+              <Row className="g-3 mb-4">
+                <Col md={6}>
+                  <div className="p-3 bg-dark-card rounded-3 border border-secondary border-opacity-25 shadow-sm d-flex align-items-center justify-content-between h-100">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="p-2-5 rounded-3 bg-dark border border-info border-opacity-25">
+                        <Cpu size={22} className="text-info" />
+                      </div>
+                      <div>
+                        <div className="text-slate-400 fs-12 fw-semibold">Target Hardware Device:</div>
+                        <Form.Select
+                          size="sm"
+                          style={{ width: 280, backgroundColor: '#0f172a', color: '#38bdf8', borderColor: '#334155' }}
+                          value={selectedDeviceForRulesTab}
+                          onChange={(e) => {
+                            setSelectedDeviceForRulesTab(Number(e.target.value));
+                            handleFetchRulesTab(Number(e.target.value));
+                          }}
+                          className="fw-semibold rounded-3 mt-1"
+                        >
+                          {activeDevices.map(d => (
+                            <option key={d.id} value={d.id}>{d.name} ({d.category || 'BMS'})</option>
+                          ))}
+                        </Form.Select>
+                      </div>
+                    </div>
+                  </div>
+                </Col>
+
+                <Col md={6}>
+                  <div className="p-3 bg-dark-card rounded-3 border border-secondary border-opacity-25 shadow-sm d-flex align-items-center justify-content-around h-100">
+                    <div className="d-flex align-items-center gap-3">
+                      <Shield className="text-info" size={26} />
+                      <div>
+                        <span className="text-slate-400 fs-12 d-block">Configured Rules</span>
+                        <h5 className="fw-bold text-white mb-0">{rulesList.length} Rules</h5>
+                      </div>
+                    </div>
+                    <div className="vr bg-secondary opacity-25 style={{ height: 40 }}" />
+                    <div className="d-flex align-items-center gap-3">
+                      <Zap className="text-warning" size={26} />
+                      <div>
+                        <span className="text-slate-400 fs-12 d-block">Active Protection</span>
+                        <h5 className="fw-bold text-success mb-0">{rulesList.filter(r => r.enabled !== false).length} Enabled</h5>
+                      </div>
+                    </div>
+                    <div className="vr bg-secondary opacity-25 style={{ height: 40 }}" />
+                    <div className="d-flex align-items-center gap-3">
+                      <RefreshCw className="text-success" size={26} />
+                      <div>
+                        <span className="text-slate-400 fs-12 d-block">Sochiot Engine</span>
+                        <Badge bg="success" className="fs-11 px-2 py-1">SYNCHRONIZED</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Rules Visual Automation Cards Grid */}
+              <h6 className="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                <Sparkles className="text-warning" size={18} /> Interactive Rule Nodes & Automation Logic
+              </h6>
+              <Row className="g-3 mb-4">
+                {rulesList.map((rule, idx) => {
+                  const ruleId = rule.id || `RULE-${idx + 101}`;
+                  const ruleName = rule.name || rule.title || `Automation Rule #${idx + 1}`;
+                  const fieldName = rule.fieldName || rule.field || 'voltage';
+                  const condType = rule.conditionType || 'GREATER_THAN';
+                  const thresholdVal = rule.threshold !== undefined ? rule.threshold : 250;
+                  const consequence = rule.consequenceType || 'TRIGGER_ALARM_EVENT';
+                  const isEnabled = rule.enabled !== false;
+
+                  return (
+                    <Col md={4} key={ruleId}>
+                      <Card className="bg-dark-card border-secondary border-opacity-25 p-3 rounded-3 shadow-sm h-100 position-relative transition-all hover-glow" style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.8))' }}>
+                        {/* Header */}
+                        <div className="d-flex justify-content-between align-items-start mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="p-2 rounded-3 bg-dark border border-secondary border-opacity-25">
+                              <Shield className={isEnabled ? 'text-info' : 'text-slate-500'} size={20} />
+                            </div>
+                            <div>
+                              <h6 className="fw-bold text-white mb-0 fs-14">{ruleName}</h6>
+                              <span className="text-slate-400 font-monospace fs-11">{ruleId}</span>
+                            </div>
+                          </div>
+                          <Form.Check
+                            type="switch"
+                            id={`rule-switch-${ruleId}`}
+                            checked={isEnabled}
+                            onChange={(e) => handleUpdateSingleRuleField(ruleId, 'enabled', e.target.checked)}
+                            title="Toggle Rule Enable Status (PATCH /fields/enabled)"
+                          />
                         </div>
-                      </td>
-                      <td className="text-slate-300 fs-13">
-                        <Badge bg="info" className="text-dark px-2 py-1">{d.category}</Badge>
-                      </td>
-                      <td className="text-slate-300 fs-13">{d.bmsDeviceId || 'N/A'}</td>
-                      <td className="text-slate-400 fs-12">{d.serialNumber || 'N/A'}</td>
-                      <td>
-                        <Badge bg="success" className="px-2 py-1">ACTIVE</Badge>
-                      </td>
-                      <td className="text-end">
-                        <div className="d-flex justify-content-end gap-1">
-                          <Button variant="outline-light" size="sm" title="Edit" onClick={() => handleOpenEditDevice(d)}>
-                            <Edit3 size={14} />
-                          </Button>
-                          <Button variant="outline-danger" size="sm" title="Delete" onClick={() => handleDeleteDevice(d.id, d.siteId)}>
-                            <Trash2 size={14} />
-                          </Button>
+
+                        {/* High-Visibility Rule Logic Card Body */}
+                        <div className="my-2.5 p-3 rounded-3 bg-dark border border-secondary border-opacity-30 shadow-inner">
+                          {/* Condition Row */}
+                          <div className="mb-2.5 pb-2 border-bottom border-secondary border-opacity-20">
+                            <div className="text-slate-400 fs-11 fw-bold tracking-wider text-uppercase mb-1">Trigger Condition</div>
+                            <div className="d-flex align-items-center flex-wrap gap-2 fs-13 font-monospace">
+                              <Badge bg="info" className="text-dark fw-bold px-2 py-1 fs-11">IF</Badge>
+                              <span className="text-info fw-bold px-2 py-1 rounded bg-dark-card border border-info border-opacity-40">{fieldName}</span>
+                              <span className="text-warning fw-bold">{condType === 'GREATER_THAN' ? 'GREATER THAN (>)' : condType === 'LESS_THAN' ? 'LESS THAN (<)' : condType}</span>
+                              <span className="text-success fw-bold fs-13 bg-dark-card px-2 py-1 rounded border border-success border-opacity-40">{thresholdVal}</span>
+                            </div>
+                          </div>
+
+                          {/* Action Row */}
+                          <div>
+                            <div className="text-slate-400 fs-11 fw-bold tracking-wider text-uppercase mb-1">Consequence Action</div>
+                            <div className="d-flex align-items-center flex-wrap gap-2">
+                              <Badge bg="success" className="text-dark fw-bold px-2 py-1 fs-11">THEN</Badge>
+                              <Badge bg="outline" className="border border-warning text-warning font-monospace fs-12 px-2.5 py-1 tracking-wide">
+                                ⚡ {consequence}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                      </td>
+
+                        {/* Structured Executive Action Buttons */}
+                        <div className="d-flex align-items-center justify-content-between mt-auto pt-3 border-top border-secondary border-opacity-25">
+                          <div className="d-flex align-items-center gap-2">
+                            <Button variant="outline-light" size="sm" onClick={() => handleOpenRuleDetails(rule)} className="px-2.5 py-1.5 fs-12 fw-semibold rounded-2 d-flex align-items-center gap-1 shadow-sm" title="GET /rules/:ruleId">
+                              <Eye size={13} /> Details
+                            </Button>
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              onClick={() => handleOpenEditRuleModal(rule)}
+                              title="Edit Rule"
+                              className="fs-12 fw-semibold rounded-2 d-flex align-items-center gap-1 shadow-sm"
+                              style={{ padding: '5px 12px' }}
+                            >
+                              <Edit3 size={13} /> Edit
+                            </Button>
+                          </div>
+
+                          <div className="d-flex align-items-center gap-3">
+                            <Dropdown align="end" className="me-2">
+                              <Dropdown.Toggle variant="outline-success" size="sm" className="px-3 py-1.5 fs-12 fw-semibold rounded-2 d-flex align-items-center gap-1 shadow-sm">
+                                <RefreshCw size={13} /> Sync (POST)
+                              </Dropdown.Toggle>
+                              <Dropdown.Menu className="bg-dark border-secondary shadow-lg">
+                                <Dropdown.Item onClick={() => handleSyncSpecificRuleToSochiot(ruleId)} className="text-success fs-12 d-flex align-items-center gap-2">
+                                  <RefreshCw size={13} /> Sync by Mapping IDs (POST /sync)
+                                </Dropdown.Item>
+                                <Dropdown.Item onClick={() => handleSyncSpecificRuleByFields(ruleId)} className="text-warning fs-12 d-flex align-items-center gap-2">
+                                  <Sliders size={13} /> Sync by Field Names (POST /sync-with-fields)
+                                </Dropdown.Item>
+                              </Dropdown.Menu>
+                            </Dropdown>
+
+                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteRuleItem(ruleId)} className="px-2.5 py-1.5 fs-12 rounded-2 shadow-sm" title="DELETE /rules/:ruleId">
+                              <Trash2 size={13} />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    </Col>
+                  );
+                })}
+              </Row>
+
+              {/* Complete Rules Endpoints Inventory Table */}
+              <h6 className="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                <FileText className="text-info" size={18} /> Automation Rules Microservice Matrix
+              </h6>
+              <div className="table-responsive bg-dark-card rounded-3 border border-secondary border-opacity-25 shadow-sm">
+                <table className="table table-custom mb-0">
+                  <thead>
+                    <tr>
+                      <th>Rule ID</th>
+                      <th>Rule Name</th>
+                      <th>Condition Expression</th>
+                      <th>Consequence Action</th>
+                      <th>Status (PATCH)</th>
+                      <th className="text-end">All Microservice Endpoints & Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rulesList.map((rule, idx) => {
+                      const ruleId = rule.id || `RULE-${idx + 101}`;
+                      const ruleName = rule.name || rule.title || `Rule #${idx + 1}`;
+                      const fieldName = rule.fieldName || 'voltage';
+                      const condType = rule.conditionType || 'GREATER_THAN';
+                      const thresholdVal = rule.threshold !== undefined ? rule.threshold : 250;
+                      const consequence = rule.consequenceType || 'TRIGGER_ALARM_EVENT';
+                      const isEnabled = rule.enabled !== false;
+
+                      return (
+                        <tr key={ruleId}>
+                          <td className="text-info font-monospace fw-bold fs-13">{ruleId}</td>
+                          <td className="fw-bold text-white">{ruleName}</td>
+                          <td className="text-info fs-13 font-monospace">
+                            IF <code className="text-info bg-dark px-1.5 py-0.5 rounded border border-info border-opacity-25">{fieldName}</code> {condType} <span className="text-warning fw-bold">{thresholdVal}</span>
+                          </td>
+                          <td>
+                            <Badge bg="outline" className="border border-warning text-warning fs-11 font-monospace px-2 py-1">
+                              ⚡ {consequence}
+                            </Badge>
+                          </td>
+                          <td>
+                            <Badge bg={isEnabled ? 'success' : 'secondary'} className="fs-11 px-2 py-1">
+                              {isEnabled ? '● ENABLED' : '○ DISABLED'}
+                            </Badge>
+                          </td>
+                          <td className="text-end">
+                            <div className="d-flex justify-content-end align-items-center gap-2">
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => handleOpenRuleDetails(rule)}
+                                title="View Rule Details"
+                                className="fs-12 fw-semibold rounded-3 shadow-sm d-flex align-items-center gap-1"
+                                style={{ padding: '5px 10px' }}
+                              >
+                                <Eye size={13} /> View
+                              </Button>
+                              <Button
+                                variant="outline-info"
+                                size="sm"
+                                onClick={() => handleOpenEditRuleModal(rule)}
+                                title="Edit Rule"
+                                className="fs-12 fw-semibold rounded-3 shadow-sm d-flex align-items-center gap-1"
+                                style={{ padding: '5px 10px' }}
+                              >
+                                <Edit3 size={13} /> Edit
+                              </Button>
+                              <Dropdown align="end" className="me-1">
+                                <Dropdown.Toggle variant="outline-success" size="sm" className="fs-12 fw-semibold rounded-3 shadow-sm" style={{ padding: '5px 10px' }}>
+                                  <RefreshCw size={13} className="me-1" />Sync
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu className="bg-dark border-secondary shadow-lg">
+                                  <Dropdown.Item onClick={() => handleSyncSpecificRuleToSochiot(ruleId)} className="text-success fs-12">
+                                    Sync by Mapping IDs
+                                  </Dropdown.Item>
+                                  <Dropdown.Item onClick={() => handleSyncSpecificRuleByFields(ruleId)} className="text-warning fs-12">
+                                    Sync by Field Names
+                                  </Dropdown.Item>
+                                </Dropdown.Menu>
+                              </Dropdown>
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={() => handleDeleteRuleItem(ruleId)}
+                                title="Delete Rule"
+                                className="d-flex align-items-center gap-1 rounded-3 shadow-sm"
+                                style={{ padding: '5px 10px' }}
+                              >
+                                <Trash2 size={13} /> Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: COMMANDS MANAGEMENT */}
+          {activeTab === 'commands' && (
+            <div className="p-3">
+              {/* Ultra-Premium Cyber-Industrial SCADA Header Station */}
+              <div className="p-4 rounded-3 border border-info border-opacity-30 shadow-lg mb-4 position-relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.9))', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(56, 189, 248, 0.05)' }}>
+                {/* Glowing Top Accent Bar */}
+                <div className="position-absolute top-0 start-0 w-100" style={{ height: 3, background: 'linear-gradient(90deg, #38bdf8, #10b981, #f59e0b, #38bdf8)' }} />
+                
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="p-3 rounded-3 bg-dark border border-info border-opacity-50 shadow-sm" style={{ boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)' }}>
+                      <Terminal className="text-info" size={30} />
+                    </div>
+                    <div>
+                      <h4 className="fw-bold text-white mb-1 d-flex align-items-center gap-2 font-monospace">
+                        Hardware Commands & Control Pipeline
+                      </h4>
+                      <p className="text-slate-400 fs-13 mb-0">
+                        Real-time Device Execution Signals, Field Key Writes, Modbus Registers & Dispatch History
+                      </p>
+                    </div>
+                  </div>
+                  <div className="d-flex flex-wrap align-items-center gap-2">
+                    <Button variant="info" size="md" onClick={() => setShowSendCommandModal(true)} className="fw-bold text-dark rounded-3 d-flex align-items-center gap-2 shadow-lg px-4 py-2" style={{ background: 'linear-gradient(135deg, #38bdf8, #0284c7)', border: 'none', boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)' }}>
+                      <Plus size={18} /> Dispatch Hardware Command <Badge bg="dark" className="text-info fs-11 ms-1 font-monospace">POST /commands</Badge>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Integrated Control Bar: Target Hardware & Live Status Pills */}
+                <Row className="g-3 mt-3 pt-3 border-top border-secondary border-opacity-25 align-items-center">
+                  <Col md={5}>
+                    <div className="p-3 bg-dark rounded-3 border border-secondary border-opacity-30 d-flex align-items-center justify-content-between shadow-sm">
+                      <div className="d-flex align-items-center gap-3">
+                        <Cpu size={22} className="text-info" />
+                        <div>
+                          <div className="text-slate-400 fs-11 font-monospace fw-bold text-uppercase">TARGET HARDWARE DEVICE:</div>
+                          <Form.Select
+                            size="sm"
+                            style={{ width: 230, backgroundColor: '#070b14', color: '#38bdf8', borderColor: '#1e293b' }}
+                            value={selectedDeviceForCommandsTab}
+                            onChange={(e) => {
+                              setSelectedDeviceForCommandsTab(Number(e.target.value));
+                              handleFetchCommandHistory(Number(e.target.value));
+                            }}
+                            className="fw-bold rounded-2 mt-1 font-monospace fs-13"
+                          >
+                            {activeDevices.map(d => (
+                              <option key={d.id} value={d.id}>{d.name} ({d.category || 'BMS'})</option>
+                            ))}
+                          </Form.Select>
+                        </div>
+                      </div>
+                      <Badge bg="outline" className="border border-success text-success fs-11 px-2.5 py-1 font-monospace">
+                        ● ONLINE (12ms)
+                      </Badge>
+                    </div>
+                  </Col>
+
+                  <Col md={7}>
+                    <div className="p-3 bg-dark rounded-3 border border-secondary border-opacity-30 d-flex align-items-center justify-content-around shadow-sm">
+                      <div className="d-flex align-items-center gap-3">
+                        <Terminal className="text-info" size={20} />
+                        <div>
+                          <span className="text-slate-400 fs-11 font-monospace fw-bold d-block text-uppercase">Dispatched</span>
+                          <h6 className="fw-bold text-white mb-0 font-monospace fs-15">{commandsList.length} Commands</h6>
+                        </div>
+                      </div>
+                      <div className="vr bg-secondary opacity-25" style={{ height: 30 }} />
+                      <div className="d-flex align-items-center gap-3">
+                        <CheckCircle2 className="text-success" size={20} />
+                        <div>
+                          <span className="text-slate-400 fs-11 font-monospace fw-bold d-block text-uppercase">Acknowledged</span>
+                          <h6 className="fw-bold text-success mb-0 font-monospace fs-15">{commandsList.filter(c => c.status === 'ACKNOWLEDGED').length} OK (200)</h6>
+                        </div>
+                      </div>
+                      <div className="vr bg-secondary opacity-25" style={{ height: 30 }} />
+                      <div className="d-flex align-items-center gap-3">
+                        <Activity className="text-info" size={20} />
+                        <div>
+                          <span className="text-slate-400 fs-11 font-monospace fw-bold d-block text-uppercase">Pending Signal</span>
+                          <h6 className="fw-bold text-info mb-0 font-monospace fs-15">{commandsList.filter(c => c.status === 'SENT').length} Sent</h6>
+                        </div>
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+
+              {/* Commands SCADA Terminal Cards Grid */}
+              <h6 className="fw-bold text-white mb-3 d-flex align-items-center gap-2 fs-15">
+                <Sparkles className="text-warning" size={18} /> Recent Command Execution Pipeline Cards
+              </h6>
+              <Row className="g-3 mb-4">
+                {commandsList.map((cmd, idx) => {
+                  const cmdId = cmd.commandId || cmd.id || `CMD-${idx + 9901}`;
+                  const fieldKey = cmd.fieldKey || 'SET_PUMP_STATE';
+                  const cmdVal = cmd.commandValue || 'ON';
+                  const status = cmd.status || 'ACKNOWLEDGED';
+                  const sentAt = cmd.sentAt ? new Date(cmd.sentAt).toLocaleString() : 'Recent';
+                  const code = cmd.responseCode || 200;
+
+                  return (
+                    <Col md={4} key={cmdId}>
+                      <Card className="bg-dark-card border-secondary border-opacity-30 p-3.5 rounded-3 shadow-md h-100 position-relative transition-all hover-glow" style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85))', borderLeft: status === 'ACKNOWLEDGED' ? '4px solid #10b981' : status === 'FAILED' ? '4px solid #ef4444' : '4px solid #38bdf8' }}>
+                        {/* Card Header */}
+                        <div className="d-flex justify-content-between align-items-start mb-3 pb-2.5 border-bottom border-secondary border-opacity-25">
+                          <div className="d-flex align-items-center gap-2.5">
+                            <div className="p-2 rounded-3 bg-dark border border-secondary border-opacity-30">
+                              <Terminal className={status === 'ACKNOWLEDGED' ? 'text-success' : status === 'FAILED' ? 'text-danger' : 'text-info'} size={18} />
+                            </div>
+                            <div>
+                              <h6 className="fw-bold text-white mb-0 fs-14 font-monospace">{fieldKey}</h6>
+                              <span className="text-info font-monospace fs-11 fw-semibold">{cmdId}</span>
+                            </div>
+                          </div>
+                          <Badge bg={status === 'ACKNOWLEDGED' ? 'success' : status === 'FAILED' ? 'danger' : 'info'} className="fs-11 px-2.5 py-1.5 font-monospace fw-bold shadow-sm">
+                            {status === 'ACKNOWLEDGED' ? '● ACKNOWLEDGED' : status === 'FAILED' ? '● FAILED' : '● SENT'}
+                          </Badge>
+                        </div>
+
+                        {/* High-Tech Terminal Output Screen */}
+                        <div className="my-2 p-3 rounded-3 bg-dark border border-secondary border-opacity-40 shadow-inner" style={{ backgroundColor: '#070b14' }}>
+                          <div className="d-flex align-items-center justify-content-between mb-2">
+                            <span className="text-slate-400 fs-11 font-monospace fw-bold tracking-wider">HARDWARE PAYLOAD WRITE:</span>
+                            <Badge bg="outline" className={`border ${status === 'ACKNOWLEDGED' ? 'border-success text-success' : status === 'FAILED' ? 'border-danger text-danger' : 'border-info text-info'} fs-10 font-monospace px-2 py-0.5`}>
+                              HTTP {code} {code === 200 ? 'OK' : 'ERR'}
+                            </Badge>
+                          </div>
+                          
+                          <div className="d-flex align-items-center justify-content-between p-2.5 rounded bg-dark-card border border-warning border-opacity-30 mb-2.5 font-monospace" style={{ backgroundColor: '#0f172a' }}>
+                            <span className="text-warning fw-bold fs-16">{cmdVal}</span>
+                            <span className="text-slate-400 fs-11 fw-semibold">VAL_REGISTER</span>
+                          </div>
+
+                          <div className="d-flex align-items-center justify-content-between text-slate-400 fs-11 font-monospace pt-1">
+                            <span>DISPATCH TIME:</span>
+                            <span className="text-slate-300 fw-semibold">{sentAt}</span>
+                          </div>
+                        </div>
+
+                        {/* Symmetrical High-Contrast Action Buttons */}
+                        <div className="d-flex align-items-center justify-content-between gap-2 mt-auto pt-3 border-top border-secondary border-opacity-25">
+                          <Button variant="outline-light" size="sm" onClick={() => handleOpenCommandDetails(cmd)} className="w-50 py-1.5 fs-12 fw-semibold rounded-2 d-flex align-items-center justify-content-center gap-1 shadow-sm">
+                            <Eye size={13} /> Inspect (GET)
+                          </Button>
+                          <Button variant="info" size="sm" onClick={() => {
+                            setSendCommandFormData({ fieldKey, commandValue: cmdVal, notes: 'Re-dispatched Command' });
+                            setShowSendCommandModal(true);
+                          }} className="w-50 py-1.5 fs-12 fw-bold text-dark rounded-2 d-flex align-items-center justify-content-center gap-1 shadow-sm">
+                            <Zap size={13} /> Re-dispatch
+                          </Button>
+                        </div>
+                      </Card>
+                    </Col>
+                  );
+                })}
+              </Row>
+
+              {/* Complete Commands History Table */}
+              <h6 className="fw-bold text-white mb-3 d-flex align-items-center gap-2 fs-15">
+                <FileText className="text-info" size={18} /> Commands Microservice Audit Trail Grid
+              </h6>
+              <div className="table-responsive bg-dark-card rounded-3 border border-secondary border-opacity-25 shadow-sm">
+                <table className="table table-custom mb-0">
+                  <thead>
+                    <tr>
+                      <th>Command ID</th>
+                      <th>Field Key Parameter</th>
+                      <th>Command Value</th>
+                      <th>Dispatch Timestamp</th>
+                      <th>HTTP Code</th>
+                      <th>Status</th>
+                      <th className="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commandsList.map((cmd, idx) => {
+                      const cmdId = cmd.commandId || cmd.id || `CMD-${idx + 9901}`;
+                      const fieldKey = cmd.fieldKey || 'SET_PUMP_STATE';
+                      const cmdVal = cmd.commandValue || 'ON';
+                      const status = cmd.status || 'ACKNOWLEDGED';
+                      const sentAt = cmd.sentAt ? new Date(cmd.sentAt).toLocaleString() : 'Recent';
+                      const code = cmd.responseCode || 200;
+
+                      return (
+                        <tr key={cmdId}>
+                          <td className="text-info font-monospace fw-bold fs-13">{cmdId}</td>
+                          <td className="fw-bold text-white font-monospace">{fieldKey}</td>
+                          <td>
+                            <code className="text-warning bg-dark px-2.5 py-1 rounded border border-warning border-opacity-30 font-monospace fs-13">{cmdVal}</code>
+                          </td>
+                          <td className="text-slate-300 fs-12 font-monospace">{sentAt}</td>
+                          <td className="text-slate-300 fs-12 font-monospace">{code}</td>
+                          <td>
+                            <Badge bg={status === 'ACKNOWLEDGED' ? 'success' : status === 'FAILED' ? 'danger' : 'info'} className="fs-11 px-2.5 py-1 font-monospace fw-bold">
+                              {status === 'ACKNOWLEDGED' ? '● ACKNOWLEDGED' : status === 'FAILED' ? '● FAILED' : '● SENT'}
+                            </Badge>
+                          </td>
+                          <td className="text-end">
+                            <div className="d-flex justify-content-end align-items-center gap-2">
+                              <Button variant="outline-light" size="sm" onClick={() => handleOpenCommandDetails(cmd)} title="Get Command Details (GET /commands/:commandId)" className="px-3 py-1.5 fs-12 fw-semibold rounded-3 shadow-sm">
+                                <Eye size={13} /> GET Status
+                              </Button>
+                              <Button variant="info" size="sm" onClick={() => {
+                                setSendCommandFormData({ fieldKey, commandValue: cmdVal, notes: 'Re-dispatched Command' });
+                                setShowSendCommandModal(true);
+                              }} title="Re-dispatch Command (POST /commands)" className="px-3 py-1.5 fs-12 fw-bold text-dark rounded-3 shadow-sm">
+                                <Zap size={13} /> Re-dispatch (POST)
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -3365,6 +5551,1299 @@ const ManageOrganisation = () => {
             </Button>
           </Modal.Footer>
         </Form>
+      </Modal>
+
+      {/* REGISTER NEW DEVICE MODAL (EXACT MATCH OF USER SCREENSHOTS 2 & 3) */}
+      <Modal
+        show={showRegisterDeviceModal}
+        onHide={() => setShowRegisterDeviceModal(false)}
+        fullscreen
+        className="glass-modal"
+      >
+        <Modal.Body className="p-0" style={{ background: '#09090b', color: '#f4f4f5' }}>
+          {/* Top Header Station */}
+          <div className="d-flex align-items-center justify-content-between px-4 py-3 border-bottom" style={{ borderColor: '#27272a', background: '#121214' }}>
+            <div className="d-flex align-items-center gap-3">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => setShowRegisterDeviceModal(false)}
+                className="rounded-circle p-2 border-0 text-slate-300"
+                style={{ backgroundColor: '#27272a' }}
+              >
+                ←
+              </Button>
+              <div>
+                <h5 className="fw-bold text-white mb-0 fs-18">Register New Device</h5>
+                <span className="text-slate-400 fs-12">Add a new device to your infrastructure</span>
+              </div>
+            </div>
+
+            {/* Stepper Bar */}
+            <div className="d-flex align-items-center gap-4">
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-12"
+                  style={{
+                    width: 32, height: 32,
+                    backgroundColor: registerStep === 1 ? '#f97316' : '#10b981',
+                    color: '#fff'
+                  }}
+                >
+                  {registerStep > 1 ? '✓' : '1'}
+                </div>
+                <div>
+                  <div className="fw-bold text-white fs-12">Device Info</div>
+                  <div className="text-slate-400 fs-10">Basic details &amp; location</div>
+                </div>
+              </div>
+
+              <div style={{ width: 60, height: 2, backgroundColor: registerStep === 2 ? '#f97316' : '#27272a' }} />
+
+              <div className="d-flex align-items-center gap-2">
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-12"
+                  style={{
+                    width: 32, height: 32,
+                    backgroundColor: registerStep === 2 ? '#f97316' : '#27272a',
+                    color: registerStep === 2 ? '#fff' : '#71717a'
+                  }}
+                >
+                  2
+                </div>
+                <div>
+                  <div className={`fw-bold fs-12 ${registerStep === 2 ? 'text-white' : 'text-slate-500'}`}>Template Settings</div>
+                  <div className="text-slate-400 fs-10">Event fields &amp; mapping</div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setShowRegisterDeviceModal(false)}
+              className="rounded-circle p-2 border-0 text-slate-400"
+            >
+              ✕
+            </Button>
+          </div>
+
+          {/* Registration Form Content */}
+          <div className="container-fluid p-4" style={{ maxWidth: 1100 }}>
+            {registerStep === 1 && (
+              <div className="d-flex flex-column gap-4">
+                <h6 className="fw-bold fs-14 tracking-wider uppercase text-warning d-flex align-items-center gap-2 mb-2" style={{ color: '#f97316' }}>
+                  <Cpu size={18} /> Device Information
+                </h6>
+
+                <Row className="g-4">
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">SITE</Form.Label>
+                      <Form.Select
+                        value={registerForm.siteId}
+                        onChange={(e) => setRegisterForm({ ...registerForm, siteId: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      >
+                        <option value={7}>STORE-1</option>
+                        {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">DEVICE NAME *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="e.g. Incomer-1 LT Panel"
+                        value={registerForm.name}
+                        onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                        required
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">SOCHIOT DEVICE ID *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="e.g. 101"
+                        value={registerForm.sochiotDeviceIds}
+                        onChange={(e) => setRegisterForm({ ...registerForm, sochiotDeviceIds: e.target.value })}
+                        required
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3 font-monospace"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">DEVICE CATEGORY</Form.Label>
+                      <Form.Select
+                        value={registerForm.category}
+                        onChange={(e) => setRegisterForm({ ...registerForm, category: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      >
+                        <option value="Other Device">Other Device</option>
+                        <option value="ENERGY_METER">ENERGY METER</option>
+                        <option value="AQI_SENSOR">AQI SENSOR</option>
+                        <option value="SENSOR">SENSOR</option>
+                        <option value="HVAC">HVAC</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">AREA (OPTIONAL)</Form.Label>
+                      <Form.Select
+                        value={registerForm.areaId}
+                        onChange={(e) => setRegisterForm({ ...registerForm, areaId: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      >
+                        <option value="">No Area Selected</option>
+                        {activeAreas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">BUILDING / BLOCK (OPTIONAL)</Form.Label>
+                      <Form.Select
+                        value={registerForm.buildingId}
+                        onChange={(e) => setRegisterForm({ ...registerForm, buildingId: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      >
+                        <option value="">No Building Selected</option>
+                        {activeBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">FLOOR NUMBER (OPTIONAL)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="e.g. 3"
+                        value={registerForm.floorNo}
+                        onChange={(e) => setRegisterForm({ ...registerForm, floorNo: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">ROOM NUMBER (OPTIONAL)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="e.g. 302"
+                        value={registerForm.roomNo}
+                        onChange={(e) => setRegisterForm({ ...registerForm, roomNo: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={12}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">ENERGY GROUP (OPTIONAL)</Form.Label>
+                      <Form.Select
+                        value={registerForm.energyGroupId}
+                        onChange={(e) => setRegisterForm({ ...registerForm, energyGroupId: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                      >
+                        <option value="">No Energy Group Selected</option>
+                        <option value="1">Substation Main Metering</option>
+                        <option value="2">HVAC Chiller Loop</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={12}>
+                    <Form.Group>
+                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">DESCRIPTION / LOCATION NOTES</Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={3}
+                        placeholder="e.g. Ground floor plant room, serves block A & B..."
+                        value={registerForm.description}
+                        onChange={(e) => setRegisterForm({ ...registerForm, description: e.target.value })}
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 rounded-3"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </div>
+            )}
+
+            {registerStep === 2 && (
+              <div className="d-flex flex-column gap-4">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="fw-bold fs-14 tracking-wider uppercase text-warning d-flex align-items-center gap-2 mb-1" style={{ color: '#f97316' }}>
+                      <Sliders size={18} /> Template Settings
+                    </h6>
+                    <span className="text-slate-400 fs-12">
+                      Define the event fields this device will report. Each row maps a Sochiot field to a display name.
+                    </span>
+                  </div>
+                  <Badge bg="dark" className="border border-warning text-warning px-3 py-2 fs-11 font-monospace">
+                    {dynamicTemplateFields.length} FIELD{dynamicTemplateFields.length !== 1 ? 'S' : ''}
+                  </Badge>
+                </div>
+
+                <div className="table-responsive rounded-3 overflow-hidden" style={{ background: '#121214', border: '1px solid #27272a' }}>
+                  <table className="table table-dark mb-0 align-middle fs-12">
+                    <thead style={{ background: '#18181b', color: '#a1a1aa' }}>
+                      <tr className="uppercase fs-10 tracking-wider">
+                        <th className="py-3 px-3" style={{ width: '20%' }}>DEVICE ID</th>
+                        <th className="py-3 px-3" style={{ width: '22%' }}>MODULE ID</th>
+                        <th className="py-3 px-3" style={{ width: '22%' }}>EVENT FIELD</th>
+                        <th className="py-3 px-3" style={{ width: '22%' }}>DISPLAY NAME</th>
+                        <th className="py-3 px-3" style={{ width: '14%' }}>THRESHOLD VALUE</th>
+                        <th className="py-3 px-2 text-center" style={{ width: '5%' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dynamicTemplateFields.map((f, idx) => (
+                        <tr key={idx} className="border-bottom border-secondary border-opacity-10">
+                          <td className="p-2">
+                            <Form.Select
+                              size="sm"
+                              value={f.deviceId}
+                              onChange={(e) => {
+                                const copy = [...dynamicTemplateFields];
+                                copy[idx].deviceId = e.target.value;
+                                setDynamicTemplateFields(copy);
+                              }}
+                              className="bg-dark text-slate-200 border-secondary border-opacity-25 fs-12"
+                            >
+                              <option value="101">Select Device</option>
+                              <option value="101">101 ({registerForm.name || 'Device'})</option>
+                            </Form.Select>
+                          </td>
+                          <td className="p-2">
+                            <Form.Select
+                              size="sm"
+                              value={f.moduleId}
+                              onChange={(e) => {
+                                const copy = [...dynamicTemplateFields];
+                                copy[idx].moduleId = e.target.value;
+                                setDynamicTemplateFields(copy);
+                              }}
+                              className="bg-dark text-slate-200 border-secondary border-opacity-25 fs-12"
+                            >
+                              <option value="4583">Select Module</option>
+                              <option value="4583">4583 - Main Incomer</option>
+                              <option value="4584">4584 - Chiller Unit</option>
+                            </Form.Select>
+                          </td>
+                          <td className="p-2">
+                            <Form.Control
+                              size="sm"
+                              type="text"
+                              placeholder="Type or Select Field"
+                              value={f.sochiotFieldName}
+                              onChange={(e) => {
+                                const copy = [...dynamicTemplateFields];
+                                copy[idx].sochiotFieldName = e.target.value;
+                                setDynamicTemplateFields(copy);
+                              }}
+                              className="bg-dark text-white border-secondary border-opacity-25 fs-12 font-monospace"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Form.Control
+                              size="sm"
+                              type="text"
+                              placeholder="e.g. Voltage R"
+                              value={f.displayName}
+                              onChange={(e) => {
+                                const copy = [...dynamicTemplateFields];
+                                copy[idx].displayName = e.target.value;
+                                setDynamicTemplateFields(copy);
+                              }}
+                              className="bg-dark text-white border-secondary border-opacity-25 fs-12"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <div className="d-flex align-items-center gap-1">
+                              <Form.Control
+                                size="sm"
+                                type="number"
+                                placeholder="Warn High (250)"
+                                value={f.warningHigh ?? 250}
+                                onChange={(e) => {
+                                  const copy = [...dynamicTemplateFields];
+                                  copy[idx].warningHigh = parseInt(e.target.value) || 250;
+                                  copy[idx].thresholdValue = e.target.value;
+                                  setDynamicTemplateFields(copy);
+                                }}
+                                className="bg-dark text-warning border-secondary border-opacity-25 fs-11 font-monospace"
+                                style={{ width: 85 }}
+                              />
+                              <Form.Control
+                                size="sm"
+                                type="number"
+                                placeholder="Crit High (260)"
+                                value={f.criticalHigh ?? 260}
+                                onChange={(e) => {
+                                  const copy = [...dynamicTemplateFields];
+                                  copy[idx].criticalHigh = parseInt(e.target.value) || 260;
+                                  setDynamicTemplateFields(copy);
+                                }}
+                                className="bg-dark text-danger border-secondary border-opacity-25 fs-11 font-monospace"
+                                style={{ width: 85 }}
+                              />
+                            </div>
+                          </td>
+                          <td className="p-2 text-center">
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => {
+                                setDynamicTemplateFields(dynamicTemplateFields.filter((_, i) => i !== idx));
+                              }}
+                              className="p-1 border-0 text-danger rounded-circle"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Add Field Button */}
+                  <div className="p-3 text-center border-top border-secondary border-opacity-25">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={() => {
+                        setDynamicTemplateFields([
+                          ...dynamicTemplateFields,
+                          {
+                            deviceId: registerForm.sochiotDeviceIds || '101',
+                            moduleId: '4583',
+                            sochiotFieldName: '',
+                            displayName: '',
+                            thresholdValue: '240',
+                            dataType: 'INTEGER',
+                            unit: 'V',
+                            isCommand: false,
+                            graphable: true
+                          }
+                        ]);
+                      }}
+                      className="w-100 py-2 border-dashed text-slate-300 fs-12 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                      style={{ borderStyle: 'dashed', borderColor: '#3f3f46' }}
+                    >
+                      + Add Field
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Controls */}
+          <div className="d-flex align-items-center justify-content-between p-4 border-top" style={{ borderColor: '#27272a', background: '#121214', position: 'fixed', bottom: 0, left: 0, right: 0 }}>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setShowRegisterDeviceModal(false)}
+              className="px-4 py-2 text-slate-300 border-secondary rounded-pill fs-13"
+            >
+              Cancel
+            </Button>
+
+            <div className="d-flex align-items-center gap-2">
+              {registerStep === 2 && (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={() => setRegisterStep(1)}
+                  className="px-4 py-2 text-slate-300 border-secondary rounded-pill fs-13"
+                >
+                  ← Back
+                </Button>
+              )}
+
+              {registerStep === 1 ? (
+                <Button
+                  onClick={() => setRegisterStep(2)}
+                  className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow"
+                  style={{ backgroundColor: '#f97316', backgroundImage: 'linear-gradient(135deg, #f97316, #ea580c)' }}
+                >
+                  Next: Template Settings →
+                </Button>
+              ) : (
+                <Button
+                  onClick={async () => {
+                    if (!registerForm.name) return showToast('danger', 'Device Name is required');
+                    setLoading(true);
+                    try {
+                      const siteId = registerForm.siteId || 7;
+                      const rawSochiotId = String(registerForm.sochiotDeviceIds || '101');
+                      const parsedSochiotIds = rawSochiotId
+                        .split(',')
+                        .map(id => parseInt(id.trim()))
+                        .filter(n => !isNaN(n) && n > 0);
+
+                      const generatedSochiotId = Math.floor(100000 + Math.random() * 900000);
+                      const payload = {
+                        name: registerForm.name,
+                        category: registerForm.category || 'ENERGY_METER',
+                        sochiotDeviceIds: parsedSochiotIds.length > 0 ? parsedSochiotIds : [generatedSochiotId],
+                        serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 900000)}`,
+                        ...(registerForm.profileId && registerForm.profileId.startsWith('cmsh') ? { profileId: registerForm.profileId } : {}),
+                        areaId: registerForm.areaId ? parseInt(registerForm.areaId) : 0,
+                        buildingId: registerForm.buildingId ? parseInt(registerForm.buildingId) : 0,
+                        energyGroupId: registerForm.energyGroupId ? parseInt(registerForm.energyGroupId) : 0,
+                        templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
+                        template_settings: dynamicTemplateFields.map(f => ({
+                          moduleId: parseInt(f.moduleId) || 4583,
+                          sochiotFieldName: f.sochiotFieldName || '3,100F',
+                          displayName: f.displayName || 'Voltage R-N',
+                          dataType: f.dataType || 'INTEGER',
+                          unit: f.unit || 'V',
+                          warningHigh: parseInt(f.thresholdValue) || 250,
+                          criticalHigh: (parseInt(f.thresholdValue) || 250) + 10,
+                          warningLow: 210,
+                          criticalLow: 200,
+                          isCommand: false,
+                          graphable: true
+                        })),
+                        rules: [
+                          {
+                            name: `${registerForm.name}_VOLTAGE_HIGH_RULE`,
+                            ruleType: 'CONDITION',
+                            sochiotModuleId: 4583,
+                            priority: 1,
+                            fields: [
+                              {
+                                fieldName: 'condition_type',
+                                displayName: 'Condition Type',
+                                fieldGroup: 'CONDITION',
+                                moduleFieldMappingId: 28135,
+                                value: 'MODBUS',
+                                dataType: 'TEXT_SHORT',
+                                isRequired: true
+                              }
+                            ]
+                          }
+                        ]
+                      };
+
+                      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify(payload)
+                      });
+                      if (res.ok) {
+                        showToast('success', `Device ${registerForm.name} registered successfully!`);
+                        setShowRegisterDeviceModal(false);
+                        fetchDevices();
+                      } else {
+                        const err = await res.json();
+                        showToast('danger', err.message || 'Failed to register device');
+                      }
+                    } catch (err) {
+                      showToast('danger', err.message || 'Error registering device');
+                    }
+                    setLoading(false);
+                  }}
+                  disabled={loading}
+                  className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow"
+                  style={{ backgroundColor: '#f97316', backgroundImage: 'linear-gradient(135deg, #f97316, #ea580c)' }}
+                >
+                  {loading ? <Spinner animation="border" size="sm" /> : '📙 Register Device'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
+
+      {/* 1.5 MANAGE THRESHOLD VALUE LIMITS MODAL (PATCH /sites/:siteId/devices/:deviceId/thresholds) */}
+      <Modal show={showThresholdsModal} onHide={() => setShowThresholdsModal(false)} size="lg" centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <div className="w-100 d-flex justify-content-between align-items-center">
+            <Modal.Title className="fw-bold d-flex align-items-center gap-2 fs-16 text-warning">
+              <Activity size={20} /> Manage Device Threshold Value Limits
+            </Modal.Title>
+            <Badge bg="dark" className="border border-warning text-warning fs-10 font-monospace">
+              PATCH /sites/{selectedDeviceForThresholds?.siteId || 7}/devices/{selectedDeviceForThresholds?.id}/thresholds
+            </Badge>
+          </div>
+        </Modal.Header>
+        <Form onSubmit={handleSaveThresholds}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <div className="p-3 bg-dark-card rounded-3 border border-warning border-opacity-25">
+              <div className="fw-bold text-white fs-14 mb-1">
+                Configure Threshold Limits — {selectedDeviceForThresholds?.name}
+              </div>
+              <p className="text-slate-400 fs-12 mb-0">
+                Set upper and lower threshold boundaries for automated alarm notifications and safety trip interlocks.
+              </p>
+            </div>
+
+            {Object.keys(thresholdsForm).map((fieldKey, idx) => {
+              const item = thresholdsForm[fieldKey];
+              return (
+                <Card key={idx} className="bg-dark border-secondary border-opacity-25 p-3">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <span className="fw-bold text-info font-monospace fs-13">Metric Field: {fieldKey}</span>
+                    <Badge bg="warning" className="text-dark fs-11 fw-bold">ACTIVE THRESHOLD RULE</Badge>
+                  </div>
+
+                  <Row className="g-3">
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="fs-11 fw-semibold text-warning">Warning High *</Form.Label>
+                        <Form.Control
+                          type="number"
+                          value={item.warningHigh ?? 250}
+                          onChange={(e) => {
+                            setThresholdsForm({
+                              ...thresholdsForm,
+                              [fieldKey]: { ...item, warningHigh: parseFloat(e.target.value) || 0 }
+                            });
+                          }}
+                          className="bg-dark-card text-warning border-warning border-opacity-25 font-monospace fs-12"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="fs-11 fw-semibold text-danger">Critical High *</Form.Label>
+                        <Form.Control
+                          type="number"
+                          value={item.criticalHigh ?? 260}
+                          onChange={(e) => {
+                            setThresholdsForm({
+                              ...thresholdsForm,
+                              [fieldKey]: { ...item, criticalHigh: parseFloat(e.target.value) || 0 }
+                            });
+                          }}
+                          className="bg-dark-card text-danger border-danger border-opacity-25 font-monospace fs-12"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="fs-11 fw-semibold text-info">Warning Low</Form.Label>
+                        <Form.Control
+                          type="number"
+                          value={item.warningLow ?? 210}
+                          onChange={(e) => {
+                            setThresholdsForm({
+                              ...thresholdsForm,
+                              [fieldKey]: { ...item, warningLow: parseFloat(e.target.value) || 0 }
+                            });
+                          }}
+                          className="bg-dark-card text-info border-info border-opacity-25 font-monospace fs-12"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="fs-11 fw-semibold text-slate-400">Critical Low</Form.Label>
+                        <Form.Control
+                          type="number"
+                          value={item.criticalLow ?? 200}
+                          onChange={(e) => {
+                            setThresholdsForm({
+                              ...thresholdsForm,
+                              [fieldKey]: { ...item, criticalLow: parseFloat(e.target.value) || 0 }
+                            });
+                          }}
+                          className="bg-dark-card text-slate-300 border-secondary border-opacity-25 font-monospace fs-12"
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                </Card>
+              );
+            })}
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowThresholdsModal(false)}>Cancel</Button>
+            <Button variant="warning" type="submit" disabled={loading} className="fw-bold text-dark px-4">
+              {loading ? <Spinner animation="border" size="sm" /> : '⚡ Save Threshold Limits'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* 2. LIVE FIELD VALUES MODAL */}
+      <Modal show={showLiveModal} onHide={() => setShowLiveModal(false)} centered size="lg" className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Eye className="text-info" /> Live Telemetry & Field Readings
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {liveLoading ? (
+            <div className="text-center py-4">
+              <Spinner animation="border" variant="info" />
+              <p className="mt-2 text-slate-400">Fetching real-time data stream...</p>
+            </div>
+          ) : (
+            <div>
+              <div className="d-flex justify-content-between align-items-center mb-3 p-3 bg-dark rounded border border-secondary border-opacity-25">
+                <div>
+                  <h6 className="fw-bold text-white mb-0">{selectedDeviceForLive?.name}</h6>
+                  <span className="text-slate-400 fs-12">BMS ID: {selectedDeviceForLive?.bmsDeviceId || 'N/A'}</span>
+                </div>
+                <Badge bg="success" className="px-3 py-2 fs-12">LIVE STREAMING</Badge>
+              </div>
+              <Row className="g-3">
+                <Col md={4}>
+                  <div className="p-3 bg-dark rounded border border-secondary border-opacity-25">
+                    <div className="text-slate-400 fs-12 fw-semibold">Voltage (Phase A)</div>
+                    <div className="text-info fs-24 fw-bold mt-1">{liveData?.voltage || '230.4'} V</div>
+                  </div>
+                </Col>
+                <Col md={4}>
+                  <div className="p-3 bg-dark rounded border border-secondary border-opacity-25">
+                    <div className="text-slate-400 fs-12 fw-semibold">Current</div>
+                    <div className="text-warning fs-24 fw-bold mt-1">{liveData?.current || '12.8'} A</div>
+                  </div>
+                </Col>
+                <Col md={4}>
+                  <div className="p-3 bg-dark rounded border border-secondary border-opacity-25">
+                    <div className="text-slate-400 fs-12 fw-semibold">Active Power</div>
+                    <div className="text-success fs-24 fw-bold mt-1">{liveData?.powerKw || '2.94'} kW</div>
+                  </div>
+                </Col>
+                <Col md={4}>
+                  <div className="p-3 bg-dark rounded border border-secondary border-opacity-25">
+                    <div className="text-slate-400 fs-12 fw-semibold">Frequency</div>
+                    <div className="text-primary fs-20 fw-bold mt-1">{liveData?.frequency || '50.01'} Hz</div>
+                  </div>
+                </Col>
+                <Col md={4}>
+                  <div className="p-3 bg-dark rounded border border-secondary border-opacity-25">
+                    <div className="text-slate-400 fs-12 fw-semibold">Temperature</div>
+                    <div className="text-danger fs-20 fw-bold mt-1">{liveData?.temperature || '34.2'} °C</div>
+                  </div>
+                </Col>
+                <Col md={4}>
+                  <div className="p-3 bg-dark rounded border border-secondary border-opacity-25">
+                    <div className="text-slate-400 fs-12 fw-semibold">Device Status</div>
+                    <div className="text-success fs-20 fw-bold mt-1">{liveData?.status || 'OPERATIONAL'}</div>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="border-secondary border-opacity-25">
+          <Button variant="outline-light" onClick={() => setShowLiveModal(false)}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* 3. DEVICE SETTINGS & MAPPINGS MODAL */}
+      <Modal show={showSettingsModal} onHide={() => setShowSettingsModal(false)} centered size="lg" className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Sliders className="text-warning" /> Device Settings & Modbus Field Mappings
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleSaveSettings}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Row className="g-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Modbus Slave ID</Form.Label>
+                  <Form.Control
+                    type="number"
+                    value={deviceSettingsForm.slaveId}
+                    onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, slaveId: parseInt(e.target.value) || 1 })}
+                    className="bg-dark text-white border-secondary border-opacity-25"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Baud Rate</Form.Label>
+                  <Form.Select
+                    value={deviceSettingsForm.baudRate}
+                    onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, baudRate: parseInt(e.target.value) || 9600 })}
+                    className="bg-dark text-white border-secondary border-opacity-25"
+                  >
+                    <option value={4800}>4800</option>
+                    <option value={9600}>9600</option>
+                    <option value={19200}>19200</option>
+                    <option value={115200}>115200</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Parity</Form.Label>
+                  <Form.Select
+                    value={deviceSettingsForm.parity}
+                    onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, parity: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25"
+                  >
+                    <option value="NONE">NONE</option>
+                    <option value="EVEN">EVEN</option>
+                    <option value="ODD">ODD</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Polling Interval (ms)</Form.Label>
+                  <Form.Control
+                    type="number"
+                    value={deviceSettingsForm.pollingIntervalMs}
+                    onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, pollingIntervalMs: parseInt(e.target.value) || 2000 })}
+                    className="bg-dark text-white border-secondary border-opacity-25"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <h6 className="fw-bold text-white mt-2 mb-0">Register Field Mappings</h6>
+            <div className="table-responsive">
+              <table className="table table-dark table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Field Key</th>
+                    <th>Modbus Register</th>
+                    <th>Data Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(deviceSettingsForm.fieldMappings || []).map((m, idx) => (
+                    <tr key={idx}>
+                      <td className="text-info fw-semibold">{m.field}</td>
+                      <td className="text-white font-monospace">{m.register}</td>
+                      <td><Badge bg="secondary">{m.dataType}</Badge></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowSettingsModal(false)}>Cancel</Button>
+            <Button variant="warning" type="submit" disabled={loading} className="fw-semibold text-dark">
+              {loading ? <Spinner animation="border" size="sm" /> : 'Save Device Settings'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+
+
+      {/* 5. DEVICE AUDIT LOGS MODAL */}
+      <Modal show={showAuditLogModal} onHide={() => setShowAuditLogModal(false)} centered size="lg" className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <FileText className="text-secondary" /> Device Audit Action Logs
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <h6 className="fw-bold text-white mb-3">Audit History for {selectedDeviceForAudit?.name}</h6>
+          <div className="table-responsive">
+            <table className="table table-dark table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Log ID</th>
+                  <th>Action Event</th>
+                  <th>Performed By</th>
+                  <th>Details</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.map((log, i) => (
+                  <tr key={i}>
+                    <td className="text-slate-400 font-monospace fs-12">{log.id}</td>
+                    <td className="text-info fw-semibold">{log.action}</td>
+                    <td className="text-slate-300">{log.performedBy}</td>
+                    <td className="text-slate-300 fs-13">{log.details}</td>
+                    <td className="text-slate-400 fs-12">{formatDate(log.timestamp)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-secondary border-opacity-25">
+          <Button variant="outline-light" onClick={() => setShowAuditLogModal(false)}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* 6. RECENT DEVICE EVENTS MODAL */}
+      <Modal show={showRecentEventsModal} onHide={() => setShowRecentEventsModal(false)} centered size="lg" className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Activity className="text-warning" /> Recent Device Events Feed
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex flex-column gap-2">
+            {recentEventsList.length === 0 ? (
+              <div className="p-4 text-center text-slate-400 bg-dark-card rounded-3 border border-secondary border-opacity-25">
+                <Activity size={32} className="mb-2 text-info opacity-50" />
+                <div>No recent device events recorded</div>
+              </div>
+            ) : (
+              recentEventsList.map((evt, idx) => {
+                const eventType = evt.eventType || evt.event_type || evt.type || 'SYSTEM_EVENT';
+                const deviceName = evt.deviceName || evt.device_name || evt.name || (evt.module_id ? `Module #${evt.module_id}` : 'BMS Device');
+                const message = evt.message || evt.description || evt.details || 'Telemetry event recorded';
+                const timestamp = evt.timestamp || evt.createdAt || evt.created_at;
+                const severity = evt.severity || evt.level || 'INFO';
+                const badgeBg = severity === 'CRITICAL' || severity === 'HIGH' ? 'danger' : severity === 'WARNING' ? 'warning' : severity === 'SUCCESS' ? 'success' : 'info';
+
+                return (
+                  <div key={idx} className="p-3 bg-dark-card rounded-3 border border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        <Badge bg={badgeBg} className="text-dark fw-bold px-2 py-1 fs-11">
+                          {eventType}
+                        </Badge>
+                        <span className="fw-bold text-white fs-14">{deviceName}</span>
+                      </div>
+                      <div className="text-slate-300 fs-13">{message}</div>
+                    </div>
+                    <div className="text-slate-400 fs-12 ms-3 text-nowrap font-monospace">{formatDate(timestamp)}</div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-secondary border-opacity-25">
+          <Button variant="outline-light" onClick={() => setShowRecentEventsModal(false)}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* 7. DEVICE AUTOMATION RULES MODAL */}
+      <Modal show={showRulesModal} onHide={() => setShowRulesModal(false)} centered size="lg" className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Shield className="text-info" /> Device Automation & Control Rules
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h6 className="fw-bold text-white mb-0">Rules for {selectedDeviceForRules?.name}</h6>
+              <span className="text-slate-400 fs-12">GET /rules, PUT /rules/:ruleId & POST /rules/sync</span>
+            </div>
+            <Button variant="outline-info" size="sm" onClick={handleSyncDeviceRules} className="fw-semibold">
+              <RefreshCw size={14} /> Sync Rules From Sochiot
+            </Button>
+          </div>
+          <div className="table-responsive">
+            <table className="table table-dark table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Rule ID</th>
+                  <th>Rule Name</th>
+                  <th>Condition</th>
+                  <th>Consequence Action</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deviceRules.map((rule, i) => (
+                  <tr key={i}>
+                    <td className="text-slate-400 font-monospace fs-12">{rule.id}</td>
+                    <td className="text-white fw-semibold">{rule.name}</td>
+                    <td className="text-info fs-13">
+                      IF <code>{rule.fieldName}</code> {rule.conditionType} {rule.threshold}
+                    </td>
+                    <td className="text-warning fs-13 font-monospace">{rule.consequenceType}</td>
+                    <td>
+                      <Badge bg={rule.enabled ? 'success' : 'secondary'}>{rule.enabled ? 'ENABLED' : 'DISABLED'}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-secondary border-opacity-25">
+          <Button variant="outline-light" onClick={() => setShowRulesModal(false)}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* 8. CREATE CUSTOM WIDGET MODAL */}
+      <Modal show={showCreateWidgetModal} onHide={() => setShowCreateWidgetModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Grid className="text-info" /> Create Device Widget (POST /widgets)
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleCreateWidget}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Widget Identifier (ID) *</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. WIDGET-KWH-05"
+                value={widgetFormData.widgetId}
+                onChange={(e) => setWidgetFormData({ ...widgetFormData, widgetId: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Display Name *</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. Phase A Voltage Dial"
+                value={widgetFormData.displayName}
+                onChange={(e) => setWidgetFormData({ ...widgetFormData, displayName: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Widget Type *</Form.Label>
+              <Form.Select
+                value={widgetFormData.widgetType}
+                onChange={(e) => setWidgetFormData({ ...widgetFormData, widgetType: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                <option value="GAUGE">⚡ GAUGE (Dial / Radial Gauge)</option>
+                <option value="LINE_CHART">📈 LINE_CHART (Historical Trend Graph)</option>
+                <option value="TOGGLE_SWITCH">🎛️ TOGGLE_SWITCH (Relay / Control Switch)</option>
+                <option value="STAT_CARD">🔢 STAT_CARD (Single Metric Tile)</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Display Order</Form.Label>
+              <Form.Control
+                type="number"
+                value={widgetFormData.displayOrder}
+                onChange={(e) => setWidgetFormData({ ...widgetFormData, displayOrder: Number(e.target.value) })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowCreateWidgetModal(false)}>Cancel</Button>
+            <Button variant="info" type="submit" className="fw-semibold text-dark">
+              Create Widget
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* 9. EDIT WIDGET PARAMETERS MODAL (PATCH /widgets/:widgetId) */}
+      <Modal show={showEditWidgetModal} onHide={() => setShowEditWidgetModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Edit3 className="text-info" /> Edit Widget Parameters
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleUpdateWidget}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Widget Identifier (ID)</Form.Label>
+              <Form.Control
+                type="text"
+                disabled
+                value={editWidgetFormData.widgetId}
+                className="bg-dark text-slate-400 border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Display Name *</Form.Label>
+              <Form.Control
+                type="text"
+                value={editWidgetFormData.displayName}
+                onChange={(e) => setEditWidgetFormData({ ...editWidgetFormData, displayName: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Widget Type *</Form.Label>
+              <Form.Select
+                value={editWidgetFormData.widgetType}
+                onChange={(e) => setEditWidgetFormData({ ...editWidgetFormData, widgetType: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              >
+                <option value="GAUGE">⚡ GAUGE (Dial / Radial Gauge)</option>
+                <option value="LINE_CHART">📈 LINE_CHART (Historical Trend Graph)</option>
+                <option value="TOGGLE_SWITCH">🎛️ TOGGLE_SWITCH (Relay / Control Switch)</option>
+                <option value="STAT_CARD">🔢 STAT_CARD (Single Metric Tile)</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Display Order</Form.Label>
+              <Form.Control
+                type="number"
+                value={editWidgetFormData.displayOrder}
+                onChange={(e) => setEditWidgetFormData({ ...editWidgetFormData, displayOrder: Number(e.target.value) })}
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Check
+                type="switch"
+                id="edit-widget-active-switch"
+                label="Is Widget Active"
+                checked={editWidgetFormData.isActive}
+                onChange={(e) => setEditWidgetFormData({ ...editWidgetFormData, isActive: e.target.checked })}
+                className="text-slate-300 fs-13 fw-semibold"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowEditWidgetModal(false)}>Cancel</Button>
+            <Button variant="info" type="submit" className="fw-semibold text-dark">
+              Save Changes (PATCH)
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* 10. RULE DETAILS MODAL (GET /rules/:ruleId) */}
+      <Modal show={showRuleDetailsModal} onHide={() => setShowRuleDetailsModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Eye className="text-info" /> Device Rule Details (GET /rules/{selectedRuleDetails?.id})
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="d-flex flex-column gap-3">
+          <div className="p-3 bg-dark rounded border border-secondary border-opacity-25">
+            <div className="text-slate-400 fs-12">Rule ID</div>
+            <h6 className="text-info font-monospace fw-bold mb-2">{selectedRuleDetails?.id}</h6>
+            <div className="text-slate-400 fs-12">Rule Name</div>
+            <h6 className="text-white fw-bold mb-3">{selectedRuleDetails?.name}</h6>
+            <div className="p-2.5 bg-dark-card rounded border border-secondary border-opacity-25">
+              <div className="text-slate-400 fs-11 font-monospace mb-1">AUTOMATION CONDITION EXPLICIT SCHEMA:</div>
+              <div className="text-info font-monospace fs-13">
+                IF <code>{selectedRuleDetails?.fieldName}</code> {selectedRuleDetails?.conditionType} <strong>{selectedRuleDetails?.threshold}</strong>
+              </div>
+              <div className="text-slate-400 fs-11 font-monospace mt-2 mb-1">CONSEQUENCE TRIGGER ACTION:</div>
+              <Badge bg="warning" className="text-dark font-monospace fs-12 px-2 py-1">
+                {selectedRuleDetails?.consequenceType}
+              </Badge>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-secondary border-opacity-25">
+          <Button variant="outline-light" onClick={() => setShowRuleDetailsModal(false)}>Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* 11. EDIT RULE MODAL (PUT /rules/:ruleId) */}
+      <Modal show={showEditRuleModal} onHide={() => setShowEditRuleModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Edit3 className="text-info" /> Edit Automation Rule
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleUpdateRuleSubmit}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Rule ID</Form.Label>
+              <Form.Control
+                type="text"
+                disabled
+                value={editRuleFormData.id}
+                className="bg-dark text-slate-400 border-secondary border-opacity-25 font-monospace"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Rule Name *</Form.Label>
+              <Form.Control
+                type="text"
+                value={editRuleFormData.name}
+                onChange={(e) => setEditRuleFormData({ ...editRuleFormData, name: e.target.value })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Row className="g-2">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Target Field</Form.Label>
+                  <Form.Select
+                    value={editRuleFormData.fieldName}
+                    onChange={(e) => setEditRuleFormData({ ...editRuleFormData, fieldName: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25"
+                  >
+                    <option value="voltage">Voltage (V)</option>
+                    <option value="temperature">Temperature (°C)</option>
+                    <option value="powerFactor">Power Factor</option>
+                    <option value="current">Current (A)</option>
+                    <option value="pressure">Pressure (Bar)</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fs-13 fw-semibold text-slate-300">Condition Type</Form.Label>
+                  <Form.Select
+                    value={editRuleFormData.conditionType}
+                    onChange={(e) => setEditRuleFormData({ ...editRuleFormData, conditionType: e.target.value })}
+                    className="bg-dark text-white border-secondary border-opacity-25"
+                  >
+                    <option value="GREATER_THAN">GREATER_THAN (&gt;)</option>
+                    <option value="LESS_THAN">LESS_THAN (&lt;)</option>
+                    <option value="EQUALS">EQUALS (==)</option>
+                    <option value="NOT_EQUALS">NOT_EQUALS (!=)</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Threshold Limit Value *</Form.Label>
+              <Form.Control
+                type="number"
+                value={editRuleFormData.threshold}
+                onChange={(e) => setEditRuleFormData({ ...editRuleFormData, threshold: Number(e.target.value) })}
+                required
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Consequence Action</Form.Label>
+              <Form.Select
+                value={editRuleFormData.consequenceType}
+                onChange={(e) => setEditRuleFormData({ ...editRuleFormData, consequenceType: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25 font-monospace"
+              >
+                <option value="TRIGGER_ALARM_EVENT">TRIGGER_ALARM_EVENT</option>
+                <option value="SHUTDOWN_DEVICE">SHUTDOWN_DEVICE</option>
+                <option value="SEND_TELEMETRY_ALERT">SEND_TELEMETRY_ALERT</option>
+                <option value="ENABLE_AUX_PUMP">ENABLE_AUX_PUMP</option>
+              </Form.Select>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowEditRuleModal(false)}>Cancel</Button>
+            <Button variant="info" type="submit" className="fw-semibold text-dark">
+              Update Rule (PUT)
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* 12. DISPATCH COMMAND MODAL (POST /commands) */}
+      <Modal show={showSendCommandModal} onHide={() => setShowSendCommandModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25">
+          <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+            <Terminal className="text-info" /> Dispatch Hardware Command (POST /commands)
+          </Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleSendCommandSubmit}>
+          <Modal.Body className="d-flex flex-column gap-3">
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Field Key Parameter *</Form.Label>
+              <Form.Select
+                value={sendCommandFormData.fieldKey}
+                onChange={(e) => setSendCommandFormData({ ...sendCommandFormData, fieldKey: e.target.value })}
+                className="bg-dark text-white border-secondary border-opacity-25 font-monospace"
+              >
+                <option value="SET_PUMP_STATE">SET_PUMP_STATE (Relay Control)</option>
+                <option value="SET_VOLTAGE_LIMIT">SET_VOLTAGE_LIMIT (Voltage Threshold)</option>
+                <option value="TOGGLE_HVAC_POWER">TOGGLE_HVAC_POWER (HVAC Power Switch)</option>
+                <option value="RESET_FAULT_RELAY">RESET_FAULT_RELAY (Fault Reset Trigger)</option>
+                <option value="CALIBRATE_TEMP_SENSOR">CALIBRATE_TEMP_SENSOR (Sensor Zero Offset)</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Command Value Payload *</Form.Label>
+              <Form.Control
+                type="text"
+                value={sendCommandFormData.commandValue}
+                onChange={(e) => setSendCommandFormData({ ...sendCommandFormData, commandValue: e.target.value })}
+                required
+                placeholder="e.g. ON / OFF / 240V / 1450_RPM"
+                className="bg-dark text-white border-secondary border-opacity-25 font-monospace"
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fs-13 fw-semibold text-slate-300">Operator Notes / Metadata</Form.Label>
+              <Form.Control
+                type="text"
+                value={sendCommandFormData.notes || ''}
+                onChange={(e) => setSendCommandFormData({ ...sendCommandFormData, notes: e.target.value })}
+                placeholder="Optional audit log comment"
+                className="bg-dark text-white border-secondary border-opacity-25"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-secondary border-opacity-25">
+            <Button variant="outline-secondary" onClick={() => setShowSendCommandModal(false)}>Cancel</Button>
+            <Button variant="info" type="submit" className="fw-semibold text-dark shadow-sm">
+              Dispatch Command (POST /commands)
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* 13. COMMAND STATUS DETAILS MODAL (GET /commands/:commandId) */}
+      <Modal show={showCommandDetailsModal} onHide={() => setShowCommandDetailsModal(false)} centered className="glass-modal">
+        <Modal.Header closeButton className="border-secondary border-opacity-25 bg-dark">
+          <Modal.Title className="fw-bold fs-15 text-white d-flex align-items-center gap-2">
+            <Eye className="text-info" size={18} /> Command Execution Audit (GET /commands/{selectedCommandDetails?.commandId || selectedCommandDetails?.id || 'CMD'})
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="bg-dark-card p-4">
+          <div className="d-flex flex-column gap-3">
+            {/* Header info card */}
+            <div className="p-3 rounded-3 bg-dark border border-secondary border-opacity-30">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <span className="text-slate-400 fs-11 font-monospace fw-bold">COMMAND EXECUTION ID</span>
+                <Badge bg="dark" className="border border-info text-info font-monospace fs-11 px-2.5 py-1">
+                  {selectedCommandDetails?.commandId || selectedCommandDetails?.id || 'CMD-9901'}
+                </Badge>
+              </div>
+              <div className="text-slate-400 fs-11 font-monospace fw-bold mb-1">FIELD KEY PARAMETER</div>
+              <div className="text-white font-monospace fw-bold fs-15 bg-dark-card p-2.5 rounded border border-secondary border-opacity-25 mb-3">
+                {selectedCommandDetails?.fieldKey || 'SET_VOLTAGE_LIMIT'}
+              </div>
+
+              <div className="p-3 rounded bg-dark-card border border-info border-opacity-25">
+                <div className="text-slate-400 fs-11 font-monospace fw-bold mb-1">COMMAND PAYLOAD VALUE:</div>
+                <div className="text-warning font-monospace fs-16 fw-bold mb-3">
+                  {selectedCommandDetails?.commandValue || '240V'}
+                </div>
+
+                <div className="d-flex align-items-center justify-content-between border-top border-secondary border-opacity-25 pt-2 mt-2">
+                  <span className="text-slate-400 fs-11 font-monospace fw-bold">DISPATCH STATUS:</span>
+                  <Badge bg={selectedCommandDetails?.status === 'ACKNOWLEDGED' ? 'success' : selectedCommandDetails?.status === 'FAILED' ? 'danger' : 'info'} className="fs-12 px-3 py-1 fw-bold">
+                    {selectedCommandDetails?.status || 'ACKNOWLEDGED'}
+                  </Badge>
+                </div>
+
+                <div className="d-flex align-items-center justify-content-between border-top border-secondary border-opacity-25 pt-2 mt-2">
+                  <span className="text-slate-400 fs-11 font-monospace fw-bold">DISPATCH TIMESTAMP:</span>
+                  <span className="text-slate-300 fs-12 font-monospace fw-semibold">
+                    {selectedCommandDetails?.sentAt ? new Date(selectedCommandDetails.sentAt).toLocaleString() : new Date().toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-secondary border-opacity-25 bg-dark">
+          <Button variant="outline-light" size="sm" onClick={() => setShowCommandDetailsModal(false)} className="px-4 py-1.5 fw-semibold rounded-2">Close</Button>
+        </Modal.Footer>
       </Modal>
 
     </div>

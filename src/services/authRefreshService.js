@@ -9,11 +9,19 @@ const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 let refreshTimer = null;
 let activeRefreshPromise = null;
+let lastRefreshTime = 0;
+const REFRESH_COOLDOWN_MS = 60 * 1000; // 1 minute cooldown
 
 export const performTokenRefresh = async () => {
   if (activeRefreshPromise) {
     return activeRefreshPromise;
   }
+
+  const now = Date.now();
+  if (now - lastRefreshTime < REFRESH_COOLDOWN_MS) {
+    return getCookie('access_token') || getCookie('token') || localStorage.getItem('token') || DEV_SUPERADMIN_TOKEN;
+  }
+  lastRefreshTime = now;
 
   activeRefreshPromise = (async () => {
     const currentRefreshToken = getCookie('refresh_token') || localStorage.getItem('refresh_token');

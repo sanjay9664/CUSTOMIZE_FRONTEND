@@ -263,6 +263,28 @@ window.fetch = async function (input, init) {
 
   // 1. Auth Login / Register / Refresh (Pass through to real backend first)
   if (urlStr.includes('/auth/login') || urlStr.includes('/sochiot-auth/login') || urlStr.includes('/auth/register') || urlStr.includes('/auth/refresh')) {
+    // For refresh endpoint: check if using a local/dummy refresh token
+    if (urlStr.includes('/auth/refresh')) {
+      let reqBody = {};
+      try { reqBody = typeof init?.body === 'string' ? JSON.parse(init.body) : (init?.body || {}); } catch(e) {}
+      const tokenToRefresh = reqBody?.refreshToken || '';
+
+      // If token is a local dummy token, resolve directly with valid token to avoid 401 Network error in DevTools
+      if (!tokenToRefresh || tokenToRefresh.startsWith('ref_') || tokenToRefresh.startsWith('refreshed_ref_')) {
+        const newTok = DEV_SUPERADMIN_TOKEN;
+        return createMockResponse({
+          success: true,
+          data: {
+            accessToken: newTok,
+            token: newTok,
+            refreshToken: `refreshed_ref_${Date.now().toString(36)}`,
+            expiresIn: 900
+          },
+          message: 'Token refreshed successfully'
+        }, 200);
+      }
+    }
+
     try {
       const realResp = await originalFetch.apply(this, arguments);
       if (realResp) {
@@ -471,7 +493,7 @@ window.fetch = async function (input, init) {
       }
 
       if (realResp && realResp.ok) return realResp;
-      if (realResp && realResp.status === 401) {
+      if (realResp && realResp.status === 401 && !urlStr.includes('/auth/refresh')) {
         console.warn('[mockApi] Backend returned 401 Unauthorized. Retrying with SuperAdmin token...');
         try {
           const authHeaders = {
@@ -1119,10 +1141,272 @@ window.fetch = async function (input, init) {
     return createMockResponse({ success: true, data: defaultBuildings, total: defaultBuildings.length });
   }
 
+  if (urlStr.includes('/resync-event-stats')) {
+    return createMockResponse({
+      success: true,
+      message: 'Global Device Event & Telemetry Resync initiated successfully',
+      processedCount: 148,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   if (urlStr.includes('/devices')) {
+    if (urlStr.includes('/summary')) {
+      return createMockResponse({
+        success: true,
+        data: {
+          totalDevices: 14,
+          onlineDevices: 12,
+          offlineDevices: 2,
+          energyMeters: 5,
+          sensors: 4,
+          pumps: 3,
+          syncedCount: 13
+        }
+      });
+    }
+
+    if (urlStr.includes('/recent_events')) {
+      return createMockResponse({
+        success: true,
+        data: [
+          { id: 'EVT-101', deviceName: 'Main Energy Meter #01', eventType: 'VOLTAGE_SPIKE', severity: 'WARNING', message: 'Phase A voltage exceeded 245V threshold', timestamp: new Date(Date.now() - 300000).toISOString() },
+          { id: 'EVT-102', deviceName: 'AHU Control Sensor', eventType: 'CONFIG_SYNC', severity: 'INFO', message: 'Device configuration synced with Sochiot Config Engine', timestamp: new Date(Date.now() - 900000).toISOString() },
+          { id: 'EVT-103', deviceName: 'Water Pump Controller', eventType: 'STATUS_CHANGE', severity: 'SUCCESS', message: 'Device transitioned to OPERATIONAL', timestamp: new Date(Date.now() - 3600000).toISOString() }
+        ]
+      });
+    }
+
+    if (urlStr.includes('/templates')) {
+      const templates = [
+        { name: 'ENERGY_METER', category: 'ENERGY_METER', protocol: 'MODBUS_RTU', defaultBaudRate: 9600, fields: ['voltage', 'current', 'powerKw', 'frequency', 'energyKwh'] },
+        { name: 'TEMP_SENSOR', category: 'SENSOR', protocol: 'BACNET_IP', defaultBaudRate: 19200, fields: ['temperature', 'humidity', 'status'] },
+        { name: 'PUMP_CONTROLLER', category: 'MOTOR_PUMP', protocol: 'MODBUS_TCP', defaultBaudRate: 115200, fields: ['runStatus', 'flowRate', 'pressure', 'rpm'] },
+        { name: 'TRANSFORMER_MONITOR', category: 'TRANSFORMER', protocol: 'MODBUS_RTU', defaultBaudRate: 9600, fields: ['oilTemp', 'windingTemp', 'loadPercentage', 'status'] }
+      ];
+      return createMockResponse({ success: true, data: templates });
+    }
+
+    if (urlStr.includes('/live')) {
+      return createMockResponse({
+        success: true,
+        data: {
+          voltage: (220 + Math.random() * 10).toFixed(1),
+          current: (10 + Math.random() * 5).toFixed(2),
+          powerKw: (2.4 + Math.random() * 0.8).toFixed(2),
+          frequency: 50.02,
+          temperature: (32 + Math.random() * 4).toFixed(1),
+          status: 'OPERATIONAL',
+          lastSeen: new Date().toISOString()
+        }
+      });
+    }
+
+    if (urlStr.includes('/settings')) {
+      return createMockResponse({
+        success: true,
+        data: {
+          slaveId: 1,
+          baudRate: 9600,
+          parity: 'NONE',
+          pollingIntervalMs: 2000,
+          fieldMappings: [
+            { field: 'voltage', register: 40001, dataType: 'FLOAT32' },
+            { field: 'current', register: 40003, dataType: 'FLOAT32' },
+            { field: 'powerKw', register: 40005, dataType: 'FLOAT32' }
+          ]
+        }
+      });
+    }
+
+    if (urlStr.includes('/thresholds')) {
+      return createMockResponse({
+        success: true,
+        message: 'Thresholds updated successfully',
+        data: { overVoltage: 260, underVoltage: 180, overCurrent: 50, highTemp: 75 }
+      });
+    }
+
+    if (urlStr.includes('/audit-log')) {
+      return createMockResponse({
+        success: true,
+        data: [
+          { id: 'LOG-1', action: 'PROVISION_DEVICE', performedBy: 'SuperAdmin', timestamp: new Date(Date.now() - 86400000).toISOString(), details: 'Device provisioned on site' },
+          { id: 'LOG-2', action: 'UPDATE_THRESHOLDS', performedBy: 'SystemAdmin', timestamp: new Date(Date.now() - 43200000).toISOString(), details: 'Over-voltage limit set to 250V' },
+          { id: 'LOG-3', action: 'SYNC_ENGINE', performedBy: 'AutoSyncJob', timestamp: new Date(Date.now() - 7200000).toISOString(), details: 'Synced with Config Engine' }
+        ]
+      });
+    }
+
+    if (urlStr.includes('/widgets')) {
+      if (options && options.method === 'POST') {
+        let newWidget = { id: Date.now(), widgetId: `WIDGET-${Date.now()}`, displayName: 'New Device Widget', widgetType: 'GAUGE', displayOrder: 1, isActive: true };
+        try {
+          if (options.body) {
+            const parsed = JSON.parse(options.body);
+            newWidget = { ...newWidget, ...parsed, id: Date.now() };
+          }
+        } catch (e) {}
+        return createMockResponse({
+          success: true,
+          message: 'Widget created successfully',
+          data: newWidget
+        });
+      }
+      if (options && options.method === 'DELETE') {
+        return createMockResponse({
+          success: true,
+          message: 'Widget deleted successfully'
+        });
+      }
+      if (options && options.method === 'PUT') {
+        return createMockResponse({
+          success: true,
+          message: 'Widgets reordered successfully'
+        });
+      }
+      if (options && options.method === 'PATCH') {
+        let updatedWidget = { id: Date.now() };
+        try {
+          if (options.body) {
+            const parsed = JSON.parse(options.body);
+            updatedWidget = { ...parsed };
+          }
+        } catch (e) {}
+        return createMockResponse({
+          success: true,
+          message: 'Widget updated successfully via PATCH /widgets/{widgetId}',
+          data: updatedWidget
+        });
+      }
+      if (urlStr.includes('/active')) {
+        return createMockResponse({
+          success: true,
+          data: [
+            { id: 101, widgetId: 'WIDGET-1', displayName: 'Phase A Voltage Sensor', widgetType: 'GAUGE', bmsName: 'EM_VOLT_A', telemetryType: 'AVERAGE', reportType: 'OVERALL', samplingInterval: 'MIN_15', displayOrder: 1, isActive: true, lowerValue: 180, upperValue: 260 },
+            { id: 102, widgetId: 'WIDGET-2', displayName: 'HVAC Temperature Monitor', widgetType: 'LINE_CHART', bmsName: 'TEMP_SENSOR_01', telemetryType: 'INSTANT', reportType: 'DETAILED', samplingInterval: 'MIN_15', displayOrder: 2, isActive: true, lowerValue: 15, upperValue: 35 }
+          ]
+        });
+      }
+      return createMockResponse({
+        success: true,
+        data: [
+          { id: 101, widgetId: 'WIDGET-1', displayName: 'Phase A Voltage Sensor', widgetType: 'GAUGE', bmsName: 'EM_VOLT_A', telemetryType: 'AVERAGE', reportType: 'OVERALL', samplingInterval: 'MIN_15', displayOrder: 1, isActive: true, lowerValue: 180, upperValue: 260 },
+          { id: 102, widgetId: 'WIDGET-2', displayName: 'HVAC Temperature Monitor', widgetType: 'LINE_CHART', bmsName: 'TEMP_SENSOR_01', telemetryType: 'INSTANT', reportType: 'DETAILED', samplingInterval: 'MIN_15', displayOrder: 2, isActive: true, lowerValue: 15, upperValue: 35 },
+          { id: 103, widgetId: 'WIDGET-3', displayName: 'Main Water Pump Control Relay', widgetType: 'TOGGLE_SWITCH', bmsName: 'PUMP_RELAY_01', telemetryType: 'INSTANT', reportType: 'SUMMARY', samplingInterval: 'HOUR_1', displayOrder: 3, isActive: true, lowerValue: 0, upperValue: 1 }
+        ]
+      });
+    }
+
+    if (urlStr.includes('/rules')) {
+      if (options && options.method === 'DELETE') {
+        return createMockResponse({
+          success: true,
+          message: 'Device automation rule soft-deleted successfully'
+        });
+      }
+      if (options && options.method === 'PUT') {
+        let updatedRule = { id: 'RULE-101', name: 'High Voltage Cutoff Protection', conditionType: 'GREATER_THAN', fieldName: 'voltage', threshold: 250, consequenceType: 'TRIGGER_ALARM_EVENT', enabled: true };
+        try {
+          if (options.body) {
+            const parsed = JSON.parse(options.body);
+            updatedRule = { ...updatedRule, ...parsed };
+          }
+        } catch (e) {}
+        return createMockResponse({
+          success: true,
+          message: 'Device rule updated successfully via PUT',
+          data: updatedRule
+        });
+      }
+      if (options && options.method === 'PATCH') {
+        return createMockResponse({
+          success: true,
+          message: 'Single rule field value updated successfully via PATCH'
+        });
+      }
+      if (options && options.method === 'POST') {
+        return createMockResponse({
+          success: true,
+          message: 'Rule automation synced with Sochiot Config Engine',
+          syncedAt: new Date().toISOString()
+        });
+      }
+      return createMockResponse({
+        success: true,
+        data: [
+          { id: 'RULE-101', name: 'High Voltage Safety Cutoff', conditionType: 'GREATER_THAN', fieldName: 'voltage', threshold: 250, consequenceType: 'TRIGGER_ALARM_EVENT', enabled: true, category: 'SAFETY' },
+          { id: 'RULE-102', name: 'Over-Temperature Emergency Protection', conditionType: 'GREATER_THAN', fieldName: 'temperature', threshold: 75, consequenceType: 'SHUTDOWN_DEVICE', enabled: true, category: 'THERMAL' },
+          { id: 'RULE-103', name: 'Low Power Factor Alert Interlock', conditionType: 'LESS_THAN', fieldName: 'powerFactor', threshold: 0.85, consequenceType: 'SEND_TELEMETRY_ALERT', enabled: false, category: 'EFFICIENCY' }
+        ]
+      });
+    }
+
+    if (urlStr.includes('/commands')) {
+      if (options && options.method === 'POST') {
+        let cmdBody = { fieldKey: 'SET_PUMP_STATE', commandValue: 'ON' };
+        try {
+          if (options.body) {
+            cmdBody = { ...cmdBody, ...JSON.parse(options.body) };
+          }
+        } catch (e) {}
+        return createMockResponse({
+          success: true,
+          message: `Command '${cmdBody.fieldKey}' dispatched to hardware device successfully`,
+          data: {
+            id: `CMD-${Date.now()}`,
+            commandId: `CMD-${Date.now()}`,
+            fieldKey: cmdBody.fieldKey,
+            commandValue: cmdBody.commandValue,
+            status: 'SENT',
+            responseCode: 200,
+            sentAt: new Date().toISOString()
+          }
+        });
+      }
+
+      // If specific command ID is requested
+      const matchCmd = urlStr.match(/\/commands\/(CMD-[\w-]+)/);
+      if (matchCmd) {
+        const reqCmdId = matchCmd[1];
+        return createMockResponse({
+          success: true,
+          data: {
+            id: reqCmdId,
+            commandId: reqCmdId,
+            fieldKey: 'SET_VOLTAGE_LIMIT',
+            commandValue: '240V',
+            status: 'ACKNOWLEDGED',
+            responseCode: 200,
+            sentAt: new Date().toISOString()
+          }
+        });
+      }
+
+      return createMockResponse({
+        success: true,
+        data: [
+          { id: 'CMD-9901', commandId: 'CMD-9901', fieldKey: 'SET_VOLTAGE_LIMIT', commandValue: '240V', status: 'ACKNOWLEDGED', sentAt: '2026-08-27T12:00:00Z', responseCode: 200 },
+          { id: 'CMD-9902', commandId: 'CMD-9902', fieldKey: 'TOGGLE_HVAC_POWER', commandValue: 'ON', status: 'ACKNOWLEDGED', sentAt: '2026-08-27T11:45:00Z', responseCode: 200 },
+          { id: 'CMD-9903', commandId: 'CMD-9903', fieldKey: 'RESET_FAULT_RELAY', commandValue: 'TRIGGER', status: 'SENT', sentAt: '2026-08-27T11:30:00Z', responseCode: 200 },
+          { id: 'CMD-9904', commandId: 'CMD-9904', fieldKey: 'CALIBRATE_TEMP_SENSOR', commandValue: 'ZERO_OFFSET', status: 'FAILED', sentAt: '2026-08-27T10:15:00Z', responseCode: 504 }
+        ]
+      });
+    }
+
+    if (urlStr.includes('/sync')) {
+      return createMockResponse({
+        success: true,
+        message: 'Device successfully synced with Sochiot Config Engine',
+        syncedAt: new Date().toISOString()
+      });
+    }
+
     const defaultDevices = [
-      { id: 1, name: 'Smart Energy Meter #01', deviceType: 'ENERGY_METER', status: 'ONLINE', siteId: 1, buildingId: 1 },
-      { id: 2, name: 'HVAC Temperature Sensor', deviceType: 'TEMP_SENSOR', status: 'ONLINE', siteId: 1, buildingId: 1 }
+      { id: 1, name: 'Smart Energy Meter #01', category: 'ENERGY_METER', bmsDeviceId: 'EM-101', serialNumber: 'SN-99821-X', status: 'ONLINE', siteId: 1, buildingId: 1 },
+      { id: 2, name: 'HVAC Temperature Sensor', category: 'SENSOR', bmsDeviceId: 'TS-202', serialNumber: 'SN-44312-Y', status: 'ONLINE', siteId: 1, buildingId: 1 },
+      { id: 3, name: 'Water Tank Pump Controller', category: 'MOTOR_PUMP', bmsDeviceId: 'PC-303', serialNumber: 'SN-11209-Z', status: 'ONLINE', siteId: 1, buildingId: 1 },
+      { id: 4, name: 'Main Substation Transformer Monitor', category: 'TRANSFORMER', bmsDeviceId: 'TM-404', serialNumber: 'SN-77341-W', status: 'ONLINE', siteId: 1, buildingId: 1 }
     ];
     return createMockResponse({ success: true, data: defaultDevices, total: defaultDevices.length });
   }

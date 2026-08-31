@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Nav, Row, Col } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu, Building } from 'lucide-react';
+import { Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu, Building, Grid, Terminal, Zap } from 'lucide-react';
 import GlobalSettings from './GlobalSettings';
 import UserAdministration from './UserAdministration';
 import SiteManagement from './SiteManagement';
@@ -198,63 +198,70 @@ const SettingsIndex = () => {
         .hub-animated { animation: fadeSlideUp 0.5s ease-out forwards; }
       `}</style>
 
-      {/* Sub-Header Tabs */}
-      <div className="border-bottom border-secondary border-opacity-25 px-4 pt-3 bg-black settings-tabs-header overflow-auto">
-        <Nav variant="tabs" activeKey={activeTab} onSelect={handleSelectTab} className="border-0 flex-nowrap">
+      {/* Sub-Header Tabs Row - Floating Executive Glass Segmented Bar */}
+      <div className="px-4 py-2-5 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '0 0 1.5rem 0', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
+        <Nav variant="pills" activeKey={activeTab} onSelect={handleSelectTab} className="flex-nowrap gap-2">
           <Nav.Item>
             <Nav.Link
               eventKey="hub"
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'hub' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'hub' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Sparkles size={18} className={activeTab === 'hub' ? 'text-info' : 'text-slate-400'} />
+              <Sparkles size={16} />
               Settings Hub
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               eventKey="global"
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'global' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'global' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Settings size={18} className={activeTab === 'global' ? 'text-info' : 'text-slate-400'} />
+              <Settings size={16} />
               Global Settings
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               eventKey="users"
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'users' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'users' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Users size={18} className={activeTab === 'users' ? 'text-info' : 'text-slate-400'} />
-              User Administration
+              <Users size={16} />
+              User Admin
             </Nav.Link>
           </Nav.Item>
+          <div className="vr bg-secondary opacity-30 my-1" />
           <Nav.Item>
             <Nav.Link
               eventKey="org"
               onClick={() => navigate('/manage-organisation')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'org' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'org' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Building2 size={18} className={activeTab === 'org' ? 'text-info' : 'text-slate-400'} />
-              Manage Organisation
+              <Building2 size={16} />
+              Organisation
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               eventKey="location"
               onClick={() => navigate('/manage-organisation?tab=zone')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'location' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'location' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <MapPin size={18} className={activeTab === 'location' ? 'text-info' : 'text-slate-400'} />
-              Location Management
+              <MapPin size={16} />
+              Location
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
               eventKey="device"
               onClick={() => navigate('/manage-organisation?tab=device')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'device' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'device' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Cpu size={18} className={activeTab === 'device' ? 'text-info' : 'text-slate-400'} />
+              <Cpu size={16} />
               Device
             </Nav.Link>
           </Nav.Item>
@@ -262,10 +269,44 @@ const SettingsIndex = () => {
             <Nav.Link
               eventKey="sites"
               onClick={() => navigate('/manage-organisation?tab=site')}
-              className={`d-flex align-items-center gap-2 fw-bold px-4 py-3 border-0 rounded-top-3 transition-all settings-tab-link ${activeTab === 'sites' ? 'bg-dark text-info border-bottom border-info border-2 active-tab' : 'text-slate-400 bg-transparent inactive-tab'}`}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'sites' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
             >
-              <Building size={18} className={activeTab === 'sites' ? 'text-info' : 'text-slate-400'} />
+              <Building size={16} />
               Site
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="widgets"
+              onClick={() => navigate('/manage-organisation?tab=widgets')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'widgets' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Grid size={16} />
+              Widgets
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="rules"
+              onClick={() => navigate('/manage-organisation?tab=rules')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'rules' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Shield size={16} />
+              Rules
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              eventKey="commands"
+              onClick={() => navigate('/manage-organisation?tab=commands')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'commands' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Zap size={16} />
+              Commands
             </Nav.Link>
           </Nav.Item>
         </Nav>

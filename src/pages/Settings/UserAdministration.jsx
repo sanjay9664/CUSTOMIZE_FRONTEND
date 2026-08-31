@@ -30,7 +30,7 @@ const UserAdministration = () => {
   const [inviteFormData, setInviteFormData] = useState({
     email: '',
     role: 'OPERATOR',
-    tenantId: 'cmshedsk40002zsvnhajul18y',
+    tenantId: '',
     scopeType: 'ZONE',
     expirationDays: '7',
     note: ''
@@ -54,7 +54,7 @@ const UserAdministration = () => {
     name: '',
     email: '',
     role: 'VIEWER',
-    tenantId: 'cmshedsk40002zsvnhajul18y',
+    tenantId: '',
     status: 'ACTIVE',
     scopeType: 'ZONE',
     scopeId: '',
@@ -145,22 +145,6 @@ const UserAdministration = () => {
       }
     } catch (e) {}
 
-    // Ensure standard default organizations exist
-    const defaultOrgs = [
-      { id: 'cmshedsk40002zsvnhajul18y', name: 'Sochiot', code: 'SOCHIOT' },
-      { id: 'cmshedskq0005zsvnrc1mcrg4', name: 'Siemens Energy Ltd', code: 'SIEMENS' },
-      { id: 'cmshedske0003zsvnysjzt2ap', name: 'Tata Industrial Corp', code: 'TATA' },
-      { id: 'c2a8b410-449e-11ee-be56-0242ac120002', name: 'SAAS Headquarters', code: 'SAAS' }
-    ];
-
-    const finalIds = new Set(tenantList.map(t => String(t.id)));
-    const finalNames = new Set(tenantList.map(t => String(t.name).toLowerCase()));
-    for (const d of defaultOrgs) {
-      if (!finalIds.has(String(d.id)) && !finalNames.has(String(d.name).toLowerCase())) {
-        tenantList.push(d);
-        finalIds.add(String(d.id));
-      }
-    }
 
     if (tenantList.length > 0) {
       setTenants(tenantList);
@@ -269,9 +253,9 @@ const UserAdministration = () => {
       token: randTok,
       email: targetEmail,
       role: inviteFormData.role || 'OPERATOR',
-      tenantId: inviteFormData.tenantId || 'cmshedsk40002zsvnhajul18y',
+      tenantId: inviteFormData.tenantId || '',
       scopeType: inviteFormData.scopeType || 'ZONE',
-      invitedBy: 'Super Admin',
+      invitedBy: localStorage.getItem('user_name') || localStorage.getItem('username') || 'Admin',
       status: 'PENDING',
       expiresAt: new Date(Date.now() + expDays * 864e5).toISOString(),
       invitationLink: `${window.location.origin}/invitations/${randTok}`,
@@ -288,7 +272,7 @@ const UserAdministration = () => {
           name: targetEmail.split('@')[0],
           email: targetEmail,
           role: inviteFormData.role || 'OPERATOR',
-          tenantId: inviteFormData.tenantId || 'cmshedsk40002zsvnhajul18y',
+          tenantId: inviteFormData.tenantId || '',
           scopeType: inviteFormData.scopeType || 'ZONE',
           status: 'PENDING',
           note: inviteFormData.note || ''
@@ -313,7 +297,7 @@ const UserAdministration = () => {
     setInviteFormData({
       email: '',
       role: 'OPERATOR',
-      tenantId: 'cmshedsk40002zsvnhajul18y',
+      tenantId: '',
       scopeType: 'ZONE',
       expirationDays: '7',
       note: ''
@@ -452,47 +436,27 @@ const UserAdministration = () => {
 
     const validRole = formData.role === 'USER' ? 'VIEWER' : formData.role;
     const roleIdMap = { SUPER_ADMIN: 1, ADMIN: 2, OPERATOR: 3, VIEWER: 4, MANAGER: 5 };
-    const selectedTenant = formData.tenantId || 'cmshedsk40002zsvnhajul18y';
-
-    // If selected tenant is a mock ID, use default DB tenant for backend payload to avoid 404 TENANT_NOT_FOUND
-    const isMockTenant = selectedTenant === 'c2a8b410-449e-11ee-be56-0242ac120002' || 
-                         selectedTenant === 'cmshedske0003zsvnysjzt2ap' || 
-                         selectedTenant === 'cmshedskq0005zsvnrc1mcrg4';
-    const backendTenantId = isMockTenant ? 'cmshedsk40002zsvnhajul18y' : selectedTenant;
+    const selectedTenant = formData.tenantId || '';
 
     const payload = {
       name: formData.name,
       email: formData.email,
       role: validRole,
       roleId: roleIdMap[validRole] || 4,
-      tenantId: backendTenantId,
-      zoneLocations: [
-        { zoneNodeType: 'ZONE', zoneNodeId: '' },
-        { zoneNodeType: 'SITE', zoneNodeId: '1' },
-        { zoneNodeType: 'ASSET', zoneNodeId: 'room_101' }
-      ],
+      tenantId: selectedTenant,
       status: formData.status || 'ACTIVE',
-      scopeType: 'ZONE',
-      scopeId: '',
+      scopeType: formData.scopeType || 'ZONE',
+      scopeId: formData.scopeId || '',
       permissions: typeof formData.permissions === 'string' ? formData.permissions.split(',').map(s => s.trim()) : ['read', 'write']
     };
 
     let createdUser = null;
     try {
-      let response = await fetch(`${API_BASE_URL}/users`, {
+      const response = await fetch(`${API_BASE_URL}/users`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
-
-      // If backend returns 404 TENANT_NOT_FOUND, retry with default tenant ID
-      if (!response.ok && response.status === 404) {
-        response = await fetch(`${API_BASE_URL}/users`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ ...payload, tenantId: 'cmshedsk40002zsvnhajul18y' })
-        });
-      }
 
       if (response.ok) {
         const resJson = await response.json();
@@ -532,19 +496,11 @@ const UserAdministration = () => {
   };
 
   const getTenantLabel = (user) => {
-    if (!user) return 'Sochiot';
+    if (!user) return '—';
     const tid = user.tenantId || user.scopeId || '';
-    if (!tid) return 'Sochiot';
-
+    if (!tid) return '—';
     const found = tenants.find(t => String(t.id) === String(tid) || String(t.name).toLowerCase() === String(tid).toLowerCase());
-    if (found) return found.name || 'Organization';
-
-    if (tid === 'cmshedsk40002zsvnhajul18y' || tid.toLowerCase().includes('sochiot')) return 'Sochiot';
-    if (tid === 'c2a8b410-449e-11ee-be56-0242ac120002' || tid === 'cmshedsjg0001zsvnof6oml' || tid.toLowerCase().includes('saas')) return 'SAAS Headquarters';
-    if (tid === 'cmshedske0003zsvnysjzt2ap' || tid.toLowerCase().includes('tata') || tid.toLowerCase().includes('industrial')) return 'Tata Industrial Corp';
-    if (tid === 'cmshedskq0005zsvnrc1mcrg4' || tid.toLowerCase().includes('siemens')) return 'Siemens Energy Ltd';
-
-    return 'Organization';
+    return found?.name || tid || '—';
   };
 
   // PATCH /api/users/{id} - Update User
@@ -559,17 +515,13 @@ const UserAdministration = () => {
       return;
     }
     const validRole = formData.role === 'USER' ? 'VIEWER' : formData.role;
-    const selectedTenant = formData.tenantId || 'cmshedsk40002zsvnhajul18y';
-    const isMockTenant = selectedTenant === 'c2a8b410-449e-11ee-be56-0242ac120002' || 
-                         selectedTenant === 'cmshedske0003zsvnysjzt2ap' || 
-                         selectedTenant === 'cmshedskq0005zsvnrc1mcrg4';
-    const backendTenantId = isMockTenant ? 'cmshedsk40002zsvnhajul18y' : selectedTenant;
+    const selectedTenant = formData.tenantId || '';
 
     const payload = {
       name: formData.name,
       email: formData.email,
       role: validRole,
-      tenantId: backendTenantId,
+      tenantId: selectedTenant,
       status: formData.status,
       scopeType: formData.scopeType || 'ZONE',
       scopeId: formData.scopeId !== undefined ? formData.scopeId : ''
@@ -577,18 +529,11 @@ const UserAdministration = () => {
 
     let updatedResult = null;
     try {
-      let res = await fetch(`${API_BASE_URL}/users/${selectedUser.id}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${selectedUser.id}`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
-      if (!res.ok && res.status === 404) {
-        res = await fetch(`${API_BASE_URL}/users/${selectedUser.id}`, {
-          method: 'PATCH',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ ...payload, tenantId: 'cmshedsk40002zsvnhajul18y' })
-        });
-      }
       if (res.ok) {
         const json = await res.json();
         const apiUser = json.data || json.user || json;
