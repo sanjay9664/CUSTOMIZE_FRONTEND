@@ -1035,6 +1035,7 @@ const SiteManagement = () => {
                 <Form.Group>
                   <Form.Label className="fw-semibold">Organization / Tenant *</Form.Label>
                   <Form.Select
+                    disabled
                     value={editForm.tenantId}
                     onChange={e => {
                       const tId = e.target.value;
@@ -1047,12 +1048,16 @@ const SiteManagement = () => {
                         areaId: ''
                       }));
                     }}
+                    style={{ opacity: 0.7, cursor: 'not-allowed' }}
                   >
                     <option value="">Select Organization / Tenant...</option>
                     {tenants.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </Form.Select>
+                  <Form.Text className="text-muted small fs-11 mt-1 d-block">
+                    Organization cannot be edited after site creation.
+                  </Form.Text>
                 </Form.Group>
               </Col>
               <Col md={6}>
