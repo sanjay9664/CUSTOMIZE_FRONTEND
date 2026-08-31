@@ -5,7 +5,9 @@
 export const setCookie = (name, value, days = 7) => {
   try {
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+    const isSecure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:';
+    const secureFlag = isSecure ? '; Secure' : '';
+    document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax${secureFlag}`;
   } catch (e) {
     console.warn('Failed to set cookie:', e);
   }
@@ -22,7 +24,9 @@ export const getCookie = (name) => {
 
 export const eraseCookie = (name) => {
   try {
-    document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+    const isSecure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:';
+    const secureFlag = isSecure ? '; Secure' : '';
+    document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax${secureFlag}`;
   } catch (e) {
     console.warn('Failed to erase cookie:', e);
   }

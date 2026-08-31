@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Badge, Button, Modal, Form, Spinner, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import {
   MapPin, Plus, Building2, Activity, AlertTriangle, Zap,
   Eye, RefreshCw, Search, LayoutGrid, List, ChevronRight,
@@ -8,20 +9,15 @@ import {
 
 const API_BASE_URL = '/api';
 
-const DEV_SUPERADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNoZWRzaGUwMDAwenN2bjlpOXIwM241IiwiZW1haWwiOiJzYUBpc21hcnRhY2Nlc3MuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwicGVybWlzc2lvbnMiOlsiUEVSTV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJibXMtcGxhdGZvcm0iLCJhdWQiOiJibXMtYXBpIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc4NjY4NjAxMywiZXhwIjoxODE4MjQzNjEzfQ.keUks3gjheRnHnkSLoO0g0M1WhpmwDCDkIXkpxBow1Q';
-
 const getAuthHeaders = () => {
-  let token = localStorage.getItem('token') ||
+  const token = localStorage.getItem('token') ||
+    localStorage.getItem('access_token') ||
     localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') ||
-    localStorage.getItem('access_token') || '';
+    localStorage.getItem('auth_token') || '';
 
-  if (!token || token === 'undefined' || token === 'null' || token === 'bms-dev-token-admin') {
-    token = DEV_SUPERADMIN_TOKEN;
-  }
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
 
@@ -44,6 +40,7 @@ const normalizeList = (raw, key) => {
 };
 
 const SiteManagement = () => {
+  const navigate = useNavigate();
   const [sites, setSites] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [zones, setZones] = useState([]);
@@ -765,7 +762,15 @@ const SiteManagement = () => {
                       <Server size={13} style={{ color: '#8b5cf6' }} />
                       <span>{site.devicesCount || 0} Devices</span>
                     </div>
-                    <div className="stat-pill">
+                    <div
+                      className="stat-pill"
+                      style={{ cursor: 'pointer' }}
+                      title="Click to manage buildings for this site"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/manage-organisation?tab=building&siteId=${site.id}`);
+                      }}
+                    >
                       <Building2 size={13} style={{ color: '#06b6d4' }} />
                       <span>{site.buildingsCount || 0} Buildings</span>
                     </div>
@@ -1210,6 +1215,24 @@ const SiteManagement = () => {
                     <span className="config-val-text" style={{ fontWeight: 500, fontSize: '0.85rem', fontFamily: 'monospace' }}>{item.value || '—'}</span>
                   </div>
                 ))}
+              </div>
+
+              {/* Building Settings Quick Link */}
+              <div className="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                <Button
+                  variant="outline-info"
+                  size="sm"
+                  className="d-flex align-items-center gap-2 fw-semibold"
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    navigate(`/manage-organisation?tab=building&siteId=${selectedSite.id}`);
+                  }}
+                >
+                  <Building2 size={16} /> Manage Buildings for this Site
+                </Button>
+                <Button variant="outline-light" size="sm" onClick={() => setShowDetailModal(false)}>
+                  Close
+                </Button>
               </div>
             </>
           )}

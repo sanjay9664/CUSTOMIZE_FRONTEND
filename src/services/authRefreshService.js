@@ -4,7 +4,6 @@
  */
 import { getCookie, setAuthCookies } from '../utils/cookieUtils';
 
-const DEV_SUPERADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNoZWRzaGUwMDAwenN2bjlpOXIwM241IiwiZW1haWwiOiJzYUBpc21hcnRhY2Nlc3MuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwicGVybWlzc2lvbnMiOlsiUEVSTV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJibXMtcGxhdGZvcm0iLCJhdWQiOiJibXMtYXBpIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc4NjY4NjAxMywiZXhwIjoxODE4MjQzNjEzfQ.keUks3gjheRnHnkSLoO0g0M1WhpmwDCDkIXkpxBow1Q';
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 let refreshTimer = null;
@@ -19,13 +18,17 @@ export const performTokenRefresh = async () => {
 
   const now = Date.now();
   if (now - lastRefreshTime < REFRESH_COOLDOWN_MS) {
-    return getCookie('access_token') || getCookie('token') || localStorage.getItem('token') || DEV_SUPERADMIN_TOKEN;
+    return getCookie('access_token') || getCookie('token') || localStorage.getItem('token') || null;
   }
   lastRefreshTime = now;
 
   activeRefreshPromise = (async () => {
     const currentRefreshToken = getCookie('refresh_token') || localStorage.getItem('refresh_token');
     const currentAccessToken = getCookie('access_token') || getCookie('token') || localStorage.getItem('token');
+
+    if (!currentRefreshToken && !currentAccessToken) {
+      return null;
+    }
 
     try {
       console.log('[AuthRefresh] Performing silent token refresh...');
@@ -36,43 +39,43 @@ export const performTokenRefresh = async () => {
           ...(currentAccessToken ? { Authorization: `Bearer ${currentAccessToken}` } : {})
         },
         body: JSON.stringify({
-          refreshToken: currentRefreshToken || `ref_${Date.now()}`
+          refreshToken: currentRefreshToken
         })
       });
 
       if (response.ok) {
         const resData = await response.json();
         const payload = resData?.data || resData;
-        const newAccessToken = payload?.accessToken || payload?.token || DEV_SUPERADMIN_TOKEN;
-        const newRefreshToken = payload?.refreshToken || currentRefreshToken || `ref_${Date.now()}`;
+        const newAccessToken = payload?.accessToken || payload?.token;
+        const newRefreshToken = payload?.refreshToken || currentRefreshToken;
 
-        localStorage.setItem('token', newAccessToken);
-        localStorage.setItem('access_token', newAccessToken);
-        localStorage.setItem('refresh_token', newRefreshToken);
+        if (newAccessToken) {
+          localStorage.setItem('token', newAccessToken);
+          localStorage.setItem('access_token', newAccessToken);
+        }
+        if (newRefreshToken) {
+          localStorage.setItem('refresh_token', newRefreshToken);
+        }
 
-        const userRole = localStorage.getItem('userRole') || 'SUPER_ADMIN';
+        const userRole = localStorage.getItem('userRole') || 'USER';
         let userData = {};
         try { userData = JSON.parse(localStorage.getItem('userData') || '{}'); } catch(e) {}
 
         setAuthCookies({
-          token: newAccessToken,
+          token: newAccessToken || currentAccessToken,
           refreshToken: newRefreshToken,
           userRole,
           userData
         });
 
         console.log(`[AuthRefresh] Silent token refresh succeeded at ${new Date().toLocaleTimeString()}`);
-        return newAccessToken;
+        return newAccessToken || currentAccessToken;
       }
     } catch (err) {
-      console.warn('[AuthRefresh] Network error during token refresh, maintaining session:', err);
+      console.warn('[AuthRefresh] Network error during token refresh:', err);
     }
 
-    // Resilient fallback in dev mode: ensure valid token so user is never logged out
-    const fallbackToken = currentAccessToken || DEV_SUPERADMIN_TOKEN;
-    localStorage.setItem('token', fallbackToken);
-    localStorage.setItem('access_token', fallbackToken);
-    return fallbackToken;
+    return currentAccessToken || null;
   })().finally(() => {
     activeRefreshPromise = null;
   });
