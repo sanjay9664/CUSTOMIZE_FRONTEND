@@ -5878,11 +5878,18 @@ const ManageOrganisation = () => {
               <Form.Label className="fs-13 fw-semibold text-slate-300">Serial Number</Form.Label>
               <Form.Control
                 type="text"
+                disabled={!!editingDevice}
                 placeholder="e.g. SN-9454C5F385"
                 value={deviceForm.serialNumber}
                 onChange={(e) => setDeviceForm({ ...deviceForm, serialNumber: e.target.value })}
-                className="bg-dark text-white border-secondary border-opacity-25"
+                className="bg-dark text-white border-secondary border-opacity-25 font-monospace"
+                style={editingDevice ? { opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'rgba(15, 23, 42, 0.6)' } : {}}
               />
+              {editingDevice && (
+                <Form.Text className="text-muted fs-11 mt-1 d-block">
+                  Serial Number cannot be edited after device creation.
+                </Form.Text>
+              )}
             </Form.Group>
             <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Sochiot Device ID(s)</Form.Label>
