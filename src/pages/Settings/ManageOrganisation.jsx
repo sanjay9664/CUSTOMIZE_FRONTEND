@@ -2429,7 +2429,7 @@ const ManageOrganisation = () => {
   });
 
   const isOrgGroup = ['company', 'tenant'].includes(activeTab);
-  const isLocationGroup = ['zone', 'area', 'telemetry', 'report', 'alarm'].includes(activeTab);
+  const isLocationGroup = ['zone', 'area'].includes(activeTab);
   const isDeviceGroup = activeTab === 'device';
   const isSiteGroup = activeTab === 'site';
   const isAssetGroup = activeTab === 'asset';
@@ -2437,6 +2437,7 @@ const ManageOrganisation = () => {
   const isWidgetGroup = activeTab === 'widgets';
   const isRuleGroup = activeTab === 'rules';
   const isCommandGroup = activeTab === 'commands';
+  const isReportGroup = ['telemetry', 'report', 'alarm'].includes(activeTab);
 
   let pageTitle = "Organisation Management";
   let pageSubtitle = "Multi-Tenant Administration Platform — Manage Companies & Organizations (Tenants)";
@@ -2444,7 +2445,7 @@ const ManageOrganisation = () => {
 
   if (isLocationGroup) {
     pageTitle = "Location Management";
-    pageSubtitle = "Regional Zones, Tenant Areas, Telemetry & Alarm Reports";
+    pageSubtitle = "Regional Zones & Tenant Areas";
     PageIcon = MapPin;
   } else if (isDeviceGroup) {
     pageTitle = "Device Management";
@@ -2474,6 +2475,10 @@ const ManageOrganisation = () => {
     pageTitle = "Commands Management";
     pageSubtitle = "Remote Modbus/BACnet Device Commands & Execution Payloads";
     PageIcon = Terminal;
+  } else if (isReportGroup) {
+    pageTitle = "Reports & Monitoring";
+    pageSubtitle = "Tenant Areas, Telemetry Data, Reports & Alarm Management";
+    PageIcon = FileText;
   }
 
   return (
@@ -2766,7 +2771,7 @@ const ManageOrganisation = () => {
 
       {/* Sub-Header Tabs Row - Floating Executive Glass Segmented Bar */}
       <div className="px-4 py-2-5 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
-        <Nav variant="pills" activeKey={isLocationGroup ? 'location' : isSiteGroup ? 'site' : isAssetGroup ? 'asset' : isBuildingGroup ? 'building' : isDeviceGroup ? 'device' : isWidgetGroup ? 'widgets' : isRuleGroup ? 'rules' : isCommandGroup ? 'commands' : 'org'} className="flex-nowrap gap-2">
+        <Nav variant="pills" activeKey={isLocationGroup ? 'location' : isSiteGroup ? 'site' : isAssetGroup ? 'asset' : isBuildingGroup ? 'building' : isDeviceGroup ? 'device' : isWidgetGroup ? 'widgets' : isRuleGroup ? 'rules' : isCommandGroup ? 'commands' : isReportGroup ? 'report_group' : 'org'} className="flex-nowrap gap-2">
           <Nav.Item>
             <Nav.Link
               onClick={() => navigate('/settings')}
@@ -2886,6 +2891,16 @@ const ManageOrganisation = () => {
             >
               <Zap size={16} />
               Commands
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect(isReportGroup ? activeTab : 'telemetry')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isReportGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <FileText size={16} />
+              Report
             </Nav.Link>
           </Nav.Item>
         </Nav>
@@ -3107,21 +3122,6 @@ const ManageOrganisation = () => {
                 <Layers size={18} /> Tenant Areas ({activeAreas.length})
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="telemetry">
-                <Radio size={18} /> Telemetry
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="report">
-                <FileText size={18} /> Reports
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="alarm">
-                <BellRing size={18} /> Alarms
-              </Nav.Link>
-            </Nav.Item>
           </>
         )}
 
@@ -3155,6 +3155,26 @@ const ManageOrganisation = () => {
               <Building2 size={18} /> Buildings ({activeBuildings.length})
             </Nav.Link>
           </Nav.Item>
+        )}
+
+        {isReportGroup && (
+          <>
+            <Nav.Item>
+              <Nav.Link eventKey="telemetry">
+                <Radio size={18} /> Telemetry
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="report">
+                <FileText size={18} /> Reports
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="alarm">
+                <BellRing size={18} /> Alarms
+              </Nav.Link>
+            </Nav.Item>
+          </>
         )}
       </Nav>
 
