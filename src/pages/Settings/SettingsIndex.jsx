@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Nav, Row, Col } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu, Building, Grid, Terminal, Zap } from 'lucide-react';
+import { Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu, Building, Grid, Terminal, Zap, Sliders } from 'lucide-react';
 import GlobalSettings from './GlobalSettings';
 import UserAdministration from './UserAdministration';
 import SiteManagement from './SiteManagement';
@@ -62,12 +62,21 @@ const SETTING_CARDS = [
     path: '/manage-organisation?tab=site'
   },
   {
+    key: 'assets',
+    title: 'Asset Management',
+    description: 'Industrial Equipment, Machinery & Facility Asset Inventory',
+    icon: <Sliders size={28} />,
+    color: '#06b6d4',
+    gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+    path: '/manage-organisation?tab=asset'
+  },
+  {
     key: 'buildings',
     title: 'Building Settings',
     description: 'Hierarchical building management with dynamic site selector, floor counts & codes',
     icon: <Building2 size={28} />,
-    color: '#06b6d4',
-    gradient: 'linear-gradient(135deg, #06b6d4, #0284c7)',
+    color: '#10b981',
+    gradient: 'linear-gradient(135deg, #10b981, #059669)',
     path: '/manage-organisation?tab=building'
   }
 ];
@@ -77,6 +86,7 @@ const SettingsIndex = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState(() => {
+    if (location.search.includes('tab=asset')) return 'assets';
     if (location.search.includes('tab=building')) return 'buildings';
     if (location.pathname.includes('/settings/sites') || location.search.includes('tab=site')) return 'sites';
     if (location.search.includes('tab=zone') || location.search.includes('tab=area')) return 'location';
@@ -88,7 +98,9 @@ const SettingsIndex = () => {
   });
 
   useEffect(() => {
-    if (location.search.includes('tab=building')) {
+    if (location.search.includes('tab=asset')) {
+      setActiveTab('assets');
+    } else if (location.search.includes('tab=building')) {
       setActiveTab('buildings');
     } else if (location.pathname.includes('/settings/sites') || location.search.includes('tab=site')) {
       setActiveTab('sites');
@@ -116,6 +128,7 @@ const SettingsIndex = () => {
     else if (tab === 'location') navigate('/manage-organisation?tab=zone');
     else if (tab === 'device') navigate('/manage-organisation?tab=device');
     else if (tab === 'sites') navigate('/manage-organisation?tab=site');
+    else if (tab === 'assets') navigate('/manage-organisation?tab=asset');
     else if (tab === 'buildings') navigate('/manage-organisation?tab=building');
   };
 
@@ -291,13 +304,24 @@ const SettingsIndex = () => {
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
+              eventKey="assets"
+              onClick={() => navigate('/manage-organisation?tab=asset')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'assets' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Sliders size={16} />
+              Asset
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
               eventKey="buildings"
               onClick={() => navigate('/manage-organisation?tab=building')}
               className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'buildings' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
               style={{ fontSize: '0.85rem' }}
             >
               <Building2 size={16} />
-              Buildings
+              Building
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>

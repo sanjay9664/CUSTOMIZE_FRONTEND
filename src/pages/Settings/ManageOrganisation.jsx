@@ -2428,16 +2428,18 @@ const ManageOrganisation = () => {
     return matchesSearch && matchesBuilding && matchesArea;
   });
 
-  const isOrgGroup = ['company', 'tenant', 'building'].includes(activeTab);
+  const isOrgGroup = ['company', 'tenant'].includes(activeTab);
   const isLocationGroup = ['zone', 'area', 'telemetry', 'report', 'alarm'].includes(activeTab);
   const isDeviceGroup = activeTab === 'device';
-  const isSiteGroup = ['site', 'asset'].includes(activeTab);
+  const isSiteGroup = activeTab === 'site';
+  const isAssetGroup = activeTab === 'asset';
+  const isBuildingGroup = activeTab === 'building';
   const isWidgetGroup = activeTab === 'widgets';
   const isRuleGroup = activeTab === 'rules';
   const isCommandGroup = activeTab === 'commands';
 
   let pageTitle = "Organisation Management";
-  let pageSubtitle = "Multi-Tenant Administration Platform — Manage Companies, Organizations (Tenants) & Buildings";
+  let pageSubtitle = "Multi-Tenant Administration Platform — Manage Companies & Organizations (Tenants)";
   let PageIcon = Building2;
 
   if (isLocationGroup) {
@@ -2450,8 +2452,16 @@ const ManageOrganisation = () => {
     PageIcon = Cpu;
   } else if (isSiteGroup) {
     pageTitle = "Site Management";
-    pageSubtitle = "Physical Sites, Infrastructure Buildings & Asset Inventory";
+    pageSubtitle = "Physical Sites & Infrastructure Management";
     PageIcon = Building;
+  } else if (isAssetGroup) {
+    pageTitle = "Asset Management";
+    pageSubtitle = "Industrial Equipment, Machinery & Facility Asset Inventory";
+    PageIcon = Sliders;
+  } else if (isBuildingGroup) {
+    pageTitle = "Building Management";
+    pageSubtitle = "Infrastructure Buildings & Property Assets";
+    PageIcon = Building2;
   } else if (isWidgetGroup) {
     pageTitle = "Widgets Management";
     pageSubtitle = "Dashboard Widget Configurations, Canvas Layouts & Telemetry Cards";
@@ -2756,7 +2766,7 @@ const ManageOrganisation = () => {
 
       {/* Sub-Header Tabs Row - Floating Executive Glass Segmented Bar */}
       <div className="px-4 py-2-5 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
-        <Nav variant="pills" activeKey={isLocationGroup ? 'location' : isSiteGroup ? 'sites' : isDeviceGroup ? 'device' : 'org'} className="flex-nowrap gap-2">
+        <Nav variant="pills" activeKey={isLocationGroup ? 'location' : isSiteGroup ? 'site' : isAssetGroup ? 'asset' : isBuildingGroup ? 'building' : isDeviceGroup ? 'device' : isWidgetGroup ? 'widgets' : isRuleGroup ? 'rules' : isCommandGroup ? 'commands' : 'org'} className="flex-nowrap gap-2">
           <Nav.Item>
             <Nav.Link
               onClick={() => navigate('/settings')}
@@ -2820,12 +2830,32 @@ const ManageOrganisation = () => {
           </Nav.Item>
           <Nav.Item>
             <Nav.Link
-              onClick={() => handleTabSelect(isSiteGroup ? activeTab : 'site')}
+              onClick={() => handleTabSelect('site')}
               className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isSiteGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
               style={{ fontSize: '0.85rem' }}
             >
               <Building size={16} />
               Site
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect('asset')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isAssetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Sliders size={16} />
+              Asset
+            </Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link
+              onClick={() => handleTabSelect('building')}
+              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${isBuildingGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <Building2 size={16} />
+              Building
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
@@ -3062,11 +3092,6 @@ const ManageOrganisation = () => {
                 <Building2 size={18} /> Organizations / Tenants ({activeTenants.length})
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="building">
-                <Building2 size={18} /> Buildings ({activeBuildings.length})
-              </Nav.Link>
-            </Nav.Item>
           </>
         )}
 
@@ -3109,18 +3134,27 @@ const ManageOrganisation = () => {
         )}
 
         {isSiteGroup && (
-          <>
-            <Nav.Item>
-              <Nav.Link eventKey="site">
-                <MapPin size={18} />Site ({activeSites.length})
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="asset">
-                <Sliders size={18} /> Assets ({activeAssets.length})
-              </Nav.Link>
-            </Nav.Item>
-          </>
+          <Nav.Item>
+            <Nav.Link eventKey="site">
+              <MapPin size={18} /> Site ({activeSites.length})
+            </Nav.Link>
+          </Nav.Item>
+        )}
+
+        {isAssetGroup && (
+          <Nav.Item>
+            <Nav.Link eventKey="asset">
+              <Sliders size={18} /> Assets ({activeAssets.length})
+            </Nav.Link>
+          </Nav.Item>
+        )}
+
+        {isBuildingGroup && (
+          <Nav.Item>
+            <Nav.Link eventKey="building">
+              <Building2 size={18} /> Buildings ({activeBuildings.length})
+            </Nav.Link>
+          </Nav.Item>
         )}
       </Nav>
 
