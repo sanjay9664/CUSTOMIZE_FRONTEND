@@ -160,7 +160,7 @@ const ManageOrganisation = () => {
   const [registerForm, setRegisterForm] = useState({
     siteId: 7,
     name: '',
-    sochiotDeviceIds: '101',
+    sochiotDeviceIds: '',
     category: 'ENERGY_METER',
     areaId: '',
     buildingId: '',
@@ -3755,13 +3755,16 @@ const ManageOrganisation = () => {
                   <Form.Select
                     size="sm"
                     className="filter-select-premium fs-12 rounded-3 fw-semibold py-2 text-slate-200"
-                    style={{ width: 150, background: 'rgba(5, 8, 17, 0.8)', borderColor: 'rgba(255, 255, 255, 0.15)' }}
+                    style={{ width: 170, background: 'rgba(5, 8, 17, 0.8)', borderColor: 'rgba(255, 255, 255, 0.15)' }}
                   >
                     <option value="ALL">All Categories ∨</option>
-                    <option value="ENERGY_METER">ENERGY METER</option>
-                    <option value="AQI_SENSOR">AQI SENSOR</option>
-                    <option value="SENSOR">SENSOR</option>
+                    <option value="ENERGY_METER">ENERGY_METER</option>
+                    <option value="DIESEL_GENERATOR">DIESEL_GENERATOR</option>
+                    <option value="UPS">UPS</option>
                     <option value="HVAC">HVAC</option>
+                    <option value="WATER_PUMP">WATER_PUMP</option>
+                    <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR</option>
+                    <option value="OTHER">OTHER</option>
                   </Form.Select>
                 </div>
 
@@ -3790,12 +3793,11 @@ const ManageOrganisation = () => {
                   <Button
                     onClick={() => {
                       setRegisterStep(1);
-                      const freshId = String(Math.floor(1000 + Math.random() * 9000));
                       setRegisterForm(prev => ({
                         ...prev,
                         name: '',
-                        sochiotDeviceIds: freshId,
-                        serialNumber: `SN-${Math.floor(100000 + Math.random() * 900000)}`
+                        sochiotDeviceIds: '',
+                        serialNumber: ''
                       }));
                       setShowRegisterDeviceModal(true);
                     }}
@@ -6193,19 +6195,7 @@ const ManageOrganisation = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fs-12 fw-bold text-slate-300 uppercase tracking-wide">SOCHIOT DEVICE ID *</Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="e.g. 101"
-                        value={registerForm.sochiotDeviceIds}
-                        onChange={(e) => setRegisterForm({ ...registerForm, sochiotDeviceIds: e.target.value })}
-                        required
-                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3 font-monospace"
-                      />
-                    </Form.Group>
-                  </Col>
+
 
                   <Col md={6}>
                     <Form.Group>
@@ -6213,13 +6203,15 @@ const ManageOrganisation = () => {
                       <Form.Select
                         value={registerForm.category}
                         onChange={(e) => setRegisterForm({ ...registerForm, category: e.target.value })}
-                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3"
+                        className="bg-dark text-white border-secondary border-opacity-25 fs-13 py-2.5 rounded-3 font-monospace"
                       >
-                        <option value="Other Device">Other Device</option>
-                        <option value="ENERGY_METER">ENERGY METER</option>
-                        <option value="AQI_SENSOR">AQI SENSOR</option>
-                        <option value="SENSOR">SENSOR</option>
-                        <option value="HVAC">HVAC</option>
+                        <option value="ENERGY_METER">ENERGY_METER (Energy Meter)</option>
+                        <option value="DIESEL_GENERATOR">DIESEL_GENERATOR (Diesel Generator)</option>
+                        <option value="UPS">UPS (Uninterruptible Power Supply)</option>
+                        <option value="HVAC">HVAC (Heating & Air Conditioning)</option>
+                        <option value="WATER_PUMP">WATER_PUMP (Water & Hydro Pump)</option>
+                        <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR (AQI & Ambient)</option>
+                        <option value="OTHER">OTHER (General Device)</option>
                       </Form.Select>
                     </Form.Group>
                   </Col>
@@ -6505,7 +6497,12 @@ const ManageOrganisation = () => {
 
               {registerStep === 1 ? (
                 <Button
-                  onClick={() => setRegisterStep(2)}
+                  onClick={() => {
+                    if (!registerForm.name || !registerForm.name.trim()) {
+                      return showToast('warning', 'Device Name is required to proceed to Template Settings');
+                    }
+                    setRegisterStep(2);
+                  }}
                   className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow-lg"
                   style={{ backgroundColor: '#2563eb', backgroundImage: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}
                 >
