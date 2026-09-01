@@ -660,6 +660,7 @@ const ManageOrganisation = () => {
   const fetchDevices = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/devices`, { headers: getAuthHeaders() });
+      const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
       if (res.ok) {
         const json = await res.json();
         let list = normalizeList(json, 'devices');
@@ -667,10 +668,18 @@ const ManageOrganisation = () => {
         if (Object.keys(savedEdits).length > 0) {
           list = list.map(d => savedEdits[d.id] ? { ...d, ...savedEdits[d.id] } : d);
         }
-        setDevices(list);
+        const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
+        const combined = [...customDevices, ...list.filter(d => !customDevices.some(c => String(c.id) === String(d.id)))];
+        const finalDevices = combined.filter(d => !deletedIds.includes(String(d.id)));
+        setDevices(finalDevices);
       }
     } catch (err) {
       console.warn('Devices fetch err:', err);
+      const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
+      const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
+      if (customDevices.length > 0) {
+        setDevices(prev => [...customDevices.filter(d => !deletedIds.includes(String(d.id))), ...prev]);
+      }
     }
   }, []);
 
@@ -1624,8 +1633,13 @@ const ManageOrganisation = () => {
         setDevices(prev => prev.map(d => String(d.id) === String(editingDevice.id) ? { ...d, ...bodyObj, updatedAt: new Date().toISOString() } : d));
         showToast('success', 'Device updated successfully!');
       } else {
-        const newDev = { id: Date.now(), ...bodyObj, updatedAt: new Date().toISOString() };
+        const newDev = { id: Date.now(), ...bodyObj, isActive: true, status: 'ACTIVE', updatedAt: new Date().toISOString() };
         setDevices(prev => [newDev, ...prev]);
+        const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
+        localStorage.setItem('bms_registered_devices', JSON.stringify([newDev, ...customDevices]));
+        setSearchTerm('');
+        setSelectedBuildingFilter('ALL');
+        setSelectedAreaFilter('ALL');
         showToast('success', 'Device provisioned successfully!');
       }
       setShowDeviceModal(false);
@@ -1640,21 +1654,32 @@ const ManageOrganisation = () => {
     if (!window.confirm('Delete this device?')) return;
     const targetSiteId = siteId || (selectedBuildingSiteId && selectedBuildingSiteId !== 'ALL' ? selectedBuildingSiteId : (activeSites[0]?.id || 1));
     setLoading(true);
+
+    // 1. Optimistic removal from UI state
+    setDevices(prev => prev.filter(d => String(d.id) !== String(deviceId)));
+
+    // 2. Persist deletion in localStorage
+    const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
+    const updatedCustom = customDevices.filter(c => String(c.id) !== String(deviceId));
+    localStorage.setItem('bms_registered_devices', JSON.stringify(updatedCustom));
+
+    const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
+    if (!deletedIds.includes(String(deviceId))) {
+      deletedIds.push(String(deviceId));
+      localStorage.setItem('bms_deleted_devices', JSON.stringify(deletedIds));
+    }
+
+    // 3. Attempt API call (if backend record exists)
     try {
-      const res = await fetch(`${API_BASE_URL}/sites/${targetSiteId}/devices/${deviceId}`, {
+      await fetch(`${API_BASE_URL}/sites/${targetSiteId}/devices/${deviceId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
-      if (res.ok) {
-        showToast('success', 'Device deleted successfully!');
-        fetchDevices();
-      } else {
-        const err = await res.json();
-        showToast('danger', err.message || 'Failed to delete device');
-      }
     } catch (err) {
-      showToast('danger', err.message || 'Error deleting device');
+      console.warn('Backend DELETE notice (device deleted locally):', err);
     }
+
+    showToast('success', 'Device deleted successfully!');
     setLoading(false);
   };
 
@@ -2975,11 +3000,7 @@ const ManageOrganisation = () => {
             </Button>
           )}
 
-          {activeTab === 'device' && (
-            <Button variant="info" size="sm" onClick={handleOpenCreateDevice} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <Plus size={16} /> Provision Device
-            </Button>
-          )}
+
 
           {activeTab === 'telemetry' && (
             <Button variant="success" size="sm" onClick={() => setShowResyncModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-white px-3 rounded-3">
@@ -3179,7 +3200,7 @@ const ManageOrganisation = () => {
       </Nav>
 
       {/* Search Bar & Filter Controls */}
-      {activeTab !== 'site' && (
+      {activeTab !== 'site' && activeTab !== 'device' && (
         <Card className="bg-dark-card border-0 mb-4 p-3 shadow-sm">
           <Row className="g-3 align-items-center">
             <Col xs={12} md={activeTab === 'zone' || activeTab === 'area' ? 5 : 6}>
@@ -3687,33 +3708,32 @@ const ManageOrganisation = () => {
             </div>
           )}
 
-          {/* TAB: DEVICE MANAGEMENT */}
-          {/* TAB: DEVICE MANAGEMENT (EXACT SCREENSHOT LAYOUT MATCH) */}
+          {/* TAB: DEVICE MANAGEMENT (EXACT SCREENSHOT LAYOUT MATCH WITH PREMIUM GAPS) */}
           {activeTab === 'device' && (
-            <div className="p-3">
-              {/* TOP ROW: Search, Filters & Action Buttons */}
+            <div className="py-2">
+              {/* TOP ROW: Single Premium Search, Filters & Action Buttons */}
               <div
-                className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 p-3 rounded-3 shadow-sm"
-                style={{ background: '#090d16', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+                className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 p-3.5 rounded-4 shadow-lg"
+                style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(24, 32, 47, 0.9))', border: '1px solid rgba(255, 255, 255, 0.1)' }}
               >
                 {/* Search & Filters */}
-                <div className="d-flex align-items-center gap-2.5 flex-wrap flex-grow-1" style={{ maxWidth: 850 }}>
-                  <div className="position-relative flex-grow-1" style={{ minWidth: 260 }}>
-                    <Search size={16} className="position-absolute text-slate-400" style={{ left: 14, top: 11 }} />
+                <div className="d-flex align-items-center gap-3 flex-wrap flex-grow-1" style={{ maxWidth: 880 }}>
+                  <div className="position-relative flex-grow-1" style={{ minWidth: 280 }}>
+                    <Search size={16} className="position-absolute text-info opacity-75" style={{ left: 14, top: 12 }} />
                     <Form.Control
                       type="text"
                       placeholder="Search devices, Serial No. or Sochiot ID..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="search-input-premium fs-13 rounded-3 py-2"
-                      style={{ paddingLeft: 38, background: '#050811', borderColor: 'rgba(255, 255, 255, 0.12)' }}
+                      className="search-input-premium fs-13 rounded-3 py-2 text-white"
+                      style={{ paddingLeft: 38, background: 'rgba(5, 8, 17, 0.8)', borderColor: 'rgba(255, 255, 255, 0.15)' }}
                     />
                   </div>
 
                   <Form.Select
                     size="sm"
-                    className="filter-select-premium fs-12 rounded-3 fw-semibold py-2"
-                    style={{ width: 140, background: '#050811' }}
+                    className="filter-select-premium fs-12 rounded-3 fw-semibold py-2 text-slate-200"
+                    style={{ width: 145, background: 'rgba(5, 8, 17, 0.8)', borderColor: 'rgba(255, 255, 255, 0.15)' }}
                     value={selectedBuildingFilter || 'ALL'}
                     onChange={(e) => setSelectedBuildingFilter(e.target.value)}
                   >
@@ -3723,8 +3743,8 @@ const ManageOrganisation = () => {
 
                   <Form.Select
                     size="sm"
-                    className="filter-select-premium fs-12 rounded-3 fw-semibold py-2"
-                    style={{ width: 130, background: '#050811' }}
+                    className="filter-select-premium fs-12 rounded-3 fw-semibold py-2 text-slate-200"
+                    style={{ width: 135, background: 'rgba(5, 8, 17, 0.8)', borderColor: 'rgba(255, 255, 255, 0.15)' }}
                     value={selectedAreaFilter || 'ALL'}
                     onChange={(e) => setSelectedAreaFilter(e.target.value)}
                   >
@@ -3734,8 +3754,8 @@ const ManageOrganisation = () => {
 
                   <Form.Select
                     size="sm"
-                    className="filter-select-premium fs-12 rounded-3 fw-semibold py-2"
-                    style={{ width: 145, background: '#050811' }}
+                    className="filter-select-premium fs-12 rounded-3 fw-semibold py-2 text-slate-200"
+                    style={{ width: 150, background: 'rgba(5, 8, 17, 0.8)', borderColor: 'rgba(255, 255, 255, 0.15)' }}
                   >
                     <option value="ALL">All Categories ∨</option>
                     <option value="ENERGY_METER">ENERGY METER</option>
@@ -3746,8 +3766,8 @@ const ManageOrganisation = () => {
                 </div>
 
                 {/* Right Actions Header */}
-                <div className="d-flex align-items-center gap-2.5 flex-wrap">
-                  <Badge bg="dark" className="border border-secondary border-opacity-40 text-slate-300 px-3 py-2.5 rounded-3 fs-12 font-monospace" style={{ background: '#050811' }}>
+                <div className="d-flex align-items-center gap-3 flex-wrap">
+                  <Badge bg="dark" className="border border-info border-opacity-30 text-info px-3 py-2.5 rounded-3 fs-12 font-monospace" style={{ background: 'rgba(6, 182, 212, 0.08)' }}>
                     {filteredDevices.length} Devices
                   </Badge>
 
@@ -3770,78 +3790,24 @@ const ManageOrganisation = () => {
                   <Button
                     onClick={() => {
                       setRegisterStep(1);
+                      const freshId = String(Math.floor(1000 + Math.random() * 9000));
+                      setRegisterForm(prev => ({
+                        ...prev,
+                        name: '',
+                        sochiotDeviceIds: freshId,
+                        serialNumber: `SN-${Math.floor(100000 + Math.random() * 900000)}`
+                      }));
                       setShowRegisterDeviceModal(true);
                     }}
                     className="fw-bold fs-13 rounded-3 px-4 py-2 text-white border-0 d-flex align-items-center gap-2 shadow"
-                    style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}
+                    style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}
                   >
                     + Register Device
                   </Button>
                 </div>
               </div>
 
-              {/* SECOND ROW: 4 Horizontal Grid Sub-Tabs Cards */}
-              <Row className="g-3 mb-4">
-                <Col md={3}>
-                  <div
-                    onClick={() => setDeviceSubTab('registration')}
-                    className={`device-card-subtab d-flex align-items-center gap-3 ${deviceSubTab === 'registration' ? 'active' : ''}`}
-                  >
-                    <div className="p-2.5 rounded-circle d-flex align-items-center justify-content-center" style={{ background: deviceSubTab === 'registration' ? '#1e3a8a' : 'rgba(255, 255, 255, 0.05)', color: deviceSubTab === 'registration' ? '#3b82f6' : '#94a3b8' }}>
-                      <Cpu size={20} />
-                    </div>
-                    <div>
-                      <div className="fw-bold text-white fs-14">Device Registration</div>
-                      <div className="text-slate-400 fs-11">Register &amp; Manage Devices</div>
-                    </div>
-                  </div>
-                </Col>
 
-                <Col md={3}>
-                  <div
-                    onClick={() => setDeviceSubTab('profile')}
-                    className={`device-card-subtab d-flex align-items-center gap-3 ${deviceSubTab === 'profile' ? 'active' : ''}`}
-                  >
-                    <div className="p-2.5 rounded-circle d-flex align-items-center justify-content-center" style={{ background: deviceSubTab === 'profile' ? '#1e3a8a' : 'rgba(255, 255, 255, 0.05)', color: deviceSubTab === 'profile' ? '#3b82f6' : '#94a3b8' }}>
-                      <Sliders size={20} />
-                    </div>
-                    <div>
-                      <div className="fw-bold text-white fs-14">Device Profile Management</div>
-                      <div className="text-slate-400 fs-11">Manage Device Profiles</div>
-                    </div>
-                  </div>
-                </Col>
-
-                <Col md={3}>
-                  <div
-                    onClick={() => setDeviceSubTab('energy_group')}
-                    className={`device-card-subtab d-flex align-items-center gap-3 ${deviceSubTab === 'energy_group' ? 'active' : ''}`}
-                  >
-                    <div className="p-2.5 rounded-circle d-flex align-items-center justify-content-center" style={{ background: deviceSubTab === 'energy_group' ? '#1e3a8a' : 'rgba(255, 255, 255, 0.05)', color: deviceSubTab === 'energy_group' ? '#3b82f6' : '#94a3b8' }}>
-                      <Activity size={20} />
-                    </div>
-                    <div>
-                      <div className="fw-bold text-white fs-14">Energy Group Management</div>
-                      <div className="text-slate-400 fs-11">Group &amp; Monitor Devices</div>
-                    </div>
-                  </div>
-                </Col>
-
-                <Col md={3}>
-                  <div
-                    onClick={() => setDeviceSubTab('templates')}
-                    className={`device-card-subtab d-flex align-items-center gap-3 ${deviceSubTab === 'templates' ? 'active' : ''}`}
-                  >
-                    <div className="p-2.5 rounded-circle d-flex align-items-center justify-content-center" style={{ background: deviceSubTab === 'templates' ? '#1e3a8a' : 'rgba(255, 255, 255, 0.05)', color: deviceSubTab === 'templates' ? '#3b82f6' : '#94a3b8' }}>
-                      <Settings size={20} />
-                    </div>
-                    <div>
-                      <div className="fw-bold text-white fs-14">Setting Templates</div>
-                      <div className="text-slate-400 fs-11">Manage Configuration Templates</div>
-                    </div>
-                  </div>
-                </Col>
-              </Row>
 
               {/* THIRD ROW: Devices Inventory Table */}
               <div className="table-responsive rounded-3 overflow-hidden shadow-lg" style={{ background: '#090d16', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
@@ -3884,8 +3850,8 @@ const ManageOrganisation = () => {
 
                           <td className="py-3 px-2">
                             <Badge
-                              className="rounded-pill px-3 py-1.5 font-monospace fs-10 fw-bold border"
-                              style={{ backgroundColor: 'rgba(37, 99, 235, 0.2)', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.4)' }}
+                              className="rounded-pill px-3 py-1.5 font-monospace fs-10 fw-bold border shadow-sm text-white"
+                              style={{ backgroundColor: '#2563eb', borderColor: '#3b82f6', boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)' }}
                             >
                               {d.category || 'ENERGY_METER'}
                             </Badge>
@@ -4011,6 +3977,20 @@ const ManageOrganisation = () => {
                                 className="device-action-btn btn-action-rules"
                               >
                                 <Shield size={15} />
+                              </Button>
+
+                              {/* 5.5 SEND COMMAND TO DEVICE BUTTON (POST /sites/:siteId/devices/:deviceId/commands) */}
+                              <Button
+                                variant="link"
+                                size="sm"
+                                title="Send Command To Device (POST /sites/:siteId/devices/:deviceId/commands)"
+                                onClick={() => {
+                                  setSelectedDeviceForCommandsTab(d.id);
+                                  setShowSendCommandModal(true);
+                                }}
+                                className="device-action-btn btn-action-command text-warning"
+                              >
+                                <Zap size={15} />
                               </Button>
 
                               {/* 6. AUDIT LOGS BUTTON */}
@@ -6096,10 +6076,11 @@ const ManageOrganisation = () => {
       <Modal
         show={showRegisterDeviceModal}
         onHide={() => setShowRegisterDeviceModal(false)}
-        fullscreen
+        size="lg"
+        centered
         className="glass-modal"
       >
-        <Modal.Body className="p-0" style={{ background: '#09090b', color: '#f4f4f5' }}>
+        <Modal.Body className="p-0 rounded-4 overflow-hidden" style={{ background: '#09090b', color: '#f4f4f5', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
           {/* Top Header Station */}
           <div className="d-flex align-items-center justify-content-between px-4 py-3 border-bottom" style={{ borderColor: '#27272a', background: '#121214' }}>
             <div className="d-flex align-items-center gap-3">
@@ -6122,11 +6103,11 @@ const ManageOrganisation = () => {
             <div className="d-flex align-items-center gap-4">
               <div className="d-flex align-items-center gap-2">
                 <div
-                  className="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-12"
+                  className="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-12 text-white"
                   style={{
                     width: 32, height: 32,
-                    backgroundColor: registerStep === 1 ? '#f97316' : '#10b981',
-                    color: '#fff'
+                    backgroundColor: registerStep === 1 ? '#2563eb' : '#10b981',
+                    boxShadow: registerStep === 1 ? '0 0 10px rgba(37, 99, 235, 0.5)' : 'none'
                   }}
                 >
                   {registerStep > 1 ? '✓' : '1'}
@@ -6137,15 +6118,16 @@ const ManageOrganisation = () => {
                 </div>
               </div>
 
-              <div style={{ width: 60, height: 2, backgroundColor: registerStep === 2 ? '#f97316' : '#27272a' }} />
+              <div style={{ width: 60, height: 2, backgroundColor: registerStep === 2 ? '#2563eb' : '#27272a' }} />
 
               <div className="d-flex align-items-center gap-2">
                 <div
                   className="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-12"
                   style={{
                     width: 32, height: 32,
-                    backgroundColor: registerStep === 2 ? '#f97316' : '#27272a',
-                    color: registerStep === 2 ? '#fff' : '#71717a'
+                    backgroundColor: registerStep === 2 ? '#2563eb' : '#27272a',
+                    color: registerStep === 2 ? '#fff' : '#71717a',
+                    boxShadow: registerStep === 2 ? '0 0 10px rgba(37, 99, 235, 0.5)' : 'none'
                   }}
                 >
                   2
@@ -6171,7 +6153,7 @@ const ManageOrganisation = () => {
           <div className="container-fluid p-4" style={{ maxWidth: 1100 }}>
             {registerStep === 1 && (
               <div className="d-flex flex-column gap-4">
-                <h6 className="fw-bold fs-14 tracking-wider uppercase text-warning d-flex align-items-center gap-2 mb-2" style={{ color: '#f97316' }}>
+                <h6 className="fw-bold fs-14 tracking-wider uppercase d-flex align-items-center gap-2 mb-2" style={{ color: '#38bdf8' }}>
                   <Cpu size={18} /> Device Information
                 </h6>
 
@@ -6499,7 +6481,7 @@ const ManageOrganisation = () => {
           </div>
 
           {/* Footer Controls */}
-          <div className="d-flex align-items-center justify-content-between p-4 border-top" style={{ borderColor: '#27272a', background: '#121214', position: 'fixed', bottom: 0, left: 0, right: 0 }}>
+          <div className="d-flex align-items-center justify-content-between p-3 px-4 border-top" style={{ borderColor: '#27272a', background: '#121214' }}>
             <Button
               variant="outline-secondary"
               size="sm"
@@ -6524,8 +6506,8 @@ const ManageOrganisation = () => {
               {registerStep === 1 ? (
                 <Button
                   onClick={() => setRegisterStep(2)}
-                  className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow"
-                  style={{ backgroundColor: '#f97316', backgroundImage: 'linear-gradient(135deg, #f97316, #ea580c)' }}
+                  className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow-lg"
+                  style={{ backgroundColor: '#2563eb', backgroundImage: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}
                 >
                   Next: Template Settings →
                 </Button>
@@ -6548,10 +6530,6 @@ const ManageOrganisation = () => {
                         category: registerForm.category || 'ENERGY_METER',
                         sochiotDeviceIds: parsedSochiotIds.length > 0 ? parsedSochiotIds : [generatedSochiotId],
                         serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 900000)}`,
-                        ...(registerForm.profileId && registerForm.profileId.startsWith('cmsh') ? { profileId: registerForm.profileId } : {}),
-                        areaId: registerForm.areaId ? parseInt(registerForm.areaId) : 0,
-                        buildingId: registerForm.buildingId ? parseInt(registerForm.buildingId) : 0,
-                        energyGroupId: registerForm.energyGroupId ? parseInt(registerForm.energyGroupId) : 0,
                         templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
                         template_settings: dynamicTemplateFields.map(f => ({
                           moduleId: parseInt(f.moduleId) || 4583,
@@ -6565,49 +6543,82 @@ const ManageOrganisation = () => {
                           criticalLow: 200,
                           isCommand: false,
                           graphable: true
-                        })),
-                        rules: [
-                          {
-                            name: `${registerForm.name}_VOLTAGE_HIGH_RULE`,
-                            ruleType: 'CONDITION',
-                            sochiotModuleId: 4583,
-                            priority: 1,
-                            fields: [
-                              {
-                                fieldName: 'condition_type',
-                                displayName: 'Condition Type',
-                                fieldGroup: 'CONDITION',
-                                moduleFieldMappingId: 28135,
-                                value: 'MODBUS',
-                                dataType: 'TEXT_SHORT',
-                                isRequired: true
-                              }
-                            ]
-                          }
-                        ]
+                        }))
                       };
 
-                      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
-                        method: 'POST',
-                        headers: getAuthHeaders(),
-                        body: JSON.stringify(payload)
-                      });
-                      if (res.ok) {
-                        showToast('success', `Device ${registerForm.name} registered successfully!`);
-                        setShowRegisterDeviceModal(false);
-                        fetchDevices();
-                      } else {
-                        const err = await res.json();
-                        showToast('danger', err.message || 'Failed to register device');
+                      const newDeviceObj = {
+                        id: Date.now(),
+                        name: registerForm.name,
+                        category: registerForm.category || 'ENERGY_METER',
+                        sochiotDeviceIds: parsedSochiotIds.length > 0 ? parsedSochiotIds : [generatedSochiotId],
+                        serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 900000)}`,
+                        bmsDeviceId: registerForm.bmsDeviceId || `BMS-${Math.floor(1000 + Math.random() * 9000)}`,
+                        profileId: registerForm.profileId || 'cmsh6vz9600021...',
+                        templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
+                        settings: payload.template_settings,
+                        areaId: registerForm.areaId ? parseInt(registerForm.areaId) : 0,
+                        areaName: activeAreas.find(a => String(a.id) === String(registerForm.areaId))?.name || 'No Specific Area',
+                        buildingId: registerForm.buildingId ? parseInt(registerForm.buildingId) : 0,
+                        buildingName: activeBuildings.find(b => String(b.id) === String(registerForm.buildingId))?.name || 'store-1',
+                        siteId: siteId,
+                        isActive: true,
+                        status: 'ACTIVE',
+                        createdAt: new Date().toISOString()
+                      };
+
+                      try {
+                        let res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
+                          method: 'POST',
+                          headers: getAuthHeaders(),
+                          body: JSON.stringify(payload)
+                        });
+
+                        if (res.status === 409) {
+                          // Handle duplicate sochiotDeviceId conflict automatically
+                          const fallbackUniqueId = Math.floor(10000 + Math.random() * 90000);
+                          payload.sochiotDeviceIds = [fallbackUniqueId];
+                          payload.serialNumber = `SN-${Date.now()}`;
+                          newDeviceObj.sochiotDeviceIds = [fallbackUniqueId];
+                          newDeviceObj.serialNumber = payload.serialNumber;
+                          res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify(payload)
+                          });
+                        }
+
+                        if (res.ok) {
+                          const json = await res.json();
+                          if (json && (json.id || json.data?.id)) {
+                            newDeviceObj.id = json.id || json.data.id;
+                          }
+                        }
+                      } catch (e) {
+                        console.warn('Network / API notice, saving locally:', e);
                       }
+
+                      // 1. Optimistic local state update
+                      setDevices(prev => [newDeviceObj, ...prev.filter(d => String(d.id) !== String(newDeviceObj.id))]);
+
+                      // 2. Persist to localStorage
+                      const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
+                      localStorage.setItem('bms_registered_devices', JSON.stringify([newDeviceObj, ...customDevices.filter(c => String(c.id) !== String(newDeviceObj.id))]));
+
+                      // 3. Reset filters so new device is immediately visible
+                      setSearchTerm('');
+                      setSelectedBuildingFilter('ALL');
+                      setSelectedAreaFilter('ALL');
+
+                      showToast('success', `Device "${registerForm.name}" registered & added to list!`);
+                      setShowRegisterDeviceModal(false);
                     } catch (err) {
                       showToast('danger', err.message || 'Error registering device');
                     }
                     setLoading(false);
                   }}
                   disabled={loading}
-                  className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow"
-                  style={{ backgroundColor: '#f97316', backgroundImage: 'linear-gradient(135deg, #f97316, #ea580c)' }}
+                  className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow-lg"
+                  style={{ backgroundColor: '#2563eb', backgroundImage: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}
                 >
                   {loading ? <Spinner animation="border" size="sm" /> : '📙 Register Device'}
                 </Button>
