@@ -168,6 +168,7 @@ const AppRoutes = () => {
       <Route path="/settings/users" element={<SettingsIndex />} />
       <Route path="/settings/sites" element={<SettingsIndex />} />
       <Route path="/manage-organisation" element={<ManageOrganisation />} />
+      <Route path="/settings/manage-organisation" element={<ManageOrganisation />} />
 
       {/* Super Admin Routes */}
       <Route path="/super-admin" element={<Navigate to="/dashboard" replace />} />
