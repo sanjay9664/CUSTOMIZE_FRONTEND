@@ -132,16 +132,8 @@ window.fetch = async function (input, init) {
       console.warn('Real API fetch error:', e);
     }
     if (reqMethod === 'GET') {
-      const mockAssets = [
-        { id: "floor_1", siteId: 4, name: "Floor 1", assetType: "FLOOR", description: "First floor", parentAssetId: "building_main", status: "ACTIVE" },
-        { id: "room_101", siteId: 4, name: "Room 101", assetType: "ROOM", description: "Main equipment room", parentAssetId: "floor_1", status: "ACTIVE" },
-        { id: "cmswsz2ks002001r35qid2vfi", siteId: 4, name: "Test Building 10", assetType: "BUILDING", description: "Created from UI", parentAssetId: null, status: "ACTIVE" },
-        { id: "building_main", siteId: 4, name: "Main Building-asset", assetType: "BUILDING", description: "Main testing building", parentAssetId: null, status: "ACTIVE" },
-        { id: "cmswte6ir002j01r3b8cbcm64", siteId: 4, name: "sanjay gupta", assetType: "FLOOR", description: "second floor", parentAssetId: "building_main", status: "ACTIVE" },
-        { id: "cmth5t70l000001r35kww88l5", siteId: 1, name: "Sanjay", assetType: "FLOOR", description: "lit data", parentAssetId: null, status: "ACTIVE" },
-        { id: "cmth5w4fy000101r3u0b28yd7", siteId: 1, name: "sanjay", assetType: "FLOOR", description: "sasda", parentAssetId: null, status: "ACTIVE" }
-      ];
-      return new Response(JSON.stringify({ success: true, data: mockAssets, assets: mockAssets }), {
+      const userAssets = JSON.parse(localStorage.getItem('tb_created_assets') || '[]');
+      return new Response(JSON.stringify({ success: true, data: userAssets, assets: userAssets }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -907,64 +899,16 @@ window.fetch = async function (input, init) {
       }
     } catch(e) {}
 
-    // Purge old dummy data (Noida Corporate HQ, Mumbai Industrial Plant, etc.) AND old seeds with fake stats
-    const DUMMY_NAMES = ['Noida Corporate HQ', 'Mumbai Industrial Plant', 'Bangalore Tech Campus', 'Delhi Data Center', 'Testing Site'];
-    const hasDummy = Array.isArray(savedSites) && savedSites.some(s => DUMMY_NAMES.includes(s.name));
-    const hasFakeStats = Array.isArray(savedSites) && savedSites.some(s => s.devicesCount > 0 || s.energyKwh > 0);
-    if (hasDummy || hasFakeStats) {
-      savedSites = []; // Force re-seed with clean real DB sites
-      try { localStorage.removeItem('scada_sites_db'); } catch(e) {}
-    }
-
-    if (!Array.isArray(savedSites) || savedSites.length === 0) {
-      savedSites = [
-        {
-          id: 1,
-          name: 'LIT India',
-          sochiotLocationId: 43,
-          organizationId: 1,
-          address: 'Plot No. 123, Sector 18',
-          city: 'Gurugram',
-          state: 'Haryana',
-          pincode: '122001',
-          status: 'ACTIVE',
-          createdAt: new Date(Date.now() - 30 * 864e5).toISOString()
-        },
-        {
-          id: 4,
-          name: 'Testing',
-          sochiotLocationId: 7,
-          organizationId: 7,
-          organizationType: 'CLIENT',
-          address: 'Sector 63, Noida',
-          city: 'Noida',
-          state: 'Uttar Pradesh',
-          pincode: '201301',
-          status: 'ACTIVE',
-          createdAt: new Date(Date.now() - 60 * 864e5).toISOString()
-        },
-        {
-          id: 5,
-          name: 'Naught',
-          sochiotLocationId: 6,
-          organizationId: 6,
-          city: 'Delhi',
-          state: 'Delhi',
-          status: 'ACTIVE',
-          createdAt: new Date(Date.now() - 15 * 864e5).toISOString()
-        },
-        {
-          id: 6,
-          name: 'sochiot',
-          sochiotLocationId: 1,
-          organizationId: 1,
-          city: 'Noida',
-          state: 'Uttar Pradesh',
-          status: 'ACTIVE',
-          createdAt: new Date(Date.now() - 90 * 864e5).toISOString()
-        }
-      ];
+    // Purge old dummy data (LIT India, Testing site, Naught, sochiot, etc.)
+    const DUMMY_KEYWORDS = ['noida corporate', 'mumbai industrial', 'bangalore tech', 'delhi data center', 'testing site', 'testing', 'lit india', 'naught', 'sochiot'];
+    if (Array.isArray(savedSites)) {
+      savedSites = savedSites.filter(s => {
+        if (!s || !s.name) return false;
+        const nameLower = String(s.name).trim().toLowerCase();
+        return !DUMMY_KEYWORDS.some(dk => nameLower === dk || nameLower.includes('lit india') || nameLower === 'naught' || nameLower === 'sochiot' || nameLower === 'testing site');
+      });
       try { localStorage.setItem('scada_sites_db', JSON.stringify(savedSites)); } catch(e) {}
+      try { localStorage.setItem('tb_sites', JSON.stringify(savedSites)); } catch(e) {}
     }
 
     const method = (init?.method || 'GET').toUpperCase();

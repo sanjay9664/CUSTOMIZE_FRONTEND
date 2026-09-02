@@ -150,18 +150,30 @@ const DevicesTab = ({
               </tr>
             ) : safeDevices.map(d => {
               const catUpper = String(d.category || 'ENERGY_METER').toUpperCase();
-              let badgeStyle = { backgroundColor: '#0284c7', color: '#ffffff' };
+              let badgeBg = 'rgba(2, 132, 199, 0.14)';
+              let badgeColor = '#0284c7';
+              let badgeBorder = '1px solid rgba(56, 189, 248, 0.35)';
 
               if (catUpper.includes('ENERGY') || catUpper.includes('METER')) {
-                badgeStyle = { backgroundColor: '#2563eb', color: '#ffffff' };
+                badgeBg = 'rgba(37, 99, 235, 0.14)';
+                badgeColor = '#2563eb';
+                badgeBorder = '1px solid rgba(59, 130, 246, 0.35)';
               } else if (catUpper.includes('GENERATOR') || catUpper.includes('DIESEL') || catUpper.includes('DG')) {
-                badgeStyle = { backgroundColor: '#d97706', color: '#ffffff' };
+                badgeBg = 'rgba(217, 119, 6, 0.14)';
+                badgeColor = '#d97706';
+                badgeBorder = '1px solid rgba(245, 158, 11, 0.35)';
               } else if (catUpper.includes('PUMP')) {
-                badgeStyle = { backgroundColor: '#0284c7', color: '#ffffff' };
+                badgeBg = 'rgba(2, 132, 199, 0.14)';
+                badgeColor = '#0284c7';
+                badgeBorder = '1px solid rgba(56, 189, 248, 0.35)';
               } else if (catUpper.includes('HVAC') || catUpper.includes('AIR') || catUpper.includes('COOL')) {
-                badgeStyle = { backgroundColor: '#0d9488', color: '#ffffff' };
+                badgeBg = 'rgba(13, 148, 136, 0.14)';
+                badgeColor = '#0d9488';
+                badgeBorder = '1px solid rgba(45, 212, 191, 0.35)';
               } else {
-                badgeStyle = { backgroundColor: '#64748b', color: '#ffffff' };
+                badgeBg = 'rgba(100, 116, 139, 0.14)';
+                badgeColor = '#64748b';
+                badgeBorder = '1px solid rgba(148, 163, 184, 0.35)';
               }
 
               const rawIds = d.sochiotDeviceIds || d.sochiot_device_ids;
@@ -175,9 +187,15 @@ const DevicesTab = ({
                   </td>
                   <td className="py-3 px-3">
                     <span 
-                      className="px-2.5 py-1 fs-11 font-monospace fw-bold rounded-2 d-inline-block shadow-sm"
-                      style={badgeStyle}
+                      className="px-3 py-1 fs-11 font-monospace fw-bold rounded-pill d-inline-flex align-items-center gap-1.5 shadow-sm"
+                      style={{
+                        background: badgeBg,
+                        color: badgeColor,
+                        border: badgeBorder,
+                        letterSpacing: '0.04em'
+                      }}
                     >
+                      <span className="rounded-circle" style={{ width: 6, height: 6, backgroundColor: badgeColor }}></span>
                       {catUpper}
                     </span>
                   </td>
