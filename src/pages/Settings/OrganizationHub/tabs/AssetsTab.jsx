@@ -3,17 +3,22 @@ import { Button, Badge } from 'react-bootstrap';
 import { Activity, Plus, Edit3, Trash2 } from 'lucide-react';
 
 const AssetsTab = ({
-  assets,
-  searchTerm,
+  assets = [],
+  searchTerm = '',
   onOpenCreate,
   onOpenEdit,
   onDelete,
   isAdmin
 }) => {
-  const filtered = assets.filter(a =>
-    (a.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.assetType || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const safeSearch = String(searchTerm || '').toLowerCase();
+  const safeAssets = Array.isArray(assets) ? assets : [];
+
+  const filtered = safeAssets.filter(a => {
+    if (!a) return false;
+    const name = String(a.name || '').toLowerCase();
+    const type = String(a.assetType || '').toLowerCase();
+    return !safeSearch || name.includes(safeSearch) || type.includes(safeSearch);
+  });
 
   return (
     <div className="table-responsive">

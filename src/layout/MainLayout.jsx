@@ -4,7 +4,8 @@ import Header from './Header';
 import { io } from 'socket.io-client';
 
 const MainLayout = ({ children }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
+  const [sidebarHover, setSidebarHover] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
@@ -121,10 +122,10 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="scada-container">
-      <Sidebar collapsed={collapsed} />
+      <Sidebar collapsed={collapsed} onClose={() => setCollapsed(true)} onOpen={() => setCollapsed(false)} onHoverChange={setSidebarHover} />
       <div 
-        className={`scada-main-content w-100 ${collapsed ? 'sidebar-collapsed' : ''}`}
-        style={{ marginLeft: collapsed ? '80px' : '280px' }}
+        className={`scada-main-content w-100`}
+        style={{ marginLeft: (!collapsed || sidebarHover) ? '270px' : '62px', transition: 'margin-left 0.4s cubic-bezier(0.25, 0.1, 0.25, 1)' }}
       >
         {isImpersonating && (
           <div className="bg-warning text-dark px-4 py-2 d-flex justify-content-between align-items-center position-sticky top-0 z-3 shadow-sm border-bottom border-warning">
@@ -150,8 +151,16 @@ const MainLayout = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* Responsive: On mobile remove sidebar margin */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 992px) {
+          .scada-main-content { margin-left: 0 !important; }
+        }
+      `}} />
     </div>
   );
 };
 
 export default MainLayout;
+

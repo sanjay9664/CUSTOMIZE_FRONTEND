@@ -3,9 +3,9 @@ import { Button, Badge } from 'react-bootstrap';
 import { Building2, Sliders, Award, Edit3, Trash2, Zap } from 'lucide-react';
 
 const OrganizationsTab = ({
-  tenants,
-  companies,
-  searchTerm,
+  tenants = [],
+  companies = [],
+  searchTerm = '',
   onOpenCreate,
   onOpenEdit,
   onDelete,
@@ -14,10 +14,16 @@ const OrganizationsTab = ({
   onOpenSub,
   isAdmin
 }) => {
-  const filtered = tenants.filter(t =>
-    (t.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (t.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const safeSearch = String(searchTerm || '').toLowerCase();
+  const safeTenants = Array.isArray(tenants) ? tenants : [];
+  const safeCompanies = Array.isArray(companies) ? companies : [];
+
+  const filtered = safeTenants.filter(t => {
+    if (!t) return false;
+    const name = String(t.name || '').toLowerCase();
+    const email = String(t.email || '').toLowerCase();
+    return !safeSearch || name.includes(safeSearch) || email.includes(safeSearch);
+  });
 
   return (
     <div className="table-responsive">

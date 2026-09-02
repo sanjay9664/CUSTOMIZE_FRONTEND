@@ -13,13 +13,17 @@ const BuildingsTab = ({
   onDelete,
   isAdmin
 }) => {
-  const activeSites = sites.filter(s => s.status !== 'INACTIVE' && s.status !== 'DISABLED' && !s.deletedAt);
+  const safeSearch = String(searchTerm || '').toLowerCase();
+  const safeBuildings = Array.isArray(buildings) ? buildings : [];
+  const safeSites = Array.isArray(sites) ? sites : [];
+  const activeSites = safeSites.filter(s => s && s.status !== 'INACTIVE' && s.status !== 'DISABLED' && !s.deletedAt);
 
-  const filtered = buildings.filter(b => {
-    const matchesSearch = !searchTerm ||
-      (b.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (b.code || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSite = selectedBuildingSiteId === 'ALL' ||
+  const filtered = safeBuildings.filter(b => {
+    if (!b) return false;
+    const name = String(b.name || '').toLowerCase();
+    const code = String(b.code || '').toLowerCase();
+    const matchesSearch = !safeSearch || name.includes(safeSearch) || code.includes(safeSearch);
+    const matchesSite = !selectedBuildingSiteId || selectedBuildingSiteId === 'ALL' ||
       String(b.siteId) === String(selectedBuildingSiteId);
     return matchesSearch && matchesSite;
   });

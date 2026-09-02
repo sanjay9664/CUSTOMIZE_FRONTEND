@@ -5,25 +5,26 @@ import { Cpu, Sliders, Trash2 } from 'lucide-react';
 const RegisterDeviceModal = ({
   show,
   onHide,
-  registerStep,
-  setRegisterStep,
-  registerForm,
-  setRegisterForm,
-  sites,
-  editingDevice,
-  activeAreas,
-  activeBuildings,
-  dynamicTemplateFields,
-  setDynamicTemplateFields,
-  showToast,
-  loading,
-  setLoading,
-  setDevices,
-  setSelectedBuildingFilter,
-  setSelectedAreaFilter,
-  setSearchTerm,
-  API_BASE_URL,
-  getAuthHeaders
+  registerStep = 1,
+  setRegisterStep = () => {},
+  registerForm = {},
+  setRegisterForm = () => {},
+  sites = [],
+  editingDevice = null,
+  activeAreas = [],
+  activeBuildings = [],
+  dynamicTemplateFields = [],
+  setDynamicTemplateFields = () => {},
+  fetchDevices = () => {},
+  showToast = () => {},
+  loading = false,
+  setLoading = () => {},
+  setDevices = () => {},
+  setSelectedBuildingFilter = () => {},
+  setSelectedAreaFilter = () => {},
+  setSearchTerm = () => {},
+  API_BASE_URL = '',
+  getAuthHeaders = () => ({})
 }) => {
   return (
     <Modal
@@ -460,52 +461,94 @@ const RegisterDeviceModal = ({
             ) : (
               <Button
                 onClick={async () => {
-                  if (!registerForm.name) return showToast('danger', 'Device Name is required');
-                  setLoading(true);
+                  if (!registerForm.name || !registerForm.name.trim()) {
+                    if (typeof showToast === 'function') showToast('danger', 'Device Name is required');
+                    return;
+                  }
+                  if (typeof setLoading === 'function') setLoading(true);
                   try {
-                    const siteId = registerForm.siteId || 7;
-                    const rawSochiotId = String(registerForm.sochiotDeviceIds || '101');
-                    const parsedSochiotIds = rawSochiotId
+                    const siteId = registerForm.siteId || (sites && sites.length ? sites[0].id : 7);
+                    const generatedSochiotId = Math.floor(100000 + Math.random() * 899999);
+                    const rawSochiotId = String(registerForm.sochiotDeviceIds || '');
+                    let parsedSochiotIds = rawSochiotId
                       .split(',')
                       .map(id => parseInt(id.trim()))
                       .filter(n => !isNaN(n) && n > 0);
 
-                    const generatedSochiotId = Math.floor(100000 + Math.random() * 900000);
-                    const payload = {
-                      name: registerForm.name,
-                      category: registerForm.category || 'ENERGY_METER',
-                      sochiotDeviceIds: parsedSochiotIds.length > 0 ? parsedSochiotIds : [generatedSochiotId],
-                      serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 900000)}`,
-                      templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
-                      template_settings: dynamicTemplateFields.map(f => ({
-                        moduleId: parseInt(f.moduleId) || 4583,
-                        sochiotFieldName: f.sochiotFieldName || '3,100F',
-                        displayName: f.displayName || 'Voltage R-N',
-                        dataType: f.dataType || 'INTEGER',
-                        unit: f.unit || 'V',
-                        warningHigh: parseInt(f.thresholdValue) || 250,
-                        criticalHigh: (parseInt(f.thresholdValue) || 250) + 10,
+                    if (parsedSochiotIds.length === 0) {
+                      parsedSochiotIds = [generatedSochiotId];
+                    }
+
+                    const templateSettings = (dynamicTemplateFields && dynamicTemplateFields.length > 0 ? dynamicTemplateFields : [
+                      {
+                        moduleId: 4583,
+                        sochiotFieldName: "3,100F",
+                        displayName: "Voltage R-N",
+                        dataType: "INTEGER",
+                        unit: "V",
+                        warningHigh: 250,
+                        criticalHigh: 260,
                         warningLow: 210,
                         criticalLow: 200,
                         isCommand: false,
                         graphable: true
-                      }))
+                      }
+                    ]).map(f => ({
+                      moduleId: parseInt(f.moduleId) || 4583,
+                      sochiotFieldName: f.sochiotFieldName || '3,100F',
+                      displayName: f.displayName || 'Voltage R-N',
+                      dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(f.dataType)) ? f.dataType : 'INTEGER',
+                      unit: f.unit || 'V',
+                      warningHigh: parseInt(f.warningHigh ?? f.thresholdValue) || 250,
+                      criticalHigh: parseInt(f.criticalHigh) || ((parseInt(f.warningHigh ?? f.thresholdValue) || 250) + 10),
+                      warningLow: parseInt(f.warningLow) || 210,
+                      criticalLow: parseInt(f.criticalLow) || 200,
+                      isCommand: Boolean(f.isCommand),
+                      graphable: f.graphable !== false
+                    }));
+
+                    const payload = {
+                      name: registerForm.name?.trim() || 'EM_LIVEWIZE_178',
+                      category: registerForm.category || 'ENERGY_METER',
+                      sochiotDeviceIds: parsedSochiotIds,
+                      serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 899999)}`,
+                      templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
+                      template_settings: templateSettings
                     };
+
+                    if (registerForm.areaId && activeAreas.some(a => String(a.id) === String(registerForm.areaId))) {
+                      payload.areaId = parseInt(registerForm.areaId);
+                    }
+                    if (registerForm.buildingId && activeBuildings.some(b => String(b.id) === String(registerForm.buildingId))) {
+                      payload.buildingId = parseInt(registerForm.buildingId);
+                    }
+                    if (registerForm.floorNo && !isNaN(parseInt(registerForm.floorNo))) {
+                      payload.floorNo = parseInt(registerForm.floorNo);
+                    }
+                    if (registerForm.roomNo && !isNaN(parseInt(registerForm.roomNo))) {
+                      payload.roomNo = parseInt(registerForm.roomNo);
+                    }
+                    if (registerForm.description && registerForm.description.trim()) {
+                      payload.description = registerForm.description.trim();
+                    }
+                    if (registerForm.profileId && typeof registerForm.profileId === 'string' && registerForm.profileId.length >= 20 && !registerForm.profileId.includes(' ')) {
+                      payload.profileId = registerForm.profileId;
+                    }
 
                     const newDeviceObj = {
                       id: Date.now(),
-                      name: registerForm.name,
+                      name: registerForm.name.trim(),
                       category: registerForm.category || 'ENERGY_METER',
-                      sochiotDeviceIds: parsedSochiotIds.length > 0 ? parsedSochiotIds : [generatedSochiotId],
-                      serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 900000)}`,
+                      sochiotDeviceIds: payload.sochiotDeviceIds,
+                      serialNumber: payload.serialNumber,
                       bmsDeviceId: registerForm.bmsDeviceId || `BMS-${Math.floor(1000 + Math.random() * 9000)}`,
-                      profileId: registerForm.profileId || 'cmsh6vz9600021...',
+                      profileId: payload.profileId || null,
                       templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
                       settings: payload.template_settings,
-                      areaId: registerForm.areaId ? parseInt(registerForm.areaId) : 0,
-                      areaName: activeAreas.find(a => String(a.id) === String(registerForm.areaId))?.name || 'No Specific Area',
-                      buildingId: registerForm.buildingId ? parseInt(registerForm.buildingId) : 0,
-                      buildingName: activeBuildings.find(b => String(b.id) === String(registerForm.buildingId))?.name || 'store-1',
+                      areaId: payload.areaId || 0,
+                      areaName: (activeAreas || []).find(a => String(a.id) === String(registerForm.areaId))?.name || 'No Specific Area',
+                      buildingId: payload.buildingId || 0,
+                      buildingName: (activeBuildings || []).find(b => String(b.id) === String(registerForm.buildingId))?.name || 'store-1',
                       siteId: siteId,
                       isActive: true,
                       status: 'ACTIVE',
@@ -513,9 +556,10 @@ const RegisterDeviceModal = ({
                     };
 
                     try {
+                      const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
                       let res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
                         method: 'POST',
-                        headers: getAuthHeaders(),
+                        headers,
                         body: JSON.stringify(payload)
                       });
 
@@ -527,13 +571,13 @@ const RegisterDeviceModal = ({
                         newDeviceObj.serialNumber = payload.serialNumber;
                         res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
                           method: 'POST',
-                          headers: getAuthHeaders(),
+                          headers,
                           body: JSON.stringify(payload)
                         });
                       }
 
                       if (res.ok) {
-                        const json = await res.json();
+                        const json = await res.json().catch(() => ({}));
                         if (json && (json.id || json.data?.id)) {
                           newDeviceObj.id = json.id || json.data.id;
                         }
@@ -542,27 +586,36 @@ const RegisterDeviceModal = ({
                       console.warn('Network / API notice, saving locally:', e);
                     }
 
-                    setDevices(prev => [newDeviceObj, ...prev.filter(d => String(d.id) !== String(newDeviceObj.id))]);
+                    if (typeof setDevices === 'function') {
+                      setDevices(prev => [newDeviceObj, ...(Array.isArray(prev) ? prev.filter(d => String(d.id) !== String(newDeviceObj.id)) : [])]);
+                    }
+                    if (typeof fetchDevices === 'function') {
+                      fetchDevices();
+                    }
 
                     const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
                     localStorage.setItem('bms_registered_devices', JSON.stringify([newDeviceObj, ...customDevices.filter(c => String(c.id) !== String(newDeviceObj.id))]));
 
-                    setSearchTerm('');
-                    setSelectedBuildingFilter('ALL');
-                    setSelectedAreaFilter('ALL');
+                    if (typeof setSearchTerm === 'function') setSearchTerm('');
+                    if (typeof setSelectedBuildingFilter === 'function') setSelectedBuildingFilter('ALL');
+                    if (typeof setSelectedAreaFilter === 'function') setSelectedAreaFilter('ALL');
 
-                    showToast('success', `Device "${registerForm.name}" registered & added to list!`);
+                    if (typeof showToast === 'function') {
+                      showToast('success', `Device "${registerForm.name}" registered & added to list!`);
+                    }
                     onHide();
                   } catch (err) {
-                    showToast('danger', err.message || 'Error registering device');
+                    if (typeof showToast === 'function') {
+                      showToast('danger', err.message || 'Error registering device');
+                    }
                   }
-                  setLoading(false);
+                  if (typeof setLoading === 'function') setLoading(false);
                 }}
                 disabled={loading}
                 className="fw-bold fs-13 rounded-pill px-4 py-2 text-white border-0 shadow-lg"
                 style={{ backgroundColor: '#2563eb', backgroundImage: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)' }}
               >
-                {loading ? <Spinner animation="border" size="sm" /> : '📙 Register Device'}
+                {loading ? <Spinner animation="border" size="sm" /> : 'Register Device'}
               </Button>
             )}
           </div>

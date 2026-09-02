@@ -149,7 +149,33 @@ const DevicesTab = ({
                 </td>
               </tr>
             ) : safeDevices.map(d => {
-              const categoryBadgeBg = d.category === 'ENERGY_METER' ? 'primary' : d.category === 'DIESEL_GENERATOR' ? 'warning' : d.category === 'HVAC' ? 'info' : 'secondary';
+              const catUpper = String(d.category || 'ENERGY_METER').toUpperCase();
+              let badgeBg = 'rgba(2, 132, 199, 0.14)';
+              let badgeColor = '#0284c7';
+              let badgeBorder = '1px solid rgba(56, 189, 248, 0.35)';
+
+              if (catUpper.includes('ENERGY') || catUpper.includes('METER')) {
+                badgeBg = 'rgba(37, 99, 235, 0.14)';
+                badgeColor = '#2563eb';
+                badgeBorder = '1px solid rgba(59, 130, 246, 0.35)';
+              } else if (catUpper.includes('GENERATOR') || catUpper.includes('DIESEL') || catUpper.includes('DG')) {
+                badgeBg = 'rgba(217, 119, 6, 0.14)';
+                badgeColor = '#d97706';
+                badgeBorder = '1px solid rgba(245, 158, 11, 0.35)';
+              } else if (catUpper.includes('PUMP')) {
+                badgeBg = 'rgba(2, 132, 199, 0.14)';
+                badgeColor = '#0284c7';
+                badgeBorder = '1px solid rgba(56, 189, 248, 0.35)';
+              } else if (catUpper.includes('HVAC') || catUpper.includes('AIR') || catUpper.includes('COOL')) {
+                badgeBg = 'rgba(13, 148, 136, 0.14)';
+                badgeColor = '#0d9488';
+                badgeBorder = '1px solid rgba(45, 212, 191, 0.35)';
+              } else {
+                badgeBg = 'rgba(100, 116, 139, 0.14)';
+                badgeColor = '#64748b';
+                badgeBorder = '1px solid rgba(148, 163, 184, 0.35)';
+              }
+
               const rawIds = d.sochiotDeviceIds || d.sochiot_device_ids;
               const displayIds = Array.isArray(rawIds) ? rawIds.join(', ') : String(rawIds || '101');
 
@@ -157,25 +183,34 @@ const DevicesTab = ({
                 <tr key={d.id} className="border-bottom border-secondary border-opacity-10">
                   <td className="py-3 px-3">
                     <div className="fw-bold text-white fs-14">{d.name}</div>
-                    <div className="text-slate-400 fs-11 font-monospace">BMS ID: {d.bmsDeviceId || `BMS-${d.id}`}</div>
+                    <div className="text-slate-400 fs-11 font-monospace fw-medium">BMS ID: {d.bmsDeviceId || `BMS-${d.id}`}</div>
                   </td>
                   <td className="py-3 px-3">
-                    <Badge bg={categoryBadgeBg} className="px-2 py-1 fs-11 font-monospace">
-                      {d.category || 'ENERGY_METER'}
-                    </Badge>
+                    <span 
+                      className="px-3 py-1 fs-11 font-monospace fw-bold rounded-pill d-inline-flex align-items-center gap-1.5 shadow-sm"
+                      style={{
+                        background: badgeBg,
+                        color: badgeColor,
+                        border: badgeBorder,
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      <span className="rounded-circle" style={{ width: 6, height: 6, backgroundColor: badgeColor }}></span>
+                      {catUpper}
+                    </span>
                   </td>
-                  <td className="py-3 px-3 font-monospace text-slate-300">
+                  <td className="py-3 px-3 font-monospace text-slate-300 fw-medium">
                     {d.serialNumber || `SN-${d.id}`}
                   </td>
-                  <td className="py-3 px-3 font-monospace text-info">
+                  <td className="py-3 px-3 font-monospace text-info fw-semibold">
                     {displayIds}
                   </td>
                   <td className="py-3 px-3 text-slate-300 fs-12">
-                    <div>{d.buildingName || 'store-1'}</div>
+                    <div className="fw-medium">{d.buildingName || 'store-1'}</div>
                     <div className="text-slate-400 fs-10">{d.areaName || 'Main Area'}</div>
                   </td>
                   <td className="py-3 px-3">
-                    <Badge bg={d.isActive !== false ? 'success' : 'secondary'} className="px-2 py-1 fs-11">
+                    <Badge bg={d.isActive !== false ? 'success' : 'secondary'} className="px-2 py-1 fs-11 fw-semibold">
                       {d.isActive !== false ? '● ACTIVE' : '○ INACTIVE'}
                     </Badge>
                   </td>

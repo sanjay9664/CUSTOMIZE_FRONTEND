@@ -234,7 +234,15 @@ export const useManageOrganisation = () => {
   const [subForm, setSubForm] = useState({ subscription: 'BASIC', subscriptionPeriod: 'ANNUALLY', licenseValidity: '' });
 
   const showToast = (type, text) => {
-    setMessage({ type, text });
+    let msgText = 'Operation completed';
+    if (typeof text === 'string') {
+      msgText = text;
+    } else if (text && typeof text === 'object') {
+      msgText = text.message || (typeof text.error === 'string' ? text.error : text.error?.message) || JSON.stringify(text);
+    } else if (text !== undefined && text !== null) {
+      msgText = String(text);
+    }
+    setMessage({ type, text: msgText });
     setTimeout(() => setMessage(null), 4000);
   };
 
@@ -464,7 +472,7 @@ export const useManageOrganisation = () => {
     setLoading(true);
     try {
       const url = editingCompany ? `${API_BASE_URL}/companies/${editingCompany.id}` : `${API_BASE_URL}/companies`;
-      const method = editingCompany ? 'PUT' : 'POST';
+      const method = editingCompany ? 'PATCH' : 'POST';
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
@@ -553,11 +561,31 @@ export const useManageOrganisation = () => {
     setLoading(true);
     try {
       const url = editingTenant ? `${API_BASE_URL}/tenants/${editingTenant.id}` : `${API_BASE_URL}/tenants`;
-      const method = editingTenant ? 'PUT' : 'POST';
-      const payload = { ...tenantForm };
-      if (!payload.companyId && activeCompanies.length > 0) {
-        payload.companyId = activeCompanies[0].id;
+      const method = editingTenant ? 'PATCH' : 'POST';
+
+      const payload = {
+        companyId: tenantForm.companyId || (activeCompanies.length ? String(activeCompanies[0].id) : ''),
+        name: tenantForm.name?.trim(),
+        email: tenantForm.email?.trim(),
+        subscription: tenantForm.subscription || 'BASIC'
+      };
+
+      if (tenantForm.phone?.trim()) payload.phone = tenantForm.phone.trim();
+      if (tenantForm.address?.trim()) payload.address = tenantForm.address.trim();
+
+      if (tenantForm.sochiotOrgId !== undefined && tenantForm.sochiotOrgId !== null && String(tenantForm.sochiotOrgId).trim() !== '') {
+        const parsedOrgId = parseInt(tenantForm.sochiotOrgId, 10);
+        if (!isNaN(parsedOrgId)) {
+          payload.sochiotOrgId = parsedOrgId;
+        }
       }
+
+      if (!payload.companyId) {
+        showToast('danger', 'Please select a valid Parent Company.');
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
@@ -569,11 +597,14 @@ export const useManageOrganisation = () => {
         setShowTenantModal(false);
         fetchTenants();
       } else {
-        const err = await res.json();
-        showToast('danger', err.error?.message || err.message || 'Error saving organization');
+        const err = await res.json().catch(() => ({}));
+        const errMsg = typeof err?.error === 'string'
+          ? err.error
+          : err?.error?.message || err?.message || (Array.isArray(err?.errors) ? err.errors.map(item => item.message).join(', ') : 'Error saving organization');
+        showToast('danger', errMsg);
       }
     } catch (err) {
-      showToast('danger', err.message || 'Network error saving organization');
+      showToast('danger', err?.message || 'Network error saving organization');
     }
     setLoading(false);
   };
@@ -634,10 +665,27 @@ export const useManageOrganisation = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const url = editingZone ? `${API_BASE_URL}/zones/${editingZone.id}` : `${API_BASE_URL}/zones`;
-      const method = editingZone ? 'PUT' : 'POST';
-      const payload = { ...zoneForm };
-      if (!payload.tenantId && activeTenants.length > 0) payload.tenantId = activeTenants[0].id;
+      const tenantId = zoneForm.tenantId || (activeTenants.length ? activeTenants[0].id : '');
+      if (!tenantId) {
+        showToast('danger', 'Please select a valid Organization (Tenant).');
+        setLoading(false);
+        return;
+      }
+
+      const url = editingZone
+        ? `${API_BASE_URL}/zones/${editingZone.id}`
+        : `${API_BASE_URL}/tenants/${tenantId}/zones`;
+      const method = editingZone ? 'PATCH' : 'POST';
+
+      const payload = {
+        tenantId,
+        name: zoneForm.name?.trim(),
+        region: zoneForm.region?.trim() || 'General',
+        timezone: zoneForm.timezone || 'Asia/Kolkata',
+        country: zoneForm.country || 'India'
+      };
+      if (zoneForm.description?.trim()) payload.description = zoneForm.description.trim();
+
       const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
 
       if (res.ok) {
@@ -645,11 +693,14 @@ export const useManageOrganisation = () => {
         setShowZoneModal(false);
         fetchZones();
       } else {
-        const err = await res.json();
-        showToast('danger', err.error?.message || err.message || 'Error saving zone');
+        const err = await res.json().catch(() => ({}));
+        const errMsg = typeof err?.error === 'string'
+          ? err.error
+          : err?.error?.message || err?.message || (Array.isArray(err?.errors) ? err.errors.map(item => item.message).join(', ') : 'Error saving zone');
+        showToast('danger', errMsg);
       }
     } catch (err) {
-      showToast('danger', err.message || 'Network error saving zone');
+      showToast('danger', err?.message || 'Network error saving zone');
     }
     setLoading(false);
   };
@@ -700,11 +751,32 @@ export const useManageOrganisation = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const url = editingArea ? `${API_BASE_URL}/areas/${editingArea.id}` : `${API_BASE_URL}/areas`;
-      const method = editingArea ? 'PUT' : 'POST';
-      const payload = { ...areaForm };
-      if (!payload.tenantId && activeTenants.length) payload.tenantId = activeTenants[0].id;
-      if (!payload.zoneId && activeZones.length) payload.zoneId = activeZones[0].id;
+      const tenantId = areaForm.tenantId || (activeTenants.length ? activeTenants[0].id : '');
+      const zoneId = areaForm.zoneId || (activeZones.length ? activeZones[0].id : '');
+
+      if (!zoneId) {
+        showToast('danger', 'Please select a valid Zone.');
+        setLoading(false);
+        return;
+      }
+      if (!tenantId) {
+        showToast('danger', 'Please select a valid Organization.');
+        setLoading(false);
+        return;
+      }
+
+      const url = editingArea
+        ? `${API_BASE_URL}/areas/${editingArea.id}`
+        : `${API_BASE_URL}/tenants/${tenantId}/zones/${zoneId}/areas`;
+      const method = editingArea ? 'PATCH' : 'POST';
+
+      const payload = {
+        tenantId,
+        zoneId,
+        name: areaForm.name?.trim(),
+      };
+      if (areaForm.description?.trim()) payload.description = areaForm.description.trim();
+
       const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
 
       if (res.ok) {
@@ -712,11 +784,14 @@ export const useManageOrganisation = () => {
         setShowAreaModal(false);
         fetchAreas();
       } else {
-        const err = await res.json();
-        showToast('danger', err.error?.message || err.message || 'Error saving area');
+        const err = await res.json().catch(() => ({}));
+        const errMsg = typeof err?.error === 'string'
+          ? err.error
+          : err?.error?.message || err?.message || (Array.isArray(err?.errors) ? err.errors.map(item => item.message).join(', ') : 'Error saving area');
+        showToast('danger', errMsg);
       }
     } catch (err) {
-      showToast('danger', 'Network error saving area');
+      showToast('danger', err?.message || 'Network error saving area');
     }
     setLoading(false);
   };
@@ -756,7 +831,7 @@ export const useManageOrganisation = () => {
     try {
       const siteId = buildingForm.siteId;
       const url = editingBuilding ? `${API_BASE_URL}/sites/${siteId}/buildings/${editingBuilding.id}` : `${API_BASE_URL}/sites/${siteId}/buildings`;
-      const method = editingBuilding ? 'PUT' : 'POST';
+      const method = editingBuilding ? 'PATCH' : 'POST';
       const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(buildingForm) });
       if (res.ok) {
         showToast('success', `Building ${editingBuilding ? 'updated' : 'created'} successfully!`);
@@ -807,7 +882,7 @@ export const useManageOrganisation = () => {
     try {
       const siteId = assetForm.siteId || 7;
       const url = editingAsset ? `${API_BASE_URL}/sites/${siteId}/assets/${editingAsset.id}` : `${API_BASE_URL}/sites/${siteId}/assets`;
-      const method = editingAsset ? 'PUT' : 'POST';
+      const method = editingAsset ? 'PATCH' : 'POST';
       const payload = { name: assetForm.name, assetType: assetForm.assetType, description: assetForm.description };
       if (assetForm.parentAssetId) payload.parentAssetId = parseInt(assetForm.parentAssetId);
       const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
@@ -856,7 +931,7 @@ export const useManageOrganisation = () => {
     try {
       const siteId = editingDeviceItem.siteId || 7;
       const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDeviceItem.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ name: editDeviceForm.name, category: editDeviceForm.category })
       });
@@ -879,10 +954,24 @@ export const useManageOrganisation = () => {
     setLoading(true);
     try {
       const siteId = 7;
-      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+      try {
+        await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+      } catch (e) {
+        console.warn('Backend delete notice, removing locally:', e);
+      }
+
+      // Persist deleted status
       const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
-      localStorage.setItem('bms_deleted_devices', JSON.stringify([...deletedIds, String(id)]));
-      setDevices(prev => prev.filter(d => String(d.id) !== String(id)));
+      if (!deletedIds.includes(String(id))) {
+        localStorage.setItem('bms_deleted_devices', JSON.stringify([...deletedIds, String(id)]));
+      }
+
+      // Remove from custom registered devices in localStorage
+      const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
+      localStorage.setItem('bms_registered_devices', JSON.stringify(customDevices.filter(c => String(c.id) !== String(id))));
+
+      // Remove from devices React state
+      setDevices(prev => (Array.isArray(prev) ? prev.filter(d => String(d.id) !== String(id)) : []));
       showToast('success', `Device "${name}" deleted successfully.`);
     } catch (err) {
       showToast('danger', 'Error deleting device');

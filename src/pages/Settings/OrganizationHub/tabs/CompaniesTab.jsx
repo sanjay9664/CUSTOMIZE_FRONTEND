@@ -3,18 +3,23 @@ import { Card, Button, Badge } from 'react-bootstrap';
 import { Building, Plus, Search, Edit3, Trash2, Layers } from 'lucide-react';
 
 const CompaniesTab = ({
-  companies,
-  searchTerm,
+  companies = [],
+  searchTerm = '',
   onOpenCreate,
   onOpenEdit,
   onDelete,
   onViewTenants,
   isAdmin
 }) => {
-  const filtered = companies.filter(c =>
-    (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const safeSearch = String(searchTerm || '').toLowerCase();
+  const safeCompanies = Array.isArray(companies) ? companies : [];
+
+  const filtered = safeCompanies.filter(c => {
+    if (!c) return false;
+    const name = String(c.name || '').toLowerCase();
+    const email = String(c.email || '').toLowerCase();
+    return !safeSearch || name.includes(safeSearch) || email.includes(safeSearch);
+  });
 
   return (
     <div className="table-responsive">

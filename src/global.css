@@ -960,19 +960,84 @@ body.light-mode [style*="linear-gradient(145deg, #0f172a"] {
    TABLE HOVER FIX FOR LIGHT MODE
    ========================================================= */
 
-/* Override Bootstrap's dark table hover in light mode */
-body.light-mode .table-dark.table-hover > tbody > tr:hover > *,
-body.light-mode .table.table-hover > tbody > tr:hover > *,
-body.light-mode .table-hover > tbody > tr:hover > td,
-body.light-mode .table-hover > tbody > tr:hover > th {
-    background-color: #f1f5f9 !important;
-    color: var(--scada-text) !important;
+body.light-mode table,
+body.light-mode .table,
+body.light-mode .table-dark,
+body.light-mode .table-hover,
+body.light-mode .table-dark.table-hover {
+    --bs-table-bg: #ffffff !important;
+    --bs-table-hover-bg: #e2e8f0 !important;
+    --bs-table-color: #0f172a !important;
+    --bs-table-hover-color: #0f172a !important;
+    --bs-table-accent-bg: transparent !important;
+    color: #0f172a !important;
 }
 
-/* Also ensure text inside hover state remains dark */
+body.light-mode .table-dark th,
+body.light-mode .table-dark td,
+body.light-mode .table th,
+body.light-mode .table td {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+}
+
+body.light-mode .table-dark thead,
+body.light-mode .table-dark thead th,
+body.light-mode .table thead,
+body.light-mode .table thead th {
+    background-color: #f8fafc !important;
+    background: #f8fafc !important;
+    color: #475569 !important;
+}
+
+body.light-mode .table-dark.table-hover > tbody > tr:hover,
+body.light-mode .table-dark.table-hover > tbody > tr:hover > *,
+body.light-mode .table.table-hover > tbody > tr:hover,
+body.light-mode .table.table-hover > tbody > tr:hover > *,
+body.light-mode .table-hover > tbody > tr:hover,
+body.light-mode .table-hover > tbody > tr:hover > td,
+body.light-mode .table-hover > tbody > tr:hover > th,
+body.light-mode .scada-table tbody tr:hover,
+body.light-mode .scada-table tbody tr:hover td {
+    background-color: #e2e8f0 !important;
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+}
+
+/* Also ensure text inside hover state remains readable dark text */
 body.light-mode .table-hover > tbody > tr:hover td .text-white,
-body.light-mode .table-hover > tbody > tr:hover td .text-secondary {
-    color: var(--scada-text) !important;
+body.light-mode .table-hover > tbody > tr:hover td .text-secondary,
+body.light-mode .table-hover > tbody > tr:hover td .text-slate-300,
+body.light-mode .table-hover > tbody > tr:hover td .text-slate-400,
+body.light-mode .table-hover > tbody > tr:hover td div,
+body.light-mode .table-hover > tbody > tr:hover td span {
+    color: #0f172a !important;
+}
+
+/* Ensure all text inside light mode table rows is high-contrast, crystal-clear, and perfectly readable */
+body.light-mode table td,
+body.light-mode .table td,
+body.light-mode .table-dark td {
+    color: #1e293b !important;
+}
+
+body.light-mode table td .text-white,
+body.light-mode .table td .text-white,
+body.light-mode .table-dark td .text-white,
+body.light-mode table td .text-slate-100,
+body.light-mode table td .text-slate-200 {
+    color: #0f172a !important;
+}
+
+body.light-mode table td .text-slate-300,
+body.light-mode table td .text-slate-400 {
+    color: #475569 !important;
+}
+
+body.light-mode table td .text-info {
+    color: #0284c7 !important;
 }
 
 /* Fix specific custom hover classes */
@@ -1390,3 +1455,112 @@ body.light-mode .device-action-btn {
 body.light-mode .device-action-btn:hover {
   background: var(--_hover-bg, rgba(100,116,139,0.1));
 }
+
+/* ── Global Dark Mode Modals, Cards & Components ─────────────────────────── */
+
+/* 1. Modal Content & Backdrop */
+body:not(.light-mode) .modal-content,
+body:not(.light-mode) .glass-modal .modal-content,
+body:not(.light-mode) .scada-modal .modal-content {
+  background-color: #0c1017 !important;
+  background: #0c1017 !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.05) !important;
+  border-radius: 12px;
+}
+
+body:not(.light-mode) .modal-header {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body:not(.light-mode) .modal-body {
+  background-color: #0c1017 !important;
+  color: #f8fafc !important;
+}
+
+body:not(.light-mode) .modal-footer {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body:not(.light-mode) .modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%) !important;
+  opacity: 0.8;
+}
+
+body:not(.light-mode) .modal-header .btn-close:hover {
+  opacity: 1;
+}
+
+/* 2. Global .bg-dark-card class */
+.bg-dark-card {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+
+body.light-mode .bg-dark-card {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* 3. Global Cards in Dark Mode */
+body:not(.light-mode) .card {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body:not(.light-mode) .card-header,
+body:not(.light-mode) .card-body,
+body:not(.light-mode) .card-footer {
+  background-color: transparent !important;
+  color: #f8fafc !important;
+}
+
+/* 4. Global Custom Table in Dark Mode */
+body:not(.light-mode) .table-custom {
+  color: #f8fafc !important;
+}
+
+body:not(.light-mode) .table-custom th {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body:not(.light-mode) .table-custom td {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 5. Select Dropdown Options in Dark Mode */
+body:not(.light-mode) select.form-select option,
+body:not(.light-mode) select.form-control option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* 6. Dropdown Menus in Dark Mode */
+body:not(.light-mode) .dropdown-menu {
+  background-color: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+body:not(.light-mode) .dropdown-item {
+  color: #e2e8f0 !important;
+}
+
+body:not(.light-mode) .dropdown-item:hover,
+body:not(.light-mode) .dropdown-item:focus {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
+}
+
