@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getCookie } from '../../../../utils/cookieUtils';
 import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, FileText } from 'lucide-react';
+import { useSiteStore } from '../../../../context/SiteContext';
 
 export const API_BASE_URL = '/api';
 
@@ -39,6 +40,7 @@ export const normalizeList = (raw, key) => {
 export const useManageOrganisation = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { sites: storeSites, activeSites: storeActiveSites, fetchSites: fetchStoreSites } = useSiteStore();
 
   // Role-Based Access Control (RBAC) Security Check
   const userRole = (localStorage.getItem('userRole') || getCookie('userRole') || 'USER').toUpperCase();
@@ -67,7 +69,7 @@ export const useManageOrganisation = () => {
   const [tenants, setTenants] = useState([]);
   const [zones, setZones] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [sites, setSites] = useState([]);
+  const [sites, setSites] = useState(() => (storeSites && storeSites.length > 0 ? storeSites : []));
   const [buildings, setBuildings] = useState([]);
   const [assets, setAssets] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -138,12 +140,10 @@ export const useManageOrganisation = () => {
   const [wizardStep, setWizardStep] = useState(1);
 
   const [registerForm, setRegisterForm] = useState({
-    siteId: 7, name: '', sochiotDeviceIds: '', category: 'ENERGY_METER', areaId: '', buildingId: '', floorNo: '', roomNo: '', energyGroupId: '', description: '', serialNumber: '', profileId: 'MFM-1 Profile', templateName: 'EnergyMeter_Template_V1'
+    siteId: '', name: '', sochiotDeviceIds: '', category: '', areaId: '', buildingId: '', floorNo: '', roomNo: '', energyGroupId: '', description: '', serialNumber: '', profileId: '', templateName: ''
   });
 
-  const [dynamicTemplateFields, setDynamicTemplateFields] = useState([
-    { deviceId: '101', moduleId: '4583', sochiotFieldName: '3,100F', displayName: 'Voltage R-N', thresholdValue: '250', dataType: 'INTEGER', unit: 'V', warningHigh: 250, criticalHigh: 260, warningLow: 210, criticalLow: 200, isCommand: false, graphable: true }
-  ]);
+  const [dynamicTemplateFields, setDynamicTemplateFields] = useState([]);
 
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [selectedDeviceForLive, setSelectedDeviceForLive] = useState(null);
@@ -323,18 +323,56 @@ export const useManageOrganisation = () => {
     }
   }, [selectedZoneFilter, selectedTenantFilter]);
 
+  // Sync sites with global Site Store and real-time events
+  useEffect(() => {
+    if (storeSites && Array.isArray(storeSites) && storeSites.length > 0) {
+      setSites(storeSites);
+    }
+  }, [storeSites]);
+
+  useEffect(() => {
+    const handleSitesUpdated = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setSites(e.detail);
+      }
+    };
+    const handleSiteCreated = (e) => {
+      if (e.detail && e.detail.id) {
+        setSites(prev => {
+          if (prev.some(s => String(s.id) === String(e.detail.id))) return prev;
+          return [e.detail, ...prev];
+        });
+      }
+    };
+    window.addEventListener('bms_sites_updated', handleSitesUpdated);
+    window.addEventListener('bms_site_created', handleSiteCreated);
+    return () => {
+      window.removeEventListener('bms_sites_updated', handleSitesUpdated);
+      window.removeEventListener('bms_site_created', handleSiteCreated);
+    };
+  }, []);
+
   // Fetch Sites
   const fetchSites = useCallback(async () => {
     try {
+      if (typeof fetchStoreSites === 'function') {
+        const list = await fetchStoreSites();
+        if (list && list.length > 0) {
+          setSites(list);
+          return list;
+        }
+      }
       const res = await fetch(`${API_BASE_URL}/sites`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
-        setSites(normalizeList(json, 'sites'));
+        const norm = normalizeList(json, 'sites');
+        setSites(norm);
+        return norm;
       }
     } catch (err) {
       console.warn('Sites fetch err:', err);
     }
-  }, []);
+  }, [fetchStoreSites]);
 
   // Fetch Buildings
   const fetchBuildings = useCallback(async (siteIdArg) => {

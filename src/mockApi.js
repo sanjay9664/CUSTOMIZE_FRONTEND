@@ -870,6 +870,10 @@ window.fetch = async function (input, init) {
               let storedSites = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
               storedSites.unshift(createdObj);
               localStorage.setItem('scada_sites_db', JSON.stringify(storedSites));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('bms_sites_updated', { detail: storedSites }));
+                window.dispatchEvent(new CustomEvent('bms_site_created', { detail: createdObj }));
+              }
             }
           } catch(e) {}
         } else if (reqMethod === 'PATCH' || reqMethod === 'PUT') {
@@ -883,6 +887,9 @@ window.fetch = async function (input, init) {
             if (pIdx !== -1) {
               storedSites[pIdx] = { ...storedSites[pIdx], ...patchBody, updatedAt: new Date().toISOString() };
               localStorage.setItem('scada_sites_db', JSON.stringify(storedSites));
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('bms_sites_updated', { detail: storedSites }));
+              }
             }
           } catch(e) {}
         }
@@ -961,7 +968,14 @@ window.fetch = async function (input, init) {
         createdAt: new Date().toISOString()
       };
       savedSites.unshift(newSite);
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(savedSites)); } catch(e) {}
+      try { 
+        localStorage.setItem('scada_sites_db', JSON.stringify(savedSites));
+        localStorage.setItem('tb_sites', JSON.stringify(savedSites));
+      } catch(e) {}
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bms_sites_updated', { detail: savedSites }));
+        window.dispatchEvent(new CustomEvent('bms_site_created', { detail: newSite }));
+      }
       return createMockResponse({ success: true, data: newSite, message: 'Site created successfully' }, 201);
     }
 
@@ -975,7 +989,13 @@ window.fetch = async function (input, init) {
       const idx = savedSites.findIndex(s => String(s.id) === String(targetId));
       if (idx !== -1) {
         savedSites[idx] = { ...savedSites[idx], ...body, updatedAt: new Date().toISOString() };
-        try { localStorage.setItem('scada_sites_db', JSON.stringify(savedSites)); } catch(e) {}
+        try { 
+          localStorage.setItem('scada_sites_db', JSON.stringify(savedSites));
+          localStorage.setItem('tb_sites', JSON.stringify(savedSites));
+        } catch(e) {}
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('bms_sites_updated', { detail: savedSites }));
+        }
         return createMockResponse({ success: true, data: savedSites[idx], message: 'Site updated successfully' }, 200);
       }
       return createMockResponse({ success: true, message: 'Site updated successfully' }, 200);
