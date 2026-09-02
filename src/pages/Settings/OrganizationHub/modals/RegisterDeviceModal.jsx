@@ -476,7 +476,7 @@ const RegisterDeviceModal = ({
                       .filter(n => !isNaN(n) && n > 0);
 
                     if (parsedSochiotIds.length === 0) {
-                      parsedSochiotIds = [1231];
+                      parsedSochiotIds = [generatedSochiotId];
                     }
 
                     const templateSettings = (dynamicTemplateFields && dynamicTemplateFields.length > 0 ? dynamicTemplateFields : [
