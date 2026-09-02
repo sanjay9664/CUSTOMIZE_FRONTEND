@@ -181,91 +181,27 @@ const DevicesTab = ({
                   </td>
                   <td className="py-3 px-3 text-end">
                     <div className="d-flex align-items-center justify-content-end gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline-info"
-                        onClick={() => handleOpenLiveModal(d)}
-                        title="Live Telemetry Data"
-                        className="p-1 border-0 rounded-circle text-info"
-                      >
-                        <Zap size={15} />
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline-warning"
-                        onClick={() => handleOpenThresholdsModal(d)}
-                        title="Threshold Limits"
-                        className="p-1 border-0 rounded-circle text-warning"
-                      >
-                        <Sliders size={15} />
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline-secondary"
-                        onClick={() => handleOpenSettingsModal(d)}
-                        title="Modbus Settings"
-                        className="p-1 border-0 rounded-circle text-slate-300"
-                      >
-                        <RefreshCw size={15} />
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline-primary"
-                        onClick={() => handleOpenRulesModal(d)}
-                        title="Automation Rules"
-                        className="p-1 border-0 rounded-circle text-primary"
-                      >
-                        <Shield size={15} />
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline-success"
-                        onClick={() => {
-                          setSelectedDeviceForCommandsTab(d.id);
-                          setShowSendCommandModal(true);
-                        }}
-                        title="Dispatch Command"
-                        className="p-1 border-0 rounded-circle text-success"
-                      >
-                        <Zap size={15} />
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline-info"
-                        onClick={() => {
-                          setSelectedDeviceForAudit(d);
-                          handleOpenAuditLog(d);
-                        }}
-                        title="Audit Logs"
-                        className="p-1 border-0 rounded-circle text-info"
-                      >
-                        <FileText size={15} />
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline-secondary"
-                        onClick={() => handleOpenEditDevice(d)}
-                        title="Edit Device Details"
-                        className="p-1 border-0 rounded-circle text-slate-300"
-                      >
-                        <Edit3 size={15} />
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline-danger"
-                        onClick={() => handleDeleteDevice(d.id, d.name)}
-                        title="Delete Device"
-                        className="p-1 border-0 rounded-circle text-danger"
-                      >
-                        <Trash2 size={15} />
-                      </Button>
+                      {[
+                        { icon: <Zap size={14} />,       color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Live Telemetry',    onClick: () => handleOpenLiveModal(d) },
+                        { icon: <Sliders size={14} />,   color: '#f59e0b', hoverBg: 'rgba(245,158,11,0.12)',  label: 'Threshold Limits',  onClick: () => handleOpenThresholdsModal(d) },
+                        { icon: <RefreshCw size={14} />, color: '#94a3b8', hoverBg: 'rgba(148,163,184,0.12)', label: 'Modbus Settings',   onClick: () => handleOpenSettingsModal(d) },
+                        { icon: <Shield size={14} />,    color: '#818cf8', hoverBg: 'rgba(129,140,248,0.12)', label: 'Automation Rules',  onClick: () => handleOpenRulesModal(d) },
+                        { icon: <Zap size={14} />,       color: '#34d399', hoverBg: 'rgba(52,211,153,0.12)',  label: 'Send Command',      onClick: () => { setSelectedDeviceForCommandsTab(d.id); setShowSendCommandModal(true); } },
+                        { icon: <FileText size={14} />,  color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Audit Logs',        onClick: () => { setSelectedDeviceForAudit(d); handleOpenAuditLog(d); } },
+                        { icon: <Edit3 size={14} />,     color: '#22d3ee', hoverBg: 'rgba(34,211,238,0.12)',  label: 'Edit Device',       onClick: () => handleOpenEditDevice(d) },
+                        { icon: <Trash2 size={14} />,    color: '#f87171', hoverBg: 'rgba(248,113,113,0.12)', label: 'Delete Device',     onClick: () => handleDeleteDevice(d.id, d.name) },
+                      ].map((action, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={action.onClick}
+                          title={action.label}
+                          className="device-action-btn"
+                          style={{ '--_icon-color': action.color, '--_hover-bg': action.hoverBg }}
+                        >
+                          {action.icon}
+                        </button>
+                      ))}
                     </div>
                   </td>
                 </tr>

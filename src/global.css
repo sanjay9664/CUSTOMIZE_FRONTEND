@@ -1345,3 +1345,48 @@ body.light-mode .toast-popup-danger {
 body.light-mode .toast-popup-danger .toast-text {
   color: #0f172a !important;
 }
+
+/* ── Device Action Icon Buttons ─────────────────────────────────────────── */
+.device-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--_icon-color, #94a3b8);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  outline: none;
+}
+
+.device-action-btn:hover {
+  background: var(--_hover-bg, rgba(148,163,184,0.12));
+  color: var(--_icon-color, #94a3b8);
+  transform: translateY(-1px);
+}
+
+.device-action-btn:active {
+  transform: translateY(0) scale(0.92);
+}
+
+.device-action-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--_icon-color, #94a3b8);
+}
+
+.device-action-btn svg {
+  color: inherit;
+  flex-shrink: 0;
+}
+
+/* Light mode overrides */
+body.light-mode .device-action-btn {
+  color: var(--_icon-color, #64748b);
+}
+body.light-mode .device-action-btn:hover {
+  background: var(--_hover-bg, rgba(100,116,139,0.1));
+}
