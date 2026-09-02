@@ -5,6 +5,7 @@ import AppRoutes from './routes/AppRoutes';
 import Login from './pages/Login';
 import { DeviceStatusProvider } from './services/DeviceStatusContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { SiteProvider } from './context/SiteContext';
 
 import { getCookie, clearAuthCookies, setAuthCookies } from './utils/cookieUtils';
 import { startAutoTokenRefresh, stopAutoTokenRefresh } from './services/authRefreshService';
@@ -64,31 +65,33 @@ function App() {
 
   return (
     <ThemeProvider>
-      <DeviceStatusProvider>
-        <Router>
-          <Routes>
-            {/* LOGIN ROUTE */}
-            <Route 
-              path="/login" 
-              element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />} 
-            />
+      <SiteProvider>
+        <DeviceStatusProvider>
+          <Router>
+            <Routes>
+              {/* LOGIN ROUTE */}
+              <Route 
+                path="/login" 
+                element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />} 
+              />
 
-            {/* PROTECTED ROUTES */}
-            <Route
-              path="/*"
-              element={
-                isAuthenticated ? (
-                  <MainLayout>
-                    <AppRoutes />
-                  </MainLayout>
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              }
-            />
-          </Routes>
-        </Router>
-      </DeviceStatusProvider>
+              {/* PROTECTED ROUTES */}
+              <Route
+                path="/*"
+                element={
+                  isAuthenticated ? (
+                    <MainLayout>
+                      <AppRoutes />
+                    </MainLayout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+            </Routes>
+          </Router>
+        </DeviceStatusProvider>
+      </SiteProvider>
     </ThemeProvider>
   );
 }

@@ -6,6 +6,7 @@ import {
   Eye, RefreshCw, Search, LayoutGrid, List, ChevronRight,
   Globe, Server, Clock, TrendingUp, Edit3, Power, CheckCircle, XCircle
 } from 'lucide-react';
+import { useSiteStore } from '../../context/SiteContext';
 
 const API_BASE_URL = '/api';
 
@@ -41,11 +42,11 @@ const normalizeList = (raw, key) => {
 
 const SiteManagement = () => {
   const navigate = useNavigate();
-  const [sites, setSites] = useState([]);
+  const { sites, setSites, addSite, updateSite, deleteSite: removeSiteFromStore, fetchSites: refreshStoreSites } = useSiteStore();
   const [tenants, setTenants] = useState([]);
   const [zones, setZones] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -210,11 +211,7 @@ const SiteManagement = () => {
       createdAt: createdSiteFromDb?.createdAt || new Date().toISOString()
     };
 
-    setSites(prev => {
-      const updated = [finalSite, ...prev];
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
-      return updated;
-    });
+    addSite(finalSite);
 
     setMessage({ type: 'success', text: `Site "${finalSite.name}" created successfully!` });
     setShowCreateModal(false);
@@ -272,12 +269,8 @@ const SiteManagement = () => {
       console.warn('Update site API notice:', err);
     }
 
-    // Update local state + localStorage directly (GET may return 500)
-    setSites(prev => {
-      const updated = prev.map(s => String(s.id) === String(editForm.id) ? { ...s, ...updatePayload, updatedAt: new Date().toISOString() } : s);
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
-      return updated;
-    });
+    // Update global store
+    updateSite(editForm.id, updatePayload);
 
     setMessage({ type: 'success', text: `Site "${editForm.name}" updated successfully!` });
     setShowEditModal(false);
@@ -300,12 +293,8 @@ const SiteManagement = () => {
       console.warn('Toggle site status notice:', err);
     }
 
-    // Update local state + localStorage directly
-    setSites(prev => {
-      const updated = prev.map(s => String(s.id) === String(site.id) ? { ...s, status: newStatus } : s);
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
-      return updated;
-    });
+    // Update global store
+    updateSite(site.id, { status: newStatus });
 
     setMessage({
       type: newStatus === 'ACTIVE' ? 'success' : 'warning',
