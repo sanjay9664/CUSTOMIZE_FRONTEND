@@ -118,7 +118,6 @@ const ManageOrganisationModals = ({ org }) => {
         loading={org.loading}
       />
 
-      {/* RegisterDeviceModal expects: show, onHide, + many specific props */}
       <RegisterDeviceModal
         show={org.showRegisterDeviceModal}
         onHide={() => org.setShowRegisterDeviceModal(false)}
@@ -132,6 +131,12 @@ const ManageOrganisationModals = ({ org }) => {
         dynamicTemplateFields={org.dynamicTemplateFields}
         setDynamicTemplateFields={org.setDynamicTemplateFields}
         fetchDevices={org.fetchDevices}
+        setDevices={org.setDevices}
+        loading={org.loading}
+        setLoading={org.setLoading}
+        setSelectedBuildingFilter={org.setSelectedBuildingFilter}
+        setSelectedAreaFilter={org.setSelectedAreaFilter}
+        setSearchTerm={org.setSearchTerm}
         showToast={org.showToast}
         getAuthHeaders={getAuthHeaders}
         API_BASE_URL={API_BASE_URL}

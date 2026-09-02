@@ -14,13 +14,18 @@ const ZonesTab = ({
   onReactivate,
   isAdmin
 }) => {
-  const activeTenants = tenants.filter(t => t.status !== 'INACTIVE' && !t.deletedAt);
+  const safeSearch = String(searchTerm || '').toLowerCase();
+  const safeZones = Array.isArray(zones) ? zones : [];
+  const safeTenants = Array.isArray(tenants) ? tenants : [];
 
-  const filtered = zones.filter(z => {
-    const matchesSearch = !searchTerm ||
-      (z.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (z.region || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTenant = selectedTenantFilter === 'ALL' || String(z.tenantId) === String(selectedTenantFilter);
+  const activeTenants = safeTenants.filter(t => t && t.status !== 'INACTIVE' && !t.deletedAt);
+
+  const filtered = safeZones.filter(z => {
+    if (!z) return false;
+    const name = String(z.name || '').toLowerCase();
+    const region = String(z.region || '').toLowerCase();
+    const matchesSearch = !safeSearch || name.includes(safeSearch) || region.includes(safeSearch);
+    const matchesTenant = !selectedTenantFilter || selectedTenantFilter === 'ALL' || String(z.tenantId) === String(selectedTenantFilter);
     return matchesSearch && matchesTenant;
   });
 

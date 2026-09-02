@@ -16,15 +16,21 @@ const AreasTab = ({
   onDelete,
   isAdmin
 }) => {
-  const activeTenants = tenants.filter(t => t.status !== 'INACTIVE' && !t.deletedAt);
-  const activeZones = zones.filter(z => z.status !== 'INACTIVE' && !z.deletedAt);
+  const safeSearch = String(searchTerm || '').toLowerCase();
+  const safeAreas = Array.isArray(areas) ? areas : [];
+  const safeTenants = Array.isArray(tenants) ? tenants : [];
+  const safeZones = Array.isArray(zones) ? zones : [];
 
-  const filtered = areas.filter(a => {
-    const matchesSearch = !searchTerm ||
-      (a.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (a.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesZone = selectedZoneFilter === 'ALL' || String(a.zoneId) === String(selectedZoneFilter);
-    const matchesTenant = selectedTenantFilter === 'ALL' || String(a.tenantId) === String(selectedTenantFilter);
+  const activeTenants = safeTenants.filter(t => t && t.status !== 'INACTIVE' && !t.deletedAt);
+  const activeZones = safeZones.filter(z => z && z.status !== 'INACTIVE' && !z.deletedAt);
+
+  const filtered = safeAreas.filter(a => {
+    if (!a) return false;
+    const name = String(a.name || '').toLowerCase();
+    const desc = String(a.description || '').toLowerCase();
+    const matchesSearch = !safeSearch || name.includes(safeSearch) || desc.includes(safeSearch);
+    const matchesZone = !selectedZoneFilter || selectedZoneFilter === 'ALL' || String(a.zoneId) === String(selectedZoneFilter);
+    const matchesTenant = !selectedTenantFilter || selectedTenantFilter === 'ALL' || String(a.tenantId) === String(selectedTenantFilter);
     return matchesSearch && matchesZone && matchesTenant;
   });
 

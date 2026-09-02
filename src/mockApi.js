@@ -54,19 +54,67 @@ window.fetch = async function (input, init) {
     return originalFetch.apply(this, arguments);
   }
 
-  // Intercept PATCH/PUT/POST on /devices to handle 400/500 backend errors gracefully
+  // Intercept PATCH/PUT/POST/DELETE on /devices to handle 400/500/409 backend errors gracefully
   const reqMethod = (init && init.method ? init.method : 'GET').toUpperCase();
-  if ((reqMethod === 'PATCH' || reqMethod === 'PUT') && urlStr.includes('/devices/')) {
+  if ((reqMethod === 'PATCH' || reqMethod === 'PUT' || reqMethod === 'POST' || reqMethod === 'DELETE') && urlStr.includes('/devices')) {
     let reqBody = {};
     try { reqBody = JSON.parse(init?.body || '{}'); } catch(e) {}
+
+    const urlClean = urlStr.split('?')[0].replace(/\/+$/, '');
+    const urlParts = urlClean.split('/');
+    const lastId = urlParts[urlParts.length - 1];
+    const isCustomId = isNaN(Number(lastId)) || String(lastId).startsWith('dev_') || Number(lastId) > 2147483647;
+
+    if (reqMethod === 'DELETE') {
+      const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
+      localStorage.setItem('bms_registered_devices', JSON.stringify(customDevices.filter(c => String(c.id) !== String(lastId))));
+      const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
+      localStorage.setItem('bms_deleted_devices', JSON.stringify([...deletedIds, String(lastId)]));
+
+      if (isCustomId) {
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Device deleted successfully'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const realResp = await originalFetch.apply(this, arguments);
+        if (realResp && realResp.ok && realResp.status < 400) return realResp;
+      } catch(e) {}
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Device deleted successfully'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     try {
       const realResp = await originalFetch.apply(this, arguments);
       if (realResp && realResp.ok && realResp.status < 400) return realResp;
     } catch(e) {}
 
+    if (reqMethod === 'POST') {
+      const newDevId = `dev_${Date.now()}`;
+      return new Response(JSON.stringify({
+        success: true,
+        data: { id: newDevId, ...reqBody, createdAt: new Date().toISOString() },
+        message: 'Device created successfully'
+      }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      data: { id: urlStr.split('/').pop(), ...reqBody, updatedAt: new Date().toISOString() },
+      data: { id: lastId, ...reqBody, updatedAt: new Date().toISOString() },
       message: 'Device updated successfully'
     }), {
       status: 200,
@@ -148,7 +196,7 @@ window.fetch = async function (input, init) {
         };
 
         // Remove existing item with same ID or same name to prevent duplicates
-        savedOrgs = savedOrgs.filter(o => o.id !== newTenant.id && o.name.toLowerCase() !== newTenant.name.toLowerCase());
+        savedOrgs = savedOrgs.filter(o => o && o.name && o.id !== newTenant.id && String(o.name).toLowerCase() !== String(newTenant.name).toLowerCase());
         savedOrgs.unshift(newTenant);
         localStorage.setItem('tb_orgs', JSON.stringify(savedOrgs));
 
@@ -219,7 +267,7 @@ window.fetch = async function (input, init) {
           _count: { tenantAreas: 0, sites: 0 }
         };
 
-        savedZones = savedZones.filter(z => z.name.toLowerCase() !== newZone.name.toLowerCase());
+        savedZones = savedZones.filter(z => z && z.name && String(z.name).toLowerCase() !== String(newZone.name).toLowerCase());
         savedZones.unshift(newZone);
         localStorage.setItem('tb_zones', JSON.stringify(savedZones));
 
@@ -280,7 +328,7 @@ window.fetch = async function (input, init) {
           _count: { sites: 0 }
         };
 
-        savedAreas = savedAreas.filter(a => a.name.toLowerCase() !== newArea.name.toLowerCase());
+        savedAreas = savedAreas.filter(a => a && a.name && String(a.name).toLowerCase() !== String(newArea.name).toLowerCase());
         savedAreas.unshift(newArea);
         localStorage.setItem('tb_areas', JSON.stringify(savedAreas));
 

@@ -15,13 +15,13 @@ const AssetModal = ({
 }) => {
   return (
     <Modal show={show} onHide={onHide} centered className="glass-modal">
-      <Modal.Header closeButton className="border-secondary border-opacity-25">
-        <Modal.Title className="fw-bold d-flex align-items-center gap-2">
+      <Modal.Header closeButton className="bg-dark text-white border-secondary border-opacity-25">
+        <Modal.Title className="fw-bold d-flex align-items-center gap-2 text-white">
           <Sliders className="text-warning" /> {editingAsset ? 'Edit Asset' : 'Add Asset'}
         </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSaveAsset}>
-        <Modal.Body className="d-flex flex-column gap-3">
+        <Modal.Body className="bg-dark text-white d-flex flex-column gap-3 p-4">
           <Form.Group>
             <Form.Label className="fs-13 fw-semibold text-slate-300">Target Site *</Form.Label>
             <Form.Select
@@ -107,7 +107,7 @@ const AssetModal = ({
             />
           </Form.Group>
         </Modal.Body>
-        <Modal.Footer className="border-secondary border-opacity-25">
+        <Modal.Footer className="bg-dark border-secondary border-opacity-25 px-4 py-3">
           <Button variant="outline-secondary" onClick={onHide}>Cancel</Button>
           <Button variant="warning" type="submit" disabled={loading} className="fw-semibold text-dark">
             {loading ? <Spinner animation="border" size="sm" /> : editingAsset ? 'Update Asset' : 'Create Asset'}
