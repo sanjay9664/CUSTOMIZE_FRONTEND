@@ -960,19 +960,84 @@ body.light-mode [style*="linear-gradient(145deg, #0f172a"] {
    TABLE HOVER FIX FOR LIGHT MODE
    ========================================================= */
 
-/* Override Bootstrap's dark table hover in light mode */
-body.light-mode .table-dark.table-hover > tbody > tr:hover > *,
-body.light-mode .table.table-hover > tbody > tr:hover > *,
-body.light-mode .table-hover > tbody > tr:hover > td,
-body.light-mode .table-hover > tbody > tr:hover > th {
-    background-color: #f1f5f9 !important;
-    color: var(--scada-text) !important;
+body.light-mode table,
+body.light-mode .table,
+body.light-mode .table-dark,
+body.light-mode .table-hover,
+body.light-mode .table-dark.table-hover {
+    --bs-table-bg: #ffffff !important;
+    --bs-table-hover-bg: #e2e8f0 !important;
+    --bs-table-color: #0f172a !important;
+    --bs-table-hover-color: #0f172a !important;
+    --bs-table-accent-bg: transparent !important;
+    color: #0f172a !important;
 }
 
-/* Also ensure text inside hover state remains dark */
+body.light-mode .table-dark th,
+body.light-mode .table-dark td,
+body.light-mode .table th,
+body.light-mode .table td {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+}
+
+body.light-mode .table-dark thead,
+body.light-mode .table-dark thead th,
+body.light-mode .table thead,
+body.light-mode .table thead th {
+    background-color: #f8fafc !important;
+    background: #f8fafc !important;
+    color: #475569 !important;
+}
+
+body.light-mode .table-dark.table-hover > tbody > tr:hover,
+body.light-mode .table-dark.table-hover > tbody > tr:hover > *,
+body.light-mode .table.table-hover > tbody > tr:hover,
+body.light-mode .table.table-hover > tbody > tr:hover > *,
+body.light-mode .table-hover > tbody > tr:hover,
+body.light-mode .table-hover > tbody > tr:hover > td,
+body.light-mode .table-hover > tbody > tr:hover > th,
+body.light-mode .scada-table tbody tr:hover,
+body.light-mode .scada-table tbody tr:hover td {
+    background-color: #e2e8f0 !important;
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+}
+
+/* Also ensure text inside hover state remains readable dark text */
 body.light-mode .table-hover > tbody > tr:hover td .text-white,
-body.light-mode .table-hover > tbody > tr:hover td .text-secondary {
-    color: var(--scada-text) !important;
+body.light-mode .table-hover > tbody > tr:hover td .text-secondary,
+body.light-mode .table-hover > tbody > tr:hover td .text-slate-300,
+body.light-mode .table-hover > tbody > tr:hover td .text-slate-400,
+body.light-mode .table-hover > tbody > tr:hover td div,
+body.light-mode .table-hover > tbody > tr:hover td span {
+    color: #0f172a !important;
+}
+
+/* Ensure all text inside light mode table rows is high-contrast, crystal-clear, and perfectly readable */
+body.light-mode table td,
+body.light-mode .table td,
+body.light-mode .table-dark td {
+    color: #1e293b !important;
+}
+
+body.light-mode table td .text-white,
+body.light-mode .table td .text-white,
+body.light-mode .table-dark td .text-white,
+body.light-mode table td .text-slate-100,
+body.light-mode table td .text-slate-200 {
+    color: #0f172a !important;
+}
+
+body.light-mode table td .text-slate-300,
+body.light-mode table td .text-slate-400 {
+    color: #475569 !important;
+}
+
+body.light-mode table td .text-info {
+    color: #0284c7 !important;
 }
 
 /* Fix specific custom hover classes */

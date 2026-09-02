@@ -149,7 +149,21 @@ const DevicesTab = ({
                 </td>
               </tr>
             ) : safeDevices.map(d => {
-              const categoryBadgeBg = d.category === 'ENERGY_METER' ? 'primary' : d.category === 'DIESEL_GENERATOR' ? 'warning' : d.category === 'HVAC' ? 'info' : 'secondary';
+              const catUpper = String(d.category || 'ENERGY_METER').toUpperCase();
+              let badgeStyle = { backgroundColor: '#0284c7', color: '#ffffff' };
+
+              if (catUpper.includes('ENERGY') || catUpper.includes('METER')) {
+                badgeStyle = { backgroundColor: '#2563eb', color: '#ffffff' };
+              } else if (catUpper.includes('GENERATOR') || catUpper.includes('DIESEL') || catUpper.includes('DG')) {
+                badgeStyle = { backgroundColor: '#d97706', color: '#ffffff' };
+              } else if (catUpper.includes('PUMP')) {
+                badgeStyle = { backgroundColor: '#0284c7', color: '#ffffff' };
+              } else if (catUpper.includes('HVAC') || catUpper.includes('AIR') || catUpper.includes('COOL')) {
+                badgeStyle = { backgroundColor: '#0d9488', color: '#ffffff' };
+              } else {
+                badgeStyle = { backgroundColor: '#64748b', color: '#ffffff' };
+              }
+
               const rawIds = d.sochiotDeviceIds || d.sochiot_device_ids;
               const displayIds = Array.isArray(rawIds) ? rawIds.join(', ') : String(rawIds || '101');
 
@@ -157,25 +171,28 @@ const DevicesTab = ({
                 <tr key={d.id} className="border-bottom border-secondary border-opacity-10">
                   <td className="py-3 px-3">
                     <div className="fw-bold text-white fs-14">{d.name}</div>
-                    <div className="text-slate-400 fs-11 font-monospace">BMS ID: {d.bmsDeviceId || `BMS-${d.id}`}</div>
+                    <div className="text-slate-400 fs-11 font-monospace fw-medium">BMS ID: {d.bmsDeviceId || `BMS-${d.id}`}</div>
                   </td>
                   <td className="py-3 px-3">
-                    <Badge bg={categoryBadgeBg} className="px-2 py-1 fs-11 font-monospace">
-                      {d.category || 'ENERGY_METER'}
-                    </Badge>
+                    <span 
+                      className="px-2.5 py-1 fs-11 font-monospace fw-bold rounded-2 d-inline-block shadow-sm"
+                      style={badgeStyle}
+                    >
+                      {catUpper}
+                    </span>
                   </td>
-                  <td className="py-3 px-3 font-monospace text-slate-300">
+                  <td className="py-3 px-3 font-monospace text-slate-300 fw-medium">
                     {d.serialNumber || `SN-${d.id}`}
                   </td>
-                  <td className="py-3 px-3 font-monospace text-info">
+                  <td className="py-3 px-3 font-monospace text-info fw-semibold">
                     {displayIds}
                   </td>
                   <td className="py-3 px-3 text-slate-300 fs-12">
-                    <div>{d.buildingName || 'store-1'}</div>
+                    <div className="fw-medium">{d.buildingName || 'store-1'}</div>
                     <div className="text-slate-400 fs-10">{d.areaName || 'Main Area'}</div>
                   </td>
                   <td className="py-3 px-3">
-                    <Badge bg={d.isActive !== false ? 'success' : 'secondary'} className="px-2 py-1 fs-11">
+                    <Badge bg={d.isActive !== false ? 'success' : 'secondary'} className="px-2 py-1 fs-11 fw-semibold">
                       {d.isActive !== false ? '● ACTIVE' : '○ INACTIVE'}
                     </Badge>
                   </td>
