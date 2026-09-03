@@ -3,18 +3,32 @@
  * Environment variables (import.meta.env) are the single source of truth.
  */
 
-const RAW_BACKEND = import.meta.env.VITE_BACKEND_API_URL || '/api';
+const RAW_BACKEND = import.meta.env.VITE_BACKEND_API_URL || '/api/v1';
 const BACKEND_BASE = RAW_BACKEND.replace(/\/+$/, '');
 
 /**
- * Resolves full API endpoint URL using .env as the single source of truth
+ * Resolves full API endpoint URL avoiding duplicate /v1 prefixes
  */
 export const getApiUrl = (endpoint = '') => {
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (!endpoint) return BACKEND_BASE;
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
 
-  // If BACKEND_BASE ends with /v1 and endpoint starts with /v1, avoid duplication
-  if (BACKEND_BASE.endsWith('/v1') && cleanEndpoint.startsWith('/v1')) {
-    return `${BACKEND_BASE}${cleanEndpoint.replace(/^\/v1/, '')}`;
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  // Avoid duplicate /v1 if BACKEND_BASE ends with /v1
+  if (BACKEND_BASE.endsWith('/v1') && cleanEndpoint.startsWith('/v1/')) {
+    cleanEndpoint = cleanEndpoint.substring(3);
+  } else if (BACKEND_BASE.endsWith('/v1') && cleanEndpoint === '/v1') {
+    cleanEndpoint = '';
+  }
+
+  // Avoid duplicate /api/v1 if BACKEND_BASE ends with /api/v1
+  if (BACKEND_BASE.endsWith('/api/v1') && cleanEndpoint.startsWith('/api/v1/')) {
+    cleanEndpoint = cleanEndpoint.substring(7);
+  } else if (BACKEND_BASE.endsWith('/api/v1') && cleanEndpoint === '/api/v1') {
+    cleanEndpoint = '';
   }
 
   return `${BACKEND_BASE}${cleanEndpoint}`;
@@ -24,8 +38,7 @@ export const AUTH_ENDPOINTS = {
   login: getApiUrl('/auth/login'),
   refresh: getApiUrl('/auth/refresh'),
   logout: getApiUrl('/auth/logout'),
-  oauth: getApiUrl('/auth/oauth'),
-  me: getApiUrl('/user/me')
+  me: getApiUrl('/auth/me')
 };
 
 export const EXTERNAL_URLS = {

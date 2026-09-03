@@ -9,22 +9,7 @@ import {
 import GlobalSettings from './GlobalSettings';
 import UserAdministration from './UserAdministration';
 import SiteManagement from './SiteManagement';
-import { getCookie } from '../../utils/cookieUtils';
-
-const API_BASE_URL = '/api';
-
-const getAuthHeaders = () => {
-  const token = getCookie('access_token') ||
-    getCookie('token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') || '';
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
+import organizationService from '../../services/organizationService';
 
 // ── HIERARCHY STEPS (Exact Tree Explorer Order) ──────────────────────────────
 const HIERARCHY_STEPS = [
@@ -35,15 +20,15 @@ const HIERARCHY_STEPS = [
     apiKey: 'companies'
   },
   {
-    key: 'tenant', step: 2, label: 'Tenant / Client', subtitle: 'Consumer Org',
+    key: 'tenant', step: 2, label: 'Tenant / Client', subtitle: 'Consumer Org Unit',
     icon: Users, color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-    tab: 'tenant', description: 'Tenant Client organization (e.g. sochiot-app)',
+    tab: 'tenant', description: 'Consumer Organization Unit (e.g. Acme Corp)',
     apiKey: 'tenants'
   },
   {
-    key: 'zone', step: 3, label: 'Zone', subtitle: 'Region / State',
+    key: 'zone', step: 3, label: 'Zone', subtitle: 'Geographic Region',
     icon: Globe, color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    tab: 'zone', description: 'Geographic Zone (e.g. Noida)',
+    tab: 'zone', description: 'Geographic Zone (e.g. Noida Region)',
     apiKey: 'zones'
   },
   {
@@ -104,6 +89,7 @@ const SettingsIndex = () => {
   // ── Entity Counts State ────────────────────────────────────────────────
   const [entityCounts, setEntityCounts] = useState({});
   const [countsLoading, setCountsLoading] = useState(true);
+  const [countsError, setCountsError] = useState('');
 
   const [activeTab, setActiveTab] = useState(() => {
     if (location.search.includes('tab=asset')) return 'assets';
@@ -161,82 +147,45 @@ const SettingsIndex = () => {
     localStorage.setItem('bms_show_extra_tabs', String(val));
   };
 
-  // ── Fetch Entity Counts ────────────────────────────────────────────────
+  // ── Fetch Entity Counts via bmsService ─────────────────────────────────
   const fetchEntityCounts = useCallback(async () => {
     setCountsLoading(true);
-    const headers = getAuthHeaders();
-    const endpoints = {
-      companies: `${API_BASE_URL}/companies`,
-      tenants: `${API_BASE_URL}/tenants`,
-      zones: `${API_BASE_URL}/zones`,
-      areas: `${API_BASE_URL}/areas`,
-      sites: `${API_BASE_URL}/sites`,
-      devices: `${API_BASE_URL}/devices`,
-    };
-
+    setCountsError('');
+    // Leave failed values undefined. A visible em dash is more honest than
+    // displaying a false zero when the user is not authorized or the API is down.
     const counts = {};
-    await Promise.all(
-      Object.entries(endpoints).map(async ([key, url]) => {
-        try {
-          const res = await fetch(url, { headers });
-          if (res.ok) {
-            const json = await res.json();
-            const list = Array.isArray(json) ? json
-              : Array.isArray(json?.data) ? json.data
-              : Array.isArray(json?.data?.data) ? json.data.data
-              : Array.isArray(json?.[key]) ? json[key]
-              : [];
-            counts[key] = list.length;
-          } else {
-            counts[key] = null;
-          }
-        } catch {
-          counts[key] = null;
-        }
-      })
-    );
 
-    // Buildings need site-based fetch
-    try {
-      const siteId = counts.sites > 0 ? null : null;
-      if (!siteId) {
-        const siteRes = await fetch(`${API_BASE_URL}/sites`, { headers });
-        if (siteRes.ok) {
-          const siteJson = await siteRes.json();
-          const siteList = Array.isArray(siteJson) ? siteJson : Array.isArray(siteJson?.data) ? siteJson.data : [];
-          let totalBuildings = 0;
-          for (const s of siteList.slice(0, 10)) {
-            try {
-              const bRes = await fetch(`${API_BASE_URL}/sites/${s.id}/buildings`, { headers });
-              if (bRes.ok) {
-                const bJson = await bRes.json();
-                const bList = Array.isArray(bJson) ? bJson : Array.isArray(bJson?.data) ? bJson.data : [];
-                totalBuildings += bList.length;
-              }
-            } catch { /* skip */ }
-          }
-          counts.buildings = totalBuildings;
-        }
-      }
-    } catch {
-      counts.buildings = null;
-    }
+    const requests = [
+      ['companies', organizationService.getCompanies()],
+      ['tenants', organizationService.getTenants()],
+      ['zones', organizationService.getZones()],
+      ['areas', organizationService.getAreas()],
+      ['sites', organizationService.getSites()],
+      ['buildings', organizationService.getBuildings()],
+      ['assets', organizationService.getAssets()],
+      ['devices', organizationService.getDevices()]
+    ];
+    const results = await Promise.allSettled(requests.map(([, request]) => request));
+    const failedRequests = [];
 
-    // Assets - try from API
-    try {
-      const assetRes = await fetch(`${API_BASE_URL}/assets`, { headers });
-      if (assetRes.ok) {
-        const assetJson = await assetRes.json();
-        const assetList = Array.isArray(assetJson) ? assetJson : Array.isArray(assetJson?.data) ? assetJson.data : [];
-        counts.assets = assetList.length;
+    results.forEach((result, index) => {
+      const key = requests[index][0];
+      if (result.status === 'fulfilled') {
+        counts[key] = Array.isArray(result.value) ? result.value.length : 0;
       } else {
-        counts.assets = null;
+        failedRequests.push({ key, error: result.reason });
+        console.warn(`Unable to load ${key} count:`, result.reason);
       }
-    } catch {
-      counts.assets = null;
-    }
+    });
 
     setEntityCounts(counts);
+    if (failedRequests.length) {
+      const firstError = failedRequests[0].error;
+      setCountsError(
+        `Some counts could not be loaded (${failedRequests.map(({ key }) => key).join(', ')}). ` +
+        (firstError?.message || 'Please check your API access and try again.')
+      );
+    }
     setCountsLoading(false);
   }, []);
 
@@ -697,6 +646,16 @@ const SettingsIndex = () => {
               </Button>
             </div>
 
+            {countsError && (
+              <div
+                className="mb-3 px-3 py-2 rounded-3"
+                role="alert"
+                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', fontSize: '0.78rem' }}
+              >
+                {countsError}
+              </div>
+            )}
+
             {/* Grid Hierarchy Flow (No Horizontal Scroll) */}
             <div className="hierarchy-grid">
               {HIERARCHY_STEPS.map((step) => {
@@ -720,7 +679,7 @@ const SettingsIndex = () => {
                     </div>
                     <div className="w-100">
                       <div className="step-count-badge hub-card-title" style={{ color: step.color }}>
-                        {countsLoading ? <Spinner animation="border" size="sm" style={{ width: 14, height: 14 }} /> : (count !== null && count !== undefined ? count : '?')}
+                        {countsLoading ? <Spinner animation="border" size="sm" style={{ width: 14, height: 14 }} /> : (count ?? '—')}
                       </div>
                       <div className="fw-bold hub-card-title text-truncate" style={{ color: '#f1f5f9', fontSize: '0.8rem', marginBottom: 1 }} title={step.label}>
                         {step.label}

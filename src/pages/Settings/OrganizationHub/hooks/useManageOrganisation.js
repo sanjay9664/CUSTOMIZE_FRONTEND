@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getCookie, getAuthToken } from '../../../../utils/cookieUtils';
+import { getApiUrl } from '../../../../utils/apiConfig';
 import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, FileText } from 'lucide-react';
 
-export const API_BASE_URL = '/api';
+export const API_BASE_URL = getApiUrl();
 
 export const getAuthHeaders = () => {
   const token = getAuthToken() || '';
@@ -374,12 +375,22 @@ export const useManageOrganisation = () => {
   // Fetch Assets
   const fetchAssets = useCallback(async () => {
     try {
-      let list = [];
-      const res = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
-      if (res.ok) {
-        const json = await res.json();
-        list = normalizeList(json, 'assets');
-      }
+      // Assets are scoped to a site by the OpenAPI contract. Aggregate those
+      // collections for this cross-site management view.
+      const sitesResponse = await fetch(`${API_BASE_URL}/sites`, { headers: getAuthHeaders() });
+      const siteList = sitesResponse.ok
+        ? normalizeList(await sitesResponse.json(), 'sites')
+        : [];
+      const assetResponses = await Promise.all(siteList.map(async (site) => {
+        const response = await fetch(`${API_BASE_URL}/sites/${site.id}/assets`, { headers: getAuthHeaders() });
+        if (!response.ok) return [];
+        return normalizeList(await response.json(), 'assets').map((asset) => ({
+          ...asset,
+          siteId: site.id,
+          siteName: site.name
+        }));
+      }));
+      let list = assetResponses.flat();
       const userAssets = JSON.parse(localStorage.getItem('tb_created_assets') || '[]');
       if (userAssets.length > 0) {
         const existingIds = new Set(list.map(a => String(a.id)));
@@ -990,15 +1001,17 @@ export const useManageOrganisation = () => {
     setLiveLoading(true);
     try {
       const siteId = d.siteId || 7;
-      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${d.id}/live-telemetry`, { headers: getAuthHeaders() });
+      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${d.id}/live`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         setLiveData(json.data || json);
       } else {
-        setLiveData({ voltage: '230.4', current: '12.8', powerKw: '2.94', frequency: '50.01', temperature: '34.2', status: 'OPERATIONAL' });
+        setLiveData(null);
+        showToast('danger', 'Live device data could not be loaded.');
       }
     } catch (e) {
-      setLiveData({ voltage: '230.4', current: '12.8', powerKw: '2.94', frequency: '50.01', temperature: '34.2', status: 'OPERATIONAL' });
+      setLiveData(null);
+      showToast('danger', 'Live device data could not be loaded.');
     }
     setLiveLoading(false);
   };
@@ -1082,12 +1095,21 @@ export const useManageOrganisation = () => {
   // Widgets Actions
   const handleFetchWidgets = async (deviceId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/widgets?deviceId=${deviceId}`, { headers: getAuthHeaders() });
+      const device = devices.find((item) => String(item.id) === String(deviceId));
+      if (!device?.siteId) {
+        showToast('danger', 'Select a device with a valid site before loading widgets.');
+        return;
+      }
+      const res = await fetch(`${API_BASE_URL}/sites/${device.siteId}/devices/${deviceId}/widgets`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         setWidgetsList(normalizeList(json, 'widgets'));
+      } else {
+        showToast('danger', 'Widgets could not be loaded.');
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('danger', 'Widgets could not be loaded.');
+    }
   };
 
   const handleSyncWidgetsFromSochiot = async () => {
@@ -1123,12 +1145,21 @@ export const useManageOrganisation = () => {
   // Rules Tab Actions
   const handleFetchRulesTab = async (deviceId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/rules?deviceId=${deviceId}`, { headers: getAuthHeaders() });
+      const device = devices.find((item) => String(item.id) === String(deviceId));
+      if (!device?.siteId) {
+        showToast('danger', 'Select a device with a valid site before loading rules.');
+        return;
+      }
+      const res = await fetch(`${API_BASE_URL}/sites/${device.siteId}/devices/${deviceId}/rules`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         setRulesList(normalizeList(json, 'rules'));
+      } else {
+        showToast('danger', 'Rules could not be loaded.');
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('danger', 'Rules could not be loaded.');
+    }
   };
 
   const handleSyncAllRulesFromSochiot = () => {
@@ -1172,12 +1203,21 @@ export const useManageOrganisation = () => {
   // Commands Actions
   const handleFetchCommandHistory = async (deviceId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/commands?deviceId=${deviceId}`, { headers: getAuthHeaders() });
+      const device = devices.find((item) => String(item.id) === String(deviceId));
+      if (!device?.siteId) {
+        showToast('danger', 'Select a device with a valid site before loading commands.');
+        return;
+      }
+      const res = await fetch(`${API_BASE_URL}/sites/${device.siteId}/devices/${deviceId}/commands`, { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         setCommandsList(normalizeList(json, 'commands'));
+      } else {
+        showToast('danger', 'Command history could not be loaded.');
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('danger', 'Command history could not be loaded.');
+    }
   };
 
   const handleExecuteSendCommand = (e) => {
