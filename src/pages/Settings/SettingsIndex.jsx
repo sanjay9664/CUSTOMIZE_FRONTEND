@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Nav, Row, Col, Button, Spinner } from 'react-bootstrap';
+import { Container, Nav, Row, Col, Button, Spinner, Form } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu,
@@ -9,22 +9,7 @@ import {
 import GlobalSettings from './GlobalSettings';
 import UserAdministration from './UserAdministration';
 import SiteManagement from './SiteManagement';
-import { getCookie } from '../../utils/cookieUtils';
-
-const API_BASE_URL = '/api';
-
-const getAuthHeaders = () => {
-  const token = getCookie('access_token') ||
-    getCookie('token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') || '';
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
-};
+import organizationService from '../../services/organizationService';
 
 // ── HIERARCHY STEPS (Exact Tree Explorer Order) ──────────────────────────────
 const HIERARCHY_STEPS = [
@@ -35,15 +20,15 @@ const HIERARCHY_STEPS = [
     apiKey: 'companies'
   },
   {
-    key: 'tenant', step: 2, label: 'Tenant / Client', subtitle: 'Consumer Org',
+    key: 'tenant', step: 2, label: 'Tenant / Client', subtitle: 'Consumer Org Unit',
     icon: Users, color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-    tab: 'tenant', description: 'Tenant Client organization (e.g. sochiot-app)',
+    tab: 'tenant', description: 'Consumer Organization Unit (e.g. Acme Corp)',
     apiKey: 'tenants'
   },
   {
-    key: 'zone', step: 3, label: 'Zone', subtitle: 'Region / State',
+    key: 'zone', step: 3, label: 'Zone', subtitle: 'Geographic Region',
     icon: Globe, color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    tab: 'zone', description: 'Geographic Zone (e.g. Noida)',
+    tab: 'zone', description: 'Geographic Zone (e.g. Noida Region)',
     apiKey: 'zones'
   },
   {
@@ -104,6 +89,7 @@ const SettingsIndex = () => {
   // ── Entity Counts State ────────────────────────────────────────────────
   const [entityCounts, setEntityCounts] = useState({});
   const [countsLoading, setCountsLoading] = useState(true);
+  const [countsError, setCountsError] = useState('');
 
   const [activeTab, setActiveTab] = useState(() => {
     if (location.search.includes('tab=asset')) return 'assets';
@@ -142,82 +128,63 @@ const SettingsIndex = () => {
     }
   }, [location.pathname, location.search]);
 
-  // ── Fetch Entity Counts ────────────────────────────────────────────────
+  const isExtraTabActiveIndex = ['widgets', 'rules', 'commands', 'report_group', 'buildings', 'building'].includes(activeTab);
+  const [showExtraTabsIndex, setShowExtraTabsIndex] = useState(() => {
+    const saved = localStorage.getItem('bms_show_extra_tabs');
+    if (saved !== null) return saved === 'true';
+    return isExtraTabActiveIndex;
+  });
+
+  useEffect(() => {
+    if (isExtraTabActiveIndex && !showExtraTabsIndex) {
+      setShowExtraTabsIndex(true);
+    }
+  }, [isExtraTabActiveIndex]);
+
+  const handleToggleExtraIndex = (e) => {
+    const val = e.target.checked;
+    setShowExtraTabsIndex(val);
+    localStorage.setItem('bms_show_extra_tabs', String(val));
+  };
+
+  // ── Fetch Entity Counts via bmsService ─────────────────────────────────
   const fetchEntityCounts = useCallback(async () => {
     setCountsLoading(true);
-    const headers = getAuthHeaders();
-    const endpoints = {
-      companies: `${API_BASE_URL}/companies`,
-      tenants: `${API_BASE_URL}/tenants`,
-      zones: `${API_BASE_URL}/zones`,
-      areas: `${API_BASE_URL}/areas`,
-      sites: `${API_BASE_URL}/sites`,
-      devices: `${API_BASE_URL}/devices`,
-    };
-
+    setCountsError('');
+    // Leave failed values undefined. A visible em dash is more honest than
+    // displaying a false zero when the user is not authorized or the API is down.
     const counts = {};
-    await Promise.all(
-      Object.entries(endpoints).map(async ([key, url]) => {
-        try {
-          const res = await fetch(url, { headers });
-          if (res.ok) {
-            const json = await res.json();
-            const list = Array.isArray(json) ? json
-              : Array.isArray(json?.data) ? json.data
-              : Array.isArray(json?.data?.data) ? json.data.data
-              : Array.isArray(json?.[key]) ? json[key]
-              : [];
-            counts[key] = list.length;
-          } else {
-            counts[key] = null;
-          }
-        } catch {
-          counts[key] = null;
-        }
-      })
-    );
 
-    // Buildings need site-based fetch
-    try {
-      const siteId = counts.sites > 0 ? null : null;
-      if (!siteId) {
-        const siteRes = await fetch(`${API_BASE_URL}/sites`, { headers });
-        if (siteRes.ok) {
-          const siteJson = await siteRes.json();
-          const siteList = Array.isArray(siteJson) ? siteJson : Array.isArray(siteJson?.data) ? siteJson.data : [];
-          let totalBuildings = 0;
-          for (const s of siteList.slice(0, 10)) {
-            try {
-              const bRes = await fetch(`${API_BASE_URL}/sites/${s.id}/buildings`, { headers });
-              if (bRes.ok) {
-                const bJson = await bRes.json();
-                const bList = Array.isArray(bJson) ? bJson : Array.isArray(bJson?.data) ? bJson.data : [];
-                totalBuildings += bList.length;
-              }
-            } catch { /* skip */ }
-          }
-          counts.buildings = totalBuildings;
-        }
-      }
-    } catch {
-      counts.buildings = null;
-    }
+    const requests = [
+      ['companies', organizationService.getCompanies()],
+      ['tenants', organizationService.getTenants()],
+      ['zones', organizationService.getZones()],
+      ['areas', organizationService.getAreas()],
+      ['sites', organizationService.getSites()],
+      ['buildings', organizationService.getBuildings()],
+      ['assets', organizationService.getAssets()],
+      ['devices', organizationService.getDevices()]
+    ];
+    const results = await Promise.allSettled(requests.map(([, request]) => request));
+    const failedRequests = [];
 
-    // Assets - try from API
-    try {
-      const assetRes = await fetch(`${API_BASE_URL}/assets`, { headers });
-      if (assetRes.ok) {
-        const assetJson = await assetRes.json();
-        const assetList = Array.isArray(assetJson) ? assetJson : Array.isArray(assetJson?.data) ? assetJson.data : [];
-        counts.assets = assetList.length;
+    results.forEach((result, index) => {
+      const key = requests[index][0];
+      if (result.status === 'fulfilled') {
+        counts[key] = Array.isArray(result.value) ? result.value.length : 0;
       } else {
-        counts.assets = null;
+        failedRequests.push({ key, error: result.reason });
+        console.warn(`Unable to load ${key} count:`, result.reason);
       }
-    } catch {
-      counts.assets = null;
-    }
+    });
 
     setEntityCounts(counts);
+    if (failedRequests.length) {
+      setCountsError(
+        `Some counts could not be loaded (${failedRequests.map(({ key }) => key).join(', ')}). ` +
+        'Please check your API access and try again.'
+      );
+    }
     setCountsLoading(false);
   }, []);
 
@@ -469,151 +436,171 @@ const SettingsIndex = () => {
         }
       `}</style>
 
-      {/* Sub-Header Tabs Row - Floating Executive Glass Segmented Bar */}
+      {/* Sub-Header Tabs Row - Unified Executive Glass Segmented Bar */}
       <div className="px-4 py-2-5 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '0 0 1.5rem 0', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
-        <Nav variant="pills" activeKey={activeTab} onSelect={handleSelectTab} className="flex-nowrap gap-2">
-          <Nav.Item>
-            <Nav.Link
-              eventKey="hub"
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'hub' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Sparkles size={16} />
-              Settings Hub
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="global"
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'global' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Settings size={16} />
-              Global Settings
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="users"
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'users' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Users size={16} />
-              User Admin
-            </Nav.Link>
-          </Nav.Item>
-          <div className="vr bg-secondary opacity-30 my-1" />
-          <Nav.Item>
-            <Nav.Link
-              eventKey="org"
-              onClick={() => navigate('/manage-organisation')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'org' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Building2 size={16} />
-              Organisation
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="location"
-              onClick={() => navigate('/manage-organisation?tab=zone')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'location' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <MapPin size={16} />
-              Location
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="device"
-              onClick={() => navigate('/manage-organisation?tab=device')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'device' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Cpu size={16} />
-              Device
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="sites"
-              onClick={() => navigate('/manage-organisation?tab=site')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'sites' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Building size={16} />
-              Site
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="assets"
-              onClick={() => navigate('/manage-organisation?tab=asset')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'assets' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Sliders size={16} />
-              Asset
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="buildings"
-              onClick={() => navigate('/manage-organisation?tab=building')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'buildings' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Building2 size={16} />
-              Building
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="widgets"
-              onClick={() => navigate('/manage-organisation?tab=widgets')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'widgets' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Grid size={16} />
-              Widgets
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="rules"
-              onClick={() => navigate('/manage-organisation?tab=rules')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'rules' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Shield size={16} />
-              Rules
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="commands"
-              onClick={() => navigate('/manage-organisation?tab=commands')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'commands' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <Zap size={16} />
-              Commands
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              eventKey="report_group"
-              onClick={() => navigate('/manage-organisation?tab=telemetry')}
-              className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${activeTab === 'report_group' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-              style={{ fontSize: '0.85rem' }}
-            >
-              <FileText size={16} />
-              Report
-            </Nav.Link>
-          </Nav.Item>
-        </Nav>
+        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
+          <Nav variant="pills" activeKey={activeTab} className="flex-nowrap gap-1.5 align-items-center">
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => { setActiveTab('hub'); navigate('/settings'); }}
+                className={`d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 transition-all ${activeTab === 'hub' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Sparkles size={15} className={activeTab === 'hub' ? 'text-dark' : 'text-info'} /> Settings
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => { setActiveTab('global'); navigate('/settings?tab=global'); }}
+                className={`d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 transition-all ${activeTab === 'global' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Settings size={15} className={activeTab === 'global' ? 'text-dark' : 'text-slate-400'} /> Global
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => { setActiveTab('users'); navigate('/settings/users'); }}
+                className={`d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 transition-all ${activeTab === 'users' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Users size={15} className={activeTab === 'users' ? 'text-dark' : 'text-slate-400'} /> Users
+              </Nav.Link>
+            </Nav.Item>
+
+            <div className="vr bg-secondary opacity-30 mx-1" style={{ height: '24px' }} />
+
+            {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => navigate('/manage-organisation?tab=company')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'company' || activeTab === 'org' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Building size={15} /> Company
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => navigate('/manage-organisation?tab=tenant')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'tenant' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Building2 size={15} /> Organization
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => navigate('/manage-organisation?tab=zone')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'zone' || activeTab === 'location' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Globe size={15} /> Zone
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => navigate('/manage-organisation?tab=area')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'area' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Layers size={15} /> Area
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => navigate('/manage-organisation?tab=site')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'site' || activeTab === 'sites' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <MapPin size={15} /> Site
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => navigate('/manage-organisation?tab=asset')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'asset' || activeTab === 'assets' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Sliders size={15} /> Asset
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => navigate('/manage-organisation?tab=device')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'device' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Cpu size={15} /> Device
+              </Nav.Link>
+            </Nav.Item>
+          </Nav>
+
+          {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
+          <div className="d-flex align-items-center gap-2 ms-auto">
+            {showExtraTabsIndex && (
+              <Nav variant="pills" activeKey={activeTab} className="flex-nowrap gap-1.5 align-items-center">
+                <Nav.Item>
+                  <Nav.Link onClick={() => navigate('/manage-organisation?tab=widgets')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'widgets' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Grid size={15} /> Widgets
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => navigate('/manage-organisation?tab=rules')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'rules' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Shield size={15} /> Rules
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => navigate('/manage-organisation?tab=commands')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'commands' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Zap size={15} /> Commands
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => navigate('/manage-organisation?tab=telemetry')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'report_group' || activeTab === 'report' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <FileText size={15} /> Report
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => navigate('/manage-organisation?tab=building')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'building' || activeTab === 'buildings' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Building2 size={15} /> Building
+                  </Nav.Link>
+                </Nav.Item>
+              </Nav>
+            )}
+
+            <div className="d-flex align-items-center gap-2 px-2.5 py-1.5 rounded-2 bg-dark bg-opacity-60 border border-info border-opacity-30 shadow-sm ms-2">
+              <Form.Check
+                type="switch"
+                id="extra-modules-toggle-index"
+                checked={showExtraTabsIndex}
+                onChange={handleToggleExtraIndex}
+                className="m-0 cursor-pointer"
+                style={{ cursor: 'pointer' }}
+              />
+              <label htmlFor="extra-modules-toggle-index" className="form-check-label fw-semibold text-info mb-0 text-nowrap cursor-pointer" style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
+                Extra Tabs
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -658,6 +645,16 @@ const SettingsIndex = () => {
               </Button>
             </div>
 
+            {countsError && (
+              <div
+                className="mb-3 px-3 py-2 rounded-3"
+                role="alert"
+                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', fontSize: '0.78rem' }}
+              >
+                {countsError}
+              </div>
+            )}
+
             {/* Grid Hierarchy Flow (No Horizontal Scroll) */}
             <div className="hierarchy-grid">
               {HIERARCHY_STEPS.map((step) => {
@@ -681,7 +678,7 @@ const SettingsIndex = () => {
                     </div>
                     <div className="w-100">
                       <div className="step-count-badge hub-card-title" style={{ color: step.color }}>
-                        {countsLoading ? <Spinner animation="border" size="sm" style={{ width: 14, height: 14 }} /> : (count !== null && count !== undefined ? count : '?')}
+                        {countsLoading ? <Spinner animation="border" size="sm" style={{ width: 14, height: 14 }} /> : (count ?? '—')}
                       </div>
                       <div className="fw-bold hub-card-title text-truncate" style={{ color: '#f1f5f9', fontSize: '0.8rem', marginBottom: 1 }} title={step.label}>
                         {step.label}

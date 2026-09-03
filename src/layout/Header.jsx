@@ -3,11 +3,12 @@ import { Menu, Search, User, Bell, LayoutGrid, Sun, Building2, Shield, Users, Bu
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { clearAuthCookies } from '../utils/cookieUtils';
+import { useAuth } from '../context/AuthContext';
 
 const Header = ({ collapsed, toggleSidebar }) => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const { userRole, logout } = useAuth();
 
   return (
     <header className={`scada-header ${collapsed ? 'collapsed' : ''}`}>
@@ -139,6 +140,7 @@ const Header = ({ collapsed, toggleSidebar }) => {
           <LayoutGrid size={20} />
         </Button>
         
+        {/* User Profile */}
         <Dropdown align="end">
           <Dropdown.Toggle variant="link" className="d-flex align-items-center text-white text-decoration-none p-0 border-0 custom-toggle">
             <div className="user-avatar bg-info rounded-circle d-flex align-items-center justify-content-center me-2" style={{ width: '24px', height: '24px' }}>
@@ -146,12 +148,12 @@ const Header = ({ collapsed, toggleSidebar }) => {
             </div>
             <div className="user-info d-none d-sm-block text-start">
               <p className="mb-0 text-white fw-bold" style={{ fontSize: '11px', lineHeight: '1.1' }}>
-                {localStorage.getItem('userRole')?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : 
-                 localStorage.getItem('userRole')?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User'}
+                {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : 
+                 userRole?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User'}
               </p>
               <p className="mb-0 text-muted uppercase tracking-tighter" style={{ fontSize: '9px', lineHeight: '1.1' }}>
-                {localStorage.getItem('userRole')?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' :
-                 localStorage.getItem('userRole')?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator'}
+                {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' :
+                 userRole?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator'}
               </p>
             </div>
           </Dropdown.Toggle>
@@ -162,21 +164,7 @@ const Header = ({ collapsed, toggleSidebar }) => {
             <Dropdown.Divider className="bg-secondary" />
             <Dropdown.Item 
               className="text-danger hover-bg-secondary fw-bold"
-              onClick={() => {
-                clearAuthCookies();
-                localStorage.removeItem('token');
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                localStorage.removeItem('sochiot_token');
-                localStorage.removeItem('userData');
-                localStorage.removeItem('userRole');
-                localStorage.removeItem('isAuthenticated');
-                localStorage.removeItem('remembered_password');
-                localStorage.removeItem('impersonator_backup_user');
-                localStorage.removeItem('impersonator_backup_role');
-                sessionStorage.clear();
-                window.location.href = '/login';
-              }}
+              onClick={logout}
             >
               Sign Out
             </Dropdown.Item>

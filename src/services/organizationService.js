@@ -119,9 +119,28 @@ export const organizationService = {
   },
 
   // Assets & Devices
-  async getAssets() {
-    const res = await apiClient.get('/assets');
-    return normalizeList(res, 'assets');
+  async getAssets(siteId) {
+    if (siteId && siteId !== 'ALL') {
+      const res = await apiClient.get(`/sites/${siteId}/assets`);
+      return normalizeList(res, 'assets');
+    }
+
+    // Assets belong to a site in the API contract.  There is no global
+    // GET /assets collection endpoint without a siteId, so aggregate the
+    // site collections only when the UI needs a cross-site total.
+    const sites = await this.getSites();
+    const results = await Promise.all(
+      sites.map(async (site) => {
+        const res = await apiClient.get(`/sites/${site.id}/assets`);
+        return normalizeList(res, 'assets').map((asset) => ({
+          ...asset,
+          siteId: site.id,
+          siteName: site.name
+        }));
+      })
+    );
+
+    return results.flat();
   },
   async getDevices() {
     const res = await apiClient.get('/devices');

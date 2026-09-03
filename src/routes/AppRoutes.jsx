@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { getUserRole } from '../utils/cookieUtils';
 
 // Pages
 import Dashboard from '../pages/Dashboard';
@@ -101,9 +102,25 @@ const PlaceholderPage = ({ title }) => (
   </div>
 );
 
-const AppRoutes = () => {
-  const userRole = localStorage.getItem('userRole');
 
+import { useAuth } from '../context/AuthContext';
+
+// Protected Route Guard for Role-based Access Control
+const ProtectedRoute = ({ allowedRoles, children }) => {
+  const { hasRole, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !hasRole(allowedRoles)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -173,13 +190,23 @@ const AppRoutes = () => {
       {/* Super Admin Routes */}
       <Route path="/super-admin" element={<Navigate to="/dashboard" replace />} />
 
-      {/* Admin Routes */}
-      {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') && (
-        <>
-          <Route path="/admin/manage-users" element={<UserManagement />} />
-          <Route path="/admin/audit-logs" element={<AuditLogViewer />} />
-        </>
-      )}
+      {/* Admin Routes with Declarative Role Guard */}
+      <Route 
+        path="/admin/manage-users" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN']}>
+            <UserManagement />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/audit-logs" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN']}>
+            <AuditLogViewer />
+          </ProtectedRoute>
+        } 
+      />
 
       {/* Maintenance & Service History */}
       <Route path="/maintenance" element={<MaintenancePage />} />

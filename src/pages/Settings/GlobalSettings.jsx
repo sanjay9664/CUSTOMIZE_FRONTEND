@@ -29,14 +29,7 @@ const ALL_MODULES = [
 
 const GlobalSettings = () => {
   const [modulesState, setModulesState] = useState(() => {
-    const saved = localStorage.getItem('scada_modules_config');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
-    }
-    // Default all 18 modules enabled matching user screenshot
-    return {
+    const defaultState = {
       "Dashboard": true,
       "Water Management": true,
       "Motors": true,
@@ -56,6 +49,14 @@ const GlobalSettings = () => {
       "HVAC": true,
       "AC": true,
     };
+    const saved = localStorage.getItem('scada_modules_config');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...defaultState, ...parsed };
+      } catch (e) {}
+    }
+    return defaultState;
   });
 
   const [submodulesState, setSubmodulesState] = useState(() => {

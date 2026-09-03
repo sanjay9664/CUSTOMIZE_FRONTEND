@@ -8,7 +8,7 @@ import autoTable from 'jspdf-autotable';
 export function generateUserCustomPdfReport({
   title = 'SCADA BMS Custom Operational Report',
   subtitle = 'System Telemetry & Performance Audit',
-  siteName = 'LIT India (Gurugram HQ)',
+  siteName = 'Main Site',
   userName = 'Rajesh Padhi',
   userRole = 'Super Admin',
   dateRange = 'Last 7 Days (Aug 10 - Aug 17, 2026)',

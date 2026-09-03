@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Form, InputGroup, Nav } from 'react-bootstrap';
 import {
   Building2, Building, MapPin, Globe, Shield, Plus, Search,
   RefreshCw, Layers, Settings, ArrowLeft, Cpu,
-  Radio, FileText, BellRing, Sparkles, Users, Grid, Sliders, Zap
+  Radio, FileText, BellRing, Sparkles, Users, Grid, Sliders, Zap, ChevronRight
 } from 'lucide-react';
 
 const ManageOrganisationHeader = ({ org = {} }) => {
@@ -17,78 +17,180 @@ const ManageOrganisationHeader = ({ org = {} }) => {
   const safeAssets = Array.isArray(org.activeAssets) ? org.activeAssets : [];
   const safeBuildings = Array.isArray(org.activeBuildings) ? org.activeBuildings : [];
 
+  const isExtraTabActive = ['widgets', 'rules', 'commands', 'telemetry', 'report', 'alarm', 'building'].includes(org.activeTab);
+  const [showExtraTabs, setShowExtraTabs] = useState(() => {
+    const saved = localStorage.getItem('bms_show_extra_tabs');
+    if (saved !== null) return saved === 'true';
+    return isExtraTabActive;
+  });
+
+  useEffect(() => {
+    if (isExtraTabActive && !showExtraTabs) {
+      setShowExtraTabs(true);
+    }
+  }, [isExtraTabActive]);
+
+  const handleToggleExtra = (e) => {
+    const val = e.target.checked;
+    setShowExtraTabs(val);
+    localStorage.setItem('bms_show_extra_tabs', String(val));
+  };
+
   return (
     <>
       {/* Sub-Header Tabs Row */}
       <div className="px-4 py-2-5 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
-        <Nav variant="pills" activeKey={org.isLocationGroup ? 'location' : org.isSiteGroup ? 'site' : org.isAssetGroup ? 'asset' : org.isBuildingGroup ? 'building' : org.isDeviceGroup ? 'device' : org.isWidgetGroup ? 'widgets' : org.isRuleGroup ? 'rules' : org.isCommandGroup ? 'commands' : org.isReportGroup ? 'report_group' : 'org'} className="flex-nowrap gap-2">
-          <Nav.Item>
-            <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 fw-semibold px-3.5 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.85rem' }}>
-              <Sparkles size={16} className="text-info" /> Settings Hub
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 fw-semibold px-3.5 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.85rem' }}>
-              <Settings size={16} className="text-slate-400" /> Global Settings
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.navigate && org.navigate('/settings/users')} className="d-flex align-items-center gap-2 fw-semibold px-3.5 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.85rem' }}>
-              <Users size={16} className="text-slate-400" /> User Admin
-            </Nav.Link>
-          </Nav.Item>
-          <div className="vr bg-secondary opacity-30 my-1" />
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isOrgGroup ? org.activeTab : 'company')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isOrgGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Building2 size={16} /> Organisation
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isLocationGroup ? org.activeTab : 'zone')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isLocationGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <MapPin size={16} /> Location
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('device')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isDeviceGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Cpu size={16} /> Device
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('site')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isSiteGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Building size={16} /> Site
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('asset')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isAssetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Sliders size={16} /> Asset
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('building')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isBuildingGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Building2 size={16} /> Building
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('widgets')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isWidgetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Grid size={16} /> Widgets
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('rules')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isRuleGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Shield size={16} /> Rules
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('commands')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isCommandGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <Zap size={16} /> Commands
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isReportGroup ? org.activeTab : 'telemetry')} className={`d-flex align-items-center gap-2 fw-bold px-3.5 py-2 rounded-2 transition-all ${org.isReportGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.85rem' }}>
-              <FileText size={16} /> Report
-            </Nav.Link>
-          </Nav.Item>
-        </Nav>
+        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
+          <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center">
+            <Nav.Item>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
+                <Sparkles size={15} className="text-info" /> Settings
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
+                <Settings size={15} className="text-slate-400" /> Global
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings/users')} className="d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
+                <Users size={15} className="text-slate-400" /> Users
+              </Nav.Link>
+            </Nav.Item>
+
+            <div className="vr bg-secondary opacity-30 mx-1" style={{ height: '24px' }} />
+
+            {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => org.handleTabSelect && org.handleTabSelect('company')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'company' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Building size={15} /> Company
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => org.handleTabSelect && org.handleTabSelect('tenant')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'tenant' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Building2 size={15} /> Organization
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => org.handleTabSelect && org.handleTabSelect('zone')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'zone' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Globe size={15} /> Zone
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => org.handleTabSelect && org.handleTabSelect('area')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'area' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Layers size={15} /> Area
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => org.handleTabSelect && org.handleTabSelect('site')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'site' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <MapPin size={15} /> Site
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => org.handleTabSelect && org.handleTabSelect('asset')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'asset' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Sliders size={15} /> Asset
+              </Nav.Link>
+            </Nav.Item>
+
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+
+            <Nav.Item>
+              <Nav.Link
+                onClick={() => org.handleTabSelect && org.handleTabSelect('device')}
+                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'device' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                style={{ fontSize: '0.83rem' }}
+              >
+                <Cpu size={15} /> Device
+              </Nav.Link>
+            </Nav.Item>
+          </Nav>
+
+          {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
+          <div className="d-flex align-items-center gap-2 ms-auto">
+            {showExtraTabs && (
+              <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center">
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('widgets')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isWidgetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Grid size={15} /> Widgets
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('rules')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isRuleGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Shield size={15} /> Rules
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('commands')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isCommandGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Zap size={15} /> Commands
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isReportGroup ? org.activeTab : 'telemetry')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isReportGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <FileText size={15} /> Report
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('building')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isBuildingGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Building2 size={15} /> Building
+                  </Nav.Link>
+                </Nav.Item>
+              </Nav>
+            )}
+
+            <div className="d-flex align-items-center gap-2 px-2.5 py-1.5 rounded-2 bg-dark bg-opacity-60 border border-info border-opacity-30 shadow-sm ms-2">
+              <Form.Check
+                type="switch"
+                id="extra-modules-toggle"
+                checked={showExtraTabs}
+                onChange={handleToggleExtra}
+                className="m-0 cursor-pointer"
+                style={{ cursor: 'pointer' }}
+              />
+              <label htmlFor="extra-modules-toggle" className="form-check-label fw-semibold text-info mb-0 text-nowrap cursor-pointer" style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
+                Extra Tabs
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Header Banner */}

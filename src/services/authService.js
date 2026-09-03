@@ -1,6 +1,9 @@
-const EXTERNAL_API_URL = '/sochiot-auth';
-const CONFIG_API_URL = '/sochiot-config';
-const TRIGGERS_API_URL = '/sochiot-triggers';
+import { getAuthToken, setCookie } from '../utils/cookieUtils';
+import { EXTERNAL_URLS } from '../utils/apiConfig';
+
+const EXTERNAL_API_URL = EXTERNAL_URLS.authEngine;
+const CONFIG_API_URL = EXTERNAL_URLS.configEngine;
+const TRIGGERS_API_URL = EXTERNAL_URLS.ruleEngine;
 
 const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
   const controller = new AbortController();
@@ -25,24 +28,24 @@ export const loginToSochiot = async (email, password) => {
 
     if (response.ok) {
       const data = await response.json();
-      if (data.token) {
-        localStorage.setItem('sochiot_token', data.token);
-        return data.token;
+      const token = data.token || data.accessToken;
+      if (token) {
+        setCookie('access_token', token, 7);
+        setCookie('token', token, 7);
+        return token;
       }
     }
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || 'Authentication failed: Invalid credentials');
   } catch (error) {
-    console.warn('Backend Auth Error, using mock token:', error);
+    console.error('Sochiot Auth Error:', error);
+    throw error;
   }
-
-  // Fallback Mock Token for Frontend UI mode
-  const mockToken = 'mock_sochiot_token_ui_mode_12345';
-  localStorage.setItem('sochiot_token', mockToken);
-  return mockToken;
 };
 
 export const getSochiotUserMe = async () => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
       const response = await fetch(`${EXTERNAL_API_URL}/user/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -50,20 +53,16 @@ export const getSochiotUserMe = async () => {
       if (response.ok) return await response.json();
     }
   } catch (error) {
-    console.warn('Fetch Me Error, returning mock user profile:', error);
+    console.warn('Fetch Me Error:', error);
   }
 
-  return {
-    id: 1,
-    name: 'SCADA Admin User',
-    email: 'admin@sochiot.com',
-    role: 'SUPER_ADMIN'
-  };
+  return null;
 };
+
 
 export const getSochiotLocationData = async (locationId) => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
       const response = await fetch(`${CONFIG_API_URL}/entity/LOCATION/${locationId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -78,7 +77,7 @@ export const getSochiotLocationData = async (locationId) => {
 
 export const getSochiotZoneData = async (zoneId) => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
       const response = await fetch(`${CONFIG_API_URL}/entity/ZONE/${zoneId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -93,7 +92,7 @@ export const getSochiotZoneData = async (zoneId) => {
 
 export const getSochiotDeviceDetails = async (deviceId) => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
       const response = await fetchWithTimeout(`${CONFIG_API_URL}/device/${deviceId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -117,7 +116,7 @@ export const getSochiotDeviceDetails = async (deviceId) => {
 
 export const getSochiotGatewayStatus = async (clusterId) => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
       const response = await fetchWithTimeout(`${CONFIG_API_URL}/gateway/status/uuid/${clusterId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -139,7 +138,7 @@ export const getSochiotGatewayStatus = async (clusterId) => {
 
 export const getSochiotDeviceStatus = async (deviceId) => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
       const response = await fetchWithTimeout(`${CONFIG_API_URL}/device/status/uuid/${deviceId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -161,9 +160,9 @@ export const getSochiotDeviceStatus = async (deviceId) => {
 
 export const getSochiotRules = async (nodeType, nodeId, page = 1) => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
-      const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/${nodeType}/${nodeId}?page=${page}&isPageable=true&sortBy=lastUpdated&sortOrder=DESC`, {
+      const response = await fetchWithTimeout(`${TRIGGERS_API_URL}/rules/${nodeType}/${nodeId}?page=${page}&isPageable=true&sortBy=lastUpdated&sortOrder=DESC`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }, 3000);
       if (response.ok) return await response.json();
@@ -184,9 +183,9 @@ export const getSochiotRules = async (nodeType, nodeId, page = 1) => {
 
 export const getSochiotRuleById = async (ruleId) => {
   try {
-    const token = localStorage.getItem('sochiot_token');
+    const token = getAuthToken();
     if (token && !token.startsWith('mock_')) {
-      const response = await fetchWithTimeout(`https://app.sochiot.com/api/triggers/rules/${ruleId}`, {
+      const response = await fetchWithTimeout(`${TRIGGERS_API_URL}/rules/${ruleId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }, 3000);
       if (response.ok) return await response.json();
