@@ -74,9 +74,24 @@ function handleFallbackResponse(urlStr) {
   // 4. Super Admin Config Fallback
   if (urlStr.includes('/super-admin/config') || urlStr.includes('/super-admin/admin-config')) {
     return new Response(JSON.stringify({
-      showDashboard: true, showWaterManagement: true, showMotors: true, showDGSet: true,
-      showSettingTemplates: true, showAlarms: true, showLTPanel: true, showTransformers: true,
-      showFirePumps: true, showTicketing: true
+      showDashboard: true,
+      showWaterManagement: true,
+      showMotors: true,
+      showDGSet: true,
+      showSettingTemplates: true,
+      showAlarms: true,
+      showLTPanel: true,
+      showTransformers: true,
+      showFirePumps: true,
+      showTicketing: true,
+      showMaintenance: true,
+      showServiceHistory: true,
+      showDailyDPR: true,
+      showEnergyMetering: true,
+      showVRV: true,
+      showAQISensor: true,
+      showHVAC: true,
+      showAC: true
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
 

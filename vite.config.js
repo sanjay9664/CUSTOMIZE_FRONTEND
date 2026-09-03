@@ -92,9 +92,24 @@ export default defineConfig({
           // Super Admin Config
           if (urlStr.includes('/super-admin/config') || urlStr.includes('/super-admin/admin-config')) {
             return res.end(JSON.stringify({
-              showDashboard: true, showWaterManagement: true, showMotors: true, showDGSet: true,
-              showSettingTemplates: true, showAlarms: true, showLTPanel: true, showTransformers: true,
-              showFirePumps: true, showTicketing: true
+              showDashboard: true,
+              showWaterManagement: true,
+              showMotors: true,
+              showDGSet: true,
+              showSettingTemplates: true,
+              showAlarms: true,
+              showLTPanel: true,
+              showTransformers: true,
+              showFirePumps: true,
+              showTicketing: true,
+              showMaintenance: true,
+              showServiceHistory: true,
+              showDailyDPR: true,
+              showEnergyMetering: true,
+              showVRV: true,
+              showAQISensor: true,
+              showHVAC: true,
+              showAC: true
             }));
           }
 
