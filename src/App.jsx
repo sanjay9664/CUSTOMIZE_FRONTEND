@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SiteProvider } from './context/SiteContext';
 
 // Keep the login bundle small. The authenticated application is downloaded
 // only after a valid session is available.
@@ -55,7 +56,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <SiteProvider>
+          <DeviceStatusProvider>
+            <AppContent />
+          </DeviceStatusProvider>
+        </SiteProvider>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -9,6 +9,7 @@ import {
 
 import { getAuthToken } from '../../utils/cookieUtils';
 import { getApiUrl } from '../../utils/apiConfig';
+import { useSiteStore } from '../../context/SiteContext';
 
 const API_BASE_URL = getApiUrl();
 
@@ -41,7 +42,7 @@ const normalizeList = (raw, key) => {
 
 const SiteManagement = () => {
   const navigate = useNavigate();
-  const [sites, setSites] = useState([]);
+  const { sites, setSites, addSite, updateSite, deleteSite: removeSiteFromStore, fetchSites: refreshStoreSites } = useSiteStore();
   const [tenants, setTenants] = useState([]);
   const [zones, setZones] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -267,12 +268,8 @@ const SiteManagement = () => {
       console.warn('Update site API notice:', err);
     }
 
-    // Update local state + localStorage directly (GET may return 500)
-    setSites(prev => {
-      const updated = prev.map(s => String(s.id) === String(editForm.id) ? { ...s, ...updatePayload, updatedAt: new Date().toISOString() } : s);
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
-      return updated;
-    });
+    // Update global store
+    updateSite(editForm.id, updatePayload);
 
     setMessage({ type: 'success', text: `Site "${editForm.name}" updated successfully!` });
     setShowEditModal(false);
@@ -295,12 +292,8 @@ const SiteManagement = () => {
       console.warn('Toggle site status notice:', err);
     }
 
-    // Update local state + localStorage directly
-    setSites(prev => {
-      const updated = prev.map(s => String(s.id) === String(site.id) ? { ...s, status: newStatus } : s);
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
-      return updated;
-    });
+    // Update global store
+    updateSite(site.id, { status: newStatus });
 
     setMessage({
       type: newStatus === 'ACTIVE' ? 'success' : 'warning',
