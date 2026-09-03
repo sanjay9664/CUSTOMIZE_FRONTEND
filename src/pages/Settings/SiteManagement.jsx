@@ -9,6 +9,7 @@ import {
 
 import { getAuthToken } from '../../utils/cookieUtils';
 import { getApiUrl } from '../../utils/apiConfig';
+import { useSiteStore } from '../../context/SiteContext';
 
 const API_BASE_URL = getApiUrl();
 
