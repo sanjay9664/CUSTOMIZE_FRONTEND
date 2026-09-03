@@ -11,6 +11,7 @@ import { getAuthToken } from '../../utils/cookieUtils';
 import { getApiUrl } from '../../utils/apiConfig';
 import { useSiteStore } from '../../context/SiteContext';
 import RegisterSiteModal from './modals/RegisterSiteModal';
+import UnifiedRegisterModal from '../../components/common/UnifiedRegisterModal';
 
 const API_BASE_URL = getApiUrl();
 
@@ -886,142 +887,88 @@ const SiteManagement = () => {
         error={createModalError}
       />
 
-      {/* Edit Site Modal (PATCH /api/sites/:siteId) */}
-      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered size="lg" className="site-modal" backdrop="static">
-        <Modal.Header closeButton closeVariant="white" style={{ border: 'none', padding: '24px 28px 8px' }}>
-          <Modal.Title className="d-flex align-items-center gap-2 fw-bold" style={{ fontSize: '1.15rem' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Edit3 size={18} color="#fff" />
-            </div>
-            Edit Site Configuration
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ padding: '20px 28px 28px' }}>
-          <Form onSubmit={handleUpdateSite}>
-            <Row className="g-3">
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Organization / Tenant *</Form.Label>
-                  <Form.Select
-                    disabled
-                    value={editForm.tenantId}
-                    onChange={e => {
-                      const tId = e.target.value;
-                      const selTenant = tenants.find(t => t.id === tId);
-                      setEditForm(p => ({
-                        ...p,
-                        tenantId: tId,
-                        organizationId: selTenant?.sochiotOrgId || p.organizationId,
-                        zoneId: '',
-                        areaId: ''
-                      }));
-                    }}
-                    style={{ opacity: 0.7, cursor: 'not-allowed' }}
-                  >
-                    <option value="">Select Organization / Tenant...</option>
-                    {tenants.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted small fs-11 mt-1 d-block">
-                    Organization cannot be edited after site creation.
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Geographic Zone</Form.Label>
-                  <Form.Select
-                    value={editForm.zoneId}
-                    onChange={e => setEditForm(p => ({ ...p, zoneId: e.target.value, areaId: '' }))}
-                  >
-                    <option value="">Select Geographic Zone...</option>
-                    {zones
-                      .filter(z => !editForm.tenantId || z.tenantId === editForm.tenantId)
-                      .map(z => (
-                        <option key={z.id} value={z.id}>{z.name}</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Tenant Area</Form.Label>
-                  <Form.Select
-                    value={editForm.areaId}
-                    onChange={e => setEditForm(p => ({ ...p, areaId: e.target.value }))}
-                  >
-                    <option value="">Select Tenant Area...</option>
-                    {areas
-                      .filter(a => {
-                        if (editForm.zoneId && a.zoneId !== editForm.zoneId) return false;
-                        if (editForm.tenantId && a.tenantId !== editForm.tenantId) return false;
-                        return true;
-                      })
-                      .map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Site Name *</Form.Label>
-                  <Form.Control
-                    placeholder="Site Name"
-                    value={editForm.name}
-                    onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Status (Enable/Disable)</Form.Label>
-                  <Form.Select
-                    value={editForm.status}
-                    onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))}
-                  >
-                    <option value="ACTIVE">ACTIVE (Enabled)</option>
-                    <option value="INACTIVE">INACTIVE (Disabled)</option>
-                    <option value="MAINTENANCE">MAINTENANCE</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">City</Form.Label>
-                  <Form.Control
-                    placeholder="City"
-                    value={editForm.city}
-                    onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">State</Form.Label>
-                  <Form.Control
-                    placeholder="State"
-                    value={editForm.state}
-                    onChange={e => setEditForm(p => ({ ...p, state: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <div className="d-flex justify-content-end gap-3 mt-4">
-              <Button variant="outline-secondary" onClick={() => setShowEditModal(false)} style={{ borderRadius: 12, padding: '10px 24px' }}>
-                Cancel
-              </Button>
-              <button type="submit" className="create-site-btn text-white d-flex align-items-center gap-2" disabled={submitting}>
-                {submitting ? <Spinner size="sm" /> : <Edit3 size={16} />}
-                {submitting ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
+      {/* Edit Site Drawer (Using UnifiedRegisterModal) */}
+      <UnifiedRegisterModal
+        show={showEditModal}
+        onHide={() => setShowEditModal(false)}
+        title="Edit Site Configuration"
+        subtitle={editingSite ? `Site #${editingSite.id} - ${editingSite.name}` : ''}
+        icon={Edit3}
+        fields={[
+          {
+            key: 'tenantId',
+            label: 'Organization / Tenant',
+            type: 'select',
+            disabled: true,
+            options: tenants.map(t => ({ value: t.id, label: t.name })),
+            helpText: 'Organization cannot be edited after site creation.',
+            colSpan: 12
+          },
+          {
+            key: 'zoneId',
+            label: 'Geographic Zone',
+            type: 'select',
+            placeholder: 'Select Geographic Zone...',
+            options: zones
+              .filter(z => !editForm.tenantId || String(z.tenantId) === String(editForm.tenantId))
+              .map(z => ({ value: z.id, label: z.name })),
+            colSpan: 6
+          },
+          {
+            key: 'areaId',
+            label: 'Tenant Area',
+            type: 'select',
+            placeholder: 'Select Tenant Area...',
+            options: areas
+              .filter(a => {
+                if (editForm.zoneId && String(a.zoneId) !== String(editForm.zoneId)) return false;
+                if (editForm.tenantId && String(a.tenantId) !== String(editForm.tenantId)) return false;
+                return true;
+              })
+              .map(a => ({ value: a.id, label: a.name })),
+            colSpan: 6
+          },
+          {
+            key: 'name',
+            label: 'Site Name',
+            type: 'text',
+            placeholder: 'Site Name',
+            required: true,
+            colSpan: 6
+          },
+          {
+            key: 'status',
+            label: 'Status (Enable/Disable)',
+            type: 'select',
+            options: [
+              { value: 'ACTIVE', label: 'ACTIVE (Enabled)' },
+              { value: 'INACTIVE', label: 'INACTIVE (Disabled)' },
+              { value: 'MAINTENANCE', label: 'MAINTENANCE' }
+            ],
+            colSpan: 6
+          },
+          {
+            key: 'city',
+            label: 'City',
+            type: 'text',
+            placeholder: 'City',
+            colSpan: 6
+          },
+          {
+            key: 'state',
+            label: 'State',
+            type: 'text',
+            placeholder: 'State',
+            colSpan: 6
+          }
+        ]}
+        formData={editForm}
+        onChange={(key, val) => setEditForm(p => ({ ...p, [key]: val }))}
+        onSubmit={handleUpdateSite}
+        submitting={submitting}
+        submitLabel="Save Changes"
+        submittingLabel="Saving Changes..."
+      />
 
       {/* Site Detail Modal */}
       <Modal show={showDetailModal} onHide={() => setShowDetailModal(false)} centered size="lg" className="site-modal">
