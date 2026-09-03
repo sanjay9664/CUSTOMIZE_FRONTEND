@@ -8,7 +8,9 @@ import {
   Upload, Trash2
 } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
-import { setAuthCookies } from '../utils/cookieUtils';
+import { setAuthCookies, setAuthSession } from '../utils/cookieUtils';
+import { AUTH_ENDPOINTS } from '../utils/apiConfig';
+import { useAuth } from '../context/AuthContext';
 import logo from "../assets/logo.png";
 import heroImg from "./scada_hero.png";
 
@@ -88,6 +90,7 @@ const PRESET_THEMES = [
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login: authLogin, syncAuthState } = useAuth();
   
   // Login State
   const [rememberMe, setRememberMe] = useState(() => {
@@ -204,13 +207,8 @@ const Login = () => {
     const token = payloadData?.accessToken || payloadData?.token || '';
     const refreshToken = payloadData?.refreshToken || '';
 
-    localStorage.setItem('token',           token);
-    localStorage.setItem('userRole',         user.role || 'ADMIN');
-    localStorage.setItem('userData',         JSON.stringify(user));
-    localStorage.setItem('isAuthenticated', 'true');
-
-    // Set Cookies for Session Management
-    setAuthCookies({
+    // Set Cookies & Session Management, cleaning redundant raw JWT tokens from localStorage
+    setAuthSession({
       token,
       refreshToken,
       userRole: user.role || 'ADMIN',
@@ -254,10 +252,11 @@ const Login = () => {
     localStorage.setItem('scada_modules_config',    JSON.stringify(sidebarMapping));
     localStorage.setItem('scada_submodules_config', JSON.stringify(config.submoduleVisibility || {}));
 
+    syncAuthState();
     window.dispatchEvent(new Event('storage-update'));
     setLoading(false);
 
-    navigate('/dashboard');
+    navigate('/dashboard', { replace: true });
   };
 
   // ── HANDLE LOGIN (Username or Email) ──────────────────────────────────────
@@ -273,44 +272,16 @@ const Login = () => {
       return;
     }
 
-    const payload = {
-      identifier: credentials.identifier,
-      email: credentials.identifier,
-      password: credentials.password,
-    };
-
-    let response;
     try {
-      response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const result = await authLogin({
+        identifier: credentials.identifier,
+        password: credentials.password,
       });
-    } catch (primaryErr) {
-      try {
-        response = await fetch('http://127.0.0.1:3001/api/v1/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      } catch (secondaryErr) {
-        console.error('Backend connection error:', secondaryErr);
-        setError('Unable to connect to backend server. Please verify backend is running.');
-        setLoading(false);
-        return;
-      }
-    }
 
-    if (response && response.ok) {
-      const data = await response.json();
-      storeSessionAndRedirect(data);
-    } else {
-      let errorMsg = 'Invalid username/email or password';
-      try {
-        const errData = await response.json();
-        errorMsg = errData?.error?.message || errData?.message || errorMsg;
-      } catch {}
-      setError(errorMsg);
+      storeSessionAndRedirect(result.data);
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Invalid username/email or password');
       setLoading(false);
     }
   };
@@ -322,7 +293,7 @@ const Login = () => {
     setSuccessMsg(`Authenticating with ${provider}...`);
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/v1/auth/oauth', {
+      const response = await fetch(AUTH_ENDPOINTS.oauth, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

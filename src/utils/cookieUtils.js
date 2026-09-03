@@ -1,6 +1,7 @@
 /**
  * Cookie Utilities for SCADA Authentication & Session Management
  */
+import { AUTH_ENDPOINTS } from './apiConfig';
 
 export const setCookie = (name, value, days = 7) => {
   try {
@@ -32,6 +33,39 @@ export const eraseCookie = (name) => {
   }
 };
 
+let inMemoryAccessToken = null;
+
+export const setMemoryToken = (token) => {
+  inMemoryAccessToken = token;
+};
+
+export const getMemoryToken = () => inMemoryAccessToken;
+
+export const getAuthToken = () => {
+  return (
+    inMemoryAccessToken ||
+    getCookie('access_token') ||
+    getCookie('token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('sochiot_token') ||
+    null
+  );
+};
+
+export const getUserRole = () => {
+  return getCookie('userRole') || localStorage.getItem('userRole') || null;
+};
+
+export const getUserData = () => {
+  try {
+    const raw = getCookie('userData') || localStorage.getItem('userData');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 export const setAuthCookies = ({ token, refreshToken, userRole, userData }) => {
   if (token) {
     setCookie('access_token', token, 7);
@@ -49,6 +83,24 @@ export const setAuthCookies = ({ token, refreshToken, userRole, userData }) => {
   setCookie('isAuthenticated', 'true', 7);
 };
 
+export const setAuthSession = ({ token, refreshToken, userRole, userData }) => {
+  if (token) {
+    setMemoryToken(token);
+  }
+  setAuthCookies({ token, refreshToken, userRole, userData });
+
+  // Keep non-sensitive metadata in localStorage for sync/reactivity across tabs
+  if (userRole) localStorage.setItem('userRole', userRole);
+  if (userData) localStorage.setItem('userData', typeof userData === 'string' ? userData : JSON.stringify(userData));
+  localStorage.setItem('isAuthenticated', 'true');
+
+  // Remove redundant raw JWT tokens from localStorage to minimize XSS attack surface
+  localStorage.removeItem('token');
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('sochiot_token');
+  localStorage.removeItem('auth_token');
+};
+
 export const clearAuthCookies = () => {
   eraseCookie('access_token');
   eraseCookie('token');
@@ -57,3 +109,38 @@ export const clearAuthCookies = () => {
   eraseCookie('userData');
   eraseCookie('isAuthenticated');
 };
+
+export const clearAuthSession = () => {
+  const currentToken = getAuthToken();
+  setMemoryToken(null);
+  clearAuthCookies();
+
+  // Graceful server-side session revocation (fire-and-forget)
+  try {
+    fetch(AUTH_ENDPOINTS.logout, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {})
+      }
+    }).catch(() => {});
+  } catch (e) {}
+
+  try {
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('sochiot_token');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('remembered_password');
+    localStorage.removeItem('impersonator_backup_user');
+    localStorage.removeItem('impersonator_backup_role');
+    sessionStorage.clear();
+  } catch (e) {
+    console.warn('Failed to clear storage on auth session reset:', e);
+  }
+};
+

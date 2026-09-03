@@ -1,15 +1,10 @@
 import { useState, useCallback, useRef } from 'react';
-import { getCookie } from '../../../../utils/cookieUtils';
+import { getAuthToken } from '../../../../utils/cookieUtils';
 
 export const API_BASE_URL = '/api';
 
 export const getAuthHeaders = () => {
-  const token = getCookie('access_token') ||
-    getCookie('token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') || '';
+  const token = getAuthToken() || '';
 
   return {
     'Content-Type': 'application/json',

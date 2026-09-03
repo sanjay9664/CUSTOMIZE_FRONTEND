@@ -168,7 +168,7 @@ const UserPdfReportModal = ({ show, onHide, sites = [], assets = [] }) => {
                   className="bg-dark text-white border-secondary border-opacity-25 fs-13"
                 >
                   {sites.length === 0 ? (
-                    <option value="4">Site #4 - LIT India / Testing Site</option>
+                    <option value="">No Sites Available</option>
                   ) : sites.map(s => (
                     <option key={s.id} value={s.id}>Site #{s.id} - {s.name} ({s.city || 'HQ'})</option>
                   ))}

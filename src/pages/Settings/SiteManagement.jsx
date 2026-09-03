@@ -6,15 +6,13 @@ import {
   Eye, RefreshCw, Search, LayoutGrid, List, ChevronRight,
   Globe, Server, Clock, TrendingUp, Edit3, Power, CheckCircle, XCircle
 } from 'lucide-react';
-import { useSiteStore } from '../../context/SiteContext';
+
+import { getAuthToken } from '../../utils/cookieUtils';
 
 const API_BASE_URL = '/api';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') || '';
+  const token = getAuthToken() || '';
 
   return {
     'Content-Type': 'application/json',
@@ -112,7 +110,7 @@ const SiteManagement = () => {
     }
   }, []);
 
-  // Fetch sites strictly from backend API
+  // Fetch sites strictly from backend API dynamically
   const fetchSites = useCallback(async () => {
     setLoading(true);
     try {
@@ -127,7 +125,7 @@ const SiteManagement = () => {
         setSites([]);
       }
     } catch (err) {
-      console.warn('Sites API notice:', err);
+      console.warn('Sites fetch notice:', err);
       setSites([]);
     }
     setLoading(false);
@@ -211,9 +209,8 @@ const SiteManagement = () => {
       createdAt: createdSiteFromDb?.createdAt || new Date().toISOString()
     };
 
-    addSite(finalSite);
-
-    setMessage({ type: 'success', text: `Site "${finalSite.name}" created successfully!` });
+    await fetchSites();
+    setMessage({ type: 'success', text: `Site "${payload.name}" created successfully!` });
     setShowCreateModal(false);
     setCreateForm({ name: '', sochiotLocationId: '', organizationId: '', tenantId: '', zoneId: '', areaId: '', city: '', state: '' });
     setSubmitting(false);
