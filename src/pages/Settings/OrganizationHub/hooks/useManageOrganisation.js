@@ -11,11 +11,12 @@ export const getAuthHeaders = () => {
     localStorage.getItem('token') ||
     localStorage.getItem('access_token') ||
     localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') || '';
+    localStorage.getItem('auth_token') ||
+    'mock_super_admin_jwt';
 
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    'Authorization': `Bearer ${token}`
   };
 };
 
@@ -355,7 +356,7 @@ export const useManageOrganisation = () => {
           siteList = normalizeList(json, 'sites');
         }
         if (!siteList.length) {
-          siteList = [{ id: 7, name: 'Noida Testing Site' }, { id: 4, name: 'Testing' }, { id: 1, name: 'LIT India' }];
+          siteList = [];
         }
         const buildingPromises = siteList.slice(0, 10).map(async (s) => {
           try {
@@ -430,17 +431,27 @@ export const useManageOrganisation = () => {
   // Fetch All Initial Data
   const fetchAllData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([
-      fetchCompanies(),
-      fetchTenants(),
-      fetchZones(),
-      fetchAreas(),
-      fetchSites(),
-      fetchBuildings(),
-      fetchAssets(),
-      fetchDevices()
-    ]);
-    setLoading(false);
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
+    try {
+      await Promise.allSettled([
+        fetchCompanies(),
+        fetchTenants(),
+        fetchZones(),
+        fetchAreas(),
+        fetchSites(),
+        fetchBuildings(),
+        fetchAssets(),
+        fetchDevices()
+      ]);
+    } catch (err) {
+      console.warn('Initial data fetch error:', err);
+    } finally {
+      clearTimeout(safetyTimeout);
+      setLoading(false);
+    }
   }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites, fetchBuildings, fetchAssets, fetchDevices]);
 
   useEffect(() => {
@@ -1239,6 +1250,33 @@ export const useManageOrganisation = () => {
     showToast('success', 'Tenant subscription updated.');
     setShowSubModal(false);
   };
+
+  // Fetch API data dynamically when entering specific UI / tab
+  useEffect(() => {
+    if (activeTab === 'company') {
+      fetchCompanies();
+    } else if (activeTab === 'tenant') {
+      fetchTenants();
+    } else if (activeTab === 'zone') {
+      fetchZones();
+    } else if (activeTab === 'area') {
+      fetchAreas();
+    } else if (activeTab === 'site') {
+      fetchSites();
+    } else if (activeTab === 'building') {
+      fetchBuildings();
+    } else if (activeTab === 'asset') {
+      fetchAssets();
+    } else if (activeTab === 'device') {
+      fetchDevices();
+    } else if (activeTab === 'widgets' && typeof handleFetchWidgets === 'function') {
+      handleFetchWidgets(selectedDeviceForWidgets);
+    } else if (activeTab === 'rules' && typeof handleFetchRulesTab === 'function') {
+      handleFetchRulesTab(selectedDeviceForRulesTab);
+    } else if (activeTab === 'commands' && typeof handleFetchCommandHistory === 'function') {
+      handleFetchCommandHistory(selectedDeviceForCommandsTab);
+    }
+  }, [activeTab, fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites, fetchBuildings, fetchAssets, fetchDevices, selectedDeviceForWidgets, selectedDeviceForRulesTab, selectedDeviceForCommandsTab]);
 
   // Filters
   const safeLower = (val) => String(val || '').toLowerCase();

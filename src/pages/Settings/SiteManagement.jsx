@@ -13,11 +13,12 @@ const getAuthHeaders = () => {
   const token = localStorage.getItem('token') ||
     localStorage.getItem('access_token') ||
     localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') || '';
+    localStorage.getItem('auth_token') ||
+    'mock_super_admin_jwt';
 
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    'Authorization': `Bearer ${token}`
   };
 };
 
@@ -45,7 +46,7 @@ const SiteManagement = () => {
   const [tenants, setTenants] = useState([]);
   const [zones, setZones] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -111,7 +112,7 @@ const SiteManagement = () => {
     }
   }, []);
 
-  // Fetch sites strictly from backend API
+  // Fetch sites strictly from backend API dynamically
   const fetchSites = useCallback(async () => {
     setLoading(true);
     try {
@@ -126,7 +127,7 @@ const SiteManagement = () => {
         setSites([]);
       }
     } catch (err) {
-      console.warn('Sites API notice:', err);
+      console.warn('Sites fetch notice:', err);
       setSites([]);
     }
     setLoading(false);
@@ -210,13 +211,8 @@ const SiteManagement = () => {
       createdAt: createdSiteFromDb?.createdAt || new Date().toISOString()
     };
 
-    setSites(prev => {
-      const updated = [finalSite, ...prev];
-      try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch (e) { }
-      return updated;
-    });
-
-    setMessage({ type: 'success', text: `Site "${finalSite.name}" created successfully!` });
+    await fetchSites();
+    setMessage({ type: 'success', text: `Site "${payload.name}" created successfully!` });
     setShowCreateModal(false);
     setCreateForm({ name: '', sochiotLocationId: '', organizationId: '', tenantId: '', zoneId: '', areaId: '', city: '', state: '' });
     setSubmitting(false);

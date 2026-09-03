@@ -119,163 +119,147 @@ const ManageOrganisation = () => {
       )}
 
       {/* TAB CONTENT TABLES */}
-      {org.loading ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="info" />
-          <p className="mt-2 text-muted">Loading organisation parameters...</p>
-        </div>
-      ) : (
-        <Card className="bg-dark-card border-0 shadow-sm overflow-hidden">
-          {(org.activeTab === 'company' || org.activeTab === 'tenant') && (
-            <OrganizationSection
-              activeTab={org.activeTab}
-              filteredCompanies={org.filteredCompanies}
-              formatDate={formatDate}
-              handleViewCompanyTenants={org.handleViewCompanyTenants}
-              handleOpenEditCompany={org.handleOpenEditCompany}
-              handleDeleteCompany={org.handleDeleteCompany}
-              filteredTenants={org.filteredTenants}
-              companies={org.companies}
-              handleOpenFeaturesModal={org.handleOpenFeaturesModal}
-              handleOpenSubModal={org.handleOpenSubModal}
-              handleOpenEditTenant={org.handleOpenEditTenant}
-              handleReactivateTenant={org.handleReactivateTenant}
-              handleDeleteTenant={org.handleDeleteTenant}
-            />
-          )}
+      <Card className="bg-dark-card border-0 shadow-sm overflow-hidden">
+        {(org.activeTab === 'company' || org.activeTab === 'tenant') && (
+          <OrganizationSection
+            activeTab={org.activeTab}
+            filteredCompanies={org.filteredCompanies}
+            formatDate={formatDate}
+            handleViewCompanyTenants={org.handleViewCompanyTenants}
+            handleOpenEditCompany={org.handleOpenEditCompany}
+            handleDeleteCompany={org.handleDeleteCompany}
+            filteredTenants={org.filteredTenants}
+            companies={org.companies}
+            handleOpenFeaturesModal={org.handleOpenFeaturesModal}
+            handleOpenSubModal={org.handleOpenSubModal}
+            handleOpenEditTenant={org.handleOpenEditTenant}
+            handleReactivateTenant={org.handleReactivateTenant}
+            handleDeleteTenant={org.handleDeleteTenant}
+          />
+        )}
 
-          {(org.activeTab === 'zone' || org.activeTab === 'area') && (
-            <LocationSection
-              activeTab={org.activeTab}
-              filteredZones={org.filteredZones}
-              tenants={org.tenants}
-              handleOpenEditZone={org.handleOpenEditZone}
-              handleReactivateZone={org.handleReactivateZone}
-              handleDeleteZone={org.handleDeleteZone}
-              filteredAreas={org.filteredAreas}
-              zones={org.zones}
-              handleOpenEditArea={org.handleOpenEditArea}
-              handleDeleteArea={org.handleDeleteArea}
-            />
-          )}
+        {(org.activeTab === 'zone' || org.activeTab === 'area') && (
+          <LocationSection
+            activeTab={org.activeTab}
+            filteredZones={org.filteredZones}
+            tenants={org.tenants}
+            handleOpenEditZone={org.handleOpenEditZone}
+            handleReactivateZone={org.handleReactivateZone}
+            handleDeleteZone={org.handleDeleteZone}
+            filteredAreas={org.filteredAreas}
+            zones={org.zones}
+            handleOpenEditArea={org.handleOpenEditArea}
+            handleDeleteArea={org.handleDeleteArea}
+          />
+        )}
 
-          {org.activeTab === 'building' && (
-            <BuildingSection
-              selectedBuildingSiteId={org.selectedBuildingSiteId}
-              setSelectedBuildingSiteId={org.setSelectedBuildingSiteId}
-              activeSites={org.activeSites}
-              filteredBuildings={org.filteredBuildings}
-              handleOpenCreateBuilding={org.handleOpenCreateBuilding}
-              sites={org.sites}
-              handleOpenEditBuilding={org.handleOpenEditBuilding}
-              handleDeleteBuilding={org.handleDeleteBuilding}
-            />
-          )}
+        {org.activeTab === 'building' && (
+          <BuildingSection
+            selectedBuildingSiteId={org.selectedBuildingSiteId}
+            setSelectedBuildingSiteId={org.setSelectedBuildingSiteId}
+            activeSites={org.activeSites}
+            filteredBuildings={org.filteredBuildings}
+            handleOpenCreateBuilding={org.handleOpenCreateBuilding}
+            sites={org.sites}
+            handleOpenEditBuilding={org.handleOpenEditBuilding}
+            handleDeleteBuilding={org.handleDeleteBuilding}
+          />
+        )}
 
-          {org.activeTab === 'asset' && (
-            <AssetSection
-              filteredAssets={org.filteredAssets}
-              handleOpenEditAsset={org.handleOpenEditAsset}
-              handleDeleteAsset={org.handleDeleteAsset}
-            />
-          )}
+        {org.activeTab === 'asset' && (
+          <AssetSection
+            filteredAssets={org.filteredAssets}
+            handleOpenEditAsset={org.handleOpenEditAsset}
+            handleDeleteAsset={org.handleDeleteAsset}
+          />
+        )}
 
-          {org.activeTab === 'device' && (
-            <DeviceSection
-              searchTerm={org.searchTerm}
-              setSearchTerm={org.setSearchTerm}
-              selectedBuildingFilter={org.selectedBuildingFilter}
-              setSelectedBuildingFilter={org.setSelectedBuildingFilter}
-              selectedAreaFilter={org.selectedAreaFilter}
-              setSelectedAreaFilter={org.setSelectedAreaFilter}
-              activeBuildings={org.activeBuildings}
-              activeAreas={org.activeAreas}
-              filteredDevices={org.filteredDevices}
-              handleOpenRecentEvents={org.handleOpenRecentEvents}
-              handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}
-              setRegisterStep={org.setRegisterStep}
-              setRegisterForm={org.setRegisterForm}
-              setShowRegisterDeviceModal={org.setShowRegisterDeviceModal}
-              handleOpenEditDevice={org.handleOpenEditDevice}
-              handleOpenLiveModal={org.handleOpenLiveModal}
-              handleOpenThresholdsModal={org.handleOpenThresholdsModal}
-              handleOpenSettingsModal={org.handleOpenSettingsModal}
-              handleOpenRulesModal={org.handleOpenRulesModal}
-              setSelectedDeviceForCommandsTab={org.setSelectedDeviceForCommandsTab}
-              setShowSendCommandModal={org.setShowSendCommandModal}
-              handleOpenAuditLog={org.handleOpenAuditLog}
-              setSelectedDeviceForAudit={org.setSelectedDeviceForAudit}
-              handleDeleteDevice={org.handleDeleteDevice}
-              fetchDevices={org.fetchDevices}
-              showToast={org.showToast}
-              getAuthHeaders={getAuthHeaders}
-              API_BASE_URL={API_BASE_URL}
-            />
-          )}
+        {org.activeTab === 'device' && (
+          <DeviceSection
+            searchTerm={org.searchTerm}
+            setSearchTerm={org.setSearchTerm}
+            selectedBuildingFilter={org.selectedBuildingFilter}
+            setSelectedBuildingFilter={org.setSelectedBuildingFilter}
+            selectedAreaFilter={org.selectedAreaFilter}
+            setSelectedAreaFilter={org.setSelectedAreaFilter}
+            activeBuildings={org.activeBuildings}
+            activeAreas={org.activeAreas}
+            filteredDevices={org.filteredDevices}
+            handleOpenRecentEvents={org.handleOpenRecentEvents}
+            handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}
+            setRegisterStep={org.setRegisterStep}
+            setRegisterForm={org.setRegisterForm}
+            setShowRegisterDeviceModal={org.setShowRegisterDeviceModal}
+            handleOpenEditDevice={org.handleOpenEditDevice}
+            handleOpenLiveModal={org.handleOpenLiveModal}
+            handleOpenSettingsModal={org.handleOpenSettingsModal}
+            handleOpenThresholdsModal={org.handleOpenThresholdsModal}
+            handleOpenRulesModal={org.handleOpenRulesModal}
+            handleOpenAuditLogModal={org.handleOpenAuditLogModal}
+            handleDeleteDevice={org.handleDeleteDevice}
+          />
+        )}
 
-          {org.activeTab === 'widgets' && (
-            <WidgetsSection
-              handleSyncWidgetsFromSochiot={org.handleSyncWidgetsFromSochiot}
-              handleReorderWidgets={org.handleReorderWidgets}
-              handleDeleteAllWidgets={org.handleDeleteAllWidgets}
-              selectedDeviceForWidgets={org.selectedDeviceForWidgets}
-              setSelectedDeviceForWidgets={org.setSelectedDeviceForWidgets}
-              handleFetchWidgets={org.handleFetchWidgets}
-              widgetFilterActiveOnly={org.widgetFilterActiveOnly}
-              setWidgetFilterActiveOnly={org.setWidgetFilterActiveOnly}
-              activeDevices={org.activeDevices}
-              widgetsList={org.widgetsList}
-              handleOpenEditWidgetModal={org.handleOpenEditWidgetModal}
-              handleDeleteWidget={org.handleDeleteWidget}
-            />
-          )}
+        {org.activeTab === 'widgets' && (
+          <WidgetsSection
+            searchTerm={org.searchTerm}
+            setSearchTerm={org.setSearchTerm}
+            selectedDeviceForWidgets={org.selectedDeviceForWidgets}
+            setSelectedDeviceForWidgets={org.setSelectedDeviceForWidgets}
+            activeDevices={org.activeDevices}
+            widgetFilterActiveOnly={org.widgetFilterActiveOnly}
+            setWidgetFilterActiveOnly={org.setWidgetFilterActiveOnly}
+            setShowCreateWidgetModal={org.setShowCreateWidgetModal}
+            filteredWidgets={org.filteredWidgets}
+            handleToggleWidget={org.handleToggleWidget}
+            handleOpenEditWidget={org.handleOpenEditWidget}
+            handleDeleteWidget={org.handleDeleteWidget}
+          />
+        )}
 
-          {org.activeTab === 'rules' && (
-            <RulesSection
-              handleSyncAllRulesFromSochiot={org.handleSyncAllRulesFromSochiot}
-              selectedDeviceForRulesTab={org.selectedDeviceForRulesTab}
-              setSelectedDeviceForRulesTab={org.setSelectedDeviceForRulesTab}
-              handleFetchRulesTab={org.handleFetchRulesTab}
-              activeDevices={org.activeDevices}
-              rulesList={org.rulesList}
-              handleUpdateSingleRuleField={org.handleUpdateSingleRuleField}
-              handleOpenRuleDetails={org.handleOpenRuleDetails}
-              handleOpenEditRuleModal={org.handleOpenEditRuleModal}
-              handleSyncSpecificRuleToSochiot={org.handleSyncSpecificRuleToSochiot}
-              handleSyncSpecificRuleByFields={org.handleSyncSpecificRuleByFields}
-              handleDeleteRuleItem={org.handleDeleteRuleItem}
-            />
-          )}
+        {org.activeTab === 'rules' && (
+          <RulesSection
+            searchTerm={org.searchTerm}
+            setSearchTerm={org.setSearchTerm}
+            selectedDeviceForRulesTab={org.selectedDeviceForRulesTab}
+            setSelectedDeviceForRulesTab={org.setSelectedDeviceForRulesTab}
+            activeDevices={org.activeDevices}
+            setShowRulesModal={org.setShowRulesModal}
+            filteredRules={org.filteredRules}
+            handleToggleRule={org.handleToggleRule}
+            handleInspectRule={org.handleInspectRule}
+            handleOpenEditRule={org.handleOpenEditRule}
+            handleDeleteRule={org.handleDeleteRule}
+          />
+        )}
 
-          {org.activeTab === 'commands' && (
-            <CommandsSection
-              setShowSendCommandModal={org.setShowSendCommandModal}
-              selectedDeviceForCommandsTab={org.selectedDeviceForCommandsTab}
-              setSelectedDeviceForCommandsTab={org.setSelectedDeviceForCommandsTab}
-              handleFetchCommandHistory={org.handleFetchCommandHistory}
-              activeDevices={org.activeDevices}
-              commandsList={org.commandsList}
-              handleOpenCommandDetails={org.handleOpenCommandDetails}
-              setSendCommandFormData={org.setSendCommandFormData}
-            />
-          )}
+        {org.activeTab === 'commands' && (
+          <CommandsSection
+            selectedDeviceForCommandsTab={org.selectedDeviceForCommandsTab}
+            setSelectedDeviceForCommandsTab={org.setSelectedDeviceForCommandsTab}
+            activeDevices={org.activeDevices}
+            setShowSendCommandModal={org.setShowSendCommandModal}
+            filteredCommands={org.filteredCommands}
+            formatDate={formatDate}
+            handleInspectCommand={org.handleInspectCommand}
+          />
+        )}
 
-          {(org.activeTab === 'telemetry' || org.activeTab === 'report' || org.activeTab === 'alarm') && (
-            <ReportSection
-              activeTab={org.activeTab}
-              setShowResyncModal={org.setShowResyncModal}
-              telemetryLogs={org.telemetryLogs}
-              formatDate={formatDate}
-              sites={org.sites}
-              assets={org.assets}
-              setShowReportModal={org.setShowReportModal}
-              reportsList={org.reportsList}
-              setShowAlarmModal={org.setShowAlarmModal}
-              alarmsList={org.alarmsList}
-            />
-          )}
-        </Card>
-      )}
+        {(org.activeTab === 'telemetry' || org.activeTab === 'report' || org.activeTab === 'alarm') && (
+          <ReportSection
+            activeTab={org.activeTab}
+            telemetryLogs={org.telemetryLogs}
+            formatDate={formatDate}
+            setShowResyncModal={org.setShowResyncModal}
+            activeDevices={org.activeDevices}
+            assets={org.assets}
+            setShowReportModal={org.setShowReportModal}
+            reportsList={org.reportsList}
+            setShowAlarmModal={org.setShowAlarmModal}
+            alarmsList={org.alarmsList}
+          />
+        )}
+      </Card>
 
       {org.activeTab === 'site' && <SiteSection />}
 
