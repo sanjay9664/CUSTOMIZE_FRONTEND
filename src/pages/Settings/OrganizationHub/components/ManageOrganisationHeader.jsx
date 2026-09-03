@@ -17,7 +17,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
   const safeAssets = Array.isArray(org.activeAssets) ? org.activeAssets : [];
   const safeBuildings = Array.isArray(org.activeBuildings) ? org.activeBuildings : [];
 
-  const isExtraTabActive = ['widgets', 'rules', 'commands', 'telemetry', 'report', 'alarm'].includes(org.activeTab);
+  const isExtraTabActive = ['widgets', 'rules', 'commands', 'telemetry', 'report', 'alarm', 'building'].includes(org.activeTab);
   const [showExtraTabs, setShowExtraTabs] = useState(() => {
     const saved = localStorage.getItem('bms_show_extra_tabs');
     if (saved !== null) return saved === 'true';
@@ -60,7 +60,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
 
             <div className="vr bg-secondary opacity-30 mx-1" style={{ height: '24px' }} />
 
-            {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device => Building */}
+            {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
             <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('company')}
@@ -142,21 +142,9 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                 <Cpu size={15} /> Device
               </Nav.Link>
             </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('building')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'building' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
-                style={{ fontSize: '0.83rem' }}
-              >
-                <Building2 size={15} /> Building
-              </Nav.Link>
-            </Nav.Item>
           </Nav>
 
-          {/* Right Side Toggle Controls & Extra Tabs */}
+          {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
           <div className="d-flex align-items-center gap-2 ms-auto">
             {showExtraTabs && (
               <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center">
@@ -178,6 +166,11 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                 <Nav.Item>
                   <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isReportGroup ? org.activeTab : 'telemetry')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isReportGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
                     <FileText size={15} /> Report
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('building')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isBuildingGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
+                    <Building2 size={15} /> Building
                   </Nav.Link>
                 </Nav.Item>
               </Nav>
