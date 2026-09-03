@@ -413,22 +413,12 @@ export const useManageOrganisation = () => {
   // Fetch Assets
   const fetchAssets = useCallback(async () => {
     try {
-      // Assets are scoped to a site by the OpenAPI contract. Aggregate those
-      // collections for this cross-site management view.
-      const sitesResponse = await fetch(`${API_BASE_URL}/sites`, { headers: getAuthHeaders() });
-      const siteList = sitesResponse.ok
-        ? normalizeList(await sitesResponse.json(), 'sites')
-        : [];
-      const assetResponses = await Promise.all(siteList.map(async (site) => {
-        const response = await fetch(`${API_BASE_URL}/sites/${site.id}/assets`, { headers: getAuthHeaders() });
-        if (!response.ok) return [];
-        return normalizeList(await response.json(), 'assets').map((asset) => ({
-          ...asset,
-          siteId: site.id,
-          siteName: site.name
-        }));
-      }));
-      let list = assetResponses.flat();
+      // The documented /assets endpoint aggregates only the caller's
+      // authorized sites on the server, keeping this tab to one HTTP request.
+      const response = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
+      if (!response.ok) throw new Error('Assets could not be loaded');
+      const listResponse = await response.json();
+      let list = normalizeList(listResponse, 'assets');
       const userAssets = JSON.parse(localStorage.getItem('tb_created_assets') || '[]');
       if (userAssets.length > 0) {
         const existingIds = new Set(list.map(a => String(a.id)));
@@ -471,7 +461,9 @@ export const useManageOrganisation = () => {
     }
   }, []);
 
-  // Fetch All Initial Data
+  // Manual full refresh only. Do not invoke this on mount: loading every
+  // hierarchy resource when the user opens one tab creates unnecessary network
+  // traffic and duplicate requests. The tab effect below performs lazy loads.
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     const safetyTimeout = setTimeout(() => {
@@ -496,10 +488,6 @@ export const useManageOrganisation = () => {
       setLoading(false);
     }
   }, [fetchCompanies, fetchTenants, fetchZones, fetchAreas, fetchSites, fetchBuildings, fetchAssets, fetchDevices]);
-
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
 
   // Tab switch handler
   const handleTabSelect = (key) => {

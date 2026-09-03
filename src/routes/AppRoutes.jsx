@@ -1,68 +1,50 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { getUserRole } from '../utils/cookieUtils';
 
-// Pages
-import Dashboard from '../pages/Dashboard';
-import WaterOverview from '../pages/WaterManagement/Overview';
-import DGSetOverview from '../pages/DGSet/Overview';
-import AlarmOverview from '../pages/AlarmSystem/Overview';
-import ActiveAlarms from '../pages/AlarmSystem/Active';
-import AlarmConfig from '../pages/AlarmSystem/AlarmConfig';
-import MessageTemplateSetting from '../pages/AlarmSystem/MessageTemplateSetting';
-import TransformerOverview from '../pages/Transformer/Overview';
-import SettingsIndex from '../pages/Settings/SettingsIndex';
-import ManageOrganisation from '../pages/Settings/ManageOrganisation';
-import UserSettings from '../pages/Settings/UserSettings';
-import AgTank from '../pages/WaterManagement/AgTank';
-import UgTank from '../pages/WaterManagement/UgTank';
-import MotorsOverview from '../pages/Motors/Overview';
-import TicketingSystem from '../pages/Ticketing/Index';
-import ConfigTemplates from '../pages/Configuration/Templates';
-import SuperAdminConfig from '../pages/SuperAdmin/SuperAdminConfig';
-import UserManagement from '../pages/Admin/UserManagement';
-import AuditLogViewer from '../pages/Admin/AuditLogViewer';
-import MaintenancePage from '../pages/Maintenance/Index';
-
-// Energy Metering Pages
-import EnergyOverview from '../pages/EnergyMetering/Overview';
-import EnergyMainMeter from '../pages/EnergyMetering/MainMeter';
-import EnergySubMeters from '../pages/EnergyMetering/SubMeters';
-import EnergyPDFReport from '../pages/EnergyMetering/PDFReport';
-import EnergyGraphs from '../pages/EnergyMetering/EnergyGraphs';
-
-// VRV
-import VRVOverview from '../pages/VRV/Overview';
-import VRVControlPanel from '../pages/VRV/ControlPanel';
-import VRVSchedule from '../pages/VRV/Schedule';
-import VRVHumanSensor from '../pages/VRV/HumanSensor';
-import VRVTempHumidity from '../pages/VRV/TempHumidity';
-
-// AQI Sensor
-import AQIOverview from '../pages/AQISensor/Overview';
-
-// LT Panel
-import LTRoom1 from '../pages/LTPanel/LTRoom1';
-import LTRoom2 from '../pages/LTPanel/LTRoom2';
-import LTRoom3 from '../pages/LTPanel/LTRoom3';
-import LTOverview from '../pages/LTPanel/Overview';
-import IncomingOutgoing from '../pages/LTPanel/IncomingOutgoing';
-import BreakerStatus from '../pages/LTPanel/BreakerStatus';
-
-// HVAC
-import Chiller from '../pages/HVAC/Chiller';
-import AHU from '../pages/HVAC/AHU';
-import CoolingTower from '../pages/HVAC/CoolingTower';
-
-// AC
-import ACOverview from '../pages/AC/Overview';
-import ACScheduler from '../pages/AC/ACScheduler';
-
-// Fire Pumps
-import FireOverview from '../pages/FirePumps/Overview';
-import PumpStatus from '../pages/FirePumps/PumpStatus';
-import HeaderPressure from '../pages/FirePumps/HeaderPressure';
-import JockeyMain from '../pages/FirePumps/JockeyMain';
+// Each screen is downloaded only after its route is opened.
+const Dashboard = lazy(() => import('../pages/Dashboard'));
+const WaterOverview = lazy(() => import('../pages/WaterManagement/Overview'));
+const AgTank = lazy(() => import('../pages/WaterManagement/AgTank'));
+const UgTank = lazy(() => import('../pages/WaterManagement/UgTank'));
+const MotorsOverview = lazy(() => import('../pages/Motors/Overview'));
+const DGSetOverview = lazy(() => import('../pages/DGSet/Overview'));
+const AlarmOverview = lazy(() => import('../pages/AlarmSystem/Overview'));
+const ActiveAlarms = lazy(() => import('../pages/AlarmSystem/Active'));
+const AlarmConfig = lazy(() => import('../pages/AlarmSystem/AlarmConfig'));
+const MessageTemplateSetting = lazy(() => import('../pages/AlarmSystem/MessageTemplateSetting'));
+const LTRoom1 = lazy(() => import('../pages/LTPanel/LTRoom1'));
+const LTRoom2 = lazy(() => import('../pages/LTPanel/LTRoom2'));
+const LTRoom3 = lazy(() => import('../pages/LTPanel/LTRoom3'));
+const LTOverview = lazy(() => import('../pages/LTPanel/Overview'));
+const IncomingOutgoing = lazy(() => import('../pages/LTPanel/IncomingOutgoing'));
+const BreakerStatus = lazy(() => import('../pages/LTPanel/BreakerStatus'));
+const TransformerOverview = lazy(() => import('../pages/Transformer/Overview'));
+const SettingsIndex = lazy(() => import('../pages/Settings/SettingsIndex'));
+const ManageOrganisation = lazy(() => import('../pages/Settings/ManageOrganisation'));
+const UserManagement = lazy(() => import('../pages/Admin/UserManagement'));
+const AuditLogViewer = lazy(() => import('../pages/Admin/AuditLogViewer'));
+const MaintenancePage = lazy(() => import('../pages/Maintenance/Index'));
+const TicketingSystem = lazy(() => import('../pages/Ticketing/Index'));
+const EnergyOverview = lazy(() => import('../pages/EnergyMetering/Overview'));
+const EnergyMainMeter = lazy(() => import('../pages/EnergyMetering/MainMeter'));
+const EnergySubMeters = lazy(() => import('../pages/EnergyMetering/SubMeters'));
+const EnergyPDFReport = lazy(() => import('../pages/EnergyMetering/PDFReport'));
+const EnergyGraphs = lazy(() => import('../pages/EnergyMetering/EnergyGraphs'));
+const VRVOverview = lazy(() => import('../pages/VRV/Overview'));
+const VRVControlPanel = lazy(() => import('../pages/VRV/ControlPanel'));
+const VRVSchedule = lazy(() => import('../pages/VRV/Schedule'));
+const VRVHumanSensor = lazy(() => import('../pages/VRV/HumanSensor'));
+const VRVTempHumidity = lazy(() => import('../pages/VRV/TempHumidity'));
+const AQIOverview = lazy(() => import('../pages/AQISensor/Overview'));
+const Chiller = lazy(() => import('../pages/HVAC/Chiller'));
+const AHU = lazy(() => import('../pages/HVAC/AHU'));
+const CoolingTower = lazy(() => import('../pages/HVAC/CoolingTower'));
+const ACOverview = lazy(() => import('../pages/AC/Overview'));
+const ACScheduler = lazy(() => import('../pages/AC/ACScheduler'));
+const FireOverview = lazy(() => import('../pages/FirePumps/Overview'));
+const PumpStatus = lazy(() => import('../pages/FirePumps/PumpStatus'));
+const HeaderPressure = lazy(() => import('../pages/FirePumps/HeaderPressure'));
+const JockeyMain = lazy(() => import('../pages/FirePumps/JockeyMain'));
 
 // Fallback for other routes until customized
 const PlaceholderPage = ({ title }) => (
@@ -122,7 +104,8 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
 
 const AppRoutes = () => {
   return (
-    <Routes>
+    <Suspense fallback={<div className="d-flex justify-content-center align-items-center py-5"><div className="spinner-border text-info" role="status" /></div>}>
+      <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<Dashboard />} />
 
@@ -258,7 +241,8 @@ const AppRoutes = () => {
 
       {/* Catch-all */}
       <Route path="*" element={<PlaceholderPage title="Module Under Calibration" />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 
