@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { getAuthToken } from '../../../../utils/cookieUtils';
+import { getApiUrl } from '../../../../utils/apiConfig';
 
-export const API_BASE_URL = '/api';
+export const API_BASE_URL = getApiUrl();
 
 export const getAuthHeaders = () => {
   const token = getAuthToken() || '';

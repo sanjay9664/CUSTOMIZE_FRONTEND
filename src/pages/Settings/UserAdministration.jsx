@@ -5,8 +5,9 @@ import {
   CheckCircle, XCircle, Globe, Shield, User, Building2, MapPin, Key, Layers, Mail,
   UserCheck, Building, AlertTriangle, Send, MailCheck, Copy, Check, Link2, Clock, ExternalLink, ShieldAlert
 } from 'lucide-react';
+import { getApiUrl } from '../../utils/apiConfig';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = getApiUrl();
 
 const UserAdministration = () => {
   const [users, setUsers] = useState([]);
