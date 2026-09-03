@@ -2,7 +2,8 @@
  * Automatic Token Refresh Service
  * Refreshes access tokens silently before expiration and handles concurrent request deduplication
  */
-import { getCookie, setAuthCookies } from '../utils/cookieUtils';
+import { getCookie, getAuthToken, setAuthSession, getUserRole, getUserData } from '../utils/cookieUtils';
+import { AUTH_ENDPOINTS } from '../utils/apiConfig';
 
 const REFRESH_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
 
@@ -11,20 +12,20 @@ let activeRefreshPromise = null;
 let lastRefreshTime = 0;
 const REFRESH_COOLDOWN_MS = 60 * 1000; // 1 minute cooldown
 
-export const performTokenRefresh = async () => {
+export const performTokenRefresh = async (force = false) => {
   if (activeRefreshPromise) {
     return activeRefreshPromise;
   }
 
   const now = Date.now();
-  if (now - lastRefreshTime < REFRESH_COOLDOWN_MS) {
-    return getCookie('access_token') || getCookie('token') || localStorage.getItem('token') || null;
+  if (!force && now - lastRefreshTime < REFRESH_COOLDOWN_MS) {
+    return getAuthToken();
   }
   lastRefreshTime = now;
 
   activeRefreshPromise = (async () => {
     const currentRefreshToken = getCookie('refresh_token') || localStorage.getItem('refresh_token');
-    const currentAccessToken = getCookie('access_token') || getCookie('token') || localStorage.getItem('token');
+    const currentAccessToken = getAuthToken();
 
     if (!currentRefreshToken && !currentAccessToken) {
       return null;
@@ -32,7 +33,7 @@ export const performTokenRefresh = async () => {
 
     try {
       console.log('[AuthRefresh] Performing silent token refresh...');
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetch(AUTH_ENDPOINTS.refresh, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,19 +50,10 @@ export const performTokenRefresh = async () => {
         const newAccessToken = payload?.accessToken || payload?.token;
         const newRefreshToken = payload?.refreshToken || currentRefreshToken;
 
-        if (newAccessToken) {
-          localStorage.setItem('token', newAccessToken);
-          localStorage.setItem('access_token', newAccessToken);
-        }
-        if (newRefreshToken) {
-          localStorage.setItem('refresh_token', newRefreshToken);
-        }
+        const userRole = getUserRole() || 'USER';
+        const userData = getUserData() || {};
 
-        const userRole = localStorage.getItem('userRole') || 'USER';
-        let userData = {};
-        try { userData = JSON.parse(localStorage.getItem('userData') || '{}'); } catch(e) {}
-
-        setAuthCookies({
+        setAuthSession({
           token: newAccessToken || currentAccessToken,
           refreshToken: newRefreshToken,
           userRole,

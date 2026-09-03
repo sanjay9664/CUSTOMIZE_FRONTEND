@@ -1,22 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getCookie } from '../../../../utils/cookieUtils';
+import { getCookie, getAuthToken } from '../../../../utils/cookieUtils';
 import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, FileText } from 'lucide-react';
 
 export const API_BASE_URL = '/api';
 
 export const getAuthHeaders = () => {
-  const token = getCookie('access_token') ||
-    getCookie('token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') ||
-    'mock_super_admin_jwt';
+  const token = getAuthToken() || '';
 
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
 

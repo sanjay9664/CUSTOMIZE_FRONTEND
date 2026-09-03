@@ -7,18 +7,16 @@ import {
   Globe, Server, Clock, TrendingUp, Edit3, Power, CheckCircle, XCircle
 } from 'lucide-react';
 
+import { getAuthToken } from '../../utils/cookieUtils';
+
 const API_BASE_URL = '/api';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') ||
-    'mock_super_admin_jwt';
+  const token = getAuthToken() || '';
 
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
 

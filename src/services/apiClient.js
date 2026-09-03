@@ -2,17 +2,12 @@
  * Unified API Client for BMS Platform
  * Handles authentication, cookies, JSON parsing, and response normalization
  */
-import { getCookie } from '../utils/cookieUtils';
-
-const API_BASE_URL = '/api';
+import { getAuthToken, clearAuthSession } from '../utils/cookieUtils';
+import { performTokenRefresh } from './authRefreshService';
+import { getApiUrl } from '../utils/apiConfig';
 
 export const getAuthHeaders = () => {
-  const token = getCookie('access_token') ||
-    getCookie('token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('sochiot_token') ||
-    localStorage.getItem('auth_token') || '';
+  const token = getAuthToken() || '';
 
   return {
     'Content-Type': 'application/json',
@@ -30,11 +25,50 @@ export const normalizeList = (raw, key) => {
   return [];
 };
 
+let refreshPromise = null;
+
+async function executeRequest(endpoint, options = {}, isRetry = false) {
+  const url = getApiUrl(endpoint);
+  const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
+
+  const res = await fetch(url, { ...options, headers });
+
+  // Reactive 401 Interceptor: Catch token expiration, perform single refresh, and retry queued requests
+  if (res.status === 401 && !isRetry) {
+    if (endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh')) {
+      return res;
+    }
+
+    if (!refreshPromise) {
+      refreshPromise = performTokenRefresh(true).finally(() => {
+        refreshPromise = null;
+      });
+    }
+
+    const newToken = await refreshPromise;
+    if (newToken) {
+      const retryHeaders = {
+        ...(options.headers || {}),
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${newToken}`
+      };
+      return fetch(url, { ...options, headers: retryHeaders });
+    } else {
+      clearAuthSession();
+      if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+  }
+
+  return res;
+}
+
 export const apiClient = {
   async get(endpoint, customHeaders = {}) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const res = await executeRequest(endpoint, {
       method: 'GET',
-      headers: { ...getAuthHeaders(), ...customHeaders }
+      headers: customHeaders
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
@@ -44,9 +78,9 @@ export const apiClient = {
   },
 
   async post(endpoint, data = {}, customHeaders = {}) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const res = await executeRequest(endpoint, {
       method: 'POST',
-      headers: { ...getAuthHeaders(), ...customHeaders },
+      headers: customHeaders,
       body: JSON.stringify(data)
     });
     if (!res.ok) {
@@ -57,9 +91,9 @@ export const apiClient = {
   },
 
   async patch(endpoint, data = {}, customHeaders = {}) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const res = await executeRequest(endpoint, {
       method: 'PATCH',
-      headers: { ...getAuthHeaders(), ...customHeaders },
+      headers: customHeaders,
       body: JSON.stringify(data)
     });
     if (!res.ok) {
@@ -70,9 +104,9 @@ export const apiClient = {
   },
 
   async delete(endpoint, customHeaders = {}) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const res = await executeRequest(endpoint, {
       method: 'DELETE',
-      headers: { ...getAuthHeaders(), ...customHeaders }
+      headers: customHeaders
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));

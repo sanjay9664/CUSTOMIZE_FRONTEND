@@ -1,3 +1,5 @@
+import { getAuthToken } from './utils/cookieUtils';
+
 function prepareRealFetchArgs(input, init) {
   let headersObj = {};
   if (init && init.headers) {
@@ -12,7 +14,7 @@ function prepareRealFetchArgs(input, init) {
 
   let auth = headersObj['Authorization'] || headersObj['authorization'];
   if (!auth || auth.includes('bms-dev-token-admin') || auth === 'Bearer ' || auth === 'Bearer null' || auth === 'Bearer undefined') {
-    const userTok = localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('sochiot_token') || '';
+    const userTok = getAuthToken() || '';
     if (userTok) {
       headersObj['Authorization'] = `Bearer ${userTok}`;
     }
@@ -38,38 +40,7 @@ function getEntityKey(url) {
 }
 
 function handleFallbackResponse(urlStr) {
-  // 1. Auth Login Fallback
-  if (urlStr.includes('/auth/login') || urlStr.includes('/sochiot-auth/login')) {
-    const userTok = 'mock_super_admin_jwt_' + Date.now();
-    localStorage.getItem('token') || localStorage.setItem('token', userTok);
-    localStorage.getItem('access_token') || localStorage.setItem('access_token', userTok);
-    localStorage.getItem('userRole') || localStorage.setItem('userRole', 'SUPERADMIN');
-    return new Response(JSON.stringify({
-      success: true,
-      data: {
-        token: userTok,
-        accessToken: userTok,
-        refreshToken: 'mock_refresh_token_' + Date.now(),
-        user: { id: 1, email: 'admin@sochiot.com', name: 'Super Admin', role: 'SUPERADMIN' },
-        expiresIn: 86400
-      },
-      message: 'Login successful'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }
 
-  // 2. Auth Refresh Fallback
-  if (urlStr.includes('/auth/refresh')) {
-    const userTok = localStorage.getItem('token') || ('mock_super_admin_jwt_' + Date.now());
-    return new Response(JSON.stringify({
-      success: true,
-      data: { accessToken: userTok, token: userTok, refreshToken: 'ref_' + Date.now(), expiresIn: 900 }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  // 3. User Me / Auth Me Fallback
-  if (urlStr.includes('/user/me') || urlStr.includes('/auth/me')) {
-    return new Response(JSON.stringify({ id: 1, name: 'System Administrator', email: 'admin@sochiot.com', role: 'SUPER_ADMIN' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }
 
   // 4. Super Admin Config Fallback
   if (urlStr.includes('/super-admin/config') || urlStr.includes('/super-admin/admin-config')) {
@@ -113,11 +84,12 @@ function handleFallbackResponse(urlStr) {
 
 const originalFetch = window.fetch;
 
-// Smart Middleware: Sends request to backend API. On 500/error, safely fallbacks to localStorage cache and 200 OK auth
+// Smart Middleware: Sends request to backend API. On 500/error, safely fallbacks to localStorage cache for mock data, but preserves real auth responses
 window.fetch = async function (input, init) {
   const [realUrl, realInit] = prepareRealFetchArgs(input, init);
   const urlStr = typeof realUrl === 'string' ? realUrl : (realUrl && realUrl.url ? realUrl.url : '');
   const entityKey = getEntityKey(urlStr);
+  const isAuthEndpoint = urlStr.includes('/auth/') || urlStr.includes('/login') || urlStr.includes('/sochiot-auth/') || urlStr.includes('/user/me');
 
   try {
     const response = await originalFetch.call(this, realUrl, realInit);
@@ -137,9 +109,18 @@ window.fetch = async function (input, init) {
       return response;
     }
 
-    // On 500 or any non-OK status from backend, handle fallback gracefully
+    // Never mask auth errors - return real error response directly to caller
+    if (isAuthEndpoint) {
+      return response;
+    }
+
+    // On 500 or non-OK status from backend, handle fallback gracefully for mock telemetry/entities
     return handleFallbackResponse(urlStr);
   } catch (err) {
+    // If auth network call fails, let caller handle error
+    if (isAuthEndpoint) {
+      throw err;
+    }
     // On network/connection error, handle fallback gracefully
     return handleFallbackResponse(urlStr);
   }
