@@ -63,14 +63,7 @@ export const bmsService = {
   // Assets Service
   getAssets: async (siteId, params = {}) => {
     if (siteId) return apiClient.get(`/sites/${siteId}/assets`, params);
-    const sites = normalizeList(await apiClient.get('/sites'), 'sites');
-    const results = await Promise.all(
-      sites.map(async (site) => {
-        const response = await apiClient.get(`/sites/${site.id}/assets`, params);
-        return normalizeList(response, 'assets').map((asset) => ({ ...asset, siteId: site.id, siteName: site.name }));
-      })
-    );
-    return results.flat();
+    return apiClient.get('/assets', params);
   },
   createAsset: (data) => apiClient.post('/assets', data),
   updateAsset: (id, data) => apiClient.patch(`/assets/${id}`, data),
