@@ -180,10 +180,9 @@ const SettingsIndex = () => {
 
     setEntityCounts(counts);
     if (failedRequests.length) {
-      const firstError = failedRequests[0].error;
       setCountsError(
         `Some counts could not be loaded (${failedRequests.map(({ key }) => key).join(', ')}). ` +
-        (firstError?.message || 'Please check your API access and try again.')
+        'Please check your API access and try again.'
       );
     }
     setCountsLoading(false);
