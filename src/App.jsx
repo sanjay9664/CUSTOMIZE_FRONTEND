@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import { DeviceStatusProvider } from './services/DeviceStatusContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SiteProvider } from './context/SiteContext';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -51,9 +52,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <DeviceStatusProvider>
-          <AppContent />
-        </DeviceStatusProvider>
+        <SiteProvider>
+          <DeviceStatusProvider>
+            <AppContent />
+          </DeviceStatusProvider>
+        </SiteProvider>
       </AuthProvider>
     </ThemeProvider>
   );

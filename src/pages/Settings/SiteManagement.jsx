@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { getAuthToken } from '../../utils/cookieUtils';
+import { useSiteStore } from '../../context/SiteContext';
 
 const API_BASE_URL = '/api';
 

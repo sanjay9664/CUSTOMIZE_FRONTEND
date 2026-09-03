@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const SiteContext = createContext();
 
-const API_BASE_URL = '/api';
+import { getAuthToken } from '../utils/cookieUtils';
+import { getApiUrl } from '../utils/apiConfig';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('sochiot_token') || '';
+  const token = getAuthToken() || '';
   return {
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -36,7 +37,7 @@ export const SiteProvider = ({ children }) => {
   const fetchSites = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/sites`, { headers: getAuthHeaders() });
+      const res = await fetch(getApiUrl('/sites'), { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         const list = normalizeList(json, 'sites');
