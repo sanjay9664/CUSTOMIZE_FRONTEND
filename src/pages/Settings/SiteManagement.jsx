@@ -10,6 +10,7 @@ import {
 import { getAuthToken } from '../../utils/cookieUtils';
 import { getApiUrl } from '../../utils/apiConfig';
 import { useSiteStore } from '../../context/SiteContext';
+import RegisterSiteModal from './modals/RegisterSiteModal';
 
 const API_BASE_URL = getApiUrl();
 
@@ -57,6 +58,7 @@ const SiteManagement = () => {
   const [siteStats, setSiteStats] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
+  const [createModalError, setCreateModalError] = useState(null);
 
   // Form State
   const [createForm, setCreateForm] = useState({
@@ -67,7 +69,14 @@ const SiteManagement = () => {
     zoneId: '',
     areaId: '',
     city: '',
-    state: ''
+    state: '',
+    address: '',
+    contactEmails: [],
+    showSochiotLogo: true,
+    logoUrl: '',
+    selectedTemplates: [],
+    selectedFeatures: [],
+    customFields: []
   });
 
   const [editForm, setEditForm] = useState({
@@ -158,11 +167,12 @@ const SiteManagement = () => {
   // Create site handler
   const handleCreateSite = async (e) => {
     e.preventDefault();
-    if (!createForm.name.trim()) {
-      setMessage({ type: 'error', text: 'Site name is required.' });
+    if (!createForm.name?.trim()) {
+      setCreateModalError('Site / Company name is required.');
       return;
     }
     setSubmitting(true);
+    setCreateModalError(null);
 
     const locationId = parseInt(createForm.sochiotLocationId) || (Math.floor(Date.now() / 1000) % 89999 + 1000);
     const orgId = parseInt(createForm.organizationId) || 1;
@@ -171,14 +181,19 @@ const SiteManagement = () => {
       name: createForm.name.trim(),
       sochiotLocationId: locationId,
       organizationId: orgId,
-      city: createForm.city.trim() || 'Noida',
-      state: createForm.state.trim() || 'Uttar Pradesh',
+      city: createForm.city?.trim() || 'Noida',
+      state: createForm.state?.trim() || 'Uttar Pradesh',
+      address: createForm.address?.trim() || '',
+      contactEmails: createForm.contactEmails || [],
+      showSochiotLogo: createForm.showSochiotLogo !== false,
+      logoUrl: createForm.logoUrl || '',
+      selectedTemplates: createForm.selectedTemplates || [],
+      selectedFeatures: createForm.selectedFeatures || [],
+      customFields: createForm.customFields || [],
       ...(createForm.tenantId?.trim() ? { tenantId: createForm.tenantId.trim() } : {}),
       ...(createForm.zoneId?.trim() ? { zoneId: createForm.zoneId.trim() } : {}),
       ...(createForm.areaId?.trim() ? { areaId: createForm.areaId.trim() } : {})
     };
-
-    let createdSiteFromDb = null;
 
     try {
       const response = await fetch(`${API_BASE_URL}/sites`, {
@@ -186,36 +201,43 @@ const SiteManagement = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
+
       if (response.ok) {
         const result = await response.json();
-        createdSiteFromDb = result?.data || result?.site || result;
+        await fetchSites();
+        setMessage({ type: 'success', text: `Site "${payload.name}" created successfully!` });
+        setShowCreateModal(false);
+        setCreateModalError(null);
+        setCreateForm({
+          name: '',
+          sochiotLocationId: '',
+          organizationId: '',
+          tenantId: '',
+          zoneId: '',
+          areaId: '',
+          city: '',
+          state: '',
+          address: '',
+          contactEmails: [],
+          showSochiotLogo: true,
+          logoUrl: '',
+          selectedTemplates: [],
+          selectedFeatures: [],
+          customFields: []
+        });
       } else {
         const errData = await response.json().catch(() => ({}));
-        console.warn('Backend create site error:', errData);
+        const errMsg = errData?.error?.message || errData?.message || `Server returned error (${response.status}): Failed to create site.`;
+        setCreateModalError(errMsg);
+        setMessage({ type: 'error', text: errMsg });
       }
     } catch (err) {
-      console.warn('Create site API notice:', err);
+      const errMsg = err?.message || 'Network error connecting to backend service.';
+      setCreateModalError(errMsg);
+      setMessage({ type: 'error', text: errMsg });
+    } finally {
+      setSubmitting(false);
     }
-
-    const finalSite = {
-      id: createdSiteFromDb?.id || `site_${Date.now().toString(36)}`,
-      name: payload.name,
-      sochiotLocationId: payload.sochiotLocationId,
-      organizationId: payload.organizationId,
-      tenantId: payload.tenantId || '',
-      zoneId: payload.zoneId || '',
-      areaId: payload.areaId || '',
-      city: payload.city,
-      state: payload.state,
-      status: 'ACTIVE',
-      createdAt: createdSiteFromDb?.createdAt || new Date().toISOString()
-    };
-
-    await fetchSites();
-    setMessage({ type: 'success', text: `Site "${payload.name}" created successfully!` });
-    setShowCreateModal(false);
-    setCreateForm({ name: '', sochiotLocationId: '', organizationId: '', tenantId: '', zoneId: '', areaId: '', city: '', state: '' });
-    setSubmitting(false);
   };
 
   // Open Edit Modal
@@ -847,144 +869,22 @@ const SiteManagement = () => {
         </div>
       )}
 
-      {/* Create Site Modal */}
-      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered size="lg" className="site-modal" backdrop="static">
-        <Modal.Header closeButton closeVariant="white" style={{ border: 'none', padding: '24px 28px 8px' }}>
-          <Modal.Title className="d-flex align-items-center gap-2 fw-bold" style={{ fontSize: '1.15rem' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Plus size={18} color="#fff" />
-            </div>
-            Create New Site
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ padding: '20px 28px 28px' }}>
-          <Form onSubmit={handleCreateSite}>
-            <Row className="g-3">
-              {/* 1. Organization / Tenant Select */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Organization / Tenant *</Form.Label>
-                  <Form.Select
-                    value={createForm.tenantId}
-                    onChange={e => {
-                      const tId = e.target.value;
-                      const selTenant = tenants.find(t => t.id === tId);
-                      setCreateForm(p => ({
-                        ...p,
-                        tenantId: tId,
-                        organizationId: selTenant?.sochiotOrgId || 1,
-                        zoneId: '',
-                        areaId: ''
-                      }));
-                    }}
-                    required
-                  >
-                    <option value="">Select Organization / Tenant...</option>
-                    {tenants.map(t => (
-                      <option key={t.id} value={t.id}>{t.name} ({t.email || t.subscription || 'Tenant'})</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              {/* 2. Geographic Zone Select */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Geographic Zone</Form.Label>
-                  <Form.Select
-                    value={createForm.zoneId}
-                    onChange={e => {
-                      const zId = e.target.value;
-                      setCreateForm(p => ({ ...p, zoneId: zId, areaId: '' }));
-                    }}
-                  >
-                    <option value="">Select Geographic Zone...</option>
-                    {zones
-                      .filter(z => !createForm.tenantId || z.tenantId === createForm.tenantId)
-                      .map(z => (
-                        <option key={z.id} value={z.id}>{z.name} ({z.region || 'Zone'})</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              {/* 3. Tenant Area Select */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Tenant Area *</Form.Label>
-                  <Form.Select
-                    value={createForm.areaId}
-                    onChange={e => setCreateForm(p => ({ ...p, areaId: e.target.value }))}
-                  >
-                    <option value="">Select Tenant Area...</option>
-                    {areas
-                      .filter(a => {
-                        if (createForm.zoneId && a.zoneId !== createForm.zoneId) return false;
-                        if (createForm.tenantId && a.tenantId !== createForm.tenantId) return false;
-                        return true;
-                      })
-                      .map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Site Name *</Form.Label>
-                  <Form.Control
-                    placeholder="e.g. Noida Testing Site"
-                    value={createForm.name}
-                    onChange={e => setCreateForm(p => ({ ...p, name: e.target.value }))}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">City</Form.Label>
-                  <Form.Control
-                    placeholder="e.g. Noida"
-                    value={createForm.city}
-                    onChange={e => setCreateForm(p => ({ ...p, city: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">State</Form.Label>
-                  <Form.Control
-                    placeholder="e.g. Uttar Pradesh"
-                    value={createForm.state}
-                    onChange={e => setCreateForm(p => ({ ...p, state: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Sochiot Location ID</Form.Label>
-                  <Form.Control
-                    type="number"
-                    placeholder="e.g. 7"
-                    value={createForm.sochiotLocationId}
-                    onChange={e => setCreateForm(p => ({ ...p, sochiotLocationId: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <div className="d-flex justify-content-end gap-3 mt-4">
-              <Button variant="outline-secondary" onClick={() => setShowCreateModal(false)} style={{ borderRadius: 12, padding: '10px 24px' }}>
-                Cancel
-              </Button>
-              <button type="submit" className="create-site-btn text-white d-flex align-items-center gap-2" disabled={submitting}>
-                {submitting ? <Spinner size="sm" /> : <Plus size={16} />}
-                {submitting ? 'Creating...' : 'Create Site'}
-              </button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
+      {/* Create Site Drawer (Architected like RegisterDeviceModal) */}
+      <RegisterSiteModal
+        show={showCreateModal}
+        onHide={() => {
+          setShowCreateModal(false);
+          setCreateModalError(null);
+        }}
+        createForm={createForm}
+        setCreateForm={setCreateForm}
+        handleCreateSite={handleCreateSite}
+        tenants={tenants}
+        zones={zones}
+        areas={areas}
+        submitting={submitting}
+        error={createModalError}
+      />
 
       {/* Edit Site Modal (PATCH /api/sites/:siteId) */}
       <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered size="lg" className="site-modal" backdrop="static">
