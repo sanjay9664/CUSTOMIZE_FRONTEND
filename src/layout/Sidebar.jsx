@@ -41,7 +41,11 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
 
   const [modulesConfig, setModulesConfig] = useState(() => {
     const s = localStorage.getItem('scada_modules_config');
-    return s ? JSON.parse(s) : null;
+    try {
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
   });
   const [submodulesConfig, setSubmodulesConfig] = useState(() => {
     const s = localStorage.getItem('scada_submodules_config');
@@ -91,57 +95,27 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
   };
 
-  // Config fetching
+  // Sidebar uses cached configuration. Do not request an unsupported config
+  // endpoint every time the layout mounts; the Settings screen owns config edits.
   useEffect(() => {
-    const fetchConfig = async () => {
-      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-      if (!isAuth) return;
-      const defaults = {
-        "Dashboard": true, "Water Management": true, "Motors": true,
-        "DG Set": true, "Setting Templates": true, "Alarm System": true,
-        "LT Panel": true, "Transformer": true, "Fire": true,
-        "Ticketing": true, "Maintenance": true, "Service History": true,
-        "Daily DPR": true, "Energy Metering": true, "VRV": true,
-        "AQI Sensor": true, "HVAC": true, "AC": true
-      };
-      try {
-        const ep = isSuperAdmin ? '/api/super-admin/config' : '/api/super-admin/admin-config';
-        const res = await fetch(ep);
-        if (res.ok) {
-          const cfg = await res.json();
-          const map = {
-            showDashboard:'Dashboard', showWaterManagement:'Water Management',
-            showMotors:'Motors', showDGSet:'DG Set', showSettingTemplates:'Setting Templates',
-            showAlarms:'Alarm System', showLTPanel:'LT Panel', showTransformers:'Transformer',
-            showFirePumps:'Fire', showTicketing:'Ticketing', showMaintenance:'Maintenance',
-            showServiceHistory:'Service History', showDailyDPR:'Daily DPR',
-            showEnergyMetering:'Energy Metering', showVRV:'VRV', showAQISensor:'AQI Sensor',
-            showHVAC:'HVAC', showAC:'AC'
-          };
-          const sm = {};
-          Object.entries(map).forEach(([k,l]) => { sm[l] = cfg[k]; });
-          setModulesConfig(sm);
-          setSubmodulesConfig(cfg.submoduleVisibility || {});
-          localStorage.setItem('scada_modules_config', JSON.stringify(sm));
-          localStorage.setItem('scada_submodules_config', JSON.stringify(cfg.submoduleVisibility || {}));
-          return;
-        }
-      } catch(e) {}
-      if (!localStorage.getItem('scada_modules_config')) {
-        setModulesConfig(defaults);
-        localStorage.setItem('scada_modules_config', JSON.stringify(defaults));
-      }
-    };
-    fetchConfig();
+    if (!modulesConfig) {
+      const defaults = { "Dashboard": true, "Water Management": true, "Motors": true, "DG Set": true, "Setting Templates": true, "Alarm System": true, "LT Panel": true, "Transformer": true, "Fire": true, "Ticketing": true, "Maintenance": true, "Service History": true, "Daily DPR": true, "Energy Metering": true, "VRV": true, "AQI Sensor": true, "HVAC": true, "AC": true };
+      setModulesConfig(defaults);
+      localStorage.setItem('scada_modules_config', JSON.stringify(defaults));
+    }
     const upd = () => {
       const a = localStorage.getItem('scada_modules_config');
       const b = localStorage.getItem('scada_submodules_config');
-      if (a) setModulesConfig(JSON.parse(a));
-      if (b) setSubmodulesConfig(JSON.parse(b));
+      try {
+        if (a) setModulesConfig(JSON.parse(a));
+        if (b) setSubmodulesConfig(JSON.parse(b));
+      } catch {
+        // Keep the last valid cached settings instead of breaking the sidebar.
+      }
     };
     window.addEventListener('storage-update', upd);
     return () => window.removeEventListener('storage-update', upd);
-  }, []);
+  }, [modulesConfig]);
 
   const handleExitImpersonation = () => {
     const u = localStorage.getItem('impersonator_backup_user');

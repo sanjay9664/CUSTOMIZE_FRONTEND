@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { io } from 'socket.io-client';
 
 const MainLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(true);
@@ -51,70 +50,7 @@ const MainLayout = ({ children }) => {
 
       window.location.href = '/dashboard';
     }
-  };  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const tenantId = userData?.tenantId;
-        const url = tenantId ? `/api/templates?tenantId=${tenantId}` : '/api/templates';
-
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          const mappedData = data.map(t => ({
-            id: t.id,
-            name: t.name,
-            category: t.category || 'Water Management',
-            module: t.settings[0]?.eventKey || 'AG Tank',
-            mapping: (t.defaultValues || t.settings[0]?.meta || {}),
-            timestamp: new Date(t.createdAt).toLocaleString()
-          }));
-          
-          const cleanCorruptedMapping = (obj) => {
-            if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
-            const cleaned = {};
-            Object.keys(obj).forEach(key => {
-              let newKey = key;
-              if (key.includes('Water Level') && key !== 'agLevelConfig' && key !== 'ugTankLevelConfig' && key !== 'Water Level' && key !== 'agLevel' && key !== 'waterLevel') {
-                newKey = key.replace('Water Level', '').trim();
-              }
-              let value = obj[key];
-              if (value && typeof value === 'object' && !Array.isArray(value)) value = cleanCorruptedMapping(value);
-              cleaned[newKey] = value;
-            });
-            return cleaned;
-          };
-
-          const finalData = mappedData.map(t => ({
-            ...t,
-            mapping: cleanCorruptedMapping(t.mapping)
-          }));
-
-          localStorage.setItem('scada_templates', JSON.stringify(finalData));
-          window.dispatchEvent(new Event('storage'));
-        }
-      } catch (error) {
-        console.warn('Backend offline, skipping remote template sync:', error);
-      }
-    };
-
-    fetchTemplates();
-
-    let socket;
-    try {
-      const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
-      if (backendUrl) {
-        socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'], autoConnect: false });
-        socket.on('templates_updated', (payload) => {
-          fetchTemplates();
-        });
-      }
-    } catch (e) {}
-
-    return () => {
-      if (socket) socket.disconnect();
-    };
-  }, []);
+  };
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);

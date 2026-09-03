@@ -1,13 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { getSochiotGatewayStatus, getSochiotDeviceStatus, getSochiotDeviceDetails } from './authService';
+import { setDeviceStatus, setGatewayStatus } from '../store/deviceStatusSlice';
 
-const DeviceStatusContext = createContext();
+const isOnlineResponse = (res) => Boolean(res && (res.status === 'ONLINE' || res.status === 'online' || res.mode?.name === 'ONLINE' || res.we?.mode?.name === 'ONLINE' || res.online === true || res.active === true));
 
-export const DeviceStatusProvider = ({ children }) => {
-  const [deviceStatuses, setDeviceStatuses] = useState({});
-  const [gatewayStatuses, setGatewayStatuses] = useState({});
-  const lastSeenOnlineRef = useRef({});
-  const lastSeenGatewayOnlineRef = useRef({});
+export const useDeviceStatus = () => {
+  const dispatch = useDispatch();
+  const { deviceStatuses, gatewayStatuses } = useSelector((state) => state.deviceStatus);
 
   const checkDeviceStatus = useCallback(async (deviceId) => {
     if (!deviceId) return false;
@@ -28,11 +28,7 @@ export const DeviceStatusProvider = ({ children }) => {
             res.active === true
           );
           if (isOnline) {
-            lastSeenOnlineRef.current[deviceId] = Date.now();
-            setDeviceStatuses(prev => ({
-              ...prev,
-              [deviceId]: true
-            }));
+            dispatch(setDeviceStatus({ id: deviceId, online: true }));
             return true;
           }
         } catch (statusErr) {
@@ -54,28 +50,14 @@ export const DeviceStatusProvider = ({ children }) => {
         res.online === true ||
         res.active === true
       );
-      if (isOnline) {
-        lastSeenOnlineRef.current[deviceId] = Date.now();
-      }
-      
-      // Latch/Damp status: keep it online if it was seen online in the last 90 seconds
-      const finalStatus = isOnline || (lastSeenOnlineRef.current[deviceId] && (Date.now() - lastSeenOnlineRef.current[deviceId] < 90000));
-      
-      setDeviceStatuses(prev => ({
-        ...prev,
-        [deviceId]: !!finalStatus
-      }));
-      return !!finalStatus;
+      dispatch(setDeviceStatus({ id: deviceId, online: isOnline }));
+      return isOnline;
     } catch (e) {
       console.error(`Error checking device status for ${deviceId}:`, e);
-      const finalStatus = lastSeenOnlineRef.current[deviceId] && (Date.now() - lastSeenOnlineRef.current[deviceId] < 90000);
-      setDeviceStatuses(prev => ({
-        ...prev,
-        [deviceId]: !!finalStatus
-      }));
-      return !!finalStatus;
+      dispatch(setDeviceStatus({ id: deviceId, online: false }));
+      return false;
     }
-  }, []);
+  }, [dispatch]);
 
   const checkGatewayStatus = useCallback(async (clusterId) => {
     if (!clusterId) return false;
@@ -83,10 +65,7 @@ export const DeviceStatusProvider = ({ children }) => {
     // If gateway/cluster ID is numeric, treat it as online (true) as a legacy fallback
     const isNumeric = /^\d+$/.test(String(clusterId));
     if (isNumeric) {
-      setGatewayStatuses(prev => ({
-        ...prev,
-        [clusterId]: true
-      }));
+      dispatch(setGatewayStatus({ id: clusterId, online: true }));
       return true;
     }
 
@@ -100,28 +79,14 @@ export const DeviceStatusProvider = ({ children }) => {
         res.online === true ||
         res.active === true
       );
-      if (isOnline) {
-        lastSeenGatewayOnlineRef.current[clusterId] = Date.now();
-      }
-      
-      // Latch/Damp status: keep it online if it was seen online in the last 90 seconds
-      const finalStatus = isOnline || (lastSeenGatewayOnlineRef.current[clusterId] && (Date.now() - lastSeenGatewayOnlineRef.current[clusterId] < 90000));
-      
-      setGatewayStatuses(prev => ({
-        ...prev,
-        [clusterId]: !!finalStatus
-      }));
-      return !!finalStatus;
+      dispatch(setGatewayStatus({ id: clusterId, online: isOnline }));
+      return isOnline;
     } catch (e) {
       console.error(`Error checking gateway status for ${clusterId}:`, e);
-      const finalStatus = lastSeenGatewayOnlineRef.current[clusterId] && (Date.now() - lastSeenGatewayOnlineRef.current[clusterId] < 90000);
-      setGatewayStatuses(prev => ({
-        ...prev,
-        [clusterId]: !!finalStatus
-      }));
-      return !!finalStatus;
+      dispatch(setGatewayStatus({ id: clusterId, online: false }));
+      return false;
     }
-  }, []);
+  }, [dispatch]);
 
   // Method to poll statuses for all devices/gateways found in savedTemplates
   const pollAllStatuses = useCallback(async () => {
@@ -159,13 +124,6 @@ export const DeviceStatusProvider = ({ children }) => {
     }
   }, [checkDeviceStatus, checkGatewayStatus]);
 
-  // Set up periodic polling
-  useEffect(() => {
-    pollAllStatuses();
-    const interval = setInterval(pollAllStatuses, 20000); // Poll every 20 seconds
-    return () => clearInterval(interval);
-  }, [pollAllStatuses]);
-
   // Helper function to resolve overall status
   const getOverallStatus = useCallback((deviceId, gatewayUuid) => {
     const isDevOnline = deviceId ? (deviceStatuses[deviceId] ?? true) : true;
@@ -173,24 +131,11 @@ export const DeviceStatusProvider = ({ children }) => {
     return isDevOnline && isGwyOnline;
   }, [deviceStatuses, gatewayStatuses]);
 
-  return (
-    <DeviceStatusContext.Provider value={{
-      deviceStatuses,
-      gatewayStatuses,
-      checkDeviceStatus,
-      checkGatewayStatus,
-      getOverallStatus,
-      refreshStatuses: pollAllStatuses
-    }}>
-      {children}
-    </DeviceStatusContext.Provider>
-  );
+  return { deviceStatuses, gatewayStatuses, checkDeviceStatus, checkGatewayStatus, getOverallStatus, refreshStatuses: pollAllStatuses };
 };
 
-export const useDeviceStatus = () => {
-  const context = useContext(DeviceStatusContext);
-  if (!context) {
-    throw new Error('useDeviceStatus must be used within a DeviceStatusProvider');
-  }
-  return context;
+export const DeviceStatusProvider = ({ children }) => {
+  const { refreshStatuses } = useDeviceStatus();
+  useEffect(() => { refreshStatuses(); const interval = setInterval(refreshStatuses, 20000); return () => clearInterval(interval); }, [refreshStatuses]);
+  return children;
 };
