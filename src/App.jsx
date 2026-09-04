@@ -3,11 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-
-// Keep the login bundle small. The authenticated application is downloaded
-// only after a valid session is available.
-const MainLayout = lazy(() => import('./layout/MainLayout'));
-const AppRoutes = lazy(() => import('./routes/AppRoutes'));
+import { SiteProvider } from './context/SiteContext';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -55,7 +51,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <SiteProvider>
+          <DeviceStatusProvider>
+            <AppContent />
+          </DeviceStatusProvider>
+        </SiteProvider>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -102,20 +102,23 @@ const DevicesTab = ({
             onClick={() => {
               setRegisterStep(1);
               setRegisterForm({
-                siteId: 7,
+                siteId: '',
                 name: '',
                 sochiotDeviceIds: '',
-                category: 'ENERGY_METER',
+                category: '',
                 areaId: '',
                 buildingId: '',
                 floorNo: '',
                 roomNo: '',
                 energyGroupId: '',
                 description: '',
-                serialNumber: `SN-${Math.floor(100000 + Math.random() * 900000)}`,
-                profileId: 'MFM-1 Profile',
-                templateName: 'EnergyMeter_Template_V1'
+                serialNumber: '',
+                profileId: '',
+                templateName: ''
               });
+              if (typeof setDynamicTemplateFields === 'function') {
+                setDynamicTemplateFields([]);
+              }
               setShowRegisterDeviceModal(true);
             }}
             className="fw-bold fs-12 text-white px-3 border-0"
