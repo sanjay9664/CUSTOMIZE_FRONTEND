@@ -30,8 +30,8 @@ const RegisterSiteModal = ({
       options: [
         {
           key: 'tenantId',
-          label: 'Organization / Tenant',
-          placeholder: 'Select Organization / Tenant...',
+          label: 'Organization',
+          placeholder: 'Select Organization...',
           required: true,
           colSpan: 4,
           options: tenants.map(t => ({
@@ -47,8 +47,8 @@ const RegisterSiteModal = ({
         },
         {
           key: 'zoneId',
-          label: 'Geographic Zone',
-          placeholder: 'Select Geographic Zone...',
+          label: 'Zone',
+          placeholder: 'Select Zone...',
           colSpan: 4,
           options: zones
             .filter(z => !createForm.tenantId || String(z.tenantId) === String(createForm.tenantId))
@@ -59,8 +59,8 @@ const RegisterSiteModal = ({
         },
         {
           key: 'areaId',
-          label: 'Tenant Area',
-          placeholder: 'Select Tenant Area...',
+          label: 'Area',
+          placeholder: 'Select Area...',
           colSpan: 4,
           options: areas
             .filter(a => !createForm.zoneId || String(a.zoneId) === String(createForm.zoneId))
@@ -70,9 +70,9 @@ const RegisterSiteModal = ({
     },
     {
       key: 'name',
-      label: 'Company name',
+      label: 'Site name',
       type: 'text',
-      placeholder: 'Company name',
+      placeholder: 'Site name',
       required: true,
       colSpan: 6
     },
@@ -137,8 +137,8 @@ const RegisterSiteModal = ({
     <UnifiedRegisterModal
       show={show}
       onHide={onHide}
-      title="Add Company / Site"
-      subtitle="Configure site entity, templates, features, and custom metadata"
+      title="Site"
+      subtitle="Configure site"
       icon={Building2}
       fields={siteFields}
       formData={createForm}

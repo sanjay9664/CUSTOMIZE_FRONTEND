@@ -3,18 +3,36 @@ import { Row, Col, Form, Button, Badge } from 'react-bootstrap';
 import { Plus, Trash2, Sliders, Layers, CheckSquare, Sparkles } from 'lucide-react';
 
 export const DEFAULT_SITE_TEMPLATES = [
-  { id: 'mouldings', label: 'Mouldings' },
-  { id: 'extrusion', label: 'Extrusion' },
-  { id: 'punch_press', label: 'Punch Press' },
-  { id: 'cnc', label: 'CNC' }
+  { id: 'EnergyMeter', label: 'Energy Meter' },
+  { id: 'Smart-DG', label: 'Smart DG' },
+  { id: 'AirCompressor', label: 'Air Compressor' },
+  { id: 'SolarSystem', label: 'Solar System' },
+  { id: 'Pumps', label: 'Pumps' },
+  { id: 'Chillers', label: 'Chillers' },
+  { id: 'AHUs', label: 'AHUs' },
+  { id: 'Cooling-Towers', label: 'Cooling Towers' },
+  { id: 'Boilers', label: 'Boilers' },
+  { id: 'HVAC-System', label: 'HVAC System' },
 ];
 
 export const DEFAULT_SITE_FEATURES = [
-  { id: 'andon', label: 'Andon System' },
-  { id: 'breakdown', label: 'Breakdown Reports' },
-  { id: 'alert', label: 'Alert System' },
-  { id: 'erp', label: 'ERP Integration' },
-  { id: 'pnl', label: 'Profit & Loss' }
+  { id: 'Dashboard', label: 'Dashboard' },
+  { id: 'Water-Management', label: 'Water Management' },
+  { id: 'Motors', label: 'Motors' },
+  { id: 'DG-Set', label: 'DG Set' },
+  { id: 'Alarm-System', label: 'Alarm System' },
+  { id: 'LT-Panel', label: 'LT Panel' },
+  { id: 'Transformer', label: 'Transformer' },
+  { id: 'Fire', label: 'Fire' },
+  { id: 'Ticketing', label: 'Ticketing' },
+  { id: 'Maintenance', label: 'Maintenance' },
+  { id: 'Service-History', label: 'Service History' },
+  { id: 'Daily-DPR', label: 'Daily DPR' },
+  { id: 'Energy-Metering', label: 'Energy Metering' },
+  { id: 'VRV', label: 'VRV' },
+  { id: 'AQI-Sensor', label: 'AQI Sensor' },
+  { id: 'HVAC', label: 'HVAC' },
+  { id: 'AC', label: 'AC' }
 ];
 
 const CustomFieldsTemplate = ({
