@@ -38,15 +38,15 @@ const AreaModal = ({
       key: 'name',
       label: 'Area Name',
       type: 'text',
-      placeholder: 'e.g. Server Room A / Basement Floor',
+      placeholder: 'Enter a unique name',
       required: true,
       colSpan: 12
     },
     {
       key: 'description',
-      label: 'Description / Function',
+      label: 'Description',
       type: 'textarea',
-      placeholder: 'Specific room occupancy, floor area or HVAC zone notes',
+      placeholder: 'Add descriptions here',
       rows: 2,
       colSpan: 12
     }
@@ -56,8 +56,8 @@ const AreaModal = ({
     <UnifiedRegisterModal
       show={show}
       onHide={onHide}
-      title={editingArea ? 'Edit Area / Space' : 'Add Area / Space'}
-      subtitle={editingArea ? `ID: ${editingArea.id}` : 'Create a specific physical or operational area inside a zone'}
+      title={editingArea ? 'Edit Area' : 'Add Area'}
+      subtitle={editingArea ? `ID: ${editingArea.id}` : ''}
       icon={Grid}
       fields={fields}
       formData={areaForm}

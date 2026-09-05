@@ -272,7 +272,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         {org.isLocationGroup && (
           <>
             <Nav.Item><Nav.Link eventKey="zone"><Globe size={18} /> Zones ({safeZones.length})</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="area"><Layers size={18} /> Tenant Areas ({safeAreas.length})</Nav.Link></Nav.Item>
+            <Nav.Item><Nav.Link eventKey="area"><Layers size={18} /> Areas ({safeAreas.length})</Nav.Link></Nav.Item>
           </>
         )}
         {org.isDeviceGroup && <Nav.Item><Nav.Link eventKey="device"><Cpu size={18} /> Devices ({safeDevices.length})</Nav.Link></Nav.Item>}

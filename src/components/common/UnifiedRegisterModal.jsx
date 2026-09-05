@@ -198,16 +198,22 @@ const UnifiedRegisterModal = ({
           </Form.Group>
         ) : type === 'switch' ? (
           /* ── SWITCH TOGGLE ── */
-          <div className="text-center py-1">
-            {label && <label className="drawer-label mb-2">{label}</label>}
-            <div className="d-flex justify-content-center">
+          <div className={field.alignLeft ? "py-1" : "text-center py-1"}>
+            {label && <label className={`drawer-label mb-2 ${field.alignLeft ? 'd-block' : ''}`}>{label} {required && '*'}</label>}
+            <div className={field.alignLeft ? "d-flex align-items-center gap-2" : "d-flex justify-content-center"} style={field.alignLeft ? { minHeight: '38px' } : {}}>
               <Form.Check
                 type="switch"
                 id={`switch-${key}`}
-                checked={value !== false}
+                checked={value !== undefined ? Boolean(value) : (field.defaultChecked ?? false)}
                 disabled={disabled}
-                onChange={(e) => handleFieldChange(key, e.target.checked)}
+                onChange={(e) => {
+                  handleFieldChange(key, e.target.checked);
+                  if (typeof field.onChange === 'function') {
+                    field.onChange(e.target.checked, handleFieldChange);
+                  }
+                }}
                 className="fs-15"
+                label={typeof field.switchLabel === 'function' ? field.switchLabel(value) : (field.switchLabel || '')}
               />
             </div>
             {helpText && <small className="text-muted fs-11 mt-1 d-block">{helpText}</small>}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getCookie, getAuthToken } from '../../../../utils/cookieUtils';
 import { getApiUrl } from '../../../../utils/apiConfig';
@@ -82,7 +82,9 @@ export const useManageOrganisation = () => {
   const activeTenants = normalizeList(tenants, 'tenants').filter(t => t && t.status !== 'INACTIVE' && !t.deletedAt);
   const activeZones = normalizeList(zones, 'zones').filter(z => z && z.status !== 'INACTIVE' && !z.deletedAt);
   const activeAreas = normalizeList(areas, 'areas').filter(a => a && a.status !== 'INACTIVE' && !a.deletedAt);
-  const activeSites = normalizeList(sites, 'sites').filter(s => s && s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
+  const activeSites = useMemo(() => {
+    return normalizeList(sites, 'sites').filter(s => s && s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
+  }, [sites]);
   const activeBuildings = normalizeList(buildings, 'buildings').filter(b => b && b.isActive !== false && !b.deletedAt);
   const activeAssets = normalizeList(assets, 'assets').filter(a => a && a.status !== 'INACTIVE' && !a.deletedAt);
   const rawActiveDevices = normalizeList(devices, 'devices').filter(d => d && d.isActive !== false && d.status !== 'DISABLED');
@@ -121,7 +123,7 @@ export const useManageOrganisation = () => {
 
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
-  const [assetForm, setAssetForm] = useState({ name: '', assetType: 'BUILDING', parentAssetId: '', description: '', siteId: 7 });
+  const [assetForm, setAssetForm] = useState({ name: '', assetType: 'BUILDING', parentAssetId: '', isChildAsset: false, description: '', siteId: 7 });
 
   const [showDeviceModal, setShowDeviceModal] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
@@ -911,13 +913,21 @@ export const useManageOrganisation = () => {
   // Asset Actions
   const handleOpenCreateAsset = () => {
     setEditingAsset(null);
-    setAssetForm({ name: '', assetType: 'BUILDING', parentAssetId: '', description: '', siteId: activeSites.length ? activeSites[0].id : 7 });
+    setAssetForm({ name: '', assetType: 'BUILDING', parentAssetId: '', isChildAsset: false, description: '', siteId: activeSites.length ? activeSites[0].id : 7 });
     setShowAssetModal(true);
   };
 
   const handleOpenEditAsset = (a) => {
+    const hasParent = !!(a.parentAssetId || a.parentId);
     setEditingAsset(a);
-    setAssetForm({ name: a.name || '', assetType: a.assetType || 'BUILDING', parentAssetId: a.parentAssetId || '', description: a.description || '', siteId: a.siteId || 7 });
+    setAssetForm({
+      name: a.name || '',
+      assetType: a.assetType || 'BUILDING',
+      parentAssetId: a.parentAssetId || a.parentId || '',
+      isChildAsset: hasParent,
+      description: a.description || '',
+      siteId: a.siteId || (activeSites.length ? activeSites[0].id : 7)
+    });
     setShowAssetModal(true);
   };
 
@@ -929,7 +939,14 @@ export const useManageOrganisation = () => {
       const url = editingAsset ? `${API_BASE_URL}/sites/${siteId}/assets/${editingAsset.id}` : `${API_BASE_URL}/sites/${siteId}/assets`;
       const method = editingAsset ? 'PATCH' : 'POST';
       const payload = { name: assetForm.name, assetType: assetForm.assetType, description: assetForm.description };
-      if (assetForm.parentAssetId) payload.parentAssetId = parseInt(assetForm.parentAssetId);
+      if (assetForm.isChildAsset && assetForm.parentAssetId) {
+        const pId = assetForm.parentAssetId;
+        payload.parentId = String(pId);
+        payload.parentAssetId = isNaN(Number(pId)) ? pId : Number(pId);
+      } else {
+        payload.parentId = null;
+        payload.parentAssetId = null;
+      }
       const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
 
       if (res.ok) {
@@ -1412,11 +1429,11 @@ export const useManageOrganisation = () => {
   } else if (isDeviceGroup) {
     pageTitle = "Device Management"; pageSubtitle = "BMS IoT Device Provisioning, Serial Numbers & Telemetry Controls"; PageIcon = Cpu;
   } else if (isSiteGroup) {
-    pageTitle = "Site Management"; pageSubtitle = "Physical Sites & Infrastructure Management"; PageIcon = Building;
+    pageTitle = "Site Management"; pageSubtitle = "Physical Sites"; PageIcon = Building;
   } else if (isAssetGroup) {
-    pageTitle = "Asset Management"; pageSubtitle = "Industrial Equipment, Machinery & Facility Asset Inventory"; PageIcon = Sliders;
+    pageTitle = "Asset Management"; pageSubtitle = "Assets, Cubicles, Floors & Rooms"; PageIcon = Sliders;
   } else if (isBuildingGroup) {
-    pageTitle = "Building Management"; pageSubtitle = "Infrastructure Buildings & Property Assets"; PageIcon = Building2;
+    pageTitle = "Building Management"; pageSubtitle = "Buildings, Zones & Areas"; PageIcon = Building2;
   } else if (isWidgetGroup) {
     pageTitle = "Widgets Management"; pageSubtitle = "Dashboard Widget Configurations, Canvas Layouts & Telemetry Cards"; PageIcon = Grid;
   } else if (isRuleGroup) {
