@@ -86,12 +86,15 @@ export const organizationService = {
     return apiClient.delete(`/areas/${id}`);
   },
 
-  // Sites & Buildings
+  // Sites & Buildings (Building moved to asset-based model)
   async getSites() {
     const res = await apiClient.get('/sites');
     return normalizeList(res, 'sites');
   },
   async getBuildings(siteId) {
+    // Commented out: building is now managed as an asset
+    return [];
+    /*
     if (siteId && siteId !== 'ALL') {
       const res = await apiClient.get(`/sites/${siteId}/buildings`);
       return normalizeList(res, 'buildings');
@@ -107,7 +110,9 @@ export const organizationService = {
       } catch (e) {}
     }
     return all;
+    */
   },
+  /*
   async createBuilding(siteId, data) {
     return apiClient.post(`/sites/${siteId}/buildings`, data);
   },
@@ -117,6 +122,7 @@ export const organizationService = {
   async deleteBuilding(siteId, buildingId) {
     return apiClient.delete(`/sites/${siteId}/buildings/${buildingId}`);
   },
+  */
 
   // Assets & Devices
   async getAssets(siteId) {

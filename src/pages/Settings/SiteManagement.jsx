@@ -487,11 +487,15 @@ const SiteManagement = () => {
           color: #f1f5f9;
           outline: none;
         }
-        .search-input-site::placeholder { color: #64748b; }
+        .search-input-site::placeholder { color: #94a3b8 !important; opacity: 1 !important; }
         body.light-mode .search-input-site {
           background: #ffffff !important;
           border-color: #cbd5e1 !important;
           color: #1e293b !important;
+        }
+        body.light-mode .search-input-site::placeholder {
+          color: #64748b !important;
+          opacity: 1 !important;
         }
         .view-toggle-btn {
           background: rgba(255,255,255,0.04);
@@ -773,7 +777,8 @@ const SiteManagement = () => {
                       <Server size={13} style={{ color: '#8b5cf6' }} />
                       <span>{site.devicesCount || 0} Devices</span>
                     </div>
-                    <div
+                    {/* Building stat-pill commented out: building is now managed as an asset */}
+                    {/* <div
                       className="stat-pill"
                       style={{ cursor: 'pointer' }}
                       title="Click to manage buildings for this site"
@@ -784,7 +789,7 @@ const SiteManagement = () => {
                     >
                       <Building2 size={13} style={{ color: '#06b6d4' }} />
                       <span>{site.buildingsCount || 0} Buildings</span>
-                    </div>
+                    </div> */}
                     <div className="stat-pill">
                       <AlertTriangle size={13} style={{ color: (site.alarmsCount || 0) > 5 ? '#ef4444' : '#f59e0b' }} />
                       <span>{site.alarmsCount || 0} Alarms</span>
@@ -1002,9 +1007,9 @@ const SiteManagement = () => {
                     { label: 'Active Alarms', value: siteStats.activeAlarms ?? selectedSite.alarmsCount ?? 0, icon: <AlertTriangle size={22} />, color: '#f59e0b' },
                     { label: 'Energy (kWh)', value: (siteStats.energyConsumption || selectedSite.energyKwh || 0).toLocaleString(), icon: <Zap size={22} />, color: '#10b981' },
                     { label: 'Uptime %', value: `${siteStats.uptime || '99.2'}%`, icon: <TrendingUp size={22} />, color: '#06b6d4' },
-                    { label: 'Buildings', value: siteStats.buildingsCount || selectedSite.buildingsCount || 0, icon: <Building2 size={22} />, color: '#ec4899' }
+                    // { label: 'Buildings', value: siteStats.buildingsCount || selectedSite.buildingsCount || 0, icon: <Building2 size={22} />, color: '#ec4899' }
                   ].map((s, i) => (
-                    <Col xs={6} md={4} lg key={i}>
+                    <Col xs={6} md={3} lg key={i}>
                       <div className="detail-stat-card">
                         <div style={{ color: s.color, marginBottom: 8 }}>{s.icon}</div>
                         <div className="stat-val-text" style={{ fontSize: '1.5rem', fontWeight: 700 }}>{s.value}</div>
@@ -1037,9 +1042,9 @@ const SiteManagement = () => {
                 ))}
               </div>
 
-              {/* Building Settings Quick Link */}
-              <div className="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
-                <Button
+              {/* Building Settings Quick Link (Commented out: building is now managed as an asset) */}
+              <div className="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-end align-items-center">
+                {/* <Button
                   variant="outline-info"
                   size="sm"
                   className="d-flex align-items-center gap-2 fw-semibold"
@@ -1049,7 +1054,7 @@ const SiteManagement = () => {
                   }}
                 >
                   <Building2 size={16} /> Manage Buildings for this Site
-                </Button>
+                </Button> */}
                 <Button variant="outline-light" size="sm" onClick={() => setShowDetailModal(false)}>
                   Close
                 </Button>

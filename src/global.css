@@ -1564,3 +1564,191 @@ body:not(.light-mode) .dropdown-item:focus {
   color: #38bdf8 !important;
 }
 
+/* =========================================================
+   UNIVERSAL HIGH-CONTRAST PLACEHOLDERS & FORM CONTROLS
+   ========================================================= */
+
+/* Universal Placeholders */
+::placeholder,
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.light-mode ::placeholder,
+body.light-mode .form-control::placeholder,
+body.light-mode input::placeholder,
+body.light-mode textarea::placeholder,
+body.light-mode select::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+/* Form Controls in Dark Mode */
+body:not(.light-mode) .form-control,
+body:not(.light-mode) .form-select,
+body:not(.light-mode) input.form-control,
+body:not(.light-mode) select.form-control,
+body:not(.light-mode) textarea.form-control {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+body:not(.light-mode) .form-control:focus,
+body:not(.light-mode) .form-select:focus,
+body:not(.light-mode) input.form-control:focus,
+body:not(.light-mode) select.form-control:focus,
+body:not(.light-mode) textarea.form-control:focus {
+  background-color: #1e293b !important;
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
+}
+
+/* Form Controls in Light Mode */
+body.light-mode .form-control,
+body.light-mode .form-select,
+body.light-mode input.form-control,
+body.light-mode select.form-control,
+body.light-mode textarea.form-control {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .form-control:focus,
+body.light-mode .form-select:focus,
+body.light-mode input.form-control:focus,
+body.light-mode select.form-control:focus,
+body.light-mode textarea.form-control:focus {
+  background-color: #ffffff !important;
+  border-color: #0284c7 !important;
+  color: #0f172a !important;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+}
+
+/* Labels and Helper Text */
+body:not(.light-mode) .form-label,
+body:not(.light-mode) label {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+body.light-mode .form-label,
+body.light-mode label {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+.text-muted,
+small.text-muted,
+span.text-muted {
+  color: var(--scada-text-muted) !important;
+}
+
+body.light-mode .text-muted,
+body.light-mode small.text-muted,
+body.light-mode span.text-muted {
+  color: #64748b !important;
+}
+
+/* Universal Modals in Light Mode */
+body.light-mode .modal-content {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.15) !important;
+  border-radius: 12px;
+}
+
+body.light-mode .modal-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .modal-header .modal-title,
+body.light-mode .modal-header h1,
+body.light-mode .modal-header h2,
+body.light-mode .modal-header h3,
+body.light-mode .modal-header h4,
+body.light-mode .modal-header h5,
+body.light-mode .modal-header h6 {
+  color: #0f172a !important;
+}
+
+body.light-mode .modal-header .btn-close {
+  filter: none !important;
+  opacity: 0.65;
+}
+
+body.light-mode .modal-header .btn-close:hover {
+  opacity: 1;
+}
+
+body.light-mode .modal-body {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .modal-footer {
+  background-color: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Universal Offcanvas / Drawers */
+body:not(.light-mode) .offcanvas {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body:not(.light-mode) .offcanvas-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
+}
+
+body:not(.light-mode) .offcanvas-body {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+body.light-mode .offcanvas {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-left: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .offcanvas-header {
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .offcanvas-body {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Header icon containers with white SVGs */
+.modal-header-icon,
+.drawer-header-icon {
+  border-radius: 9px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.modal-header-icon svg,
+.drawer-header-icon svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+

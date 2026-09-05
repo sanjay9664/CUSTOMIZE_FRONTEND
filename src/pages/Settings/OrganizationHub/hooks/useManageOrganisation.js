@@ -370,8 +370,10 @@ export const useManageOrganisation = () => {
     }
   }, [fetchStoreSites]);
 
-  // Fetch Buildings
+  // Fetch Buildings (Commented out: building is now managed as an asset)
   const fetchBuildings = useCallback(async (siteIdArg) => {
+    setBuildings([]);
+    /*
     try {
       const targetSiteId = siteIdArg !== undefined ? siteIdArg : selectedBuildingSiteId;
       if (targetSiteId && targetSiteId !== 'ALL') {
@@ -408,6 +410,7 @@ export const useManageOrganisation = () => {
     } catch (err) {
       console.warn('Buildings fetch err:', err);
     }
+    */
   }, [selectedBuildingSiteId]);
 
   // Fetch Assets
@@ -477,7 +480,7 @@ export const useManageOrganisation = () => {
         fetchZones(),
         fetchAreas(),
         fetchSites(),
-        fetchBuildings(),
+        // fetchBuildings(), // Commented out: building moved to asset-based model
         fetchAssets(),
         fetchDevices()
       ]);
@@ -1323,8 +1326,8 @@ export const useManageOrganisation = () => {
       fetchAreas();
     } else if (activeTab === 'site') {
       fetchSites();
-    } else if (activeTab === 'building') {
-      fetchBuildings();
+    // } else if (activeTab === 'building') {
+    //   fetchBuildings();
     } else if (activeTab === 'asset') {
       fetchAssets();
     } else if (activeTab === 'device') {
@@ -1401,7 +1404,7 @@ export const useManageOrganisation = () => {
   const isReportGroup = ['telemetry', 'report', 'alarm'].includes(activeTab);
 
   let pageTitle = "Organisation Management";
-  let pageSubtitle = "Multi-Tenant Administration Platform — Manage Companies & Organizations (Tenants)";
+  let pageSubtitle = "Manage Companies & Organizations";
   let PageIcon = Building2;
 
   if (isLocationGroup) {

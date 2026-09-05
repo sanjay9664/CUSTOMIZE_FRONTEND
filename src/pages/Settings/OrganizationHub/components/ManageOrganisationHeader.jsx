@@ -168,11 +168,11 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                     <FileText size={15} /> Report
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item>
+                {/* <Nav.Item>
                   <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('building')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isBuildingGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
                     <Building2 size={15} /> Building
                   </Nav.Link>
-                </Nav.Item>
+                </Nav.Item> */}
               </Nav>
             )}
 
@@ -233,11 +233,11 @@ const ManageOrganisationHeader = ({ org = {} }) => {
               <Plus size={16} /> Add Tenant Area
             </Button>
           )}
-          {org.activeTab === 'building' && (
+          {/* {org.activeTab === 'building' && (
             <Button variant="info" size="sm" onClick={org.handleOpenCreateBuilding} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
               <Plus size={16} /> Add Building
             </Button>
-          )}
+          )} */}
           {org.activeTab === 'asset' && (
             <Button variant="info" size="sm" onClick={org.handleOpenCreateAsset} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
               <Plus size={16} /> Add Asset
@@ -266,7 +266,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         {org.isOrgGroup && (
           <>
             <Nav.Item><Nav.Link eventKey="company"><Building size={18} /> Companies ({safeCompanies.length})</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="tenant"><Building2 size={18} /> Organizations / Tenants ({safeTenants.length})</Nav.Link></Nav.Item>
+            <Nav.Item><Nav.Link eventKey="tenant"><Building2 size={18} /> Organizations ({safeTenants.length})</Nav.Link></Nav.Item>
           </>
         )}
         {org.isLocationGroup && (
@@ -278,7 +278,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         {org.isDeviceGroup && <Nav.Item><Nav.Link eventKey="device"><Cpu size={18} /> Devices ({safeDevices.length})</Nav.Link></Nav.Item>}
         {org.isSiteGroup && <Nav.Item><Nav.Link eventKey="site"><MapPin size={18} /> Site ({safeSites.length})</Nav.Link></Nav.Item>}
         {org.isAssetGroup && <Nav.Item><Nav.Link eventKey="asset"><Sliders size={18} /> Assets ({safeAssets.length})</Nav.Link></Nav.Item>}
-        {org.isBuildingGroup && <Nav.Item><Nav.Link eventKey="building"><Building2 size={18} /> Buildings ({safeBuildings.length})</Nav.Link></Nav.Item>}
+        {/* {org.isBuildingGroup && <Nav.Item><Nav.Link eventKey="building"><Building2 size={18} /> Buildings ({safeBuildings.length})</Nav.Link></Nav.Item>} */}
         {org.isReportGroup && (
           <>
             <Nav.Item><Nav.Link eventKey="telemetry"><Radio size={18} /> Telemetry</Nav.Link></Nav.Item>

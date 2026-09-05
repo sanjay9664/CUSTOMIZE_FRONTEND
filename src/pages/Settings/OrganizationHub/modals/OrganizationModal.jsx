@@ -27,7 +27,7 @@ const OrganizationModal = ({
       key: 'name',
       label: 'Organization Name',
       type: 'text',
-      placeholder: 'e.g. Acme Tech Park',
+      placeholder: 'Enter Organization Name',
       required: true,
       colSpan: 6
     },
@@ -35,14 +35,14 @@ const OrganizationModal = ({
       key: 'serverUrl',
       label: 'Server URL',
       type: 'text',
-      placeholder: 'https://client.iotcloud.com',
+      placeholder: 'Enter Server URL',
       colSpan: 6
     },
     {
       key: 'email',
       label: 'Contact Email',
       type: 'email',
-      placeholder: 'admin@tenant.com',
+      placeholder: 'Enter Email',
       required: true,
       colSpan: 6
     },
@@ -50,14 +50,14 @@ const OrganizationModal = ({
       key: 'phone',
       label: 'Phone Number',
       type: 'text',
-      placeholder: '+91-XXXXXXXXXX',
+      placeholder: 'Enter Phone Number',
       colSpan: 6
     },
     {
       key: 'sochiotOrgId',
       label: 'Sochiot Org ID',
       type: 'number',
-      placeholder: 'e.g. 101',
+      placeholder: 'Enter Sochiot Org ID',
       colSpan: 6
     },
     {
@@ -94,8 +94,7 @@ const OrganizationModal = ({
     <UnifiedRegisterModal
       show={show}
       onHide={onHide}
-      title={editingTenant ? 'Edit Organization (Tenant)' : 'Add New Organization'}
-      subtitle={editingTenant ? `ID: ${editingTenant.id}` : 'Create a tenant organization under a parent company'}
+      title={editingTenant ? 'Edit Organization' : 'Add Organization'}
       icon={Building2}
       fields={fields}
       formData={tenantForm}

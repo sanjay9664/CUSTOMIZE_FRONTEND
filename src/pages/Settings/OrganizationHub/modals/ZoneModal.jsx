@@ -17,9 +17,9 @@ const ZoneModal = ({
   const fields = [
     {
       key: 'tenantId',
-      label: 'Organization (Tenant)',
+      label: 'Organization',
       type: 'select',
-      placeholder: 'Select Organization...',
+      placeholder: 'Select Organization',
       required: true,
       options: activeTenants.map(t => ({ value: t.id, label: t.name })),
       colSpan: 12
@@ -28,15 +28,15 @@ const ZoneModal = ({
       key: 'name',
       label: 'Zone Name',
       type: 'text',
-      placeholder: 'e.g. North Zone / Tower Zone',
+      placeholder: 'Enter Zone Name',
       required: true,
       colSpan: 12
     },
     {
       key: 'region',
-      label: 'Region / Description',
+      label: 'Description',
       type: 'text',
-      placeholder: 'e.g. Delhi NCR / Floor 1-5',
+      placeholder: 'Enter Description',
       colSpan: 12
     }
   ];
@@ -46,7 +46,7 @@ const ZoneModal = ({
       show={show}
       onHide={onHide}
       title={editingZone ? 'Edit Zone' : 'Add New Zone'}
-      subtitle={editingZone ? `ID: ${editingZone.id}` : 'Create a regional zone scoped under an organization'}
+      subtitle={editingZone ? `ID: ${editingZone.id}` : ''}
       icon={Layers}
       fields={fields}
       formData={zoneForm}

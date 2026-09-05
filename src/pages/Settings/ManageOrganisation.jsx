@@ -153,7 +153,8 @@ const ManageOrganisation = () => {
           />
         )}
 
-        {org.activeTab === 'building' && (
+        {/* Building Section - Commented out: building is now managed as an asset */}
+        {/* {org.activeTab === 'building' && (
           <BuildingSection
             selectedBuildingSiteId={org.selectedBuildingSiteId}
             setSelectedBuildingSiteId={org.setSelectedBuildingSiteId}
@@ -164,7 +165,7 @@ const ManageOrganisation = () => {
             handleOpenEditBuilding={org.handleOpenEditBuilding}
             handleDeleteBuilding={org.handleDeleteBuilding}
           />
-        )}
+        )} */}
 
         {org.activeTab === 'asset' && (
           <AssetSection

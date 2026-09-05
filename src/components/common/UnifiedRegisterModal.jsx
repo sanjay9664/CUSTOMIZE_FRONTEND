@@ -284,7 +284,7 @@ const UnifiedRegisterModal = ({
           <div className="drawer-panel p-3 rounded-3 h-100">
             <div className="d-flex align-items-center gap-2 mb-3">
               {type === 'templateSelector' ? <Layers size={16} className="text-info" /> : <CheckSquare size={16} className="text-success" />}
-              <h6 className="mb-0 fw-bold fs-14 text-white">{label || (type === 'templateSelector' ? 'Select Template' : 'Select Feature')}</h6>
+              <h6 className="mb-0 fw-bold fs-14 drawer-section-heading">{label || (type === 'templateSelector' ? 'Select Template' : 'Select Feature')}</h6>
             </div>
             <div className="d-flex flex-column gap-2">
               {options.map((opt) => {
@@ -293,12 +293,11 @@ const UnifiedRegisterModal = ({
                 return (
                   <div
                     key={itemId}
-                    className={`p-2 rounded-2 border d-flex align-items-center justify-content-between ${
+                    className={`drawer-selector-card p-2 rounded-2 border d-flex align-items-center justify-content-between ${
                       isChecked
-                        ? (type === 'templateSelector' ? 'border-info bg-info bg-opacity-10' : 'border-success bg-success bg-opacity-10')
+                        ? (type === 'templateSelector' ? 'border-info active-info' : 'border-success active-success')
                         : 'border-secondary border-opacity-25'
                     }`}
-                    style={{ cursor: 'pointer', background: 'rgba(15, 23, 42, 0.6)' }}
                     onClick={() => handleArrayToggle(key, itemId)}
                   >
                     <Form.Check
@@ -325,7 +324,7 @@ const UnifiedRegisterModal = ({
             <div className="d-flex align-items-center justify-content-between mb-3">
               <div className="d-flex align-items-center gap-2">
                 <Sliders size={16} className="text-warning" />
-                <h6 className="mb-0 fw-bold fs-14 text-white">{label || 'Custom Metadata Fields'}</h6>
+                <h6 className="mb-0 fw-bold fs-14 drawer-section-heading">{label || 'Custom Metadata Fields'}</h6>
               </div>
               <small className="text-muted fs-11">Extend entity schema with custom fields</small>
             </div>
@@ -335,7 +334,7 @@ const UnifiedRegisterModal = ({
                 {value.map((cf, idx) => (
                   <div
                     key={cf.id || idx}
-                    className="d-flex align-items-center gap-2 p-2 rounded-2 bg-dark bg-opacity-50 border border-secondary border-opacity-25"
+                    className="drawer-custom-field-row d-flex align-items-center gap-2 p-2 rounded-2"
                   >
                     <span className="badge bg-secondary text-white font-monospace fs-11" style={{ minWidth: '90px' }}>
                       {cf.name}
@@ -348,7 +347,7 @@ const UnifiedRegisterModal = ({
                       type={cf.type === 'number' ? 'number' : 'text'}
                       value={cf.value || ''}
                       placeholder="Value..."
-                      className="bg-dark border-secondary text-white fs-12 flex-grow-1"
+                      className="drawer-input-sm flex-grow-1"
                       onChange={(e) => handleCustomFieldValChange(key, cf.id || idx, e.target.value)}
                     />
                     <Button
@@ -369,20 +368,20 @@ const UnifiedRegisterModal = ({
             )}
 
             {/* Add Custom Field Row */}
-            <div className="d-flex flex-wrap align-items-center gap-2 p-2 rounded-2 bg-dark border border-secondary border-opacity-25">
+            <div className="drawer-custom-add-box d-flex flex-wrap align-items-center gap-2 p-2 rounded-2">
               <Form.Control
                 size="sm"
                 placeholder="Field name..."
                 value={newFieldName}
                 onChange={(e) => setNewFieldName(e.target.value)}
-                className="bg-secondary bg-opacity-10 border-secondary text-white fs-12"
+                className="drawer-input-sm"
                 style={{ maxWidth: '180px' }}
               />
               <Form.Select
                 size="sm"
                 value={newFieldType}
                 onChange={(e) => setNewFieldType(e.target.value)}
-                className="bg-secondary bg-opacity-10 border-secondary text-white fs-12"
+                className="drawer-input-sm"
                 style={{ maxWidth: '100px' }}
               >
                 <option value="text">Text</option>
@@ -394,7 +393,7 @@ const UnifiedRegisterModal = ({
                 placeholder="Initial value..."
                 value={newFieldValue}
                 onChange={(e) => setNewFieldValue(e.target.value)}
-                className="bg-secondary bg-opacity-10 border-secondary text-white fs-12 flex-grow-1"
+                className="drawer-input-sm flex-grow-1"
               />
               <Button
                 size="sm"
@@ -476,6 +475,41 @@ const UnifiedRegisterModal = ({
           flex-shrink: 0;
         }
 
+        .unified-register-drawer .drawer-header-icon {
+          width: 38px !important;
+          height: 38px !important;
+          border-radius: 9px !important;
+          background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex-shrink: 0 !important;
+          box-shadow: 0 4px 12px rgba(6, 182, 212, 0.35) !important;
+        }
+        .unified-register-drawer .drawer-header-icon svg {
+          color: #ffffff !important;
+          stroke: #ffffff !important;
+          width: 18px !important;
+          height: 18px !important;
+        }
+
+        .unified-register-drawer .drawer-close-btn {
+          background: transparent !important;
+          border: none !important;
+          color: #94a3b8 !important;
+          border-radius: 6px !important;
+          padding: 6px !important;
+          cursor: pointer !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          transition: all 0.15s ease !important;
+        }
+        .unified-register-drawer .drawer-close-btn:hover {
+          color: #ffffff !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+
         .unified-register-drawer .drawer-scroll-content {
           flex: 1;
           overflow-y: auto;
@@ -490,6 +524,39 @@ const UnifiedRegisterModal = ({
           display: flex;
           justify-content: flex-end;
           gap: 12px;
+        }
+
+        .unified-register-drawer .drawer-cancel-btn {
+          background-color: transparent !important;
+          border: 1px solid rgba(255, 255, 255, 0.22) !important;
+          color: #e2e8f0 !important;
+          font-weight: 600 !important;
+          font-size: 13px !important;
+          border-radius: 6px !important;
+          padding: 8px 20px !important;
+          transition: all 0.15s ease !important;
+        }
+        .unified-register-drawer .drawer-cancel-btn:hover {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+          border-color: rgba(255, 255, 255, 0.4) !important;
+          color: #ffffff !important;
+        }
+
+        .unified-register-drawer .drawer-submit-btn {
+          background: #06b6d4 !important;
+          border: 1px solid #06b6d4 !important;
+          color: #0f172a !important;
+          font-weight: 700 !important;
+          font-size: 13px !important;
+          border-radius: 6px !important;
+          padding: 8px 24px !important;
+          transition: all 0.15s ease !important;
+        }
+        .unified-register-drawer .drawer-submit-btn:hover {
+          background: #0891b2 !important;
+          border-color: #0891b2 !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 14px rgba(6, 182, 212, 0.4) !important;
         }
 
         .unified-register-drawer .drawer-input,
@@ -510,16 +577,25 @@ const UnifiedRegisterModal = ({
         .unified-register-drawer .drawer-input:focus,
         .unified-register-drawer .drawer-select:focus {
           border-color: #38bdf8 !important;
-          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
           outline: none !important;
+        }
+
+        .unified-register-drawer .drawer-input::placeholder,
+        .unified-register-drawer .drawer-select::placeholder,
+        .unified-register-drawer textarea.drawer-input::placeholder {
+          color: #94a3b8 !important;
+          opacity: 1 !important;
+          font-size: 13px;
         }
 
         .unified-register-drawer .drawer-label {
           font-size: 13px;
-          font-weight: 500;
-          color: #94a3b8;
+          font-weight: 600;
+          color: #e2e8f0;
           margin-bottom: 6px;
           display: block;
+          letter-spacing: 0.01em;
         }
 
         .unified-register-drawer .drawer-upload-box {
@@ -546,7 +622,48 @@ const UnifiedRegisterModal = ({
           border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        /* Light-mode overrides */
+        .unified-register-drawer .drawer-section-heading {
+          color: #f8fafc;
+        }
+
+        .unified-register-drawer .drawer-selector-card {
+          background: rgba(15, 23, 42, 0.6);
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .unified-register-drawer .drawer-selector-card:hover {
+          background: rgba(30, 41, 59, 0.8);
+        }
+        .unified-register-drawer .drawer-selector-card.active-info {
+          background: rgba(6, 182, 212, 0.12) !important;
+        }
+        .unified-register-drawer .drawer-selector-card.active-success {
+          background: rgba(34, 197, 94, 0.12) !important;
+        }
+
+        .unified-register-drawer .drawer-custom-field-row {
+          background: rgba(30, 41, 59, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .unified-register-drawer .drawer-custom-add-box {
+          background: #1e293b;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .unified-register-drawer .drawer-input-sm {
+          background-color: #0f172a !important;
+          border: 1px solid #334155 !important;
+          color: #f8fafc !important;
+          font-size: 12px !important;
+          border-radius: 4px !important;
+        }
+        .unified-register-drawer .drawer-input-sm::placeholder {
+          color: #94a3b8 !important;
+          opacity: 1 !important;
+        }
+
+        /* ── Light-mode Overrides ── */
         body.light-mode .unified-register-drawer {
           background-color: #ffffff !important;
           color: #0f172a !important;
@@ -561,23 +678,111 @@ const UnifiedRegisterModal = ({
         body.light-mode .unified-register-drawer .drawer-header {
           border-bottom: 1px solid #e2e8f0 !important;
         }
+        body.light-mode .unified-register-drawer .drawer-header-icon {
+          background: linear-gradient(135deg, #0284c7 0%, #7c3aed 100%) !important;
+          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.28) !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-header-icon svg {
+          color: #ffffff !important;
+          stroke: #ffffff !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-close-btn {
+          color: #64748b !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-close-btn:hover {
+          color: #0f172a !important;
+          background: rgba(0, 0, 0, 0.06) !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-cancel-btn {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #334155 !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-cancel-btn:hover {
+          background-color: #f1f5f9 !important;
+          border-color: #94a3b8 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-submit-btn {
+          background: #0284c7 !important;
+          border: 1px solid #0284c7 !important;
+          color: #ffffff !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-submit-btn:hover {
+          background: #0369a1 !important;
+          border-color: #0369a1 !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+        }
         body.light-mode .unified-register-drawer .drawer-input,
         body.light-mode .unified-register-drawer .drawer-select {
-          background-color: #f8fafc !important;
+          background-color: #ffffff !important;
           border: 1px solid #cbd5e1 !important;
           color: #0f172a !important;
         }
+        body.light-mode .unified-register-drawer .drawer-input:focus,
+        body.light-mode .unified-register-drawer .drawer-select:focus {
+          border-color: #0284c7 !important;
+          box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-input::placeholder,
+        body.light-mode .unified-register-drawer .drawer-select::placeholder,
+        body.light-mode .unified-register-drawer textarea.drawer-input::placeholder {
+          color: #64748b !important;
+          opacity: 1 !important;
+        }
         body.light-mode .unified-register-drawer .drawer-label {
-          color: #475569 !important;
+          color: #1e293b !important;
+          font-weight: 600 !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-panel {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-section-heading {
+          color: #0f172a !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-selector-card {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-selector-card:hover {
+          background: #f1f5f9 !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-custom-field-row {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-custom-add-box {
+          background: #f8fafc !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-input-sm {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-input-sm::placeholder {
+          color: #64748b !important;
+          opacity: 1 !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-upload-box {
+          border: 1.5px dashed #cbd5e1 !important;
+          background: #f8fafc !important;
+        }
+        body.light-mode .unified-register-drawer .drawer-upload-box:hover {
+          border-color: #0284c7 !important;
+          background: rgba(2, 132, 199, 0.05) !important;
         }
       `}</style>
 
       {/* ── HEADER ── */}
       <div className="drawer-header">
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-3">
           {IconComponent && (
-            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <IconComponent size={18} color="#fff" />
+            <div className="drawer-header-icon">
+              <IconComponent size={18} />
             </div>
           )}
           <div>
@@ -587,8 +792,9 @@ const UnifiedRegisterModal = ({
         </div>
         <button
           onClick={onHide}
-          className="btn btn-link text-muted p-1 hover-opacity"
-          style={{ textDecoration: 'none' }}
+          className="drawer-close-btn"
+          title="Close"
+          aria-label="Close"
         >
           <X size={20} />
         </button>
@@ -619,7 +825,7 @@ const UnifiedRegisterModal = ({
           variant="outline-secondary"
           onClick={onHide}
           disabled={submitting}
-          className="fs-13 px-3 text-muted"
+          className="drawer-cancel-btn"
         >
           {cancelLabel}
         </Button>
@@ -628,7 +834,7 @@ const UnifiedRegisterModal = ({
           type="submit"
           form="unified-register-form"
           disabled={submitting}
-          className="fs-13 px-4 text-dark fw-bold d-flex align-items-center gap-2"
+          className="drawer-submit-btn d-flex align-items-center gap-2"
         >
           {submitting && <Spinner size="sm" animation="border" />}
           {submitting ? submittingLabel : submitLabel}

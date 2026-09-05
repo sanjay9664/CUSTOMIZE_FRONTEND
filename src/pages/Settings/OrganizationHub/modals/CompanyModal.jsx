@@ -16,7 +16,7 @@ const CompanyModal = ({
       key: 'name',
       label: 'Company Name',
       type: 'text',
-      placeholder: 'e.g. Acme Global Corporation',
+      placeholder: 'Enter Company Name',
       required: true,
       colSpan: 12
     },
@@ -24,21 +24,21 @@ const CompanyModal = ({
       key: 'email',
       label: 'Contact Email',
       type: 'email',
-      placeholder: 'admin@company.com',
+      placeholder: 'Enter Email',
       colSpan: 6
     },
     {
       key: 'phone',
       label: 'Phone Number',
       type: 'text',
-      placeholder: '+91-XXXXXXXXXX',
+      placeholder: 'Enter Phone Number',
       colSpan: 6
     },
     {
       key: 'address',
-      label: 'Corporate Address',
+      label: 'Address',
       type: 'textarea',
-      placeholder: 'Headquarters location and address details',
+      placeholder: 'Enter Address',
       rows: 3,
       colSpan: 12
     }
@@ -48,8 +48,7 @@ const CompanyModal = ({
     <UnifiedRegisterModal
       show={show}
       onHide={onHide}
-      title={editingCompany ? 'Edit Master Company' : 'Add Master Company'}
-      subtitle={editingCompany ? `ID: ${editingCompany.id}` : 'Create a top-level parent company entity'}
+      title={editingCompany ? 'Edit Company' : 'Add Company'}
       icon={Building}
       fields={fields}
       formData={companyForm}

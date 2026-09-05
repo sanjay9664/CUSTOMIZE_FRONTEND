@@ -43,20 +43,22 @@ const HIERARCHY_STEPS = [
     tab: 'site', description: 'Physical Site (e.g. Sector 75)',
     apiKey: 'sites'
   },
+  /*
   {
     key: 'building', step: 6, label: 'Building', subtitle: 'Property / Structure',
     icon: Building, color: '#06b6d4', gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
     tab: 'building', description: 'Building (e.g. Maxblis Whitehouse)',
     apiKey: 'buildings'
   },
+  */
   {
-    key: 'asset', step: 7, label: 'Asset', subtitle: 'Machinery / HVAC',
+    key: 'asset', step: 6, label: 'Asset', subtitle: 'Machinery / HVAC',
     icon: Sliders, color: '#ec4899', gradient: 'linear-gradient(135deg, #ec4899, #db2777)',
     tab: 'asset', description: 'Equipment & Machinery Inventory',
     apiKey: 'assets'
   },
   {
-    key: 'device', step: 8, label: 'Device / Sensor', subtitle: 'IoT Hardware',
+    key: 'device', step: 7, label: 'Device / Sensor', subtitle: 'IoT Hardware',
     icon: Cpu, color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)',
     tab: 'device', description: 'Modbus/BACnet IoT Controllers & Meters',
     apiKey: 'devices'
@@ -70,9 +72,9 @@ const QUICK_ACTIONS = [
   { key: 'add_zone', label: '3. Add Zone', icon: Globe, color: '#f59e0b', tab: 'zone', description: 'Geographic region (e.g. Noida)' },
   { key: 'add_area', label: '4. Add Sub-Zone / Area', icon: Layers, color: '#a855f7', tab: 'area', description: 'Sub-Zone Area (e.g. Central Noida)' },
   { key: 'add_site', label: '5. Add Site / Location', icon: MapPin, color: '#3b82f6', tab: 'site', description: 'Physical location (e.g. Sector 75)' },
-  { key: 'add_building', label: '6. Add Building', icon: Building, color: '#06b6d4', tab: 'building', description: 'Building (e.g. Maxblis Whitehouse)' },
-  { key: 'add_asset', label: '7. Add Asset', icon: Sliders, color: '#ec4899', tab: 'asset', description: 'HVAC & equipment inventory' },
-  { key: 'add_device', label: '8. Provision Device', icon: Cpu, color: '#ef4444', tab: 'device', description: 'Modbus/BACnet IoT hardware' },
+  // { key: 'add_building', label: '6. Add Building', icon: Building, color: '#06b6d4', tab: 'building', description: 'Building (e.g. Maxblis Whitehouse)' },
+  { key: 'add_asset', label: '6. Add Asset', icon: Sliders, color: '#ec4899', tab: 'asset', description: 'HVAC & equipment inventory' },
+  { key: 'add_device', label: '7. Provision Device', icon: Cpu, color: '#ef4444', tab: 'device', description: 'Modbus/BACnet IoT hardware' },
 ];
 
 // ── SYSTEM CONFIG CARDS ──────────────────────────────────────────────────
@@ -161,7 +163,7 @@ const SettingsIndex = () => {
       ['zones', organizationService.getZones()],
       ['areas', organizationService.getAreas()],
       ['sites', organizationService.getSites()],
-      ['buildings', organizationService.getBuildings()],
+      // ['buildings', organizationService.getBuildings()], // Commented out: building moved to asset-based model
       ['assets', organizationService.getAssets()],
       ['devices', organizationService.getDevices()]
     ];
@@ -234,7 +236,7 @@ const SettingsIndex = () => {
         /* ── HIERARCHY STEP CARDS (RESPONSIVE NO-SCROLL GRID) ─────── */
         .hierarchy-grid {
           display: grid;
-          grid-template-columns: repeat(8, minmax(0, 1fr));
+          grid-template-columns: repeat(7, minmax(0, 1fr));
           gap: 10px;
           width: 100%;
         }
@@ -578,11 +580,12 @@ const SettingsIndex = () => {
                     <FileText size={15} /> Report
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item>
+                {/* Building Tab commented out: building is now managed as an asset */}
+                {/* <Nav.Item>
                   <Nav.Link onClick={() => navigate('/manage-organisation?tab=building')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'building' || activeTab === 'buildings' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
                     <Building2 size={15} /> Building
                   </Nav.Link>
-                </Nav.Item>
+                </Nav.Item> */}
               </Nav>
             )}
 
