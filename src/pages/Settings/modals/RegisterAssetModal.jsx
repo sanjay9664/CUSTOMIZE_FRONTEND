@@ -80,14 +80,14 @@ const RegisterAssetModal = ({
   // Site options
   const siteOptions = sites.map(s => ({
     value: s.id,
-    label: `${s.name} (ID: ${s.id})`
+    label: `${s.name}`
   }));
 
   const fields = [
     // Section 1: Location & Parent Hierarchy
     {
       key: 'siteId',
-      label: 'Site / Location',
+      label: 'Site',
       type: 'select',
       placeholder: 'Select physical site...',
       required: true,
@@ -105,11 +105,11 @@ const RegisterAssetModal = ({
     },
     ...(assetForm?.isChildAsset ? [{
       key: 'parentId',
-      label: 'Parent Asset (Hierarchy Parent)',
+      label: 'Parent Asset',
       type: 'select',
       placeholder: parentAssetOptions.length === 0
         ? '-- No valid parent assets in this site --'
-        : '-- Select Parent Asset (Building, Floor, Room, etc.) --',
+        : '-- Select Parent Asset --',
       required: true,
       options: parentAssetOptions,
       colSpan: 12
@@ -120,7 +120,7 @@ const RegisterAssetModal = ({
       key: 'name',
       label: 'Asset Name',
       type: 'text',
-      placeholder: 'e.g., AHU-01, Pump Room 2, Floor 3, Main Building',
+      placeholder: 'Enter asset name',
       required: true,
       colSpan: 6
     },
@@ -149,30 +149,53 @@ const RegisterAssetModal = ({
     },
     {
       key: 'description',
-      label: 'Description / Purpose',
+      label: 'Description',
       type: 'textarea',
-      placeholder: 'Detailed function, physical location notes, or operational parameters...',
+      placeholder: 'Enter description',
       rows: 2,
       colSpan: 12
     },
 
     // Section 3: Technical Specifications & Identification
-    {
-      key: 'serialNumber',
-      label: 'Serial Number / Asset Tag',
-      type: 'text',
-      placeholder: 'e.g. SN-8829-X',
-      colSpan: 6
-    },
+    // {
+    //   key: 'serialNumber',
+    //   label: 'Serial Number / Asset Tag',
+    //   type: 'text',
+    //   placeholder: 'e.g. SN-8829-X',
+    //   colSpan: 6
+    // },
     {
       key: 'firmware',
       label: 'Firmware / Model Spec',
       type: 'text',
-      placeholder: 'e.g. v2.4.1 or BACnet-IP-400',
+      placeholder: 'Enter Firmware / Model Spec',
+      colSpan: 6
+    },
+    {
+      key: 'sochiotDeviceIds',
+      label: 'Linked IoT Device IDs',
+      type: 'text',
+      placeholder: 'Enter IoT device IDs',
       colSpan: 6
     },
 
-    // Section 4: Service & Field Calibration
+    // Section 4: Physical Capacity & Space Parameters (OpenAPI Metadata)
+    {
+      key: 'capacity',
+      label: 'Occupancy Capacity',
+      type: 'number',
+      placeholder: 'Enter Occupancy Capacity',
+      colSpan: 6
+    },
+    {
+      key: 'sqft',
+      label: 'Floor Area / Space',
+      type: 'number',
+      placeholder: 'Enter Floor Area / Space',
+      colSpan: 6
+    },
+
+    // Section 5: Commissioning & Maintenance Lifecycle
     {
       key: 'installDate',
       label: 'Installation Date',
@@ -199,7 +222,11 @@ const RegisterAssetModal = ({
       show={show}
       onHide={onHide}
       title={editingAsset ? 'Edit Asset Configuration' : 'Register New Asset'}
-      subtitle={editingAsset ? `Asset ID: ${editingAsset.id} • ${editingAsset.name}` : 'Configure physical asset hierarchy in compliance with BMS OpenAPI 3.0'}
+      subtitle={
+        editingAsset
+          ? (editingAsset.serialNumber ? `SN: ${editingAsset.serialNumber} • ${editingAsset.name}` : editingAsset.name)
+          : ''
+      }
       icon={Sliders}
       fields={fields}
       formData={assetForm}

@@ -363,6 +363,21 @@ const AssetManagement = ({ embedded = false }) => {
   };
 
   // ── Modal Handlers ────────────────────────────────────────────────────
+  // Consolidate all available assets across table & hierarchy for parent dropdown selection
+  const allPotentialParents = useMemo(() => {
+    const map = new Map();
+    tableAssets.forEach(a => { if (a?.id) map.set(String(a.id), a); });
+    const flatten = (nodes) => {
+      if (!Array.isArray(nodes)) return;
+      nodes.forEach(n => {
+        if (n?.id) map.set(String(n.id), n);
+        if (n.children && n.children.length > 0) flatten(n.children);
+      });
+    };
+    flatten(hierarchyTree);
+    return Array.from(map.values());
+  }, [tableAssets, hierarchyTree]);
+
   const handleOpenCreate = (parentAsset = null) => {
     setEditingAsset(null);
     setFormError(null);
@@ -381,7 +396,10 @@ const AssetManagement = ({ embedded = false }) => {
       firmware: '',
       installDate: '',
       installBy: '',
-      lastVisitDate: ''
+      lastVisitDate: '',
+      capacity: '',
+      sqft: '',
+      sochiotDeviceIds: ''
     });
     setShowRegisterModal(true);
   };
@@ -403,7 +421,10 @@ const AssetManagement = ({ embedded = false }) => {
       firmware: assetToEdit.firmware || '',
       installDate: assetToEdit.installDate ? assetToEdit.installDate.slice(0, 10) : '',
       installBy: assetToEdit.installBy || '',
-      lastVisitDate: assetToEdit.lastVisitDate ? assetToEdit.lastVisitDate.slice(0, 10) : ''
+      lastVisitDate: assetToEdit.lastVisitDate ? assetToEdit.lastVisitDate.slice(0, 10) : '',
+      capacity: assetToEdit.metadata?.capacity || '',
+      sqft: assetToEdit.metadata?.sqft || '',
+      sochiotDeviceIds: Array.isArray(assetToEdit.sochiotDeviceIds) ? assetToEdit.sochiotDeviceIds.join(', ') : (assetToEdit.sochiotDeviceIds || '')
     });
     setShowRegisterModal(true);
   };
@@ -415,6 +436,29 @@ const AssetManagement = ({ embedded = false }) => {
 
     try {
       const isEdit = Boolean(editingAsset);
+
+      // Construct OpenAPI metadata object if fields are populated
+      const metadata = {};
+      if (assetForm.capacity !== '' && assetForm.capacity !== undefined && !isNaN(Number(assetForm.capacity))) {
+        metadata.capacity = Number(assetForm.capacity);
+      }
+      if (assetForm.sqft !== '' && assetForm.sqft !== undefined && !isNaN(Number(assetForm.sqft))) {
+        metadata.sqft = Number(assetForm.sqft);
+      }
+
+      // Parse Sochiot device IDs
+      let deviceIds = [];
+      if (assetForm.sochiotDeviceIds) {
+        if (Array.isArray(assetForm.sochiotDeviceIds)) {
+          deviceIds = assetForm.sochiotDeviceIds.map(Number).filter(n => !isNaN(n) && n > 0);
+        } else if (typeof assetForm.sochiotDeviceIds === 'string') {
+          deviceIds = assetForm.sochiotDeviceIds
+            .split(',')
+            .map(s => Number(s.trim()))
+            .filter(n => !isNaN(n) && n > 0);
+        }
+      }
+
       const payload = {
         name: assetForm.name.trim(),
         assetType: assetForm.assetType,
@@ -425,7 +469,9 @@ const AssetManagement = ({ embedded = false }) => {
         firmware: assetForm.firmware || null,
         installDate: assetForm.installDate ? new Date(assetForm.installDate).toISOString() : null,
         installBy: assetForm.installBy || null,
-        lastVisitDate: assetForm.lastVisitDate ? new Date(assetForm.lastVisitDate).toISOString() : null
+        lastVisitDate: assetForm.lastVisitDate ? new Date(assetForm.lastVisitDate).toISOString() : null,
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+        ...(deviceIds.length > 0 ? { sochiotDeviceIds: deviceIds } : {})
       };
 
       if (!isEdit) {
@@ -1741,7 +1787,7 @@ const AssetManagement = ({ embedded = false }) => {
         show={showInspector}
         onHide={() => setShowInspector(false)}
         asset={inspectingAsset}
-        allAssets={tableAssets}
+        allAssets={allPotentialParents}
         sites={sites}
         onEdit={(a) => {
           setShowInspector(false);
@@ -1761,7 +1807,7 @@ const AssetManagement = ({ embedded = false }) => {
         setAssetForm={setAssetForm}
         handleSaveAsset={handleSaveAsset}
         sites={sites}
-        assets={tableAssets}
+        assets={allPotentialParents}
         submitting={submittingForm}
         error={formError}
       />
@@ -1770,7 +1816,7 @@ const AssetManagement = ({ embedded = false }) => {
         show={showDeleteModal}
         onHide={() => setShowDeleteModal(false)}
         asset={deletingAsset}
-        childCount={deletingAsset ? tableAssets.filter(a => String(a.parentId || a.parentAssetId) === String(deletingAsset.id)).length : 0}
+        childCount={deletingAsset ? allPotentialParents.filter(a => String(a.parentId || a.parentAssetId) === String(deletingAsset.id)).length : 0}
         onConfirm={handleConfirmDelete}
         deleting={submittingForm}
         error={formError}
