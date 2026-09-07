@@ -56,7 +56,7 @@ const stateSanitizer = (state) => {
   return state;
 };
 
-const isDev = Boolean(import.meta.env.DEV);
+const isDev = Boolean(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV);
 
 export const store = configureStore({
   reducer: {

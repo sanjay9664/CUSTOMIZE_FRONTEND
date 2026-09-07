@@ -167,13 +167,6 @@ const ManageOrganisation = () => {
           />
         )} */}
 
-        {org.activeTab === 'asset' && (
-          <AssetSection
-            filteredAssets={org.filteredAssets}
-            handleOpenEditAsset={org.handleOpenEditAsset}
-            handleDeleteAsset={org.handleDeleteAsset}
-          />
-        )}
 
         {org.activeTab === 'device' && (
           <DeviceSection
@@ -263,6 +256,7 @@ const ManageOrganisation = () => {
       </Card>
 
       {org.activeTab === 'site' && <SiteSection />}
+      {org.activeTab === 'asset' && <AssetSection />}
 
       {/* Modals Group Component */}
       <ManageOrganisationModals org={org} />

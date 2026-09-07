@@ -1163,6 +1163,7 @@ paths:
     get:
       tags: [Sites]
       summary: List Sites
+      description: Retrieve sites accessible to the current user. Superadmin users receive all sites (both active and inactive) so inactive sites can be inspected and re-enabled. Non-superadmin users receive accessible sites tagged with status ACTIVE or INACTIVE; if all accessible sites are inactive, a 'Site is inactive' message is returned.
       parameters:
         - $ref: '#/components/parameters/PageQuery'
         - $ref: '#/components/parameters/LimitQuery'
@@ -1176,6 +1177,9 @@ paths:
                   - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
                     properties:
+                      message:
+                        type: string
+                        example: "Site is inactive"
                       data:
                         type: array
                         items:
@@ -1204,10 +1208,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Site'
 
+  /sites/templates-and-features:
+    get:
+      tags: [Sites]
+      summary: Get Site Templates and Features
+      description: Returns the standardized enums and metadata for selectable BMS site templates and features.
+      responses:
+        '200':
+          description: Available site templates and features metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      templates:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: "Smart-DG"
+                            label:
+                              type: string
+                              example: "Smart DG"
+                      features:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: "Dashboard"
+                            label:
+                              type: string
+                              example: "Dashboard"
+
   /sites/{id}:
     get:
       tags: [Sites]
       summary: Get Site Details
+      description: Retrieve details for a specific site. Superadmin users can retrieve details of active or inactive sites. For non-superadmin users, inactive sites return a 400 error with code SITE_INACTIVE.
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
@@ -1217,6 +1264,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Site'
+        '400':
+          description: Bad Request - Site is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Forbidden - User does not have access to this site
           content:
@@ -1224,7 +1277,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Site not found or inactive
+          description: Site not found
           content:
             application/json:
               schema:

@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { getAuthToken, getUserData, getUserRole, clearAuthSession, setAuthSession, getCookie, isTokenExpiringSoon } from '../utils/cookieUtils.js';
+import { getAuthToken, getRefreshToken, getUserData, getUserRole, clearAuthSession, setAuthSession, getCookie, isTokenExpiringSoon } from '../utils/cookieUtils.js';
 import { performTokenRefresh, startAutoTokenRefresh, stopAutoTokenRefresh } from '../services/authRefreshService.js';
 import { AUTH_ENDPOINTS } from '../utils/apiConfig.js';
 
@@ -27,8 +27,11 @@ const getSafeSession = () => {
 
 export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
   const token = getAuthToken();
-  if (!token || isTokenExpiringSoon(token, 180)) {
-    await performTokenRefresh();
+  const refreshToken = getRefreshToken();
+  if (token || refreshToken) {
+    if (!token || isTokenExpiringSoon(token, 180)) {
+      await performTokenRefresh();
+    }
   }
   const session = getSafeSession();
   if (session.isAuthenticated) {

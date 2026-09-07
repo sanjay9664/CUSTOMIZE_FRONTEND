@@ -67,7 +67,13 @@ export const bmsService = {
     if (siteId) return apiClient.get(`/sites/${siteId}/assets`, params);
     return apiClient.get('/assets', params);
   },
+  getAssetDetails: (id) => apiClient.get(`/assets/${id}`),
+  getAssetHierarchy: (siteId, params = {}) => apiClient.get(`/sites/${siteId}/assets/hierarchy`, params),
+  getAssetStats: (siteId) => apiClient.get(`/sites/${siteId}/assets/stats`),
+  getAssetDevices: (id) => apiClient.get(`/assets/${id}/devices`),
+  getAssetTree: (id) => apiClient.get(`/assets/${id}/tree`),
   createAsset: (data) => apiClient.post('/assets', data),
+  createSiteAsset: (siteId, data) => apiClient.post(`/sites/${siteId}/assets`, data),
   updateAsset: (id, data) => apiClient.patch(`/assets/${id}`, data),
   deleteAsset: (id) => apiClient.delete(`/assets/${id}`),
 

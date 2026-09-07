@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getSochiotGatewayStatus, getSochiotDeviceStatus, getSochiotDeviceDetails } from './authService';
 import { setDeviceStatus, setGatewayStatus } from '../store/deviceStatusSlice';
+import { getAuthToken } from '../utils/cookieUtils.js';
 
 const isOnlineResponse = (res) => Boolean(res && (res.status === 'ONLINE' || res.status === 'online' || res.mode?.name === 'ONLINE' || res.we?.mode?.name === 'ONLINE' || res.online === true || res.active === true));
 
@@ -90,6 +91,7 @@ export const useDeviceStatus = () => {
 
   // Method to poll statuses for all devices/gateways found in savedTemplates
   const pollAllStatuses = useCallback(async () => {
+    if (!getAuthToken()) return;
     try {
       const saved = localStorage.getItem('scada_templates');
       if (!saved) return;
@@ -136,6 +138,14 @@ export const useDeviceStatus = () => {
 
 export const DeviceStatusProvider = ({ children }) => {
   const { refreshStatuses } = useDeviceStatus();
-  useEffect(() => { refreshStatuses(); const interval = setInterval(refreshStatuses, 20000); return () => clearInterval(interval); }, [refreshStatuses]);
+  const isAuthenticated = useSelector((state) => state.auth?.isAuthenticated);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    refreshStatuses();
+    const interval = setInterval(refreshStatuses, 20000);
+    return () => clearInterval(interval);
+  }, [refreshStatuses, isAuthenticated]);
+
   return children;
 };

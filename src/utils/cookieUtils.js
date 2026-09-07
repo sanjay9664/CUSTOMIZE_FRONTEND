@@ -1,7 +1,7 @@
 /**
  * Cookie Utilities for SCADA Authentication & Session Management
  */
-import { AUTH_ENDPOINTS } from './apiConfig';
+import { AUTH_ENDPOINTS } from './apiConfig.js';
 
 export const setCookie = (name, value, days = 7) => {
   if (typeof document === 'undefined') return;
@@ -176,23 +176,15 @@ export const clearAuthCookies = () => {
   eraseCookie('isAuthenticated');
 };
 
+let isRevokingSession = false;
+
 export const clearAuthSession = () => {
   const currentToken = getAuthToken();
+  const currentRefreshToken = getRefreshToken();
   setMemoryToken(null);
   clearAuthCookies();
 
-  // Graceful server-side session revocation (fire-and-forget)
-  try {
-    fetch(AUTH_ENDPOINTS.logout, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {})
-      },
-      credentials: 'include'
-    }).catch(() => {});
-  } catch (e) {}
-
+  // Clear local storage and session storage immediately
   safeStorageRemove('token');
   safeStorageRemove('access_token');
   safeStorageRemove('refresh_token');
@@ -209,6 +201,31 @@ export const clearAuthSession = () => {
     if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
   } catch (e) {
     console.warn('Failed to clear sessionStorage on auth session reset:', e);
+  }
+
+  // Graceful server-side session revocation (fire-and-forget):
+  // Only call server logout ONCE and ONLY if there was an active token or session to revoke!
+  if ((currentToken || currentRefreshToken) && !isRevokingSession) {
+    isRevokingSession = true;
+    try {
+      const nativeFetch = (typeof window !== 'undefined' && window._nativeFetch) ? window._nativeFetch : fetch;
+      nativeFetch(AUTH_ENDPOINTS.logout, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {})
+        },
+        credentials: 'include'
+      })
+        .catch(() => {})
+        .finally(() => {
+          setTimeout(() => {
+            isRevokingSession = false;
+          }, 2000);
+        });
+    } catch (e) {
+      isRevokingSession = false;
+    }
   }
 };
 

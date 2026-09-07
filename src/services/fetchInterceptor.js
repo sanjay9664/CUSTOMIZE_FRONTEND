@@ -34,6 +34,7 @@ export const installGlobalFetchInterceptor = () => {
   window._bmsFetchInterceptorInstalled = true;
 
   const nativeFetch = window.fetch.bind(window);
+  window._nativeFetch = nativeFetch;
 
   window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
@@ -56,7 +57,11 @@ export const installGlobalFetchInterceptor = () => {
                          url.includes('/sochiot') ||
                          hasAuthHeader;
 
-    const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/forgot-password');
+    const isAuthRoute = url.includes('/auth/login') || 
+                        url.includes('/auth/refresh') || 
+                        url.includes('/auth/logout') || 
+                        url.includes('/auth/forgot-password') ||
+                        url.includes('/auth/reset-password');
 
     // 1. Proactive Refresh Check before outgoing authenticated requests
     if (isApiRequest && !isAuthRoute) {

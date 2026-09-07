@@ -11,8 +11,8 @@ import {
   getUserRole,
   getUserData,
   isTokenExpiringSoon
-} from '../utils/cookieUtils';
-import { AUTH_ENDPOINTS } from '../utils/apiConfig';
+} from '../utils/cookieUtils.js';
+import { AUTH_ENDPOINTS } from '../utils/apiConfig.js';
 
 // Access tokens expire in 15 minutes (900s). Refresh every 10 minutes proactively.
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;

@@ -193,8 +193,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </div>
       </div>
 
-      {/* Header Banner (Suppressed for site tab to eliminate redundant header stacking) */}
-      {org.activeTab !== 'site' && (
+      {/* Header Banner (Suppressed for site & asset tabs to eliminate redundant header stacking) */}
+      {org.activeTab !== 'site' && org.activeTab !== 'asset' && (
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-3">
           <div className="d-flex align-items-center gap-3">
             <Button variant="outline-secondary" size="sm" onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 rounded-3 px-3 py-1-5 fw-semibold">
@@ -263,8 +263,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </div>
       )}
 
-      {/* Sub-Navigation Pills (Hidden for site tab because Site Management has its own internal KPI & toolbar controls) */}
-      {!org.isSiteGroup && (
+      {/* Sub-Navigation Pills (Hidden for site & asset tabs because they have their own internal KPI & toolbar controls) */}
+      {!org.isSiteGroup && !org.isAssetGroup && (
         <Nav variant="pills" activeKey={org.activeTab} onSelect={org.handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
           {org.isOrgGroup && (
             <>
@@ -291,8 +291,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </Nav>
       )}
 
-      {/* Search Bar & Filter Controls */}
-      {org.activeTab !== 'site' && org.activeTab !== 'device' && (
+      {/* Search Bar & Filter Controls (Suppressed for site & asset tabs) */}
+      {org.activeTab !== 'site' && org.activeTab !== 'device' && org.activeTab !== 'asset' && (
         <Card className="bg-dark-card border-0 mb-4 p-3 shadow-sm">
           <Row className="g-3 align-items-center">
             <Col xs={12} md={org.activeTab === 'zone' || org.activeTab === 'area' ? 5 : 6}>

@@ -42,6 +42,16 @@ export const normalizeList = (raw, key) => {
   return [];
 };
 
+export const normalizePaginatedResponse = (raw, key = 'assets') => {
+  const items = normalizeList(raw, key);
+  const total = raw?.total ?? raw?.meta?.total ?? raw?.pagination?.total ?? raw?.count ?? items.length;
+  const page = raw?.page ?? raw?.meta?.page ?? raw?.pagination?.page ?? 1;
+  const limit = raw?.limit ?? raw?.meta?.limit ?? raw?.pagination?.limit ?? raw?.meta?.pageSize ?? items.length;
+  const totalPages = raw?.totalPages ?? raw?.meta?.totalPages ?? raw?.pagination?.totalPages ?? (limit > 0 ? Math.ceil(total / limit) : 1);
+
+  return { items, total, page, limit, totalPages };
+};
+
 async function executeRequest(endpoint, options = {}) {
   const url = getApiUrl(endpoint);
   const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
