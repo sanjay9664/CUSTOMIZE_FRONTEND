@@ -193,100 +193,103 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </div>
       </div>
 
-      {/* Header Banner */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-3">
-        <div className="d-flex align-items-center gap-3">
-          <Button variant="outline-secondary" size="sm" onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 rounded-3 px-3 py-1-5 fw-semibold">
-            <ArrowLeft size={16} /> Back to Settings
-          </Button>
-          <div>
-            <div className="d-flex align-items-center gap-2 mb-1">
-              <HeaderIcon className="text-info" size={28} />
-              <h2 className="fw-bold mb-0 org-header-title tracking-wide">{org.pageTitle || 'Organisation Management'}</h2>
+      {/* Header Banner (Suppressed for site tab to eliminate redundant header stacking) */}
+      {org.activeTab !== 'site' && (
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-3">
+          <div className="d-flex align-items-center gap-3">
+            <Button variant="outline-secondary" size="sm" onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 rounded-3 px-3 py-1-5 fw-semibold">
+              <ArrowLeft size={16} /> Back to Settings
+            </Button>
+            <div>
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <HeaderIcon className="text-info" size={28} />
+                <h2 className="fw-bold mb-0 org-header-title tracking-wide">{org.pageTitle || 'Organisation Management'}</h2>
+              </div>
+              <p className="org-header-subtext mb-0 fs-14">{org.pageSubtitle || 'System Configuration & Parameters'}</p>
             </div>
-            <p className="org-header-subtext mb-0 fs-14">{org.pageSubtitle || 'System Configuration & Parameters'}</p>
+          </div>
+
+          <div className="d-flex align-items-center gap-2">
+            <Button variant="outline-secondary" size="sm" onClick={org.fetchAllData} className="d-flex align-items-center gap-2 rounded-3 text-slate-300">
+              <RefreshCw size={15} className={org.loading ? 'spin-icon' : ''} /> Refresh
+            </Button>
+
+            {org.activeTab === 'company' && (
+              <Button variant="info" size="sm" onClick={org.handleOpenCreateCompany} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <Plus size={16} /> Add Company
+              </Button>
+            )}
+            {org.activeTab === 'tenant' && (
+              <Button variant="info" size="sm" onClick={org.handleOpenCreateTenant} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <Plus size={16} /> Add Organization
+              </Button>
+            )}
+            {org.activeTab === 'zone' && (
+              <Button variant="info" size="sm" onClick={org.handleOpenCreateZone} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <Plus size={16} /> Add Geographic Zone
+              </Button>
+            )}
+            {org.activeTab === 'area' && (
+              <Button variant="info" size="sm" onClick={org.handleOpenCreateArea} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <Plus size={16} /> Add Tenant Area
+              </Button>
+            )}
+            {/* {org.activeTab === 'building' && (
+              <Button variant="info" size="sm" onClick={org.handleOpenCreateBuilding} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <Plus size={16} /> Add Building
+              </Button>
+            )} */}
+            {org.activeTab === 'asset' && (
+              <Button variant="info" size="sm" onClick={org.handleOpenCreateAsset} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <Plus size={16} /> Add Asset
+              </Button>
+            )}
+            {org.activeTab === 'telemetry' && (
+              <Button variant="success" size="sm" onClick={() => org.setShowResyncModal && org.setShowResyncModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-white px-3 rounded-3">
+                <Radio size={16} /> Resync Telemetry Data
+              </Button>
+            )}
+            {org.activeTab === 'report' && (
+              <Button variant="info" size="sm" onClick={() => org.setShowReportModal && org.setShowReportModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <FileText size={16} /> Generate Async Report
+              </Button>
+            )}
+            {org.activeTab === 'alarm' && (
+              <Button variant="warning" size="sm" onClick={() => org.setShowAlarmModal && org.setShowAlarmModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
+                <BellRing size={16} /> Trigger Alarm Event
+              </Button>
+            )}
           </div>
         </div>
+      )}
 
-        <div className="d-flex align-items-center gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={org.fetchAllData} className="d-flex align-items-center gap-2 rounded-3 text-slate-300">
-            <RefreshCw size={15} className={org.loading ? 'spin-icon' : ''} /> Refresh
-          </Button>
-
-          {org.activeTab === 'company' && (
-            <Button variant="info" size="sm" onClick={org.handleOpenCreateCompany} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <Plus size={16} /> Add Company
-            </Button>
+      {/* Sub-Navigation Pills (Hidden for site tab because Site Management has its own internal KPI & toolbar controls) */}
+      {!org.isSiteGroup && (
+        <Nav variant="pills" activeKey={org.activeTab} onSelect={org.handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
+          {org.isOrgGroup && (
+            <>
+              <Nav.Item><Nav.Link eventKey="company"><Building size={18} /> Companies ({safeCompanies.length})</Nav.Link></Nav.Item>
+              <Nav.Item><Nav.Link eventKey="tenant"><Building2 size={18} /> Organizations ({safeTenants.length})</Nav.Link></Nav.Item>
+            </>
           )}
-          {org.activeTab === 'tenant' && (
-            <Button variant="info" size="sm" onClick={org.handleOpenCreateTenant} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <Plus size={16} /> Add Organization
-            </Button>
+          {org.isLocationGroup && (
+            <>
+              <Nav.Item><Nav.Link eventKey="zone"><Globe size={18} /> Zones ({safeZones.length})</Nav.Link></Nav.Item>
+              <Nav.Item><Nav.Link eventKey="area"><Layers size={18} /> Areas ({safeAreas.length})</Nav.Link></Nav.Item>
+            </>
           )}
-          {org.activeTab === 'zone' && (
-            <Button variant="info" size="sm" onClick={org.handleOpenCreateZone} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <Plus size={16} /> Add Geographic Zone
-            </Button>
+          {org.isDeviceGroup && <Nav.Item><Nav.Link eventKey="device"><Cpu size={18} /> Devices ({safeDevices.length})</Nav.Link></Nav.Item>}
+          {org.isAssetGroup && <Nav.Item><Nav.Link eventKey="asset"><Sliders size={18} /> Assets ({safeAssets.length})</Nav.Link></Nav.Item>}
+          {/* {org.isBuildingGroup && <Nav.Item><Nav.Link eventKey="building"><Building2 size={18} /> Buildings ({safeBuildings.length})</Nav.Link></Nav.Item>} */}
+          {org.isReportGroup && (
+            <>
+              <Nav.Item><Nav.Link eventKey="telemetry"><Radio size={18} /> Telemetry</Nav.Link></Nav.Item>
+              <Nav.Item><Nav.Link eventKey="report"><FileText size={18} /> Reports</Nav.Link></Nav.Item>
+              <Nav.Item><Nav.Link eventKey="alarm"><BellRing size={18} /> Alarms</Nav.Link></Nav.Item>
+            </>
           )}
-          {org.activeTab === 'area' && (
-            <Button variant="info" size="sm" onClick={org.handleOpenCreateArea} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <Plus size={16} /> Add Tenant Area
-            </Button>
-          )}
-          {/* {org.activeTab === 'building' && (
-            <Button variant="info" size="sm" onClick={org.handleOpenCreateBuilding} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <Plus size={16} /> Add Building
-            </Button>
-          )} */}
-          {org.activeTab === 'asset' && (
-            <Button variant="info" size="sm" onClick={org.handleOpenCreateAsset} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <Plus size={16} /> Add Asset
-            </Button>
-          )}
-          {org.activeTab === 'telemetry' && (
-            <Button variant="success" size="sm" onClick={() => org.setShowResyncModal && org.setShowResyncModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-white px-3 rounded-3">
-              <Radio size={16} /> Resync Telemetry Data
-            </Button>
-          )}
-          {org.activeTab === 'report' && (
-            <Button variant="info" size="sm" onClick={() => org.setShowReportModal && org.setShowReportModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <FileText size={16} /> Generate Async Report
-            </Button>
-          )}
-          {org.activeTab === 'alarm' && (
-            <Button variant="warning" size="sm" onClick={() => org.setShowAlarmModal && org.setShowAlarmModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-              <BellRing size={16} /> Trigger Alarm Event
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Sub-Navigation Pills */}
-      <Nav variant="pills" activeKey={org.activeTab} onSelect={org.handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
-        {org.isOrgGroup && (
-          <>
-            <Nav.Item><Nav.Link eventKey="company"><Building size={18} /> Companies ({safeCompanies.length})</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="tenant"><Building2 size={18} /> Organizations ({safeTenants.length})</Nav.Link></Nav.Item>
-          </>
-        )}
-        {org.isLocationGroup && (
-          <>
-            <Nav.Item><Nav.Link eventKey="zone"><Globe size={18} /> Zones ({safeZones.length})</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="area"><Layers size={18} /> Areas ({safeAreas.length})</Nav.Link></Nav.Item>
-          </>
-        )}
-        {org.isDeviceGroup && <Nav.Item><Nav.Link eventKey="device"><Cpu size={18} /> Devices ({safeDevices.length})</Nav.Link></Nav.Item>}
-        {org.isSiteGroup && <Nav.Item><Nav.Link eventKey="site"><MapPin size={18} /> Site ({safeSites.length})</Nav.Link></Nav.Item>}
-        {org.isAssetGroup && <Nav.Item><Nav.Link eventKey="asset"><Sliders size={18} /> Assets ({safeAssets.length})</Nav.Link></Nav.Item>}
-        {/* {org.isBuildingGroup && <Nav.Item><Nav.Link eventKey="building"><Building2 size={18} /> Buildings ({safeBuildings.length})</Nav.Link></Nav.Item>} */}
-        {org.isReportGroup && (
-          <>
-            <Nav.Item><Nav.Link eventKey="telemetry"><Radio size={18} /> Telemetry</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="report"><FileText size={18} /> Reports</Nav.Link></Nav.Item>
-            <Nav.Item><Nav.Link eventKey="alarm"><BellRing size={18} /> Alarms</Nav.Link></Nav.Item>
-          </>
-        )}
-      </Nav>
+        </Nav>
+      )}
 
       {/* Search Bar & Filter Controls */}
       {org.activeTab !== 'site' && org.activeTab !== 'device' && (

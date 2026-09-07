@@ -32,7 +32,7 @@ export const DEFAULT_SITE_FEATURES = [
   { id: 'VRV', label: 'VRV' },
   { id: 'AQI-Sensor', label: 'AQI Sensor' },
   { id: 'HVAC', label: 'HVAC' },
-  { id: 'AC', label: 'AC' }
+  { id: 'AC', label: 'AC' },
 ];
 
 const CustomFieldsTemplate = ({

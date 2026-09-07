@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
-import { X, AlertCircle, Upload, Mail, Plus, Trash2, Sliders, Layers, CheckSquare } from 'lucide-react';
+import { X, AlertCircle, Upload, Mail, Plus, Trash2, Sliders, Layers, CheckSquare, User, Phone, Lock } from 'lucide-react';
 
 /**
  * Enterprise Unified Register Modal / Drawer Component
@@ -31,6 +31,42 @@ const UnifiedRegisterModal = ({
 }) => {
   const fileInputRefs = useRef({});
   const [tagInputs, setTagInputs] = useState({});
+
+  // Contacts Builder Handlers
+  const [newContact, setNewContact] = useState({ name: '', phone: '', email: '' });
+  const [contactError, setContactError] = useState('');
+
+  const handleAddContact = (fieldKey) => {
+    const name = (newContact.name || '').trim();
+    const phone = (newContact.phone || '').trim();
+    const email = (newContact.email || '').trim();
+
+    if (!name) {
+      setContactError('Contact name is required');
+      return;
+    }
+    if (!phone) {
+      setContactError('Phone number is required');
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setContactError('Invalid email format');
+      return;
+    }
+
+    setContactError('');
+    const current = Array.isArray(formData[fieldKey]) ? formData[fieldKey] : [];
+    handleFieldChange(fieldKey, [
+      ...current,
+      { name, phone, email: email || null }
+    ]);
+    setNewContact({ name: '', phone: '', email: '' });
+  };
+
+  const handleRemoveContact = (fieldKey, indexToRemove) => {
+    const current = Array.isArray(formData[fieldKey]) ? formData[fieldKey] : [];
+    handleFieldChange(fieldKey, current.filter((_, idx) => idx !== indexToRemove));
+  };
 
   // Helper to update a field in formData
   const handleFieldChange = (key, value) => {
@@ -128,6 +164,13 @@ const UnifiedRegisterModal = ({
 
     const value = formData[key];
 
+    if (typeof field.condition === 'function' && !field.condition(formData)) {
+      return null;
+    }
+    if (field.show !== undefined && !field.show) {
+      return null;
+    }
+
     return (
       <Col md={colSpan} key={key}>
         {/* Custom Slot / Render function */}
@@ -136,29 +179,46 @@ const UnifiedRegisterModal = ({
         ) : type === 'hierarchy' || type === 'location' ? (
           /* ── HIERARCHY / LOCATION SELECTOR ── */
           <div>
-            {label && <label className="drawer-label">{label} {required && '*'}</label>}
+            {label && (
+              <label className="drawer-label">
+                {label} {required && !disabled && '*'}
+              </label>
+            )}
             <Row className="g-2">
-              {options.map((hSelect) => (
-                <Col md={hSelect.colSpan || 4} key={hSelect.key}>
-                  <Form.Select
-                    className="drawer-select"
-                    value={formData[hSelect.key] || ''}
-                    disabled={disabled}
-                    onChange={(e) => {
-                      handleFieldChange(hSelect.key, e.target.value);
-                      if (typeof hSelect.onChange === 'function') {
-                        hSelect.onChange(e.target.value, formData, handleFieldChange);
-                      }
-                    }}
-                    required={hSelect.required}
-                  >
-                    <option value="">{hSelect.placeholder || `Select ${hSelect.label}...`}</option>
-                    {(hSelect.options || []).map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </Form.Select>
-                </Col>
-              ))}
+              {options.map((hSelect) => {
+                const isSelectDisabled = Boolean(disabled || hSelect.disabled);
+                return (
+                  <Col md={hSelect.colSpan || 4} key={hSelect.key}>
+                    <Form.Select
+                      className="drawer-select"
+                      value={formData[hSelect.key] || ''}
+                      disabled={isSelectDisabled}
+                      onChange={(e) => {
+                        if (isSelectDisabled) return;
+                        handleFieldChange(hSelect.key, e.target.value);
+                        if (typeof hSelect.onChange === 'function') {
+                          hSelect.onChange(e.target.value, formData, handleFieldChange);
+                        }
+                      }}
+                      required={!isSelectDisabled && hSelect.required}
+                      style={isSelectDisabled ? {
+                        cursor: 'not-allowed',
+                        opacity: 1,
+                        backgroundColor: '#1e293b',
+                        borderColor: '#334155',
+                        color: '#f8fafc',
+                        WebkitTextFillColor: '#f8fafc',
+                        pointerEvents: 'none'
+                      } : {}}
+                    >
+                      <option value="">{hSelect.placeholder || `Select ${hSelect.label}...`}</option>
+                      {(hSelect.options || []).map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                );
+              })}
             </Row>
             {helpText && <small className="text-muted fs-11 mt-1 d-block">{helpText}</small>}
           </div>
@@ -285,6 +345,126 @@ const UnifiedRegisterModal = ({
               <small className="text-muted fs-11 d-block mt-1">Please input value and hit enter to add</small>
             )}
           </Form.Group>
+        ) : type === 'contacts' ? (
+          /* ── MULTIPLE CONTACTS BUILDER (NAME, PHONE, EMAIL) ── */
+          <div className="drawer-panel p-3 rounded-3">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="d-flex align-items-center gap-2">
+                <User size={16} className="text-info" />
+                <h6 className="mb-0 fw-bold fs-14 drawer-section-heading">{label || 'Contacts'} {required && '*'}</h6>
+              </div>
+              <small className="text-muted fs-11">Name & Phone required, Email optional</small>
+            </div>
+
+            {/* Added Contacts Cards */}
+            {Array.isArray(value) && value.length > 0 ? (
+              <div className="d-flex flex-column gap-2 mb-3">
+                {value.map((contact, idx) => (
+                  <div
+                    key={idx}
+                    className="drawer-custom-field-row d-flex flex-wrap align-items-center justify-content-between p-2 rounded-2"
+                  >
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      <span className="fw-semibold text-white fs-13 d-flex align-items-center gap-1">
+                        <User size={13} className="text-info" />
+                        {contact.name}
+                      </span>
+                      <Badge bg="dark" className="border border-secondary text-light font-monospace fs-11 d-flex align-items-center gap-1">
+                        <Phone size={11} className="text-warning" />
+                        {contact.phone}
+                      </Badge>
+                      {contact.email && (
+                        <Badge bg="dark" className="border border-secondary text-info fs-11 d-flex align-items-center gap-1">
+                          <Mail size={11} />
+                          {contact.email}
+                        </Badge>
+                      )}
+                    </div>
+                    {!disabled && (
+                      <Button
+                        variant="link"
+                        className="p-1 text-danger hover-opacity"
+                        title="Remove Contact"
+                        onClick={() => handleRemoveContact(key, idx)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-2 mb-3 text-center rounded-2 border border-secondary border-opacity-10 text-muted fs-12">
+                No contacts added yet. Add one or more contacts below.
+              </div>
+            )}
+
+            {/* Inline Add Contact Form */}
+            {!disabled && (
+              <div>
+                <Row className="g-2 align-items-center">
+                  <Col md={4} sm={12}>
+                    <Form.Control
+                      size="sm"
+                      placeholder="Name *"
+                      value={newContact.name}
+                      onChange={(e) => {
+                        setNewContact(prev => ({ ...prev, name: e.target.value }));
+                        if (contactError) setContactError('');
+                      }}
+                      className="drawer-input-sm"
+                    />
+                  </Col>
+                  <Col md={4} sm={12}>
+                    <Form.Control
+                      size="sm"
+                      placeholder="Phone *"
+                      value={newContact.phone}
+                      onChange={(e) => {
+                        setNewContact(prev => ({ ...prev, phone: e.target.value }));
+                        if (contactError) setContactError('');
+                      }}
+                      className="drawer-input-sm"
+                    />
+                  </Col>
+                  <Col md={3} sm={8}>
+                    <Form.Control
+                      size="sm"
+                      type="email"
+                      placeholder="Email (optional)"
+                      value={newContact.email}
+                      onChange={(e) => {
+                        setNewContact(prev => ({ ...prev, email: e.target.value }));
+                        if (contactError) setContactError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddContact(key);
+                        }
+                      }}
+                      className="drawer-input-sm"
+                    />
+                  </Col>
+                  <Col md={1} sm={4} className="d-grid">
+                    <Button
+                      size="sm"
+                      variant="info"
+                      onClick={() => handleAddContact(key)}
+                      className="d-flex align-items-center justify-content-center gap-1 fs-12 text-dark fw-bold px-2"
+                      title="Add Contact"
+                    >
+                      <Plus size={14} /> Add
+                    </Button>
+                  </Col>
+                </Row>
+                {contactError && (
+                  <small className="text-danger fs-11 mt-1 d-block">{contactError}</small>
+                )}
+              </div>
+            )}
+            {helpText && <small className="text-muted fs-11 mt-1 d-block">{helpText}</small>}
+          </div>
         ) : type === 'templateSelector' || type === 'featureSelector' ? (
           /* ── TEMPLATES OR FEATURES CHECKBOX LIST ── */
           <div className="drawer-panel p-3 rounded-3 h-100">
@@ -423,6 +603,9 @@ const UnifiedRegisterModal = ({
               value={value !== undefined ? value : ''}
               disabled={disabled}
               required={required}
+              min={field.min}
+              max={field.max}
+              step={field.step || (type === 'number' ? 'any' : undefined)}
               onChange={(e) => handleFieldChange(key, e.target.value)}
             />
             {helpText && <small className="text-muted fs-11 mt-1 d-block">{helpText}</small>}
@@ -578,6 +761,17 @@ const UnifiedRegisterModal = ({
 
         .unified-register-drawer textarea.drawer-input {
           height: auto !important;
+        }
+
+        .unified-register-drawer .drawer-input:disabled,
+        .unified-register-drawer .drawer-select:disabled {
+          background-color: #1e293b !important;
+          border-color: #334155 !important;
+          color: #f8fafc !important;
+          cursor: not-allowed !important;
+          opacity: 1 !important;
+          -webkit-text-fill-color: #f8fafc !important;
+          pointer-events: none !important;
         }
 
         .unified-register-drawer .drawer-input:focus,
