@@ -88,6 +88,19 @@ const SiteInspectorDrawer = ({
           padding: 24px;
           overflow-y: auto;
         }
+        .site-inspector-offcanvas .offcanvas-body::-webkit-scrollbar {
+          width: 6px;
+        }
+        .site-inspector-offcanvas .offcanvas-body::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .site-inspector-offcanvas .offcanvas-body::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 4px;
+        }
+        .site-inspector-offcanvas .offcanvas-body::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.22);
+        }
         .inspector-metric-card {
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid var(--scada-border, #334155);
@@ -107,13 +120,13 @@ const SiteInspectorDrawer = ({
           margin-bottom: 20px;
         }
         .inspector-action-btn {
-          border-radius: 10px;
+          border-radius: 8px;
           font-weight: 600;
-          font-size: 0.85rem;
-          padding: 8px 16px;
+          font-size: 0.82rem;
+          padding: 7px 14px;
           display: inline-flex;
           align-items: center;
-          gap: 8px;
+          gap: 7px;
           transition: all 0.2s ease;
         }
         .inspector-contact-chip {
@@ -147,7 +160,7 @@ const SiteInspectorDrawer = ({
           </div>
           <div>
             <div className="d-flex align-items-center gap-2">
-              <h5 className="mb-0 fw-bold">{site.name}</h5>
+              <h5 className="mb-0 fw-bold text-white">{site.name}</h5>
               <Badge
                 bg={isEnabled ? 'success' : 'secondary'}
                 className="d-inline-flex align-items-center gap-1"
@@ -157,8 +170,8 @@ const SiteInspectorDrawer = ({
                 {isEnabled ? 'ACTIVE' : 'INACTIVE'}
               </Badge>
             </div>
-            <small className="text-muted" style={{ fontSize: '0.8rem' }}>
-              {/* Site ID: #{site.id} &bull; Created {formatDate(site.createdAt)} */}
+            <small className="text-muted" style={{ fontSize: '0.78rem' }}>
+              Created {formatDate(site.createdAt)} &bull; {site.city || 'Physical Campus'}
             </small>
           </div>
         </div>
@@ -174,50 +187,52 @@ const SiteInspectorDrawer = ({
       {/* Drawer Body */}
       <Offcanvas.Body>
         {/* Quick Actions Bar */}
-        <div className="d-flex flex-wrap align-items-center gap-2 mb-4 pb-3 border-bottom" style={{ borderColor: 'var(--scada-border, #334155)' }}>
-          <Button
-            variant={isActiveDashboardSite ? 'success' : 'outline-info'}
-            size="sm"
-            className="inspector-action-btn"
-            onClick={() => onSetActiveSite(site)}
-          >
-            <CheckCircle2 size={16} />
-            {isActiveDashboardSite ? 'Active Dashboard Site' : 'Set as Active Site'}
-          </Button>
-
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            className="inspector-action-btn text-white"
-            onClick={() => {
-              onHide();
-              onEditSite(site);
-            }}
-          >
-            <Edit3 size={15} /> Edit Site
-          </Button>
-
-          {mapsUrl && (
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4 pb-3 border-bottom" style={{ borderColor: 'var(--scada-border, #334155)' }}>
+          <div className="d-flex align-items-center gap-2 flex-wrap">
             <Button
-              as="a"
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              variant={isActiveDashboardSite ? 'success' : 'outline-info'}
+              size="sm"
+              className="inspector-action-btn"
+              onClick={() => onSetActiveSite(site)}
+            >
+              <CheckCircle2 size={15} />
+              {isActiveDashboardSite ? 'Active Dashboard Site' : 'Set as Active Site'}
+            </Button>
+
+            <Button
               variant="outline-secondary"
               size="sm"
-              className="inspector-action-btn text-info"
+              className="inspector-action-btn text-white"
+              onClick={() => {
+                onHide();
+                onEditSite(site);
+              }}
             >
-              <Navigation size={15} /> Maps <ExternalLink size={13} />
+              <Edit3 size={14} /> Edit Site
             </Button>
-          )}
+
+            {mapsUrl && (
+              <Button
+                as="a"
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="outline-secondary"
+                size="sm"
+                className="inspector-action-btn text-info"
+              >
+                <Navigation size={14} /> Maps <ExternalLink size={12} />
+              </Button>
+            )}
+          </div>
 
           <Button
             variant={isEnabled ? 'outline-danger' : 'outline-success'}
             size="sm"
-            className="inspector-action-btn ms-auto"
+            className="inspector-action-btn"
             onClick={(e) => onToggleStatus(site, e)}
           >
-            <Power size={15} /> {isEnabled ? 'Disable Site' : 'Enable Site'}
+            <Power size={14} /> {isEnabled ? 'Disable Site' : 'Enable Site'}
           </Button>
         </div>
 
@@ -303,24 +318,26 @@ const SiteInspectorDrawer = ({
         <div className="inspector-section-card">
           <div className="d-flex align-items-center gap-2 mb-3">
             <Globe size={16} className="text-info" />
-            <h6 className="mb-0 fw-bold" style={{ fontSize: '0.9rem' }}>Hierarchy & Organization Placement</h6>
+            <h6 className="mb-0 fw-bold text-white" style={{ fontSize: '0.9rem' }}>Hierarchy & Organization Placement</h6>
           </div>
           <div className="d-flex flex-column gap-2" style={{ fontSize: '0.85rem' }}>
-            <div className="d-flex justify-content-between py-1 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <span className="text-muted">Organization / Tenant:</span>
-              <span className="fw-semibold">{tenantName}</span>
+            <div className="d-flex justify-content-between align-items-center py-1.5 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <span className="text-muted">Organization / Tenant</span>
+              <span className="badge bg-dark border border-secondary border-opacity-40 text-white px-2.5 py-1 fs-12 fw-semibold">
+                {tenantName}
+              </span>
             </div>
-            <div className="d-flex justify-content-between py-1 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <span className="text-muted">Geographic Zone:</span>
-              <span className="fw-semibold">{zoneName}</span>
+            <div className="d-flex justify-content-between align-items-center py-1.5 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <span className="text-muted">Geographic Zone</span>
+              <span className="fw-semibold text-slate-200">{zoneName}</span>
             </div>
-            <div className="d-flex justify-content-between py-1 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <span className="text-muted">Sub-Zone / Area:</span>
-              <span className="fw-semibold">{areaName}</span>
+            <div className="d-flex justify-content-between align-items-center py-1.5 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <span className="text-muted">Sub-Zone / Area</span>
+              <span className="fw-semibold text-slate-200">{areaName}</span>
             </div>
-            <div className="d-flex justify-content-between py-1">
-              <span className="text-muted">Timezone:</span>
-              <span className="font-monospace text-info">{site.timezone || 'Asia/Kolkata'}</span>
+            <div className="d-flex justify-content-between align-items-center py-1.5">
+              <span className="text-muted">Timezone</span>
+              <span className="font-monospace text-cyan-400 fs-12">{site.timezone || 'Asia/Kolkata'}</span>
             </div>
           </div>
         </div>
@@ -330,52 +347,63 @@ const SiteInspectorDrawer = ({
           <div className="d-flex align-items-center justify-content-between mb-3">
             <div className="d-flex align-items-center gap-2">
               <MapPin size={16} className="text-danger" />
-              <h6 className="mb-0 fw-bold" style={{ fontSize: '0.9rem' }}>Physical Address & Geolocation</h6>
+              <h6 className="mb-0 fw-bold text-white" style={{ fontSize: '0.9rem' }}>Physical Address & Geolocation</h6>
             </div>
             {mapsUrl && (
               <a
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-info text-decoration-none"
-                style={{ fontSize: '0.75rem' }}
+                className="text-info text-decoration-none d-flex align-items-center gap-1"
+                style={{ fontSize: '0.78rem' }}
               >
-                View Map &nearr;
+                <span>View Map</span> <ExternalLink size={12} />
               </a>
             )}
           </div>
-          <div className="mb-3" style={{ fontSize: '0.85rem' }}>
-            <div className="text-muted mb-1" style={{ fontSize: '0.75rem' }}>Base Address:</div>
-            <div className="p-2 rounded bg-black bg-opacity-20 border" style={{ borderColor: 'var(--scada-border, #334155)' }}>
+          <div className="mb-3">
+            <div className="text-muted mb-1.5" style={{ fontSize: '0.75rem', fontWeight: 600 }}>Base Address:</div>
+            <div
+              className="p-2.5 rounded-2"
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                color: '#e2e8f0',
+                fontSize: '0.85rem',
+                lineHeight: 1.5
+              }}
+            >
               {site.address || 'No street address specified.'}
             </div>
           </div>
-          <Row className="g-2" style={{ fontSize: '0.82rem' }}>
-            <Col xs={4}>
-              <span className="text-muted d-block" style={{ fontSize: '0.72rem' }}>City</span>
-              <span className="fw-semibold">{site.city || 'N/A'}</span>
-            </Col>
-            <Col xs={4}>
-              <span className="text-muted d-block" style={{ fontSize: '0.72rem' }}>State</span>
-              <span className="fw-semibold">{site.state || 'N/A'}</span>
-            </Col>
-            <Col xs={4}>
-              <span className="text-muted d-block" style={{ fontSize: '0.72rem' }}>Pincode</span>
-              <span className="fw-semibold font-monospace">{site.pincode || 'N/A'}</span>
-            </Col>
-            <Col xs={6} className="mt-2">
-              <span className="text-muted d-block" style={{ fontSize: '0.72rem' }}>GPS Latitude</span>
-              <span className="fw-semibold font-monospace tabular-numbers text-info">
-                {site.latitude != null && site.latitude !== '' ? site.latitude : 'N/A'}
-              </span>
-            </Col>
-            <Col xs={6} className="mt-2">
-              <span className="text-muted d-block" style={{ fontSize: '0.72rem' }}>GPS Longitude</span>
-              <span className="fw-semibold font-monospace tabular-numbers text-info">
-                {site.longitude != null && site.longitude !== '' ? site.longitude : 'N/A'}
-              </span>
-            </Col>
-          </Row>
+          <div className="p-3 rounded-2" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+            <Row className="g-3" style={{ fontSize: '0.82rem' }}>
+              <Col xs={4}>
+                <span className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>City</span>
+                <span className="fw-semibold text-white">{site.city || '—'}</span>
+              </Col>
+              <Col xs={4}>
+                <span className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>State</span>
+                <span className="fw-semibold text-white">{site.state || '—'}</span>
+              </Col>
+              <Col xs={4}>
+                <span className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>Pincode</span>
+                <span className="fw-semibold font-monospace text-white">{site.pincode || '—'}</span>
+              </Col>
+              <Col xs={6} className="pt-2 border-top border-secondary border-opacity-10">
+                <span className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>GPS Latitude</span>
+                <span className="fw-semibold font-monospace tabular-numbers text-info">
+                  {site.latitude != null && site.latitude !== '' ? site.latitude : '—'}
+                </span>
+              </Col>
+              <Col xs={6} className="pt-2 border-top border-secondary border-opacity-10">
+                <span className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>GPS Longitude</span>
+                <span className="fw-semibold font-monospace tabular-numbers text-info">
+                  {site.longitude != null && site.longitude !== '' ? site.longitude : '—'}
+                </span>
+              </Col>
+            </Row>
+          </div>
         </div>
 
         {/* Site Contacts */}

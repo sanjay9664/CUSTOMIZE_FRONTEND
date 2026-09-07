@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Container, Row, Col, Badge, Button, Form, Spinner, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import { Container, Row, Col, Badge, Button, Form, Spinner, OverlayTrigger, Tooltip, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin, Plus, Building2, Activity, AlertTriangle, Zap,
@@ -83,6 +83,10 @@ const SiteManagement = ({ embedded = false }) => {
   const [message, setMessage] = useState(null);
   const [createModalError, setCreateModalError] = useState(null);
   const [editModalError, setEditModalError] = useState(null);
+
+  // Status Change Confirmation State
+  const [confirmToggleSite, setConfirmToggleSite] = useState(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
   // Forms State
   const [createForm, setCreateForm] = useState({
@@ -347,6 +351,9 @@ const SiteManagement = ({ embedded = false }) => {
       tenantId: site.tenantId || site.tenant?.id || '',
       zoneId: site.zoneId || site.zone?.id || '',
       areaId: site.areaId || site.areaRef?.id || '',
+      tenant: site.tenant || null,
+      zone: site.zone || null,
+      areaRef: site.areaRef || null,
       address: site.address || '',
       showExtendedAddress: Boolean(site.city || site.state || site.pincode || site.latitude != null || site.longitude != null),
       city: site.city || '',
@@ -385,6 +392,9 @@ const SiteManagement = ({ embedded = false }) => {
               tenantId: detail.tenantId || detail.tenant?.id || prev.tenantId,
               zoneId: detail.zoneId || detail.zone?.id || prev.zoneId,
               areaId: detail.areaId || detail.areaRef?.id || prev.areaId,
+              tenant: detail.tenant || prev.tenant,
+              zone: detail.zone || prev.zone,
+              areaRef: detail.areaRef || prev.areaRef,
               address: detail.address ?? prev.address,
               city: detail.city ?? prev.city,
               state: detail.state ?? prev.state,
@@ -476,14 +486,22 @@ const SiteManagement = ({ embedded = false }) => {
     }
   };
 
-  // Toggle Enable / Disable Status
-  const handleToggleSiteStatus = async (site, e) => {
+  // Trigger Confirmation Modal for Status Change
+  const handleToggleSiteStatus = (site, e) => {
     if (e && e.stopPropagation) e.stopPropagation();
     if (!site || !site.id) return;
+    setConfirmToggleSite(site);
+  };
+
+  // Perform Confirmed Enable / Disable Status Change
+  const handleConfirmToggleStatus = async () => {
+    if (!confirmToggleSite || !confirmToggleSite.id) return;
+    const site = confirmToggleSite;
     const isCurrentlyActive = isSiteActive(site);
     const newStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
     const newIsActive = !isCurrentlyActive;
 
+    setTogglingStatus(true);
     try {
       await fetch(`${API_BASE_URL}/sites/${site.id}`, {
         method: 'PATCH',
@@ -492,6 +510,8 @@ const SiteManagement = ({ embedded = false }) => {
       });
     } catch (err) {
       console.warn('Toggle site status notice:', err);
+    } finally {
+      setTogglingStatus(false);
     }
 
     updateSite(site.id, { status: newStatus, isActive: newIsActive });
@@ -503,6 +523,7 @@ const SiteManagement = ({ embedded = false }) => {
       type: newStatus === 'ACTIVE' ? 'success' : 'warning',
       text: `Site "${site.name}" is now ${newStatus === 'ACTIVE' ? 'ENABLED' : 'DISABLED'}.`
     });
+    setConfirmToggleSite(null);
   };
 
   // View site details in Inspector Drawer
@@ -969,6 +990,43 @@ const SiteManagement = ({ embedded = false }) => {
         }
         body.light-mode .site-data-table td {
           color: #1e293b;
+        }
+        .scada-confirm-modal {
+          z-index: 1070 !important;
+        }
+        .scada-confirm-modal .modal-dialog {
+          max-width: 530px !important;
+          margin: 1.75rem auto;
+        }
+        .scada-confirm-modal .modal-content {
+          background: linear-gradient(165deg, rgba(26, 36, 56, 0.98) 0%, rgba(13, 20, 36, 0.99) 100%) !important;
+          backdrop-filter: blur(20px) !important;
+          -webkit-backdrop-filter: blur(20px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          border-radius: 16px !important;
+          overflow: hidden !important;
+          box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 0, 0, 0.4) !important;
+        }
+        .scada-confirm-modal .modal-header {
+          background: rgba(255, 255, 255, 0.02) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+          padding: 22px 28px !important;
+        }
+        .scada-confirm-modal .modal-body {
+          background: transparent !important;
+          padding: 24px 28px !important;
+        }
+        .scada-confirm-modal .modal-footer {
+          background: rgba(0, 0, 0, 0.25) !important;
+          border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+          padding: 18px 28px !important;
+          gap: 12px;
+        }
+        .scada-confirm-backdrop {
+          backdrop-filter: blur(8px) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          background-color: rgba(3, 7, 18, 0.78) !important;
+          z-index: 1065 !important;
         }
       `}</style>
 
@@ -1667,6 +1725,204 @@ const SiteManagement = ({ embedded = false }) => {
         zones={zones}
         areas={areas}
       />
+
+      {/* CONFIRM DISABLE / ENABLE SITE MODAL */}
+      <Modal
+        show={Boolean(confirmToggleSite)}
+        onHide={() => !togglingStatus && setConfirmToggleSite(null)}
+        centered
+        backdrop="static"
+        keyboard={!togglingStatus}
+        className="scada-confirm-modal"
+        backdropClassName="scada-confirm-backdrop"
+      >
+        <Modal.Header closeButton={!togglingStatus}>
+          <div className="d-flex align-items-center gap-3">
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                minWidth: 42,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isSiteActive(confirmToggleSite) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                border: `1px solid ${isSiteActive(confirmToggleSite) ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`,
+                color: isSiteActive(confirmToggleSite) ? '#ef4444' : '#10b981',
+                boxShadow: isSiteActive(confirmToggleSite) ? '0 0 16px rgba(239, 68, 68, 0.25)' : '0 0 16px rgba(16, 185, 129, 0.25)',
+                flexShrink: 0
+              }}
+            >
+              {isSiteActive(confirmToggleSite) ? <AlertTriangle size={20} /> : <Power size={20} />}
+            </div>
+            <div>
+              <Modal.Title className="fs-16 fw-bold mb-0 text-white" style={{ letterSpacing: '0.01em' }}>
+                {isSiteActive(confirmToggleSite) ? 'Disable Site Confirmation' : 'Enable Site Confirmation'}
+              </Modal.Title>
+              <div className="text-muted fs-12 mt-0.5">Safety verification required before state change</div>
+            </div>
+          </div>
+        </Modal.Header>
+
+        <Modal.Body>
+          {/* Target Site Identity Box */}
+          <div
+            className="rounded-3 mb-3 d-flex align-items-center justify-content-between"
+            style={{
+              padding: '12px 16px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              gap: '12px'
+            }}
+          >
+            <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  minWidth: 38,
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  color: '#38bdf8',
+                  flexShrink: 0
+                }}
+              >
+                <Building2 size={18} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div className="fw-bold text-white fs-14 text-truncate" style={{ letterSpacing: '0.01em' }}>
+                  {confirmToggleSite?.name}
+                </div>
+                <div className="text-muted fs-12 d-flex align-items-center gap-1 mt-0.5 text-truncate">
+                  <MapPin size={12} className="text-secondary flex-shrink-0" />
+                  <span>{confirmToggleSite?.city || 'Location unset'}{confirmToggleSite?.state ? `, ${confirmToggleSite?.state}` : ''}</span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                flexShrink: 0,
+                backgroundColor: isSiteActive(confirmToggleSite) ? 'rgba(16, 185, 129, 0.16)' : 'rgba(100, 116, 139, 0.16)',
+                color: isSiteActive(confirmToggleSite) ? '#34d399' : '#94a3b8',
+                border: `1px solid ${isSiteActive(confirmToggleSite) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(100, 116, 139, 0.4)'}`,
+                borderRadius: '6px',
+                padding: '5px 12px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: isSiteActive(confirmToggleSite) ? '#34d399' : '#94a3b8',
+                  boxShadow: isSiteActive(confirmToggleSite) ? '0 0 8px rgba(52, 211, 153, 0.8)' : 'none',
+                  flexShrink: 0
+                }}
+              />
+              <span>{isSiteActive(confirmToggleSite) ? 'ACTIVE' : 'INACTIVE'}</span>
+            </div>
+          </div>
+
+          {/* Impact Statement Box */}
+          <div
+            className="rounded-3"
+            style={{
+              padding: '16px 18px',
+              background: isSiteActive(confirmToggleSite) ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+              borderLeft: `4px solid ${isSiteActive(confirmToggleSite) ? '#ef4444' : '#10b981'}`,
+              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '10px'
+            }}
+          >
+            <div
+              className="d-flex align-items-center gap-2 mb-2"
+              style={{
+                color: isSiteActive(confirmToggleSite) ? '#f87171' : '#34d399',
+                fontSize: '0.88rem',
+                fontWeight: 600
+              }}
+            >
+              <AlertTriangle size={17} className="flex-shrink-0" />
+              <span>{isSiteActive(confirmToggleSite) ? 'Real-time telemetry will be paused' : 'Real-time telemetry will resume'}</span>
+            </div>
+            <p
+              className="mb-0 text-slate-300"
+              style={{
+                fontSize: '0.82rem',
+                lineHeight: 1.6,
+                paddingLeft: '25px'
+              }}
+            >
+              {isSiteActive(confirmToggleSite)
+                ? 'Disabling this site will stop sensor data aggregation, mute automated threshold alarms, and mark connected assets as offline.'
+                : 'Enabling this site will reconnect live SCADA telemetry, resume background health checks, and re-engage automated alert monitoring.'}
+            </p>
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            disabled={togglingStatus}
+            className="px-4 py-2 text-slate-200 border-secondary border-opacity-40"
+            style={{
+              borderRadius: '8px',
+              fontWeight: 500,
+              fontSize: '0.85rem',
+              background: 'rgba(255, 255, 255, 0.04)',
+              transition: 'all 0.15s ease'
+            }}
+            onClick={() => setConfirmToggleSite(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={togglingStatus}
+            onClick={handleConfirmToggleStatus}
+            className="px-4 py-2 border-0 d-inline-flex align-items-center gap-2 text-white"
+            style={{
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              background: isSiteActive(confirmToggleSite)
+                ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+              boxShadow: isSiteActive(confirmToggleSite)
+                ? '0 4px 16px rgba(220, 38, 38, 0.45)'
+                : '0 4px 16px rgba(5, 150, 105, 0.45)'
+            }}
+          >
+            {togglingStatus ? (
+              <>
+                <Spinner size="sm" animation="border" />
+                <span>Updating...</span>
+              </>
+            ) : (
+              <>
+                <Power size={15} />
+                <span>{isSiteActive(confirmToggleSite) ? 'Yes, Disable Site' : 'Yes, Enable Site'}</span>
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

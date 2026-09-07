@@ -13,13 +13,41 @@ export const getSiteFormFields = ({
   formData = {},
   isEdit = false
 }) => {
+  // Ensure current formData values are present in options even if not yet in fetched lists
+  const tenantOptions = [...tenants.map(t => ({ value: t.id, label: `${t.name}` }))];
+  if (formData.tenantId && !tenantOptions.some(opt => String(opt.value) === String(formData.tenantId))) {
+    tenantOptions.unshift({
+      value: formData.tenantId,
+      label: formData.tenant?.name || formData.tenantName || `Organization (${formData.tenantId})`
+    });
+  }
+
+  const filteredZones = zones.filter(z => !formData.tenantId || String(z.tenantId) === String(formData.tenantId));
+  const zoneOptions = [...filteredZones.map(z => ({ value: z.id, label: z.name }))];
+  if (formData.zoneId && !zoneOptions.some(opt => String(opt.value) === String(formData.zoneId))) {
+    const matchedZone = zones.find(z => String(z.id) === String(formData.zoneId));
+    zoneOptions.unshift({
+      value: formData.zoneId,
+      label: matchedZone ? matchedZone.name : (formData.zone?.name || formData.zoneName || `Zone (${formData.zoneId})`)
+    });
+  }
+
+  const filteredAreas = areas.filter(a => !formData.zoneId || String(a.zoneId) === String(formData.zoneId));
+  const areaOptions = [...filteredAreas.map(a => ({ value: a.id, label: a.name }))];
+  if (formData.areaId && !areaOptions.some(opt => String(opt.value) === String(formData.areaId))) {
+    const matchedArea = areas.find(a => String(a.id) === String(formData.areaId));
+    areaOptions.unshift({
+      value: formData.areaId,
+      label: matchedArea ? matchedArea.name : (formData.areaRef?.name || formData.areaName || `Area (${formData.areaId})`)
+    });
+  }
+
   return [
     {
       key: 'hierarchy',
       type: 'hierarchy',
       label: 'Location Hierarchy',
-      required: !isEdit,
-      disabled: isEdit,
+      required: true,
       colSpan: 12,
       options: [
         {
@@ -27,12 +55,8 @@ export const getSiteFormFields = ({
           label: 'Organization',
           placeholder: 'Select Organization...',
           required: true,
-          disabled: isEdit,
           colSpan: 4,
-          options: tenants.map(t => ({
-            value: t.id,
-            label: `${t.name}`
-          })),
+          options: tenantOptions,
           onChange: (val, form, setField) => {
             setField('zoneId', '');
             setField('areaId', '');
@@ -42,11 +66,8 @@ export const getSiteFormFields = ({
           key: 'zoneId',
           label: 'Geographic Zone',
           placeholder: 'Select Zone...',
-          disabled: isEdit,
           colSpan: 4,
-          options: zones
-            .filter(z => isEdit || !formData.tenantId || String(z.tenantId) === String(formData.tenantId))
-            .map(z => ({ value: z.id, label: z.name })),
+          options: zoneOptions,
           onChange: (val, form, setField) => {
             setField('areaId', '');
           }
@@ -55,11 +76,8 @@ export const getSiteFormFields = ({
           key: 'areaId',
           label: 'Sub-Zone / Area',
           placeholder: 'Select Area...',
-          disabled: isEdit,
           colSpan: 4,
-          options: areas
-            .filter(a => isEdit || !formData.zoneId || String(a.zoneId) === String(formData.zoneId))
-            .map(a => ({ value: a.id, label: a.name }))
+          options: areaOptions
         }
       ]
     },
