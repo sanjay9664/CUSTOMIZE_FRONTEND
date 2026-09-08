@@ -2,8 +2,7 @@
  * Unified API Client for BMS Platform
  * Manages HTTP requests, authentication, token refresh, and standardized ApiError handling.
  */
-import { getAuthToken, clearAuthSession } from '../utils/cookieUtils';
-import { performTokenRefresh } from './authRefreshService';
+import { getAuthToken } from '../utils/cookieUtils';
 import { getApiUrl } from '../utils/apiConfig';
 
 export class ApiError extends Error {
@@ -43,9 +42,17 @@ export const normalizeList = (raw, key) => {
   return [];
 };
 
-let refreshPromise = null;
+export const normalizePaginatedResponse = (raw, key = 'assets') => {
+  const items = normalizeList(raw, key);
+  const total = raw?.total ?? raw?.meta?.total ?? raw?.pagination?.total ?? raw?.count ?? items.length;
+  const page = raw?.page ?? raw?.meta?.page ?? raw?.pagination?.page ?? 1;
+  const limit = raw?.limit ?? raw?.meta?.limit ?? raw?.pagination?.limit ?? raw?.meta?.pageSize ?? items.length;
+  const totalPages = raw?.totalPages ?? raw?.meta?.totalPages ?? raw?.pagination?.totalPages ?? (limit > 0 ? Math.ceil(total / limit) : 1);
 
-async function executeRequest(endpoint, options = {}, isRetry = false) {
+  return { items, total, page, limit, totalPages };
+};
+
+async function executeRequest(endpoint, options = {}) {
   const url = getApiUrl(endpoint);
   const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
 
@@ -60,37 +67,6 @@ async function executeRequest(endpoint, options = {}, isRetry = false) {
     res = await fetch(url, config);
   } catch (err) {
     throw new ApiError('Network error or backend service unreachable', 0, 'NETWORK_ERROR');
-  }
-
-  // Reactive 401 Interceptor: perform single refresh and retry queued requests once
-  if (res.status === 401 && !isRetry) {
-    if (endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh')) {
-      return res;
-    }
-
-    if (!refreshPromise) {
-      refreshPromise = performTokenRefresh(true).finally(() => {
-        refreshPromise = null;
-      });
-    }
-
-    const newToken = await refreshPromise;
-    if (newToken) {
-      const retryHeaders = {
-        ...headers,
-        'Authorization': `Bearer ${newToken}`
-      };
-      try {
-        return await fetch(url, { ...config, headers: retryHeaders });
-      } catch (retryErr) {
-        throw new ApiError('Network error during retry after token refresh', 0, 'NETWORK_ERROR');
-      }
-    } else {
-      clearAuthSession();
-      if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
   }
 
   return res;

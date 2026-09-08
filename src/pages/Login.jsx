@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import { setAuthCookies, setAuthSession } from '../utils/cookieUtils';
+import { startAutoTokenRefresh } from '../services/authRefreshService';
 import { AUTH_ENDPOINTS } from '../utils/apiConfig';
 import { useAuth } from '../context/AuthContext';
 import logo from "../assets/logo.png";
@@ -214,6 +215,9 @@ const Login = () => {
       userRole: user.role || 'ADMIN',
       userData: user
     });
+
+    // Start auto token refresh interval and tab-focus watchers
+    startAutoTokenRefresh();
 
     // Remove any legacy stored passwords for security
     localStorage.removeItem('remembered_password');

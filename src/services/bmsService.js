@@ -41,9 +41,10 @@ export const bmsService = {
   updateSite: (id, data) => apiClient.patch(`/sites/${id}`, data),
   deleteSite: (id) => apiClient.delete(`/sites/${id}`),
 
-  // Buildings and assets are site-scoped in the backend contract. For the
-  // management overview, aggregate the site collections instead of calling
-  // unsupported global /buildings or /assets endpoints.
+  // Buildings are now managed as assets in the backend
+  getBuildings: async () => [],
+  getSiteBuildings: async () => [],
+  /*
   getBuildings: async (siteId, params = {}) => {
     if (siteId) return apiClient.get(`/sites/${siteId}/buildings`, params);
     const sites = normalizeList(await apiClient.get('/sites'), 'sites');
@@ -59,13 +60,20 @@ export const bmsService = {
   createBuilding: (siteId, data) => apiClient.post(`/sites/${siteId}/buildings`, data),
   updateBuilding: (siteId, buildingId, data) => apiClient.patch(`/sites/${siteId}/buildings/${buildingId}`, data),
   deleteBuilding: (siteId, buildingId) => apiClient.delete(`/sites/${siteId}/buildings/${buildingId}`),
+  */
 
   // Assets Service
   getAssets: async (siteId, params = {}) => {
     if (siteId) return apiClient.get(`/sites/${siteId}/assets`, params);
     return apiClient.get('/assets', params);
   },
+  getAssetDetails: (id) => apiClient.get(`/assets/${id}`),
+  getAssetHierarchy: (siteId, params = {}) => apiClient.get(`/sites/${siteId}/assets/hierarchy`, params),
+  getAssetStats: (siteId) => apiClient.get(`/sites/${siteId}/assets/stats`),
+  getAssetDevices: (id) => apiClient.get(`/assets/${id}/devices`),
+  getAssetTree: (id) => apiClient.get(`/assets/${id}/tree`),
   createAsset: (data) => apiClient.post('/assets', data),
+  createSiteAsset: (siteId, data) => apiClient.post(`/sites/${siteId}/assets`, data),
   updateAsset: (id, data) => apiClient.patch(`/assets/${id}`, data),
   deleteAsset: (id) => apiClient.delete(`/assets/${id}`),
 

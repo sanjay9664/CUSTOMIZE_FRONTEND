@@ -114,7 +114,7 @@ const OrganizationSection = ({
             <tbody>
               {safeTenants.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No organizations / tenants found</td>
+                  <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No organizations found</td>
                 </tr>
               ) : safeTenants.map(tn => {
                 const parentCompany = (companies || []).find(c => c.id === tn.companyId);

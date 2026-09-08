@@ -55,7 +55,7 @@ const BuildingsTab = ({
               <option value="ALL">🏢 All Physical Sites ({activeSites.length})</option>
               {activeSites.map(s => (
                 <option key={s.id} value={s.id}>
-                  📍 {s.name} (Site #{s.id})
+                  📍 {s.name}
                 </option>
               ))}
             </Form.Select>

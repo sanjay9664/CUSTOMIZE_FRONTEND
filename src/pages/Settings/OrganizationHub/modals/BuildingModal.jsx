@@ -23,7 +23,7 @@ const BuildingModal = ({
       placeholder: 'Select Physical Parent Site...',
       required: true,
       disabled: !!editingBuilding,
-      options: activeSites.map(s => ({ value: s.id, label: `${s.name} (Site #${s.id})` })),
+      options: activeSites.map(s => ({ value: s.id, label: s.name })),
       colSpan: 12
     },
     {

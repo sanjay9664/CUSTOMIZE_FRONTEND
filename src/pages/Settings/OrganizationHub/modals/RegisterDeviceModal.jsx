@@ -141,8 +141,8 @@ const RegisterDeviceModal = ({
         /* ── Form Labels & Inputs (Dark Default) ── */
         .register-wizard-drawer .wizard-label {
           font-size: 13px;
-          font-weight: 500;
-          color: #94a3b8;
+          font-weight: 600;
+          color: #e2e8f0;
           margin-bottom: 6px;
           display: block;
         }
@@ -173,7 +173,8 @@ const RegisterDeviceModal = ({
         }
         .register-wizard-drawer .wizard-input::placeholder,
         body:not(.light-mode) .register-wizard-drawer .wizard-input::placeholder {
-          color: #64748b !important;
+          color: #94a3b8 !important;
+          opacity: 1 !important;
           font-size: 13px;
         }
 
@@ -312,7 +313,8 @@ const RegisterDeviceModal = ({
           background-color: #2563eb;
         }
         body.light-mode .register-wizard-drawer .wizard-label {
-          color: #374151;
+          color: #1e293b !important;
+          font-weight: 600 !important;
         }
         body.light-mode .register-wizard-drawer .wizard-input,
         body.light-mode .register-wizard-drawer .wizard-select {
@@ -326,7 +328,8 @@ const RegisterDeviceModal = ({
           box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
         }
         body.light-mode .register-wizard-drawer .wizard-input::placeholder {
-          color: #9ca3af !important;
+          color: #64748b !important;
+          opacity: 1 !important;
         }
         body.light-mode .register-wizard-drawer .table-wizard-custom {
           border: 1px solid #e2e8f0;
