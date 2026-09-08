@@ -527,7 +527,7 @@ const AssetInspectorDrawer = ({
                   variant="link"
                   size="sm"
                   className="text-info p-0 fs-12 text-decoration-none d-flex align-items-center gap-1"
-                  onClick={() => navigate('/manage-organisation?tab=device')}
+                  onClick={() => navigate('/settings/devices')}
                 >
                   <span>Go to Device Management</span>
                   <ExternalLink size={12} />

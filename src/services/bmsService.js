@@ -79,6 +79,17 @@ export const bmsService = {
 
   // Devices Service
   getDevices: (params = {}) => apiClient.get('/devices', params),
+  getSiteDevices: (siteId, params = {}) => apiClient.get(`/sites/${siteId}/devices`, params),
+  getDeviceSummary: (siteId) => apiClient.get(`/sites/${siteId}/devices/summary`),
+  getDeviceDetails: (siteId, deviceId) => apiClient.get(`/sites/${siteId}/devices/${deviceId}`),
+  createSiteDevice: (siteId, data) => apiClient.post(`/sites/${siteId}/devices`, data),
+  createDeviceFromTemplate: (siteId, data) => apiClient.post(`/sites/${siteId}/devices/from-template`, data),
+  getSiteDeviceTemplates: (siteId) => apiClient.get(`/sites/${siteId}/devices/templates`),
+  updateSiteDevice: (siteId, deviceId, data) => apiClient.patch(`/sites/${siteId}/devices/${deviceId}`, data),
+  deleteSiteDevice: (siteId, deviceId) => apiClient.delete(`/sites/${siteId}/devices/${deviceId}`),
+  syncSiteDevice: (siteId, deviceId) => apiClient.post(`/sites/${siteId}/devices/${deviceId}/sync`),
+  getDeviceLiveTelemetry: (siteId, deviceId) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/live`),
+  getDeviceLatestEvents: (siteId, deviceId) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/events/latest`),
 
   // Widgets Service
   getWidgets: (params = {}) => apiClient.get('/widgets', params),

@@ -10,6 +10,7 @@ import GlobalSettings from './GlobalSettings';
 import UserAdministration from './UserAdministration';
 import SiteManagement from './SiteManagement';
 import AssetManagement from './AssetManagement';
+import DeviceManagement from './DeviceManagement';
 import organizationService from '../../services/organizationService';
 
 // ── HIERARCHY STEPS (Exact Tree Explorer Order) ──────────────────────────────
@@ -801,6 +802,8 @@ const SettingsIndex = () => {
         <SiteManagement />
       ) : activeTab === 'assets' ? (
         <AssetManagement />
+      ) : activeTab === 'devices' ? (
+        <DeviceManagement />
       ) : null}
     </div>
   );
