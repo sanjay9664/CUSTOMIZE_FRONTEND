@@ -543,134 +543,149 @@ const AssetManagement = ({ embedded = false }) => {
   };
 
   // ── Recursive Hierarchy Tree Renderer ──────────────────────────────────
+  // Depth-to-accent color mapping
+  const depthAccentColors = {
+    0: { accent: '#38bdf8', glow: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.35)' },
+    1: { accent: '#c084fc', glow: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.3)' },
+    2: { accent: '#2dd4bf', glow: 'rgba(20,184,166,0.12)', border: 'rgba(20,184,166,0.3)' },
+    3: { accent: '#fbbf24', glow: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)' },
+  };
+
+  const getDepthAccent = (d) => depthAccentColors[Math.min(d, 3)];
+
   const renderTreeNode = (node, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodeIds.has(String(node.id));
     const isInactive = node.status === 'INACTIVE' || node.deletedAt;
     const isMaintenance = node.status === 'MAINTENANCE';
     const siteObj = sites.find(s => String(s.id) === String(node.siteId));
+    const childCount = hasChildren ? node.children.length : 0;
+    const accent = getDepthAccent(depth);
+
+    const depthIconClass = depth === 0 ? 'depth-0' : depth === 1 ? 'depth-1' : depth === 2 ? 'depth-2' : 'depth-sub';
 
     return (
-      <div key={node.id} className="tree-node-wrapper">
+      <div key={node.id} className={`tree-node-wrapper ${depth === 0 ? 'tree-root-wrapper' : ''}`}>
         <div
-          className={`tree-node-row d-flex align-items-center justify-content-between py-2 px-3 ${depth > 0 ? 'tree-node-child' : 'tree-node-root'}`}
+          className={`tree-node-row ${depth > 0 ? 'tree-node-child' : 'tree-node-root'}`}
           style={{
-            paddingLeft: `${16 + depth * 44}px`
+            paddingLeft: `${20 + depth * 36}px`,
+            paddingRight: 18,
+            paddingTop: depth === 0 ? 14 : 11,
+            paddingBottom: depth === 0 ? 14 : 11,
+            cursor: hasChildren ? 'pointer' : 'default',
+            borderLeft: depth > 0 ? `3px solid ${accent.accent}22` : 'none',
+          }}
+          onClick={() => {
+            if (hasChildren) toggleNodeExpand(String(node.id));
           }}
         >
-          {/* Left: Branch Indicator + Name + Type */}
-          <div className="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+          <div className="d-flex align-items-center flex-grow-1 min-w-0" style={{ gap: '14px' }}>
+            {/* Expand/Collapse chevron */}
             {hasChildren ? (
               <button
                 type="button"
-                className="btn btn-link p-0 text-slate-400 hover-text-white d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                style={{ width: 18, height: 18 }}
-                onClick={() => toggleNodeExpand(String(node.id))}
+                className={`tree-expand-btn d-inline-flex align-items-center justify-content-center flex-shrink-0 ${isExpanded ? 'expanded' : ''}`}
+                onClick={(e) => { e.stopPropagation(); toggleNodeExpand(String(node.id)); }}
                 aria-label={isExpanded ? 'Collapse node' : 'Expand node'}
+                style={{
+                  borderColor: isExpanded ? accent.border : undefined,
+                  background: isExpanded ? accent.glow : undefined,
+                  color: isExpanded ? accent.accent : undefined
+                }}
               >
-                {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                <ChevronRight size={13} className={`tree-chevron-icon ${isExpanded ? 'tree-chevron-rotated' : ''}`} />
               </button>
             ) : (
-              <span
-                className="d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                style={{ width: 18, height: 18 }}
-              >
+              <span className="tree-leaf-spacer d-inline-flex align-items-center justify-content-center flex-shrink-0">
                 {depth > 0 ? (
-                  <CornerDownRight size={13} className="text-slate-400 opacity-75" />
+                  <CornerDownRight size={11} className="tree-leaf-indicator" />
                 ) : (
-                  <span
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      backgroundColor: '#64748b'
-                    }}
-                  />
+                  <span className="tree-leaf-dot" />
                 )}
               </span>
             )}
 
-            <div className={`tree-icon-container ${depth === 0 ? 'depth-0' : 'depth-sub'}`}>
+            {/* Icon container */}
+            <div className={`tree-icon-container ${depthIconClass}`}>
               {depth === 0 ? (
-                <Building2 size={15} className="text-info" />
+                <Building2 size={17} />
               ) : depth === 1 ? (
-                <Layers size={14} className="text-warning" />
+                <Layers size={15} />
+              ) : depth === 2 ? (
+                <MapPin size={14} />
               ) : (
-                <Sliders size={13} className="text-slate-400" />
+                <Cpu size={13} />
               )}
             </div>
 
-            <div className="min-w-0">
-              <div className="d-flex align-items-center gap-2">
-                <span className="fw-bold asset-primary-name fs-13 text-truncate" title={node.name}>
+            {/* Name + Badge + sub-id */}
+            <div className="min-w-0 tree-node-info">
+              <div className="d-flex align-items-center" style={{ gap: '10px' }}>
+                <span className="fw-bold asset-primary-name text-truncate" title={node.name} style={{ fontSize: depth === 0 ? '0.88rem' : '0.82rem' }}>
                   {node.name}
                 </span>
                 <span className={`asset-type-badge ${getTypeBadgeClass(node.assetType)}`}>
                   {node.assetType || 'EQUIPMENT'}
                 </span>
+                {hasChildren && (
+                  <span className="tree-child-count-badge" style={{ borderColor: `${accent.accent}40`, color: accent.accent, background: `${accent.accent}15` }}>
+                    {childCount}
+                  </span>
+                )}
               </div>
-              <div className="asset-sub-id text-truncate">
+              <div className="asset-sub-id text-truncate" style={{ marginTop: 2 }}>
                 {node.serialNumber ? `SN: ${node.serialNumber}` : node.id}
               </div>
             </div>
           </div>
 
           {/* Middle: Site + Status */}
-          <div className="d-none d-md-flex align-items-center gap-3 me-3 flex-shrink-0">
-            <span className="asset-meta-text">
+          <div className="d-none d-md-flex align-items-center flex-shrink-0" style={{ gap: '16px', marginRight: 14 }}>
+            <span className="tree-site-pill">
               {siteObj?.name || `Site #${node.siteId || '7'}`}
             </span>
 
-            <div className="d-flex align-items-center gap-1.5">
+            <div className="tree-status-pill" style={{ background: isInactive ? 'rgba(148,163,184,0.1)' : isMaintenance ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)', borderColor: isInactive ? 'rgba(148,163,184,0.25)' : isMaintenance ? 'rgba(245,158,11,0.3)' : 'rgba(34,197,94,0.3)' }}>
               <span
+                className="tree-status-dot"
                 style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  backgroundColor: isInactive ? '#94a3b8' : (isMaintenance ? '#f59e0b' : '#22c55e')
+                  backgroundColor: isInactive ? '#94a3b8' : (isMaintenance ? '#f59e0b' : '#22c55e'),
+                  boxShadow: isInactive ? 'none' : `0 0 8px ${isMaintenance ? 'rgba(245,158,11,0.5)' : 'rgba(34,197,94,0.5)'}`
                 }}
               />
-              <span className="fs-11 fw-semibold asset-meta-text">
+              <span style={{ color: isInactive ? '#94a3b8' : isMaintenance ? '#fbbf24' : '#4ade80', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.03em' }}>
                 {node.status || (isInactive ? 'INACTIVE' : 'ACTIVE')}
               </span>
             </div>
           </div>
 
           {/* Right: Actions Menu */}
-          <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
-            <button
-              type="button"
-              className="btn-scada-inspect"
-              onClick={() => handleInspect(node)}
-            >
+          <div className="d-flex align-items-center flex-shrink-0" style={{ gap: '5px' }} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="btn-scada-inspect" onClick={() => handleInspect(node)}>
               <Eye size={12} />
               <span>Inspect</span>
             </button>
 
-            <button
-              type="button"
-              className="btn-scada-edit"
-              onClick={() => handleOpenEdit(node)}
-            >
+            <button type="button" className="btn-scada-edit" onClick={() => handleOpenEdit(node)}>
               <Edit3 size={12} />
               <span>Edit</span>
             </button>
 
-            <Dropdown align="end">
-              <Dropdown.Toggle
-                as="button"
-                className="btn-scada-more"
-                aria-label="More actions"
-              >
+            <Dropdown align="end" drop="down">
+              <Dropdown.Toggle as="button" className="btn-scada-more" aria-label="More actions">
                 <MoreVertical size={14} />
               </Dropdown.Toggle>
-              <Dropdown.Menu className="dropdown-menu-dark shadow-lg">
-                <Dropdown.Item onClick={() => handleOpenCreate(node)} className="fs-12 d-flex align-items-center gap-2">
+              <Dropdown.Menu
+                className="dropdown-menu-dark shadow-lg"
+                style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', minWidth: 180, padding: '6px 0', backdropFilter: 'blur(12px)', background: 'rgba(15,23,42,0.96)' }}
+              >
+                <Dropdown.Item onClick={() => handleOpenCreate(node)} className="fs-12 d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
                   <Plus size={14} className="text-info" />
                   <span>Add Child Asset</span>
                 </Dropdown.Item>
-                <Dropdown.Divider className="border-secondary border-opacity-30" />
-                <Dropdown.Item onClick={() => handleOpenDelete(node)} className="fs-12 text-danger d-flex align-items-center gap-2">
+                <Dropdown.Divider className="border-secondary border-opacity-30" style={{ margin: '4px 0' }} />
+                <Dropdown.Item onClick={() => handleOpenDelete(node)} className="fs-12 text-danger d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
                   <Trash2 size={14} />
                   <span>Delete Asset</span>
                 </Dropdown.Item>
@@ -679,19 +694,28 @@ const AssetManagement = ({ embedded = false }) => {
           </div>
         </div>
 
-        {/* Nested Children */}
-        {hasChildren && isExpanded && (
-          <div className="tree-children-block position-relative">
+        {/* Nested Children with smooth expand/collapse */}
+        {hasChildren && (
+          <div
+            className="tree-children-block position-relative"
+            style={{
+              maxHeight: isExpanded ? 'none' : '0px',
+              opacity: isExpanded ? 1 : 0,
+              overflow: isExpanded ? 'visible' : 'hidden',
+              transition: isExpanded ? 'opacity 0.3s ease' : 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+            }}
+          >
             <div
               className="tree-branch-guide"
               style={{
                 position: 'absolute',
                 top: 0,
                 bottom: 8,
-                left: `${16 + depth * 44 + 9}px`,
-                width: 1,
+                left: `${20 + depth * 36 + 10}px`,
+                width: 0,
                 pointerEvents: 'none',
-                zIndex: 1
+                zIndex: 1,
+                borderLeft: `2px dashed ${accent.accent}25`
               }}
             />
             {node.children.map(child => renderTreeNode(child, depth + 1))}
@@ -730,6 +754,7 @@ const AssetManagement = ({ embedded = false }) => {
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 12px;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          overflow: visible !important;
         }
         body.light-mode .asset-management-wrapper .scada-card-surface {
           background: #ffffff !important;
@@ -868,68 +893,93 @@ const AssetManagement = ({ embedded = false }) => {
 
         /* ── Filter & Search Toolbar ── */
         .asset-management-wrapper .scada-input-group-addon {
-          background-color: rgba(15, 23, 42, 0.8) !important;
-          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          background-color: rgba(15, 23, 42, 0.6) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-right: none !important;
-          color: #94a3b8 !important;
+          color: #64748b !important;
+          border-radius: 8px 0 0 8px;
         }
         body.light-mode .asset-management-wrapper .scada-input-group-addon {
           background-color: #ffffff !important;
-          border: 1px solid #cbd5e1 !important;
+          border: 1px solid #e2e8f0 !important;
           border-right: none !important;
           color: #64748b !important;
         }
         .asset-management-wrapper .filter-input-scada {
-          background-color: rgba(15, 23, 42, 0.8) !important;
-          border: 1px solid rgba(255, 255, 255, 0.12) !important;
-          color: #f8fafc !important;
-          border-radius: 6px;
-          font-size: 0.82rem;
+          background-color: rgba(15, 23, 42, 0.6) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: #e2e8f0 !important;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 500;
+          padding: 6px 12px;
+          transition: all 0.2s ease;
+          backdrop-filter: blur(4px);
+        }
+        .asset-management-wrapper .filter-input-scada:hover {
+          border-color: rgba(56, 189, 248, 0.25) !important;
+          background-color: rgba(15, 23, 42, 0.75) !important;
         }
         body.light-mode .asset-management-wrapper .filter-input-scada {
           background-color: #ffffff !important;
-          border-color: #cbd5e1 !important;
+          border-color: #e2e8f0 !important;
           color: #0f172a !important;
+          backdrop-filter: none;
+        }
+        body.light-mode .asset-management-wrapper .filter-input-scada:hover {
+          border-color: #bae6fd !important;
         }
         .asset-management-wrapper .filter-input-scada:focus {
+          border-color: #38bdf8 !important;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12) !important;
+          background-color: rgba(15, 23, 42, 0.9) !important;
+        }
+        body.light-mode .asset-management-wrapper .filter-input-scada:focus {
           border-color: #0284c7 !important;
-          box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+          box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1) !important;
+          background-color: #ffffff !important;
         }
         .asset-management-wrapper .filter-clear-btn {
-          background-color: rgba(15, 23, 42, 0.8) !important;
-          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          background-color: rgba(15, 23, 42, 0.6) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-left: none !important;
           color: #94a3b8 !important;
+          border-radius: 0 8px 8px 0;
+          transition: color 0.15s ease;
+        }
+        .asset-management-wrapper .filter-clear-btn:hover {
+          color: #f87171 !important;
         }
         body.light-mode .asset-management-wrapper .filter-clear-btn {
           background-color: #ffffff !important;
-          border: 1px solid #cbd5e1 !important;
+          border: 1px solid #e2e8f0 !important;
           border-left: none !important;
           color: #64748b !important;
         }
         .asset-management-wrapper .btn-clear-filters {
-          border: 1px solid rgba(56, 189, 248, 0.4);
-          color: #38bdf8;
-          background: transparent;
-          font-size: 0.75rem;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #f87171;
+          background: rgba(239, 68, 68, 0.06);
+          font-size: 0.72rem;
           font-weight: 600;
-          border-radius: 6px;
-          transition: all 0.15s ease;
+          border-radius: 8px;
+          transition: all 0.18s ease;
+          padding: 5px 12px;
         }
         .asset-management-wrapper .btn-clear-filters:hover {
-          background: rgba(56, 189, 248, 0.12);
-          color: #38bdf8;
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.5);
+          color: #ef4444;
         }
         body.light-mode .asset-management-wrapper .btn-clear-filters {
-          border-color: #0284c7 !important;
-          color: #0284c7 !important;
-          background: #f0f9ff !important;
+          border-color: #fca5a5 !important;
+          color: #dc2626 !important;
+          background: #fef2f2 !important;
         }
         body.light-mode .asset-management-wrapper .btn-clear-filters:hover {
-          background: #0284c7 !important;
-          color: #ffffff !important;
+          background: #fee2e2 !important;
+          border-color: #f87171 !important;
         }
-
         /* ── Crisp Asset Type Badges (Fixed for Light & Dark Mode) ── */
         .asset-type-badge {
           display: inline-flex;
@@ -1063,55 +1113,400 @@ const AssetManagement = ({ embedded = false }) => {
           color: #334155 !important;
         }
 
-        /* ── Hierarchy Tree Rows ── */
+        /* ── Tree dropdown z-index & positioning fix ── */
+        .tree-node-wrapper {
+          position: relative;
+          z-index: 1;
+        }
+        .tree-root-wrapper {
+          position: relative;
+          z-index: 1;
+        }
+        .tree-root-wrapper:hover,
+        .tree-root-wrapper:focus-within,
+        .tree-root-wrapper:has(.show) {
+          z-index: 50 !important;
+        }
         .tree-node-row {
-          transition: background 0.15s ease;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          position: relative;
+          z-index: 1;
+        }
+        .tree-node-row:hover,
+        .tree-node-row:focus-within,
+        .tree-node-row:has(.show) {
+          z-index: 60 !important;
+        }
+        .tree-node-wrapper .dropdown,
+        .tree-node-wrapper .dropdown.show {
+          position: relative;
+          z-index: 70 !important;
+        }
+        .tree-node-wrapper .dropdown-menu {
+          z-index: 9999 !important;
+          margin-top: 4px !important;
+        }
+        .asset-management-wrapper .table-responsive {
+          overflow-x: auto;
+          overflow-y: visible !important;
+        }
+        .asset-management-wrapper .table tbody tr:focus-within,
+        .asset-management-wrapper .table tbody tr:has(.show) {
+          z-index: 50 !important;
+          position: relative;
+        }
+
+        /* ── Hierarchy Tree ── Premium Glassmorphism Design ── */
+        .asset-tree-body {
+          padding: 6px 8px;
+          position: relative;
+          z-index: 2;
+          overflow: visible !important;
+        }
+
+        /* Root wrapper - card-like separation */
+        .tree-root-wrapper {
+          margin: 6px 6px;
+          border-radius: 12px;
+          background: rgba(15, 23, 42, 0.45);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          backdrop-filter: blur(8px);
+          overflow: visible;
+          transition: all 0.25s ease;
+        }
+        .tree-root-wrapper:hover {
+          border-color: rgba(56, 189, 248, 0.15);
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(56, 189, 248, 0.06);
+        }
+        body.light-mode .tree-root-wrapper {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          backdrop-filter: none;
+          box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+        }
+        body.light-mode .tree-root-wrapper:hover {
+          border-color: #bae6fd;
+          box-shadow: 0 4px 16px rgba(14, 165, 233, 0.06);
+        }
+
+        /* Tree node rows */
+        .tree-node-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+          position: relative;
+        }
+        .tree-node-row:last-child {
+          border-bottom: none;
         }
         body.light-mode .tree-node-row {
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom-color: #f1f5f9;
         }
         .tree-node-row:hover {
-          background-color: rgba(255, 255, 255, 0.025) !important;
+          background: linear-gradient(90deg, rgba(56, 189, 248, 0.04) 0%, rgba(56, 189, 248, 0.01) 100%) !important;
         }
         body.light-mode .tree-node-row:hover {
-          background-color: #f8fafc !important;
+          background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 100%) !important;
+        }
+
+        /* Root node row - slightly bolder */
+        .tree-node-root {
+          background: transparent;
         }
         .tree-node-child {
-          background-color: rgba(255, 255, 255, 0.01);
+          background: rgba(255, 255, 255, 0.008);
         }
         body.light-mode .tree-node-child {
-          background-color: #fafbfc;
+          background: rgba(241, 245, 249, 0.5);
         }
-        .tree-branch-guide {
-          border-left: 1.5px dashed rgba(148, 163, 184, 0.35);
-        }
-        body.light-mode .tree-branch-guide {
-          border-left: 1.5px dashed rgba(100, 116, 139, 0.35);
-        }
-        .tree-icon-container {
-          padding: 4px;
+
+        /* ── Tree Expand Button ── */
+        .tree-expand-btn {
+          width: 24px;
+          height: 24px;
           border-radius: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.03);
+          color: #64748b;
+          transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          padding: 0;
+        }
+        .tree-expand-btn:hover {
+          transform: scale(1.1);
+          box-shadow: 0 2px 10px rgba(56, 189, 248, 0.15);
+        }
+        .tree-expand-btn.expanded {
+          box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+        }
+        body.light-mode .tree-expand-btn {
+          background: #ffffff;
+          border-color: #e2e8f0;
+          color: #64748b;
+        }
+        body.light-mode .tree-expand-btn:hover {
+          background: #e0f2fe;
+          border-color: #0284c7;
+          color: #0284c7;
+          transform: scale(1.1);
+        }
+
+        /* Leaf spacer */
+        .tree-leaf-spacer {
+          width: 24px;
+          height: 24px;
+        }
+
+        /* ── Chevron rotation animation ── */
+        .tree-chevron-icon {
+          transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+          transform: rotate(0deg);
+        }
+        .tree-chevron-icon.tree-chevron-rotated {
+          transform: rotate(90deg);
+        }
+
+        /* ── Tree leaf indicators ── */
+        .tree-leaf-indicator {
+          color: #475569;
+          opacity: 0.45;
+        }
+        .tree-leaf-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #38bdf8, #818cf8);
+          opacity: 0.6;
+        }
+
+        /* ── Tree status dot ── */
+        .tree-status-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          animation: tree-pulse 2.5s ease-in-out infinite;
+        }
+        @keyframes tree-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+
+        /* ── Status pill ── */
+        .tree-status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          border-radius: 20px;
+          border: 1px solid;
+        }
+        body.light-mode .tree-status-pill {
+          border-color: #e2e8f0 !important;
+          background: #f8fafc !important;
+        }
+        body.light-mode .tree-status-pill span:last-child {
+          color: #334155 !important;
+        }
+
+        /* ── Site pill ── */
+        .tree-site-pill {
+          color: #94a3b8;
+          font-size: 0.72rem;
+          font-weight: 500;
+          padding: 2px 10px;
+          border-radius: 20px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        body.light-mode .tree-site-pill {
+          background: #f1f5f9;
+          border-color: #e2e8f0;
+          color: #475569;
+        }
+
+        /* ── Child count badge ── */
+        .tree-child-count-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 20px;
+          height: 20px;
+          padding: 0 6px;
+          border-radius: 10px;
+          font-size: 10px;
+          font-weight: 800;
+          border: 1px solid;
+          line-height: 1;
+          letter-spacing: 0.02em;
+        }
+        body.light-mode .tree-child-count-badge {
+          background: #e0f2fe !important;
+          color: #0369a1 !important;
+          border-color: #bae6fd !important;
+        }
+
+        /* ── Icon containers per depth ── */
+        .tree-icon-container {
+          width: 34px;
+          height: 34px;
+          border-radius: 9px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          transition: all 0.22s ease;
+        }
+        .tree-node-row:hover .tree-icon-container {
+          transform: scale(1.05);
         }
         .tree-icon-container.depth-0 {
-          background: rgba(56, 189, 248, 0.12);
-          border: 1px solid rgba(56, 189, 248, 0.25);
+          background: linear-gradient(145deg, rgba(56, 189, 248, 0.18), rgba(14, 165, 233, 0.06));
+          border: 1px solid rgba(56, 189, 248, 0.35);
+          color: #38bdf8;
+          box-shadow: 0 3px 12px rgba(56, 189, 248, 0.12), inset 0 1px 1px rgba(255,255,255,0.05);
         }
         body.light-mode .tree-icon-container.depth-0 {
-          background: #e0f2fe;
-          border: 1px solid #bae6fd;
+          background: linear-gradient(145deg, #dbeafe, #bae6fd);
+          border: 1px solid #7dd3fc;
+          color: #0369a1;
+          box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+        }
+        .tree-icon-container.depth-1 {
+          background: linear-gradient(145deg, rgba(168, 85, 247, 0.15), rgba(139, 92, 246, 0.06));
+          border: 1px solid rgba(168, 85, 247, 0.3);
+          color: #c084fc;
+          box-shadow: 0 2px 10px rgba(168, 85, 247, 0.08);
+        }
+        body.light-mode .tree-icon-container.depth-1 {
+          background: linear-gradient(145deg, #f3e8ff, #e9d5ff);
+          border: 1px solid #d8b4fe;
+          color: #7e22ce;
+          box-shadow: 0 2px 8px rgba(168, 85, 247, 0.06);
+        }
+        .tree-icon-container.depth-2 {
+          background: linear-gradient(145deg, rgba(20, 184, 166, 0.15), rgba(13, 148, 136, 0.06));
+          border: 1px solid rgba(20, 184, 166, 0.3);
+          color: #2dd4bf;
+          box-shadow: 0 2px 10px rgba(20, 184, 166, 0.08);
+        }
+        body.light-mode .tree-icon-container.depth-2 {
+          background: linear-gradient(145deg, #ccfbf1, #99f6e4);
+          border: 1px solid #5eead4;
+          color: #0f766e;
+          box-shadow: 0 2px 8px rgba(20, 184, 166, 0.06);
         }
         .tree-icon-container.depth-sub {
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: linear-gradient(145deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.05));
+          border: 1px solid rgba(245, 158, 11, 0.25);
+          color: #fbbf24;
+          box-shadow: 0 2px 10px rgba(245, 158, 11, 0.06);
         }
         body.light-mode .tree-icon-container.depth-sub {
+          background: linear-gradient(145deg, #fef3c7, #fde68a);
+          border: 1px solid #fcd34d;
+          color: #b45309;
+          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.06);
+        }
+
+        /* ── Hierarchy tree header bar ── */
+        .tree-topology-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 18px;
+          background: linear-gradient(90deg, rgba(15, 23, 42, 0.7) 0%, rgba(15, 23, 42, 0.4) 100%);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          position: relative;
+          z-index: 1;
+        }
+        body.light-mode .tree-topology-header {
+          background: linear-gradient(90deg, #f8fafc, #ffffff) !important;
+          border-bottom-color: #e2e8f0 !important;
+        }
+        .tree-topology-title {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .tree-topology-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 7px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(168, 85, 247, 0.1));
+          border: 1px solid rgba(56, 189, 248, 0.25);
+          color: #38bdf8;
+        }
+        body.light-mode .tree-topology-icon {
+          background: linear-gradient(135deg, #e0f2fe, #f3e8ff);
+          border-color: #bae6fd;
+          color: #0369a1;
+        }
+        .tree-topology-label {
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #e2e8f0;
+          letter-spacing: 0.01em;
+        }
+        body.light-mode .tree-topology-label {
+          color: #1e293b !important;
+        }
+        .tree-topology-count {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #64748b;
+          padding: 2px 8px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        body.light-mode .tree-topology-count {
           background: #f1f5f9;
-          border: 1px solid #e2e8f0;
+          border-color: #e2e8f0;
+          color: #475569;
+        }
+        .tree-header-btn {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #94a3b8;
+          font-size: 0.72rem;
+          font-weight: 600;
+          padding: 4px 12px;
+          border-radius: 6px;
+          transition: all 0.18s ease;
+          cursor: pointer;
+        }
+        .tree-header-btn:hover {
+          color: #e2e8f0;
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .tree-header-btn.btn-expand {
+          color: #38bdf8;
+          border-color: rgba(56, 189, 248, 0.2);
+        }
+        .tree-header-btn.btn-expand:hover {
+          background: rgba(56, 189, 248, 0.1);
+          border-color: rgba(56, 189, 248, 0.35);
+        }
+        body.light-mode .tree-header-btn {
+          background: #ffffff;
+          border-color: #e2e8f0;
+          color: #64748b;
+        }
+        body.light-mode .tree-header-btn:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+        body.light-mode .tree-header-btn.btn-expand {
+          color: #0284c7;
+          border-color: #bae6fd;
+        }
+        body.light-mode .tree-header-btn.btn-expand:hover {
+          background: #e0f2fe;
         }
 
         /* ── Action Buttons ── */
@@ -1263,10 +1658,10 @@ const AssetManagement = ({ embedded = false }) => {
 
       {/* HEADER SECTION */}
       <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
-        <div className="d-flex align-items-center gap-2.5">
+        <div className="d-flex align-items-center" style={{ gap: '14px' }}>
           <div
             className="p-2 rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #ec4899, #db2777)', color: '#ffffff' }}
+            style={{ background: 'linear-gradient(135deg, #ec4899, #db2777)', color: '#ffffff', width: 40, height: 40 }}
           >
             <Sliders size={20} />
           </div>
@@ -1277,7 +1672,7 @@ const AssetManagement = ({ embedded = false }) => {
                 {totalRecords} Total
               </span>
             </div>
-            <p className="fs-12 asset-header-subtitle mb-0">
+            <p className="fs-12 asset-header-subtitle mb-0" style={{ marginTop: 2 }}>
               Physical asset topology, spaces, and equipment inventory.
             </p>
           </div>
@@ -1385,8 +1780,8 @@ const AssetManagement = ({ embedded = false }) => {
         </div>
       </div>
 
-      {/* FILTER & SEARCH TOOLBAR (Mapped to OpenAPI Query Parameters) */}
-      <div className="scada-card-surface p-2.5 mb-3">
+      {/* FILTER & SEARCH TOOLBAR */}
+      <div className="scada-card-surface mb-3" style={{ padding: '10px 14px', borderRadius: 12 }}>
         <Row className="g-2 align-items-center">
           {/* Server Search Input */}
           <Col xs={12} md={4} lg={4}>
@@ -1499,7 +1894,7 @@ const AssetManagement = ({ embedded = false }) => {
       </div>
 
       {/* CONTENT AREA: TABLE OR HIERARCHY */}
-      <div className="scada-card-surface overflow-hidden">
+      <div className="scada-card-surface">
         {viewMode === 'table' ? (
           /* ── TABLE VIEW ─────────────────────────────────────────────── */
           <div>
@@ -1651,7 +2046,7 @@ const AssetManagement = ({ embedded = false }) => {
                                 <span>Edit</span>
                               </button>
 
-                              <Dropdown align="end">
+                              <Dropdown align="end" drop="down">
                                 <Dropdown.Toggle
                                   as="button"
                                   className="btn-scada-more"
@@ -1659,13 +2054,13 @@ const AssetManagement = ({ embedded = false }) => {
                                 >
                                   <MoreVertical size={14} />
                                 </Dropdown.Toggle>
-                                <Dropdown.Menu className="dropdown-menu-dark shadow-lg">
-                                  <Dropdown.Item onClick={() => handleOpenCreate(a)} className="fs-12 d-flex align-items-center gap-2">
+                                <Dropdown.Menu className="dropdown-menu-dark shadow-lg" style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', minWidth: 180, padding: '6px 0', backdropFilter: 'blur(12px)', background: 'rgba(15,23,42,0.96)' }}>
+                                  <Dropdown.Item onClick={() => handleOpenCreate(a)} className="fs-12 d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
                                     <Plus size={14} className="text-info" />
                                     <span>Add Child Asset</span>
                                   </Dropdown.Item>
-                                  <Dropdown.Divider className="border-secondary border-opacity-30" />
-                                  <Dropdown.Item onClick={() => handleOpenDelete(a)} className="fs-12 text-danger d-flex align-items-center gap-2">
+                                  <Dropdown.Divider className="border-secondary border-opacity-30" style={{ margin: '4px 0' }} />
+                                  <Dropdown.Item onClick={() => handleOpenDelete(a)} className="fs-12 text-danger d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
                                     <Trash2 size={14} />
                                     <span>Delete Asset</span>
                                   </Dropdown.Item>
@@ -1739,22 +2134,25 @@ const AssetManagement = ({ embedded = false }) => {
         ) : (
           /* ── HIERARCHY TREE VIEW ─────────────────────────────────────── */
           <div>
-            <div className="d-flex align-items-center justify-content-between p-2.5 px-3 border-bottom scada-section-bar">
-              <div className="fs-12 asset-header-subtitle fw-semibold">
-                Facility Tree Topology ({hierarchyTree.length} root branches)
+            <div className="tree-topology-header">
+              <div className="tree-topology-title">
+                <div className="tree-topology-icon">
+                  <GitFork size={14} />
+                </div>
+                <span className="tree-topology-label">Facility Tree Topology</span>
+                <span className="tree-topology-count">{hierarchyTree.length} root branches</span>
               </div>
-              <div className="d-flex gap-2">
+              <div className="d-flex" style={{ gap: '6px' }}>
                 <button
                   type="button"
-                  className="btn btn-link p-0 text-info fs-11 text-decoration-none fw-semibold"
+                  className="tree-header-btn btn-expand"
                   onClick={expandAllNodes}
                 >
                   Expand All
                 </button>
-                <span className="text-muted fs-11">•</span>
                 <button
                   type="button"
-                  className="btn btn-link p-0 asset-header-subtitle fs-11 text-decoration-none"
+                  className="tree-header-btn"
                   onClick={collapseAllNodes}
                 >
                   Collapse All
@@ -1769,7 +2167,9 @@ const AssetManagement = ({ embedded = false }) => {
               </div>
             ) : hierarchyTree.length === 0 ? (
               <div className="text-center py-5 px-3">
-                <GitFork size={32} className="text-slate-500 mb-2 opacity-40" />
+                <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <GitFork size={24} style={{ color: '#38bdf8', opacity: 0.6 }} />
+                </div>
                 <h6 className="asset-header-title fw-bold">No hierarchy tree available</h6>
                 <p className="fs-12 asset-header-subtitle mb-0">Select a specific site or register root building assets.</p>
               </div>
