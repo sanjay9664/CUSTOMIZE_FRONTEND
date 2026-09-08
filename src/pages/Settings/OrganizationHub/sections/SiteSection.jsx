@@ -3,7 +3,7 @@ import SiteManagement from '../../SiteManagement';
 
 const SiteSection = () => {
   return (
-    <SiteManagement />
+    <SiteManagement embedded={true} />
   );
 };
 

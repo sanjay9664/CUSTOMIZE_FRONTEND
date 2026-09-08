@@ -35,6 +35,11 @@ export const SiteProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
 
   const fetchSites = useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setLoading(false);
+      return [];
+    }
     setLoading(true);
     try {
       const res = await fetch(getApiUrl('/sites'), { headers: getAuthHeaders() });
@@ -114,7 +119,9 @@ export const SiteProvider = ({ children }) => {
 
   // Initial fetch and global event listeners
   useEffect(() => {
-    fetchSites();
+    if (getAuthToken()) {
+      fetchSites();
+    }
 
     const handleSitesUpdated = (e) => {
       if (e.detail && Array.isArray(e.detail)) {

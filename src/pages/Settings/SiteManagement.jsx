@@ -1,28 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Badge, Button, Modal, Form, Spinner, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Container, Row, Col, Badge, Button, Form, Spinner, OverlayTrigger, Tooltip, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin, Plus, Building2, Activity, AlertTriangle, Zap,
   Eye, RefreshCw, Search, LayoutGrid, List, ChevronRight,
-  Globe, Server, Clock, TrendingUp, Edit3, Power, CheckCircle, XCircle
+  Globe, Server, Clock, Edit3, Power, CheckCircle, XCircle,
+  ArrowUpDown, ArrowUp, ArrowDown, X, Navigation, Filter,
+  SlidersHorizontal, CheckCircle2, Radio, ArrowRight, Layers
 } from 'lucide-react';
 
 import { getAuthToken } from '../../utils/cookieUtils';
 import { getApiUrl } from '../../utils/apiConfig';
 import { useSiteStore } from '../../context/SiteContext';
+import RegisterSiteModal from './modals/RegisterSiteModal';
+import SiteInspectorDrawer from './modals/SiteInspectorDrawer';
 
 const API_BASE_URL = getApiUrl();
 
 const getAuthHeaders = () => {
   const token = getAuthToken() || '';
-
   return {
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
 
-// Helper to format dates safely
 const formatDate = (dateStr) => {
   if (!dateStr) return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   const d = new Date(dateStr);
@@ -40,50 +42,77 @@ const normalizeList = (raw, key) => {
   return [];
 };
 
-const SiteManagement = () => {
+const SiteManagement = ({ embedded = false }) => {
   const navigate = useNavigate();
-  const { sites, setSites, addSite, updateSite, deleteSite: removeSiteFromStore, fetchSites: refreshStoreSites } = useSiteStore();
+  const {
+    sites,
+    setSites,
+    addSite,
+    updateSite,
+    fetchSites: refreshStoreSites,
+    selectedSite: activeDashboardSite,
+    setSelectedSite
+  } = useSiteStore();
+
   const [tenants, setTenants] = useState([]);
   const [zones, setZones] = useState([]);
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+
+  // View & Filtering State
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTenantFilter, setSelectedTenantFilter] = useState('');
+  const [selectedZoneFilter, setSelectedZoneFilter] = useState('');
+  const [kpiFilter, setKpiFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'ALARM'
+
+  // Sorting State
+  const [sortColumn, setSortColumn] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' | 'desc'
+
+  // Modals & Drawers State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedSite, setSelectedSite] = useState(null);
+  const [showInspectorDrawer, setShowInspectorDrawer] = useState(false);
+  const [inspectingSite, setInspectingSite] = useState(null);
   const [editingSite, setEditingSite] = useState(null);
   const [siteStats, setSiteStats] = useState(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
+  const [createModalError, setCreateModalError] = useState(null);
+  const [editModalError, setEditModalError] = useState(null);
 
-  // Form State
+  // Status Change Confirmation State
+  const [confirmToggleSite, setConfirmToggleSite] = useState(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
+
+  // Forms State
   const [createForm, setCreateForm] = useState({
     name: '',
-    sochiotLocationId: '',
-    organizationId: '',
     tenantId: '',
     zoneId: '',
     areaId: '',
-    city: '',
-    state: ''
-  });
-
-  const [editForm, setEditForm] = useState({
-    id: '',
-    name: '',
-    sochiotLocationId: '',
-    organizationId: '',
-    tenantId: '',
-    zoneId: '',
-    areaId: '',
+    address: '',
+    showExtendedAddress: false,
     city: '',
     state: '',
-    status: 'ACTIVE'
+    pincode: '',
+    latitude: '',
+    longitude: '',
+    contacts: [],
+    timezone: 'Asia/Kolkata',
+    isActive: true,
+    showSochiotLogo: true,
+    logoUrl: '',
+    selectedTemplates: [],
+    selectedFeatures: []
   });
 
-  // Fetch hierarchy (Tenants, Zones, Tenant Areas)
+  const [editForm, setEditForm] = useState({});
+
+  // Fetch hierarchy
   const fetchHierarchyData = useCallback(async () => {
     try {
       const [tRes, zRes, aRes] = await Promise.all([
@@ -112,9 +141,10 @@ const SiteManagement = () => {
     }
   }, []);
 
-  // Fetch sites strictly from backend API dynamically
+  // Fetch sites
   const fetchSites = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/sites`, {
         headers: getAuthHeaders()
@@ -124,16 +154,17 @@ const SiteManagement = () => {
         const list = normalizeList(result, 'sites');
         setSites(list);
       } else {
-        setSites([]);
+        setFetchError(`Server returned status ${response.status}. Could not fetch sites.`);
       }
     } catch (err) {
       console.warn('Sites fetch notice:', err);
-      setSites([]);
+      setFetchError('Network error while connecting to the site service.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+  }, [setSites]);
 
-  // Fetch site stats directly from backend
+  // Fetch site live stats
   const fetchSiteStats = async (siteId) => {
     if (!siteId || siteId === 'undefined') return;
     setSiteStats(null);
@@ -155,157 +186,351 @@ const SiteManagement = () => {
     fetchHierarchyData();
   }, [fetchSites, fetchHierarchyData]);
 
-  // Create site handler
+  // Auto-clear toast notifications
+  useEffect(() => {
+    if (message) {
+      const t = setTimeout(() => setMessage(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [message]);
+
+  // Create Site Handler
   const handleCreateSite = async (e) => {
-    e.preventDefault();
-    if (!createForm.name.trim()) {
-      setMessage({ type: 'error', text: 'Site name is required.' });
+    if (e && e.preventDefault) e.preventDefault();
+    if (!createForm.name?.trim()) {
+      setCreateModalError('Site name is required.');
       return;
     }
     setSubmitting(true);
+    setCreateModalError(null);
 
-    const locationId = parseInt(createForm.sochiotLocationId) || (Math.floor(Date.now() / 1000) % 89999 + 1000);
-    const orgId = parseInt(createForm.organizationId) || 1;
-
-    const payload = {
+    const createPayload = {
       name: createForm.name.trim(),
-      sochiotLocationId: locationId,
-      organizationId: orgId,
-      city: createForm.city.trim() || 'Noida',
-      state: createForm.state.trim() || 'Uttar Pradesh',
+      address: createForm.address?.trim() || '',
+      city: createForm.city?.trim() || null,
+      state: createForm.state?.trim() || null,
+      pincode: createForm.pincode?.trim() || null,
+      latitude: createForm.latitude !== '' && createForm.latitude != null ? Number(createForm.latitude) : null,
+      longitude: createForm.longitude !== '' && createForm.longitude != null ? Number(createForm.longitude) : null,
+      contacts: (createForm.contacts || []).map(c => ({
+        name: c.name?.trim() || '',
+        phone: c.phone?.trim() || '',
+        email: c.email?.trim() || null
+      })),
+      contactEmails: (createForm.contacts || []).map(c => c.email).filter(Boolean),
+      timezone: createForm.timezone || 'Asia/Kolkata',
+      isActive: createForm.isActive !== false,
+      status: createForm.isActive !== false ? 'ACTIVE' : 'INACTIVE',
+      showSochiotLogo: createForm.showSochiotLogo !== false,
+      logoUrl: createForm.logoUrl || '',
+      selectedTemplates: createForm.selectedTemplates || [],
+      selectedFeatures: createForm.selectedFeatures || [],
+      feature_permissions: {
+        selectedFeatures: createForm.selectedFeatures || [],
+        selectedTemplates: createForm.selectedTemplates || []
+      },
       ...(createForm.tenantId?.trim() ? { tenantId: createForm.tenantId.trim() } : {}),
       ...(createForm.zoneId?.trim() ? { zoneId: createForm.zoneId.trim() } : {}),
       ...(createForm.areaId?.trim() ? { areaId: createForm.areaId.trim() } : {})
     };
 
-    let createdSiteFromDb = null;
-
     try {
       const response = await fetch(`${API_BASE_URL}/sites`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
+        body: JSON.stringify(createPayload)
       });
+
       if (response.ok) {
-        const result = await response.json();
-        createdSiteFromDb = result?.data || result?.site || result;
+        const resData = await response.json();
+        const created = resData.data || resData.site || { ...createPayload, id: Date.now() };
+
+        addSite(created);
+        setMessage({ type: 'success', text: `Site "${created.name}" created successfully!` });
+        setShowCreateModal(false);
+
+        // Reset form
+        setCreateForm({
+          name: '',
+          tenantId: '',
+          zoneId: '',
+          areaId: '',
+          address: '',
+          showExtendedAddress: false,
+          city: '',
+          state: '',
+          pincode: '',
+          latitude: '',
+          longitude: '',
+          contacts: [],
+          timezone: 'Asia/Kolkata',
+          isActive: true,
+          showSochiotLogo: true,
+          logoUrl: '',
+          selectedTemplates: [],
+          selectedFeatures: []
+        });
       } else {
         const errData = await response.json().catch(() => ({}));
-        console.warn('Backend create site error:', errData);
+        const errMsg = errData?.error?.message || errData?.message || `Server returned error (${response.status}): Failed to create site.`;
+        setCreateModalError(errMsg);
+        setMessage({ type: 'error', text: errMsg });
       }
     } catch (err) {
-      console.warn('Create site API notice:', err);
+      const errMsg = err?.message || 'Network error connecting to site service.';
+      setCreateModalError(errMsg);
+      setMessage({ type: 'error', text: errMsg });
+    } finally {
+      setSubmitting(false);
     }
-
-    const finalSite = {
-      id: createdSiteFromDb?.id || `site_${Date.now().toString(36)}`,
-      name: payload.name,
-      sochiotLocationId: payload.sochiotLocationId,
-      organizationId: payload.organizationId,
-      tenantId: payload.tenantId || '',
-      zoneId: payload.zoneId || '',
-      areaId: payload.areaId || '',
-      city: payload.city,
-      state: payload.state,
-      status: 'ACTIVE',
-      createdAt: createdSiteFromDb?.createdAt || new Date().toISOString()
-    };
-
-    await fetchSites();
-    setMessage({ type: 'success', text: `Site "${payload.name}" created successfully!` });
-    setShowCreateModal(false);
-    setCreateForm({ name: '', sochiotLocationId: '', organizationId: '', tenantId: '', zoneId: '', areaId: '', city: '', state: '' });
-    setSubmitting(false);
   };
 
-  // Open Edit Modal
-  const handleOpenEditModal = (site) => {
+  // Helper: check if a site is operational/active
+  const isSiteActive = useCallback((s) => {
+    if (!s) return false;
+    if (s.deletedAt) return false;
+    if (s.isActive !== undefined && s.isActive !== null) {
+      return Boolean(s.isActive);
+    }
+    if (s.status) {
+      return s.status === 'ACTIVE' || s.status === 'ENABLED';
+    }
+    return true; // Default fallback if not specified
+  }, []);
+
+  // Helper: get accurate device count from site (handles Prisma _count, devicesCount, deviceCount)
+  const getSiteDevicesCount = useCallback((s) => {
+    if (!s) return 0;
+    return Number(s._count?.devices ?? s.devicesCount ?? s.deviceCount ?? 0);
+  }, []);
+
+  // Helper: resolve hierarchy names
+  const getSiteHierarchy = useCallback((s) => {
+    if (!s) return { tenantName: null, zoneName: null, areaName: null, tenantId: null, zoneId: null, areaId: null };
+    const tenantName = s.tenant?.name || tenants.find(t => String(t.id) === String(s.tenantId))?.name || (s.tenantId ? `Tenant #${s.tenantId}` : null);
+    const zoneName = s.zone?.name || zones.find(z => String(z.id) === String(s.zoneId))?.name || null;
+    const areaName = s.areaRef?.name || areas.find(a => String(a.id) === String(s.areaId))?.name || null;
+    const tenantId = s.tenant?.id || s.tenantId;
+    const zoneId = s.zone?.id || s.zoneId;
+    const areaId = s.areaRef?.id || s.areaId;
+    return { tenantName, zoneName, areaName, tenantId, zoneId, areaId };
+  }, [tenants, zones, areas]);
+
+  // Helper: parse permissions from feature_permissions or top-level arrays
+  const parseSitePermissions = useCallback((s) => {
+    if (!s) return { selectedTemplates: [], selectedFeatures: [] };
+    let fp = s.feature_permissions;
+    if (typeof fp === 'string') {
+      try {
+        fp = JSON.parse(fp);
+      } catch (e) {
+        fp = {};
+      }
+    }
+    const selectedTemplates = (Array.isArray(s.selectedTemplates) && s.selectedTemplates.length > 0)
+      ? s.selectedTemplates
+      : (Array.isArray(fp?.selectedTemplates) ? fp.selectedTemplates : []);
+
+    const selectedFeatures = (Array.isArray(s.selectedFeatures) && s.selectedFeatures.length > 0)
+      ? s.selectedFeatures
+      : (Array.isArray(fp?.selectedFeatures) ? fp.selectedFeatures : []);
+
+    return { selectedTemplates, selectedFeatures };
+  }, []);
+
+  // Open Edit Modal with full field parity and automatic permission pre-selection
+  const handleOpenEditModal = async (site) => {
     if (!site) return;
     setEditingSite(site);
+
+    // 1. Initial pre-population from site list object
+    const initialPerms = parseSitePermissions(site);
     setEditForm({
       id: site.id,
       name: site.name || '',
-      sochiotLocationId: site.sochiotLocationId || '',
-      organizationId: site.organizationId || '',
-      tenantId: site.tenantId || '',
-      zoneId: site.zoneId || '',
-      areaId: site.areaId || '',
+      tenantId: site.tenantId || site.tenant?.id || '',
+      zoneId: site.zoneId || site.zone?.id || '',
+      areaId: site.areaId || site.areaRef?.id || '',
+      tenant: site.tenant || null,
+      zone: site.zone || null,
+      areaRef: site.areaRef || null,
+      address: site.address || '',
+      showExtendedAddress: Boolean(site.city || site.state || site.pincode || site.latitude != null || site.longitude != null),
       city: site.city || '',
       state: site.state || '',
-      status: site.status || 'ACTIVE'
+      pincode: site.pincode || '',
+      latitude: site.latitude ?? '',
+      longitude: site.longitude ?? '',
+      contacts: Array.isArray(site.contacts) && site.contacts.length > 0
+        ? site.contacts
+        : (Array.isArray(site.contactEmails) ? site.contactEmails.map(email => ({ name: '', phone: '', email })) : []),
+      timezone: site.timezone || 'Asia/Kolkata',
+      isActive: isSiteActive(site),
+      showSochiotLogo: site.showSochiotLogo !== false,
+      logoUrl: site.logoUrl || '',
+      selectedTemplates: initialPerms.selectedTemplates,
+      selectedFeatures: initialPerms.selectedFeatures
     });
+    setEditModalError(null);
     setShowEditModal(true);
+
+    // 2. Query single-site GET /sites/:id to fetch fresh feature_permissions & relations
+    try {
+      const response = await fetch(`${API_BASE_URL}/sites/${site.id}`, {
+        headers: getAuthHeaders()
+      });
+      if (response.ok) {
+        const resData = await response.json();
+        const detail = resData?.data || resData?.site;
+        if (detail) {
+          const detailPerms = parseSitePermissions(detail);
+          setEditForm(prev => {
+            if (!prev || String(prev.id) !== String(site.id)) return prev;
+            return {
+              ...prev,
+              name: detail.name ?? prev.name,
+              tenantId: detail.tenantId || detail.tenant?.id || prev.tenantId,
+              zoneId: detail.zoneId || detail.zone?.id || prev.zoneId,
+              areaId: detail.areaId || detail.areaRef?.id || prev.areaId,
+              tenant: detail.tenant || prev.tenant,
+              zone: detail.zone || prev.zone,
+              areaRef: detail.areaRef || prev.areaRef,
+              address: detail.address ?? prev.address,
+              city: detail.city ?? prev.city,
+              state: detail.state ?? prev.state,
+              pincode: detail.pincode ?? prev.pincode,
+              latitude: detail.latitude ?? prev.latitude,
+              longitude: detail.longitude ?? prev.longitude,
+              timezone: detail.timezone || prev.timezone,
+              contacts: Array.isArray(detail.contacts) && detail.contacts.length > 0
+                ? detail.contacts
+                : (Array.isArray(detail.contactEmails) ? detail.contactEmails.map(email => ({ name: '', phone: '', email })) : prev.contacts),
+              selectedTemplates: detailPerms.selectedTemplates.length > 0 ? detailPerms.selectedTemplates : prev.selectedTemplates,
+              selectedFeatures: detailPerms.selectedFeatures.length > 0 ? detailPerms.selectedFeatures : prev.selectedFeatures
+            };
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Edit site detail fetch notice:', e);
+    }
   };
 
-  // Save Edit Site (PATCH /api/sites/:siteId)
+  // Save Edit Site (PATCH /api/sites/:id)
   const handleUpdateSite = async (e) => {
-    e.preventDefault();
-    if (!editForm.name.trim() || !editForm.id) {
-      setMessage({ type: 'error', text: 'Valid site ID and name are required.' });
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editForm.name?.trim() || !editForm.id) {
+      setEditModalError('Valid site name is required.');
       return;
     }
     setSubmitting(true);
+    setEditModalError(null);
 
     const updatePayload = {
       name: editForm.name.trim(),
-      sochiotLocationId: parseInt(editForm.sochiotLocationId) || 7,
-      organizationId: parseInt(editForm.organizationId) || 7,
       tenantId: editForm.tenantId || undefined,
       zoneId: editForm.zoneId || undefined,
       areaId: editForm.areaId || undefined,
-      city: editForm.city.trim(),
-      state: editForm.state.trim(),
-      status: editForm.status
+      address: editForm.address?.trim() || '',
+      city: editForm.city?.trim() || null,
+      state: editForm.state?.trim() || null,
+      pincode: editForm.pincode?.trim() || null,
+      latitude: editForm.latitude !== '' && editForm.latitude != null ? Number(editForm.latitude) : null,
+      longitude: editForm.longitude !== '' && editForm.longitude != null ? Number(editForm.longitude) : null,
+      contacts: (editForm.contacts || []).map(c => ({
+        name: c.name?.trim() || '',
+        phone: c.phone?.trim() || '',
+        email: c.email?.trim() || null
+      })),
+      contactEmails: (editForm.contacts || []).map(c => c.email).filter(Boolean),
+      timezone: editForm.timezone || 'Asia/Kolkata',
+      status: editForm.isActive ? 'ACTIVE' : 'INACTIVE',
+      isActive: editForm.isActive,
+      showSochiotLogo: editForm.showSochiotLogo !== false,
+      logoUrl: editForm.logoUrl || '',
+      selectedTemplates: editForm.selectedTemplates || [],
+      selectedFeatures: editForm.selectedFeatures || [],
+      feature_permissions: {
+        selectedFeatures: editForm.selectedFeatures || [],
+        selectedTemplates: editForm.selectedTemplates || []
+      }
     };
 
     try {
-      await fetch(`${API_BASE_URL}/sites/${editForm.id}`, {
+      const response = await fetch(`${API_BASE_URL}/sites/${editForm.id}`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(updatePayload)
       });
+
+      if (response.ok) {
+        updateSite(editForm.id, updatePayload);
+        if (inspectingSite && String(inspectingSite.id) === String(editForm.id)) {
+          setInspectingSite(prev => ({ ...prev, ...updatePayload }));
+        }
+        setMessage({ type: 'success', text: `Site "${editForm.name}" updated successfully!` });
+        setShowEditModal(false);
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = errData?.error?.message || errData?.message || `Server returned error (${response.status}): Failed to update site.`;
+        setEditModalError(errMsg);
+        setMessage({ type: 'error', text: errMsg });
+      }
     } catch (err) {
       console.warn('Update site API notice:', err);
+      updateSite(editForm.id, updatePayload);
+      setMessage({ type: 'warning', text: `Site updated locally. Please verify network connectivity.` });
+      setShowEditModal(false);
+    } finally {
+      setSubmitting(false);
     }
-
-    // Update global store
-    updateSite(editForm.id, updatePayload);
-
-    setMessage({ type: 'success', text: `Site "${editForm.name}" updated successfully!` });
-    setShowEditModal(false);
-    setSubmitting(false);
   };
 
-  // Toggle Enable / Disable Status
-  const handleToggleSiteStatus = async (site, e) => {
-    if (e) e.stopPropagation();
+  // Trigger Confirmation Modal for Status Change
+  const handleToggleSiteStatus = (site, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
     if (!site || !site.id) return;
-    const newStatus = site.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    setConfirmToggleSite(site);
+  };
 
+  // Perform Confirmed Enable / Disable Status Change
+  const handleConfirmToggleStatus = async () => {
+    if (!confirmToggleSite || !confirmToggleSite.id) return;
+    const site = confirmToggleSite;
+    const isCurrentlyActive = isSiteActive(site);
+    const newStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
+    const newIsActive = !isCurrentlyActive;
+
+    setTogglingStatus(true);
     try {
       await fetch(`${API_BASE_URL}/sites/${site.id}`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, isActive: newIsActive })
       });
     } catch (err) {
       console.warn('Toggle site status notice:', err);
+    } finally {
+      setTogglingStatus(false);
     }
 
-    // Update global store
-    updateSite(site.id, { status: newStatus });
+    updateSite(site.id, { status: newStatus, isActive: newIsActive });
+    if (inspectingSite && String(inspectingSite.id) === String(site.id)) {
+      setInspectingSite(prev => ({ ...prev, status: newStatus, isActive: newIsActive }));
+    }
 
     setMessage({
       type: newStatus === 'ACTIVE' ? 'success' : 'warning',
-      text: `Site "${site.name}" is now ${newStatus === 'ACTIVE' ? 'ENABLED' : 'DISABLED'}!`
+      text: `Site "${site.name}" is now ${newStatus === 'ACTIVE' ? 'ENABLED' : 'DISABLED'}.`
     });
+    setConfirmToggleSite(null);
   };
 
-  // View site details
+  // View site details in Inspector Drawer
   const handleViewSite = async (site) => {
     if (!site || !site.id || site.id === 'undefined') return;
-    setSelectedSite(site);
-    setShowDetailModal(true);
+    setInspectingSite(site);
+    setShowInspectorDrawer(true);
     fetchSiteStats(site.id);
 
     try {
@@ -314,8 +539,9 @@ const SiteManagement = () => {
       });
       if (response.ok) {
         const resData = await response.json();
-        if (resData?.data || resData?.site) {
-          setSelectedSite(resData.data || resData.site);
+        const detail = resData?.data || resData?.site;
+        if (detail) {
+          setInspectingSite(prev => ({ ...prev, ...detail }));
         }
       }
     } catch (e) {
@@ -323,478 +549,988 @@ const SiteManagement = () => {
     }
   };
 
-  // Filter sites - Only active ones are displayed and counted
-  const activeSites = sites.filter(s => s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
+  // KPI calculations
+  const kpiData = useMemo(() => {
+    const total = sites.length;
+    const operational = sites.filter(s => isSiteActive(s)).length;
+    const inAlarm = sites.filter(s => (Number(s.alarmsCount) || 0) > 0 && !s.deletedAt).length;
+    const totalEnergy = sites.reduce((sum, s) => sum + (Number(s.energyKwh) || 0), 0);
+    const totalDevices = sites.reduce((sum, s) => sum + getSiteDevicesCount(s), 0);
+    return { total, operational, inAlarm, totalEnergy, totalDevices };
+  }, [sites, isSiteActive, getSiteDevicesCount]);
 
-  const filteredSites = activeSites.filter(s => {
-    const q = searchQuery.toLowerCase();
-    return !q || (s.name || '').toLowerCase().includes(q) || (s.city || '').toLowerCase().includes(q) || (s.state || '').toLowerCase().includes(q);
-  });
+  // Dependent Zone Options
+  const availableZones = useMemo(() => {
+    if (!selectedTenantFilter) return zones;
+    return zones.filter(z => String(z.tenantId) === String(selectedTenantFilter));
+  }, [zones, selectedTenantFilter]);
 
-  // Auto-clear messages
-  useEffect(() => {
-    if (message) {
-      const t = setTimeout(() => setMessage(null), 4000);
-      return () => clearTimeout(t);
+  // Filter logic
+  const filteredSites = useMemo(() => {
+    return sites.filter(s => {
+      // 1. KPI Filter
+      if (kpiFilter === 'ACTIVE') {
+        if (!isSiteActive(s)) return false;
+      } else if (kpiFilter === 'ALARM') {
+        if ((Number(s.alarmsCount) || 0) <= 0) return false;
+      }
+
+      // 2. Tenant Filter
+      const { tenantId: sTenantId, zoneId: sZoneId } = getSiteHierarchy(s);
+      if (selectedTenantFilter && String(sTenantId) !== String(selectedTenantFilter)) {
+        return false;
+      }
+
+      // 3. Zone Filter
+      if (selectedZoneFilter && String(sZoneId) !== String(selectedZoneFilter)) {
+        return false;
+      }
+
+      // 4. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = (s.name || '').toLowerCase().includes(q);
+        const matchCity = (s.city || '').toLowerCase().includes(q);
+        const matchState = (s.state || '').toLowerCase().includes(q);
+        const matchAddress = (s.address || '').toLowerCase().includes(q);
+        if (!matchName && !matchCity && !matchState && !matchAddress) return false;
+      }
+
+      return true;
+    });
+  }, [sites, kpiFilter, selectedTenantFilter, selectedZoneFilter, searchQuery, isSiteActive, getSiteHierarchy]);
+
+  // Sort logic
+  const sortedSites = useMemo(() => {
+    return [...filteredSites].sort((a, b) => {
+      let aVal = a[sortColumn];
+      let bVal = b[sortColumn];
+
+      if (sortColumn === 'name') {
+        aVal = (a.name || '').toLowerCase();
+        bVal = (b.name || '').toLowerCase();
+      } else if (sortColumn === 'devices') {
+        aVal = getSiteDevicesCount(a);
+        bVal = getSiteDevicesCount(b);
+      } else if (sortColumn === 'alarms') {
+        aVal = Number(a.alarmsCount) || 0;
+        bVal = Number(b.alarmsCount) || 0;
+      } else if (sortColumn === 'energy') {
+        aVal = Number(a.energyKwh) || 0;
+        bVal = Number(b.energyKwh) || 0;
+      } else if (sortColumn === 'status') {
+        aVal = isSiteActive(a) ? 1 : 0;
+        bVal = isSiteActive(b) ? 1 : 0;
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredSites, sortColumn, sortDirection, getSiteDevicesCount, isSiteActive]);
+
+  const handleSort = (colKey) => {
+    if (sortColumn === colKey) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(colKey);
+      setSortDirection('asc');
     }
-  }, [message]);
-
-  const statusBadge = (status) => {
-    const s = (status || 'ACTIVE').toUpperCase();
-    const colors = { ACTIVE: '#10b981', MAINTENANCE: '#f59e0b', INACTIVE: '#ef4444', DISABLED: '#64748b' };
-    const bgOpacity = { ACTIVE: 'rgba(16, 185, 129, 0.15)', MAINTENANCE: 'rgba(245, 158, 11, 0.15)', INACTIVE: 'rgba(239, 68, 68, 0.15)', DISABLED: 'rgba(100, 116, 139, 0.15)' };
-    return (
-      <span style={{
-        backgroundColor: bgOpacity[s] || 'rgba(100,116,139,0.15)',
-        color: colors[s] || '#6b7280',
-        border: `1px solid ${colors[s] || '#6b7280'}40`,
-        fontSize: '0.72rem',
-        fontWeight: 700,
-        letterSpacing: '0.04em',
-        padding: '4px 12px',
-        borderRadius: 20,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5
-      }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors[s] || '#6b7280', display: 'inline-block' }} />
-        {s === 'INACTIVE' ? 'DISABLED' : s}
-      </span>
-    );
   };
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedTenantFilter('');
+    setSelectedZoneFilter('');
+    setKpiFilter('ALL');
+  };
+
+  const isFiltered = Boolean(searchQuery.trim() || selectedTenantFilter || selectedZoneFilter || kpiFilter !== 'ALL');
+
   return (
-    <Container fluid className="site-mgmt-wrapper py-4 px-lg-4" style={{ minHeight: '100vh' }}>
+    <div className={`site-mgmt-wrapper ${embedded ? 'p-0' : 'p-3'}`} style={{ color: 'var(--scada-text, #f8fafc)' }}>
       <style>{`
-        .site-mgmt-wrapper {
-          background-color: #070605;
-          color: #e2e8f0;
-        }
-        body.light-mode .site-mgmt-wrapper {
-          background-color: var(--scada-bg, #e2e8f0) !important;
-          color: #1e293b !important;
-        }
-        .site-card {
-          background: linear-gradient(135deg, rgba(30, 30, 36, 0.95), rgba(20, 20, 25, 0.9));
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 18px;
-          transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        .site-card-modern {
+          background: linear-gradient(145deg, rgba(26, 36, 56, 0.75) 0%, rgba(15, 23, 42, 0.85) 100%);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 14px;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
           cursor: pointer;
           overflow: hidden;
           position: relative;
+          box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
         }
-        .site-card::before {
+        .site-card-modern:hover {
+          transform: translateY(-3px);
+          border-color: rgba(56, 189, 248, 0.4);
+          box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.2);
+        }
+        .site-card-modern.is-current-active {
+          border-color: rgba(14, 165, 233, 0.55);
+          background: linear-gradient(145deg, rgba(14, 165, 233, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
+          box-shadow: 0 8px 24px -2px rgba(0, 0, 0, 0.35), 0 0 16px rgba(14, 165, 233, 0.15);
+        }
+        .site-card-modern.has-alarm {
+          border-color: rgba(239, 68, 68, 0.5);
+          background: linear-gradient(145deg, rgba(239, 68, 68, 0.06) 0%, rgba(15, 23, 42, 0.9) 100%);
+        }
+        .site-card-modern.has-alarm:hover {
+          border-color: #ef4444;
+          box-shadow: 0 12px 30px -4px rgba(239, 68, 68, 0.25);
+        }
+        .site-status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 10px;
+          border-radius: 9999px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 1px solid transparent;
+        }
+        .site-status-pill.is-active {
+          background: rgba(16, 185, 129, 0.14);
+          border-color: rgba(16, 185, 129, 0.35);
+          color: #34d399;
+        }
+        .site-status-pill.is-active:hover {
+          background: rgba(16, 185, 129, 0.22);
+          border-color: #10b981;
+          color: #6ee7b7;
+        }
+        .site-status-pill.is-inactive {
+          background: rgba(100, 116, 139, 0.15);
+          border-color: rgba(100, 116, 139, 0.3);
+          color: #94a3b8;
+        }
+        .site-status-pill.is-inactive:hover {
+          background: rgba(100, 116, 139, 0.25);
+          border-color: #94a3b8;
+          color: #cbd5e1;
+        }
+        .status-dot-indicator {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+        .status-dot-indicator.online {
+          background-color: #10b981;
+          box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+          animation: status-pulse 2s infinite ease-in-out;
+        }
+        .status-dot-indicator.offline {
+          background-color: #94a3b8;
+        }
+        @keyframes status-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.45; transform: scale(0.85); }
+        }
+        .site-kpi-card-compact {
+          background: linear-gradient(145deg, rgba(26, 36, 56, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
+          overflow: hidden;
+        }
+        .site-kpi-card-compact::before {
           content: '';
           position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, #06b6d4, #8b5cf6, #ec4899);
-          opacity: 0;
-          transition: opacity 0.3s;
-        }
-        .site-card:hover {
-          transform: translateY(-6px);
-          border-color: rgba(6, 182, 212, 0.35);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.45), 0 0 30px rgba(6,182,212,0.1);
-        }
-        .site-card:hover::before { opacity: 1; }
-        body.light-mode .site-card {
-          background: linear-gradient(135deg, #ffffff, #f8fafc) !important;
-          border-color: #e2e8f0 !important;
-          color: #1e293b !important;
-        }
-        body.light-mode .site-card:hover {
-          box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 0 30px rgba(6,182,212,0.12) !important;
-          border-color: rgba(6, 182, 212, 0.4) !important;
-        }
-        .stat-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 10px;
-          padding: 6px 12px;
-          font-size: 0.78rem;
-          color: #94a3b8;
-          transition: all 0.25s;
-        }
-        .stat-pill:hover {
-          background: rgba(6,182,212,0.1);
-          border-color: rgba(6,182,212,0.2);
-        }
-        body.light-mode .stat-pill {
-          background: #f1f5f9 !important;
-          border-color: #e2e8f0 !important;
-          color: #475569 !important;
-        }
-        .site-table-row {
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: transparent;
           transition: all 0.2s;
         }
-        .site-table-row:hover {
-          background: rgba(6,182,212,0.06) !important;
-        }
-        .create-site-btn {
-          background: linear-gradient(135deg, #06b6d4, #8b5cf6);
-          border: none;
-          border-radius: 14px;
-          padding: 12px 28px;
-          font-weight: 600;
-          font-size: 0.9rem;
-          transition: all 0.3s;
-          box-shadow: 0 4px 20px rgba(6,182,212,0.25);
-        }
-        .create-site-btn:hover {
+        .site-kpi-card-compact.kpi-total::before { background: #0ea5e9; }
+        .site-kpi-card-compact.kpi-operational::before { background: #10b981; }
+        .site-kpi-card-compact.kpi-alarm::before { background: #ef4444; }
+        .site-kpi-card-compact.kpi-devices::before { background: #6366f1; }
+        .site-kpi-card-compact.kpi-energy::before { background: #f59e0b; }
+        .site-kpi-card-compact:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 30px rgba(6,182,212,0.4);
+          border-color: rgba(255, 255, 255, 0.18);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
         }
-        .search-input-site {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
+        .site-kpi-card-compact.active-kpi {
+          border-color: var(--scada-accent, #38bdf8);
+          background: linear-gradient(145deg, rgba(56, 189, 248, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%);
+          box-shadow: 0 0 0 1px var(--scada-accent, #38bdf8), 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .site-toolbar {
+          background: linear-gradient(145deg, rgba(26, 36, 56, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
-          color: #e2e8f0;
-          padding: 10px 16px 10px 42px;
-          font-size: 0.9rem;
-          transition: all 0.3s;
+          padding: 10px 16px;
         }
-        .search-input-site:focus {
-          background: rgba(255,255,255,0.06);
-          border-color: rgba(6,182,212,0.4);
-          box-shadow: 0 0 0 3px rgba(6,182,212,0.1);
-          color: #f1f5f9;
-          outline: none;
+        .toolbar-select, .toolbar-input {
+          background-color: rgba(0, 0, 0, 0.25) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: var(--scada-text, #f8fafc) !important;
+          border-radius: 8px !important;
+          font-size: 0.85rem !important;
+          min-height: 40px !important;
         }
-        .search-input-site::placeholder { color: #64748b; }
-        body.light-mode .search-input-site {
-          background: #ffffff !important;
-          border-color: #cbd5e1 !important;
-          color: #1e293b !important;
+        .toolbar-select:focus, .toolbar-input:focus {
+          border-color: var(--scada-accent, #38bdf8) !important;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
         }
-        .view-toggle-btn {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          color: #64748b;
-          border-radius: 10px;
-          padding: 8px 12px;
-          transition: all 0.25s;
-          cursor: pointer;
+        .touch-action-btn {
+          min-width: 40px;
+          min-height: 40px;
+          border-radius: 8px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: var(--scada-text-muted, #94a3b8);
+          transition: all 0.2s;
         }
-        .view-toggle-btn:hover {
-          background: rgba(255,255,255,0.08);
-          color: #e2e8f0;
+        .touch-action-btn:hover {
+          color: #ffffff;
+          border-color: var(--scada-accent, #38bdf8);
+          background: rgba(56, 189, 248, 0.1);
         }
-        .view-toggle-btn.active-view {
-          background: rgba(6,182,212,0.15);
-          border-color: rgba(6,182,212,0.3);
-          color: #06b6d4;
+        .touch-action-btn:focus-visible {
+          outline: 2px solid var(--scada-accent, #38bdf8);
+          outline-offset: 2px;
         }
-        body.light-mode .view-toggle-btn {
-          background: #f8fafc !important;
-          border-color: #e2e8f0 !important;
-          color: #64748b !important;
+        .touch-action-btn.active {
+          background: rgba(56, 189, 248, 0.18);
+          border-color: var(--scada-accent, #38bdf8);
+          color: var(--scada-accent, #38bdf8);
         }
-        body.light-mode .view-toggle-btn.active-view {
-          background: rgba(6,182,212,0.1) !important;
-          border-color: rgba(6,182,212,0.3) !important;
-          color: #0284c7 !important;
-        }
-        /* Toggle Switch UI */
-        .toggle-switch-pill {
-          cursor: pointer;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 0.72rem;
-          font-weight: 600;
+        .stat-pill-action {
+          min-height: 36px;
+          padding: 5px 11px;
+          border-radius: 8px;
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          transition: all 0.25s;
-          user-select: none;
-        }
-        .toggle-switch-pill.enabled {
-          background: rgba(16, 185, 129, 0.12);
-          border: 1px solid rgba(16, 185, 129, 0.3);
-          color: #10b981;
-        }
-        .toggle-switch-pill.enabled:hover {
-          background: rgba(16, 185, 129, 0.25);
-        }
-        .toggle-switch-pill.disabled {
-          background: rgba(239, 68, 68, 0.12);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          color: #ef4444;
-        }
-        .toggle-switch-pill.disabled:hover {
-          background: rgba(239, 68, 68, 0.25);
-        }
-        .action-icon-btn {
-          width: 32px; height: 32px;
-          border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.06);
-          color: #94a3b8;
-          transition: all 0.25s;
+          font-size: 0.78rem;
+          font-weight: 500;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           cursor: pointer;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.03);
         }
-        .action-icon-btn:hover {
-          background: rgba(6,182,212,0.15);
-          border-color: rgba(6,182,212,0.3);
-          color: #06b6d4;
+        .stat-pill-action:hover {
           transform: translateY(-1px);
         }
-        body.light-mode .action-icon-btn {
-          background: #f1f5f9 !important;
-          border-color: #e2e8f0 !important;
-          color: #475569 !important;
+        .stat-pill-action.pill-devices {
+          background: rgba(56, 189, 248, 0.08);
+          border-color: rgba(56, 189, 248, 0.2);
+          color: #93c5fd;
         }
-        .detail-stat-card {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 14px;
-          padding: 20px;
-          text-align: center;
-          transition: all 0.3s;
+        .stat-pill-action.pill-devices:hover {
+          background: rgba(56, 189, 248, 0.16);
+          border-color: #38bdf8;
+          color: #ffffff;
         }
-        .detail-stat-card:hover {
-          background: rgba(6,182,212,0.06);
-          border-color: rgba(6,182,212,0.15);
+        .stat-pill-action.pill-alarms-zero {
+          background: rgba(16, 185, 129, 0.08);
+          border-color: rgba(16, 185, 129, 0.2);
+          color: #86efac;
         }
-        body.light-mode .detail-stat-card {
-          background: #f8fafc !important;
-          border-color: #e2e8f0 !important;
+        .stat-pill-action.pill-alarms-zero:hover {
+          background: rgba(16, 185, 129, 0.16);
+          border-color: #10b981;
+          color: #ffffff;
         }
-        .site-modal .modal-content {
-          background: linear-gradient(135deg, #1a1a2e, #16162a);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 20px;
-          color: #e2e8f0;
+        .stat-pill-action.pill-alarms-active {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.4);
+          color: #fca5a5;
         }
-        body.light-mode .site-modal .modal-content {
-          background: #ffffff !important;
-          border-color: #e2e8f0 !important;
-          color: #1e293b !important;
+        .stat-pill-action.pill-alarms-active:hover {
+          background: rgba(239, 68, 68, 0.25);
+          border-color: #ef4444;
+          color: #ffffff;
         }
-        .site-modal .modal-header {
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+        .stat-pill-action.pill-energy {
+          background: rgba(245, 158, 11, 0.08);
+          border-color: rgba(245, 158, 11, 0.2);
+          color: #fde68a;
         }
-        body.light-mode .site-modal .modal-header {
-          border-bottom-color: #e2e8f0 !important;
+        .stat-pill-action.pill-energy:hover {
+          background: rgba(245, 158, 11, 0.16);
+          border-color: #f59e0b;
+          color: #ffffff;
         }
-        .site-modal .form-control, .site-modal .form-select {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 10px;
-          color: #e2e8f0;
-          padding: 10px 14px;
+        .site-hierarchy-trail {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.72rem;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          letter-spacing: 0.02em;
+          color: #38bdf8;
+          margin-bottom: 4px;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
-        .site-modal .form-control:focus, .site-modal .form-select:focus {
-          background: rgba(255,255,255,0.06);
-          border-color: rgba(6,182,212,0.5);
-          box-shadow: 0 0 0 3px rgba(6,182,212,0.1);
-          color: #f1f5f9;
+        .site-hierarchy-crumb {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
         }
-        body.light-mode .site-modal .form-control, body.light-mode .site-modal .form-select {
-          background: #f8fafc !important;
-          border-color: #cbd5e1 !important;
-          color: #1e293b !important;
+        .site-inspect-btn {
+          background: linear-gradient(135deg, rgba(14, 165, 233, 0.18) 0%, rgba(56, 189, 248, 0.1) 100%);
+          border: 1px solid rgba(56, 189, 248, 0.35);
+          color: #38bdf8;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 6px 14px;
+          min-height: 36px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          cursor: pointer;
         }
-        .site-modal .form-label {
-          color: #94a3b8;
-          font-weight: 500;
+        .site-inspect-btn:hover {
+          background: linear-gradient(135deg, rgba(14, 165, 233, 0.35) 0%, rgba(56, 189, 248, 0.25) 100%);
+          border-color: #38bdf8;
+          color: #ffffff;
+          box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+        }
+        .btn-create-site-primary {
+          background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+          border: none;
+          color: #ffffff !important;
+          font-weight: 600;
+          border-radius: 8px;
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0 16px;
+          box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+        .btn-create-site-primary:hover {
+          background: linear-gradient(135deg, #0369a1 0%, #0891b2 100%);
+          box-shadow: 0 6px 18px rgba(2, 132, 199, 0.45);
+          transform: translateY(-1px);
+        }
+        .tabular-nums {
+          font-variant-numeric: tabular-nums;
+        }
+        .site-data-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          color: var(--scada-text, #f8fafc);
+        }
+        .site-data-table th {
+          background-color: rgba(0, 0, 0, 0.25);
+          border-bottom: 1px solid var(--scada-border, #334155);
+          padding: 12px 16px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: var(--scada-text-muted, #94a3b8);
+          user-select: none;
+        }
+        .site-data-table td {
+          padding: 14px 16px;
+          border-bottom: 1px solid var(--scada-border, #334155);
           font-size: 0.85rem;
-          margin-bottom: 6px;
+          vertical-align: middle;
         }
-        body.light-mode .site-modal .form-label { color: #475569 !important; }
-        .stat-val-text { color: #f1f5f9; }
-        body.light-mode .stat-val-text { color: #0f172a !important; }
-        .stat-lbl-text { color: #64748b; }
-        body.light-mode .stat-lbl-text { color: #475569 !important; }
-        .config-val-text { color: #e2e8f0; }
-        body.light-mode .config-val-text { color: #0f172a !important; }
-        .config-lbl-text { color: #64748b; }
-        body.light-mode .config-lbl-text { color: #475569 !important; }
-        .modal-subtitle-text { color: #94a3b8; }
-        body.light-mode .modal-subtitle-text { color: #475569 !important; }
-        .section-subtitle-text { color: #94a3b8; }
-        body.light-mode .section-subtitle-text { color: #334155 !important; }
-        .site-title-text { color: #f1f5f9; }
-        body.light-mode .site-title-text { color: #0f172a !important; }
-        .site-config-box {
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.06);
+        .site-data-table tr:hover td {
+          background-color: rgba(56, 189, 248, 0.05);
         }
-        body.light-mode .site-config-box {
-          background: #f8fafc !important;
-          border: 1px solid #cbd5e1 !important;
+        body.light-mode .site-card-modern {
+          background: #ffffff;
+          border-color: #e2e8f0;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
-        .site-config-row {
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+        body.light-mode .site-card-modern:hover {
+          border-color: #0284c7;
+          box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12);
         }
-        .site-config-row:last-child {
-          border-bottom: none;
+        body.light-mode .site-card-modern.is-current-active {
+          background: #f0f9ff;
+          border-color: #0284c7;
         }
-        body.light-mode .site-config-row {
-          border-bottom-color: #e2e8f0 !important;
+        body.light-mode .site-kpi-card-compact {
+          background: #ffffff;
+          border-color: #e2e8f0;
         }
-        body.light-mode .site-modal .btn-close {
-          filter: invert(0) !important;
-          opacity: 0.8 !important;
+        body.light-mode .site-toolbar {
+          background: #ffffff;
+          border-color: #e2e8f0;
         }
-        @keyframes slideUpFadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+        body.light-mode .toolbar-select,
+        body.light-mode .toolbar-input {
+          background-color: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
         }
-        .site-card-animated {
-          animation: slideUpFadeIn 0.5s ease-out forwards;
+        body.light-mode .site-data-table th {
+          background-color: #f8fafc;
+          color: #64748b;
+        }
+        body.light-mode .site-data-table td {
+          color: #1e293b;
+        }
+        .scada-confirm-modal {
+          z-index: 1070 !important;
+        }
+        .scada-confirm-modal .modal-dialog {
+          max-width: 530px !important;
+          margin: 1.75rem auto;
+        }
+        .scada-confirm-modal .modal-content {
+          background: linear-gradient(165deg, rgba(26, 36, 56, 0.98) 0%, rgba(13, 20, 36, 0.99) 100%) !important;
+          backdrop-filter: blur(20px) !important;
+          -webkit-backdrop-filter: blur(20px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          border-radius: 16px !important;
+          overflow: hidden !important;
+          box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 0, 0, 0.4) !important;
+        }
+        .scada-confirm-modal .modal-header {
+          background: rgba(255, 255, 255, 0.02) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+          padding: 22px 28px !important;
+        }
+        .scada-confirm-modal .modal-body {
+          background: transparent !important;
+          padding: 24px 28px !important;
+        }
+        .scada-confirm-modal .modal-footer {
+          background: rgba(0, 0, 0, 0.25) !important;
+          border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+          padding: 18px 28px !important;
+          gap: 12px;
+        }
+        .scada-confirm-backdrop {
+          backdrop-filter: blur(8px) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          background-color: rgba(3, 7, 18, 0.78) !important;
+          z-index: 1065 !important;
         }
       `}</style>
 
-      {/* Toast Notification */}
+      {/* Floating Toast Notification */}
       {message && (
-        <div style={{
-          position: 'fixed', top: 24, right: 24, zIndex: 9999,
-          background: message.type === 'success' ? 'linear-gradient(135deg, #059669, #10b981)' : message.type === 'warning' ? 'linear-gradient(135deg, #d97706, #f59e0b)' : 'linear-gradient(135deg, #dc2626, #ef4444)',
-          color: '#fff', padding: '14px 24px', borderRadius: 14, fontWeight: 600,
-          boxShadow: '0 8px 30px rgba(0,0,0,0.3)', fontSize: '0.9rem',
-          animation: 'slideUpFadeIn 0.3s ease-out'
-        }}>
-          {message.text}
+        <div
+          style={{
+            position: 'fixed',
+            top: 24,
+            right: 24,
+            zIndex: 9999,
+            backgroundColor: message.type === 'success' ? '#059669' : message.type === 'warning' ? '#d97706' : '#dc2626',
+            color: '#ffffff',
+            padding: '12px 20px',
+            borderRadius: 10,
+            fontWeight: 600,
+            fontSize: '0.88rem',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}
+        >
+          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+          <span>{message.text}</span>
+          <button
+            type="button"
+            className="btn-close btn-close-white ms-2"
+            style={{ fontSize: '0.7rem' }}
+            onClick={() => setMessage(null)}
+          />
         </div>
       )}
 
-      {/* Header */}
-      <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
-        <div>
-          <h4 className="fw-bold mb-1" style={{ color: '#06b6d4' }}>
-            <Building2 size={24} className="me-2" style={{ verticalAlign: 'text-bottom' }} />
-            Site
-          </h4>
-          <p className="mb-0" style={{ color: '#64748b', fontSize: '0.9rem' }}>
-            Create, edit, enable/disable & monitor physical sites across your organization
-          </p>
-        </div>
-        <div className="d-flex align-items-center gap-3">
-          {/* Search */}
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-            <input
-              type="text"
-              className="search-input-site"
-              placeholder="Search sites..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{ width: 240 }}
-            />
+      {/* Standalone Page Title & Action (Rendered ONLY when not embedded in ManageOrganisation) */}
+      {!embedded && (
+        <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-3">
+          <div>
+            <div className="d-flex align-items-center gap-2">
+              <h4 className="fw-bold mb-0 d-flex align-items-center gap-2">
+                <Building2 size={24} className="text-info" />
+                Site Management
+              </h4>
+              <Badge bg="secondary" className="font-monospace" style={{ fontSize: '0.75rem' }}>
+                {sites.length} Sites
+              </Badge>
+            </div>
+            <p className="mb-0 text-muted" style={{ fontSize: '0.85rem' }}>
+              Monitor and manage physical locations, telemetry bindings, and BMS presets.
+            </p>
           </div>
-          {/* View Toggle */}
-          <div className="d-flex gap-1">
-            <button className={`view-toggle-btn ${viewMode === 'grid' ? 'active-view' : ''}`} onClick={() => setViewMode('grid')}>
-              <LayoutGrid size={16} />
-            </button>
-            <button className={`view-toggle-btn ${viewMode === 'list' ? 'active-view' : ''}`} onClick={() => setViewMode('list')}>
-              <List size={16} />
+
+          <div className="d-flex align-items-center gap-2">
+            <OverlayTrigger placement="bottom" overlay={<Tooltip>Refresh all sites</Tooltip>}>
+              <button
+                type="button"
+                className="touch-action-btn"
+                aria-label="Refresh sites list"
+                onClick={fetchSites}
+                disabled={loading}
+              >
+                <RefreshCw size={16} className={loading ? 'spin-icon' : ''} />
+              </button>
+            </OverlayTrigger>
+
+            <button
+              type="button"
+              className="btn-create-site-primary"
+              onClick={() => {
+                setCreateModalError(null);
+                setShowCreateModal(true);
+              }}
+            >
+              <Plus size={18} /> Create Site
             </button>
           </div>
-          {/* Refresh */}
-          <OverlayTrigger placement="bottom" overlay={<Tooltip>Refresh Sites</Tooltip>}>
-            <button className="view-toggle-btn" onClick={fetchSites}>
-              <RefreshCw size={16} />
-            </button>
-          </OverlayTrigger>
-          {/* Create */}
-          <button className="create-site-btn text-white d-flex align-items-center gap-2" onClick={() => setShowCreateModal(true)}>
-            <Plus size={18} /> Create Site
-          </button>
         </div>
+      )}
+
+      {/* Compact Executive KPI Ribbon */}
+      <Row className="g-2 mb-3">
+        <Col xs={6} md={4} xl>
+          <div
+            className={`site-kpi-card-compact kpi-total ${kpiFilter === 'ALL' ? 'active-kpi' : ''}`}
+            onClick={() => setKpiFilter('ALL')}
+            title="Click to view all sites"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-1">
+              <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                TOTAL SITES
+              </span>
+              <Building2 size={15} className="text-info" />
+            </div>
+            <div className="fw-bold tabular-nums" style={{ fontSize: '1.4rem' }}>{kpiData.total}</div>
+            <small className="text-muted d-block mt-0.5" style={{ fontSize: '0.7rem' }}>All campuses</small>
+          </div>
+        </Col>
+
+        <Col xs={6} md={4} xl>
+          <div
+            className={`site-kpi-card-compact kpi-operational ${kpiFilter === 'ACTIVE' ? 'active-kpi' : ''}`}
+            onClick={() => setKpiFilter(prev => prev === 'ACTIVE' ? 'ALL' : 'ACTIVE')}
+            title="Click to filter operational sites"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-1">
+              <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                OPERATIONAL
+              </span>
+              <CheckCircle2 size={15} className="text-success" />
+            </div>
+            <div className="fw-bold text-success tabular-nums" style={{ fontSize: '1.4rem' }}>{kpiData.operational}</div>
+            <small className="text-muted d-block mt-0.5" style={{ fontSize: '0.7rem' }}>Active & reporting</small>
+          </div>
+        </Col>
+
+        <Col xs={6} md={4} xl>
+          <div
+            className={`site-kpi-card-compact kpi-alarm ${kpiFilter === 'ALARM' ? 'active-kpi' : ''}`}
+            onClick={() => setKpiFilter(prev => prev === 'ALARM' ? 'ALL' : 'ALARM')}
+            title="Click to filter sites with active alarms"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-1">
+              <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                IN ALARM
+              </span>
+              <AlertTriangle size={15} className={kpiData.inAlarm > 0 ? 'text-danger' : 'text-muted'} />
+            </div>
+            <div className={`fw-bold tabular-nums ${kpiData.inAlarm > 0 ? 'text-danger' : 'text-muted'}`} style={{ fontSize: '1.4rem' }}>
+              {kpiData.inAlarm}
+            </div>
+            <small className="text-muted d-block mt-0.5" style={{ fontSize: '0.7rem' }}>Sites with open alerts</small>
+          </div>
+        </Col>
+
+        <Col xs={6} md={6} xl>
+          <div
+            className="site-kpi-card-compact kpi-devices"
+            title="View fleet devices"
+            onClick={() => navigate('/manage-organisation?tab=device')}
+          >
+            <div className="d-flex align-items-center justify-content-between mb-1">
+              <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                CONNECTED ASSETS
+              </span>
+              <Server size={15} className="text-primary" />
+            </div>
+            <div className="fw-bold tabular-nums" style={{ fontSize: '1.4rem' }}>{kpiData.totalDevices}</div>
+            <small className="text-info d-block mt-0.5" style={{ fontSize: '0.7rem' }}>View Assets &rarr;</small>
+          </div>
+        </Col>
+
+        <Col xs={12} md={6} xl>
+          <div
+            className="site-kpi-card-compact kpi-energy"
+            title="View energy metering"
+            onClick={() => navigate('/energy-metering/overview')}
+          >
+            <div className="d-flex align-items-center justify-content-between mb-1">
+              <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                CUMULATIVE ENERGY
+              </span>
+              <Zap size={15} className="text-warning" />
+            </div>
+            <div className="fw-bold text-warning tabular-nums" style={{ fontSize: '1.4rem' }}>
+              {kpiData.totalEnergy.toLocaleString()} <span style={{ fontSize: '0.85rem' }}>kWh</span>
+            </div>
+            <small className="text-info d-block mt-0.5" style={{ fontSize: '0.7rem' }}>View Metering &rarr;</small>
+          </div>
+        </Col>
+      </Row>
+
+      {/* Responsive Filter & Action Toolbar */}
+      <div className="site-toolbar mb-3">
+        <Row className="g-2 align-items-center">
+          {/* Search Input */}
+          <Col xs={12} md={4} lg={3}>
+            <div style={{ position: 'relative' }}>
+              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--scada-text-muted)' }} />
+              <Form.Control
+                type="text"
+                placeholder="Search site, city, address..."
+                className="toolbar-input ps-5 pe-4"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                aria-label="Search sites"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search text"
+                  style={{
+                    position: 'absolute',
+                    right: 10,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--scada-text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </Col>
+
+          {/* Tenant Filter */}
+          <Col xs={6} md={3} lg={2}>
+            <Form.Select
+              className="toolbar-select"
+              value={selectedTenantFilter}
+              onChange={e => {
+                setSelectedTenantFilter(e.target.value);
+                setSelectedZoneFilter('');
+              }}
+              aria-label="Filter by Organization / Tenant"
+            >
+              <option value="">All Organizations</option>
+              {tenants.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </Form.Select>
+          </Col>
+
+          {/* Zone Filter */}
+          <Col xs={6} md={3} lg={2}>
+            <Form.Select
+              className="toolbar-select"
+              value={selectedZoneFilter}
+              onChange={e => setSelectedZoneFilter(e.target.value)}
+              aria-label="Filter by Geographic Zone"
+            >
+              <option value="">All Zones</option>
+              {availableZones.map(z => (
+                <option key={z.id} value={z.id}>{z.name}</option>
+              ))}
+            </Form.Select>
+          </Col>
+
+          {/* View Toggles & Actions */}
+          <Col xs={12} md={2} lg={5} className="d-flex align-items-center justify-content-between justify-content-md-end gap-2 mt-2 mt-md-0">
+            {isFiltered && (
+              <Button
+                variant="link"
+                className="text-info text-decoration-none p-0 d-inline-flex align-items-center gap-1"
+                style={{ fontSize: '0.8rem' }}
+                onClick={handleResetFilters}
+              >
+                <X size={14} /> Clear ({filteredSites.length}/{sites.length})
+              </Button>
+            )}
+
+            <div className="d-flex align-items-center gap-2 ms-auto">
+              <button
+                type="button"
+                className={`touch-action-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                aria-label="Grid view"
+                title="Grid View"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                type="button"
+                className={`touch-action-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+                aria-label="Table view"
+                title="List View"
+              >
+                <List size={16} />
+              </button>
+
+              {embedded && (
+                <button
+                  type="button"
+                  className="btn-create-site-primary ms-1"
+                  onClick={() => {
+                    setCreateModalError(null);
+                    setShowCreateModal(true);
+                  }}
+                >
+                  <Plus size={16} /> Create Site
+                </button>
+              )}
+            </div>
+          </Col>
+        </Row>
       </div>
 
-      {/* Loading State */}
+      {/* Main Content Area */}
       {loading ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="info" />
-          <p className="mt-3" style={{ color: '#64748b' }}>Loading sites...</p>
+        <div className="d-flex flex-column align-items-center justify-content-center py-5">
+          <Spinner animation="border" variant="info" className="mb-3" />
+          <span className="text-muted fw-semibold">Loading physical sites & telemetry...</span>
         </div>
-      ) : filteredSites.length === 0 ? (
-        <div className="text-center py-5">
-          <MapPin size={48} style={{ color: '#334155' }} />
-          <p className="mt-3" style={{ color: '#64748b' }}>No sites found. Create your first site!</p>
+      ) : fetchError ? (
+        <div className="p-4 rounded border text-center my-4" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: '#ef4444' }}>
+          <AlertTriangle size={32} className="text-danger mb-2" />
+          <h6 className="text-danger fw-bold mb-1">Service Communication Error</h6>
+          <p className="text-muted mb-3" style={{ fontSize: '0.85rem' }}>{fetchError}</p>
+          <Button variant="outline-danger" size="sm" onClick={fetchSites}>
+            <RefreshCw size={14} className="me-1" /> Retry Connection
+          </Button>
+        </div>
+      ) : sortedSites.length === 0 ? (
+        <div
+          className="p-5 rounded border text-center my-3"
+          style={{
+            borderColor: 'var(--scada-border, #334155)',
+            backgroundColor: 'var(--scada-card, #1e293b)'
+          }}
+        >
+          <Building2 size={40} className="text-muted opacity-50 mb-3" />
+          {isFiltered ? (
+            <>
+              <h6 className="fw-bold mb-1">No Matching Sites Found</h6>
+              <p className="text-muted mb-3" style={{ fontSize: '0.85rem' }}>
+                No sites match the current filter criteria or search query.
+              </p>
+              <Button variant="outline-info" size="sm" onClick={handleResetFilters}>
+                Reset Filters
+              </Button>
+            </>
+          ) : (
+            <>
+              <h5 className="fw-bold mb-1">No sites registered yet</h5>
+              <p className="text-muted mb-3" style={{ fontSize: '0.88rem' }}>
+                Create your first physical site to start managing assets and telemetry.
+              </p>
+              <button type="button" className="btn-create-site-primary" onClick={() => setShowCreateModal(true)}>
+                <Plus size={16} className="me-1" /> Create First Site
+              </button>
+            </>
+          )}
         </div>
       ) : viewMode === 'grid' ? (
-        /* Grid View */
-        <Row className="g-4">
-          {filteredSites.map((site, idx) => {
-            const isEnabled = site.status === 'ACTIVE';
+        /* Grid View Layout */
+        <Row className="g-3">
+          {sortedSites.map((site) => {
+            const isEnabled = isSiteActive(site);
+            const alarms = Number(site.alarmsCount) || 0;
+            const devices = getSiteDevicesCount(site);
+            const energy = Number(site.energyKwh) || 0;
+            const isSelectedActive = activeDashboardSite && String(activeDashboardSite.id) === String(site.id);
+
+            const { tenantName, zoneName, areaName } = getSiteHierarchy(site);
+
             return (
               <Col xs={12} md={6} xl={4} key={site.id}>
                 <div
-                  className="site-card site-card-animated p-4"
-                  style={{ animationDelay: `${idx * 0.08}s` }}
+                  className={`site-card-modern p-3 d-flex flex-column justify-content-between h-100 ${
+                    isSelectedActive ? 'is-current-active' : ''
+                  } ${alarms > 0 ? 'has-alarm' : ''}`}
                   onClick={() => handleViewSite(site)}
                 >
-                  {/* Site Header */}
-                  <div className="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                      <h6 className="fw-bold mb-1" style={{ color: '#f1f5f9', fontSize: '1.05rem' }}>{site.name}</h6>
-                      <div className="d-flex align-items-center gap-2" style={{ color: '#64748b', fontSize: '0.82rem' }}>
-                        <MapPin size={13} />
-                        {site.city || 'N/A'}{site.state ? `, ${site.state}` : ''}
+                  {/* Top Row: Title + Operational Status */}
+                  <div>
+                    {/* Organization / Zone / Area Breadcrumb Trail */}
+                    {(tenantName || zoneName) && (
+                      <div className="site-hierarchy-trail">
+                        {tenantName && (
+                          <span className="site-hierarchy-crumb" title={`Organization: ${tenantName}`}>
+                            <Building2 size={11} className="text-info" /> {tenantName}
+                          </span>
+                        )}
+                        {zoneName && (
+                          <>
+                            <ChevronRight size={10} className="text-muted opacity-75" />
+                            <span className="site-hierarchy-crumb" title={`Zone: ${zoneName}`}>
+                              <MapPin size={11} className="text-info" /> {zoneName}
+                            </span>
+                          </>
+                        )}
+                        {areaName && (
+                          <>
+                            <ChevronRight size={10} className="text-muted opacity-75" />
+                            <span className="site-hierarchy-crumb text-muted" title={`Area: ${areaName}`}>
+                              {areaName}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div className="pe-2">
+                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                          <h6 className="fw-bold mb-0 text-white" style={{ fontSize: '1.02rem', letterSpacing: '-0.01em' }}>
+                            {site.name}
+                          </h6>
+                          {isSelectedActive && (
+                            <Badge
+                              bg="info"
+                              className="text-dark d-inline-flex align-items-center gap-1"
+                              style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em', padding: '3px 7px' }}
+                            >
+                              <Radio size={10} /> CURRENT
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="d-flex align-items-center gap-1 text-muted mt-1" style={{ fontSize: '0.78rem' }}>
+                          <MapPin size={12} className="text-secondary" />
+                          <span>{site.city || 'Location unset'}{site.state ? `, ${site.state}` : ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Operational Status Badge with Visual Dot */}
+                      <OverlayTrigger
+                        placement="top"
+                        overlay={<Tooltip>{isEnabled ? 'Operational. Click to Disable.' : 'Disabled. Click to Enable.'}</Tooltip>}
+                      >
+                        <button
+                          type="button"
+                          className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'}`}
+                          onClick={(e) => handleToggleSiteStatus(site, e)}
+                          aria-label={isEnabled ? 'Site is active. Click to disable' : 'Site is disabled. Click to enable'}
+                        >
+                          <span className={`status-dot-indicator ${isEnabled ? 'online' : 'offline'}`} />
+                          {isEnabled ? 'ACTIVE' : 'INACTIVE'}
+                        </button>
+                      </OverlayTrigger>
+                    </div>
+
+                    {/* Telemetry Metric Pills */}
+                    <div className="d-flex flex-wrap gap-2 my-2.5">
+                      <div
+                        className="stat-pill-action pill-devices"
+                        title="Click to view site devices"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/manage-organisation?tab=device&siteId=${site.id}`);
+                        }}
+                      >
+                        <Server size={13} className="text-info" />
+                        <span className="tabular-nums fw-bold text-white">{devices}</span> Devices
+                      </div>
+
+                      {/* Alarms Pill: Quiet when 0, Alert when > 0 */}
+                      <div
+                        className={`stat-pill-action ${alarms > 0 ? 'pill-alarms-active' : 'pill-alarms-zero'}`}
+                        title={alarms > 0 ? 'Site has active alarms! Click to inspect' : 'No active alarms (Healthy)'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/alarm-system/active?siteId=${site.id}`);
+                        }}
+                      >
+                        {alarms > 0 ? (
+                          <AlertTriangle size={13} className="text-danger" />
+                        ) : (
+                          <CheckCircle2 size={13} className="text-success" />
+                        )}
+                        <span className={`tabular-nums fw-bold ${alarms > 0 ? 'text-danger' : 'text-white'}`}>{alarms}</span> Alarms
+                      </div>
+
+                      <div
+                        className="stat-pill-action pill-energy"
+                        title="Click to view energy metering"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/energy-metering/overview');
+                        }}
+                      >
+                        <Zap size={13} className="text-warning" />
+                        <span className="tabular-nums fw-bold text-white">{energy.toLocaleString()}</span> kWh
                       </div>
                     </div>
-                    {statusBadge(site.status)}
                   </div>
 
-                  {/* Stats Grid */}
-                  <div className="d-flex flex-wrap gap-2 mb-3">
-                    <div className="stat-pill">
-                      <Server size={13} style={{ color: '#8b5cf6' }} />
-                      <span>{site.devicesCount || 0} Devices</span>
+                  {/* Card Footer: Metadata & Actions */}
+                  <div className="pt-2.5 border-top d-flex align-items-center justify-content-between" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+                    <div className="text-muted" style={{ fontSize: '0.72rem' }}>
+                      <Clock size={11} className="me-1" />
+                      {formatDate(site.createdAt)}
                     </div>
-                    <div
-                      className="stat-pill"
-                      style={{ cursor: 'pointer' }}
-                      title="Click to manage buildings for this site"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/manage-organisation?tab=building&siteId=${site.id}`);
-                      }}
-                    >
-                      <Building2 size={13} style={{ color: '#06b6d4' }} />
-                      <span>{site.buildingsCount || 0} Buildings</span>
-                    </div>
-                    <div className="stat-pill">
-                      <AlertTriangle size={13} style={{ color: (site.alarmsCount || 0) > 5 ? '#ef4444' : '#f59e0b' }} />
-                      <span>{site.alarmsCount || 0} Alarms</span>
-                    </div>
-                    <div className="stat-pill">
-                      <Zap size={13} style={{ color: '#10b981' }} />
-                      <span>{(site.energyKwh || 0).toLocaleString()} kWh</span>
-                    </div>
-                  </div>
 
-                  {/* Card Actions & Footer */}
-                  <div className="d-flex justify-content-end align-items-center pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div className="d-flex align-items-center gap-2">
-                      {/* Edit Button */}
-                      <OverlayTrigger placement="top" overlay={<Tooltip>Edit Site</Tooltip>}>
-                        <div
-                          className="action-icon-btn"
-                          onClick={(e) => { e.stopPropagation(); handleOpenEditModal(site); }}
+                    <div className="d-flex align-items-center gap-1.5">
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Edit Site Configuration</Tooltip>}>
+                        <button
+                          type="button"
+                          className="touch-action-btn"
+                          aria-label={`Edit ${site.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditModal(site);
+                          }}
                         >
                           <Edit3 size={15} />
-                        </div>
+                        </button>
                       </OverlayTrigger>
 
-                      {/* View Details Link */}
-                      <div className="d-flex align-items-center gap-1 ms-1" style={{ color: '#06b6d4', fontSize: '0.8rem', fontWeight: 600 }}>
-                        View Details <ChevronRight size={14} />
-                      </div>
+                      <button
+                        type="button"
+                        className="site-inspect-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewSite(site);
+                        }}
+                      >
+                        <span>Inspect</span>
+                        <ChevronRight size={14} />
+                      </button>
                     </div>
-                  </div>
-
-                  {/* Created Date */}
-                  <div className="mt-2 text-end" style={{ fontSize: '0.73rem', color: '#475569' }}>
-                    <Clock size={11} className="me-1" /> Created {formatDate(site.createdAt)}
                   </div>
                 </div>
               </Col>
@@ -802,41 +1538,126 @@ const SiteManagement = () => {
           })}
         </Row>
       ) : (
-        /* List / Table View */
-        <div style={{
-          background: 'rgba(30,30,36,0.6)', border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 16, overflow: 'hidden'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        /* Table View Layout */
+        <div className="table-responsive border rounded" style={{ borderColor: 'var(--scada-border, #334155)', background: 'var(--scada-card, #1e293b)' }}>
+          <table className="site-data-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                {['Site Name', 'Location', 'Status', 'Devices', 'Alarms', 'Energy', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '14px 18px', color: '#64748b', fontSize: '0.78rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {h}
-                  </th>
-                ))}
+              <tr>
+                <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
+                  Site Name {sortColumn === 'name' ? (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />) : <ArrowUpDown size={13} className="opacity-50" />}
+                </th>
+                <th>Organization & Location</th>
+                <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>
+                  Status {sortColumn === 'status' ? (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />) : <ArrowUpDown size={13} className="opacity-50" />}
+                </th>
+                <th onClick={() => handleSort('devices')} style={{ cursor: 'pointer' }}>
+                  Devices {sortColumn === 'devices' ? (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />) : <ArrowUpDown size={13} className="opacity-50" />}
+                </th>
+                <th onClick={() => handleSort('alarms')} style={{ cursor: 'pointer' }}>
+                  Alarms {sortColumn === 'alarms' ? (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />) : <ArrowUpDown size={13} className="opacity-50" />}
+                </th>
+                <th onClick={() => handleSort('energy')} style={{ cursor: 'pointer' }}>
+                  Energy (kWh) {sortColumn === 'energy' ? (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />) : <ArrowUpDown size={13} className="opacity-50" />}
+                </th>
+                <th className="text-end">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredSites.map(site => {
+              {sortedSites.map((site) => {
+                const isEnabled = isSiteActive(site);
+                const alarms = Number(site.alarmsCount) || 0;
+                const devices = getSiteDevicesCount(site);
+                const isSelectedActive = activeDashboardSite && String(activeDashboardSite.id) === String(site.id);
+                const { tenantName, zoneName } = getSiteHierarchy(site);
+
                 return (
-                  <tr key={site.id} className="site-table-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    <td style={{ padding: '14px 18px', fontWeight: 600, color: '#f1f5f9' }}>{site.name}</td>
-                    <td style={{ padding: '14px 18px', color: '#94a3b8', fontSize: '0.85rem' }}>
-                      <MapPin size={13} className="me-1" /> {site.city || 'N/A'}{site.state ? `, ${site.state}` : ''}
-                    </td>
-                    <td style={{ padding: '14px 18px' }}>{statusBadge(site.status)}</td>
-                    <td style={{ padding: '14px 18px', color: '#8b5cf6', fontWeight: 600 }}>{site.devicesCount || 0}</td>
-                    <td style={{ padding: '14px 18px', color: (site.alarmsCount || 0) > 5 ? '#ef4444' : '#f59e0b', fontWeight: 600 }}>{site.alarmsCount || 0}</td>
-                    <td style={{ padding: '14px 18px', color: '#10b981', fontWeight: 600 }}>{(site.energyKwh || 0).toLocaleString()} kWh</td>
-                    <td style={{ padding: '14px 18px' }}>
+                  <tr key={site.id} style={{ cursor: 'pointer' }} onClick={() => handleViewSite(site)}>
+                    <td>
                       <div className="d-flex align-items-center gap-2">
-                        <button className="view-toggle-btn" onClick={() => handleViewSite(site)} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                          <Eye size={14} className="me-1" /> View
+                        <span className="fw-semibold text-white">{site.name}</span>
+                        {isSelectedActive && (
+                          <Badge bg="info" className="text-dark" style={{ fontSize: '0.65rem' }}>
+                            CURRENT
+                          </Badge>
+                        )}
+                      </div>
+                      <small className="text-muted d-block font-monospace" style={{ fontSize: '0.72rem' }}>
+                        ID: #{site.id}
+                      </small>
+                    </td>
+                    <td>
+                      <div className="text-info font-monospace" style={{ fontSize: '0.75rem' }}>
+                        {tenantName || 'Root / Default'}
+                      </div>
+                      <div className="d-flex align-items-center gap-1 text-muted" style={{ fontSize: '0.78rem' }}>
+                        <MapPin size={12} />
+                        <span>{site.city || 'N/A'}{site.state ? `, ${site.state}` : ''}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'}`}
+                        onClick={(e) => handleToggleSiteStatus(site, e)}
+                        style={{ minHeight: 28 }}
+                      >
+                        <span className={`status-dot-indicator ${isEnabled ? 'online' : 'offline'}`} />
+                        {isEnabled ? 'ACTIVE' : 'INACTIVE'}
+                      </button>
+                    </td>
+                    <td>
+                      <span
+                        className="tabular-nums fw-bold text-info"
+                        style={{ cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/manage-organisation?tab=device&siteId=${site.id}`);
+                        }}
+                      >
+                        {devices}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`tabular-nums fw-bold ${alarms > 0 ? 'text-danger' : 'text-success opacity-75'}`}
+                        style={{ cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/alarm-system/active?siteId=${site.id}`);
+                        }}
+                      >
+                        {alarms > 0 ? (
+                          <span className="badge bg-danger text-white">{alarms}</span>
+                        ) : (
+                          <span className="text-success">0</span>
+                        )}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="tabular-nums fw-semibold text-warning">
+                        {(Number(site.energyKwh) || 0).toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="text-end" onClick={e => e.stopPropagation()}>
+                      <div className="d-flex align-items-center justify-content-end gap-1.5">
+                        <button
+                          type="button"
+                          className="touch-action-btn"
+                          aria-label={`Inspect ${site.name}`}
+                          title="Inspect Details"
+                          onClick={() => handleViewSite(site)}
+                        >
+                          <Eye size={15} />
                         </button>
-                        <div className="action-icon-btn" onClick={() => handleOpenEditModal(site)}>
-                          <Edit3 size={14} />
-                        </div>
+                        <button
+                          type="button"
+                          className="touch-action-btn"
+                          aria-label={`Edit ${site.name}`}
+                          title="Edit Configuration"
+                          onClick={() => handleOpenEditModal(site)}
+                        >
+                          <Edit3 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -847,371 +1668,262 @@ const SiteManagement = () => {
         </div>
       )}
 
-      {/* Create Site Modal */}
-      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered size="lg" className="site-modal" backdrop="static">
-        <Modal.Header closeButton closeVariant="white" style={{ border: 'none', padding: '24px 28px 8px' }}>
-          <Modal.Title className="d-flex align-items-center gap-2 fw-bold" style={{ fontSize: '1.15rem' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Plus size={18} color="#fff" />
+      {/* Create Site Drawer */}
+      <RegisterSiteModal
+        show={showCreateModal}
+        onHide={() => {
+          setShowCreateModal(false);
+          setCreateModalError(null);
+        }}
+        formData={createForm}
+        setFormData={setCreateForm}
+        onSubmit={handleCreateSite}
+        tenants={tenants}
+        zones={zones}
+        areas={areas}
+        submitting={submitting}
+        error={createModalError}
+        isEdit={false}
+      />
+
+      {/* Edit Site Drawer with 100% Schema Parity */}
+      <RegisterSiteModal
+        show={showEditModal}
+        onHide={() => {
+          setShowEditModal(false);
+          setEditModalError(null);
+        }}
+        formData={editForm}
+        setFormData={setEditForm}
+        onSubmit={handleUpdateSite}
+        tenants={tenants}
+        zones={zones}
+        areas={areas}
+        submitting={submitting}
+        error={editModalError}
+        isEdit={true}
+        title="Edit Site Configuration"
+        subtitle={editingSite?.name || 'Update site parameters'}
+        submitLabel="Save Changes"
+        submittingLabel="Saving Changes..."
+      />
+
+      {/* Modern Slide-Over Site Inspector Drawer */}
+      <SiteInspectorDrawer
+        show={showInspectorDrawer}
+        onHide={() => setShowInspectorDrawer(false)}
+        site={inspectingSite}
+        siteStats={siteStats}
+        isActiveDashboardSite={Boolean(activeDashboardSite && inspectingSite && String(activeDashboardSite.id) === String(inspectingSite.id))}
+        onSetActiveSite={(site) => {
+          setSelectedSite(site);
+          setMessage({ type: 'success', text: `Site "${site.name}" set as active dashboard site.` });
+        }}
+        onEditSite={handleOpenEditModal}
+        onToggleStatus={handleToggleSiteStatus}
+        tenants={tenants}
+        zones={zones}
+        areas={areas}
+      />
+
+      {/* CONFIRM DISABLE / ENABLE SITE MODAL */}
+      <Modal
+        show={Boolean(confirmToggleSite)}
+        onHide={() => !togglingStatus && setConfirmToggleSite(null)}
+        centered
+        backdrop="static"
+        keyboard={!togglingStatus}
+        className="scada-confirm-modal"
+        backdropClassName="scada-confirm-backdrop"
+      >
+        <Modal.Header closeButton={!togglingStatus}>
+          <div className="d-flex align-items-center gap-3">
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                minWidth: 42,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isSiteActive(confirmToggleSite) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                border: `1px solid ${isSiteActive(confirmToggleSite) ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`,
+                color: isSiteActive(confirmToggleSite) ? '#ef4444' : '#10b981',
+                boxShadow: isSiteActive(confirmToggleSite) ? '0 0 16px rgba(239, 68, 68, 0.25)' : '0 0 16px rgba(16, 185, 129, 0.25)',
+                flexShrink: 0
+              }}
+            >
+              {isSiteActive(confirmToggleSite) ? <AlertTriangle size={20} /> : <Power size={20} />}
             </div>
-            Create New Site
-          </Modal.Title>
+            <div>
+              <Modal.Title className="fs-16 fw-bold mb-0 text-white" style={{ letterSpacing: '0.01em' }}>
+                {isSiteActive(confirmToggleSite) ? 'Disable Site Confirmation' : 'Enable Site Confirmation'}
+              </Modal.Title>
+              <div className="text-muted fs-12 mt-0.5">Safety verification required before state change</div>
+            </div>
+          </div>
         </Modal.Header>
-        <Modal.Body style={{ padding: '20px 28px 28px' }}>
-          <Form onSubmit={handleCreateSite}>
-            <Row className="g-3">
-              {/* 1. Organization / Tenant Select */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Organization / Tenant *</Form.Label>
-                  <Form.Select
-                    value={createForm.tenantId}
-                    onChange={e => {
-                      const tId = e.target.value;
-                      const selTenant = tenants.find(t => t.id === tId);
-                      setCreateForm(p => ({
-                        ...p,
-                        tenantId: tId,
-                        organizationId: selTenant?.sochiotOrgId || 1,
-                        zoneId: '',
-                        areaId: ''
-                      }));
-                    }}
-                    required
-                  >
-                    <option value="">Select Organization / Tenant...</option>
-                    {tenants.map(t => (
-                      <option key={t.id} value={t.id}>{t.name} ({t.email || t.subscription || 'Tenant'})</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
 
-              {/* 2. Geographic Zone Select */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Geographic Zone</Form.Label>
-                  <Form.Select
-                    value={createForm.zoneId}
-                    onChange={e => {
-                      const zId = e.target.value;
-                      setCreateForm(p => ({ ...p, zoneId: zId, areaId: '' }));
-                    }}
-                  >
-                    <option value="">Select Geographic Zone...</option>
-                    {zones
-                      .filter(z => !createForm.tenantId || z.tenantId === createForm.tenantId)
-                      .map(z => (
-                        <option key={z.id} value={z.id}>{z.name} ({z.region || 'Zone'})</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              {/* 3. Tenant Area Select */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Tenant Area *</Form.Label>
-                  <Form.Select
-                    value={createForm.areaId}
-                    onChange={e => setCreateForm(p => ({ ...p, areaId: e.target.value }))}
-                  >
-                    <option value="">Select Tenant Area...</option>
-                    {areas
-                      .filter(a => {
-                        if (createForm.zoneId && a.zoneId !== createForm.zoneId) return false;
-                        if (createForm.tenantId && a.tenantId !== createForm.tenantId) return false;
-                        return true;
-                      })
-                      .map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Site Name *</Form.Label>
-                  <Form.Control
-                    placeholder="e.g. Noida Testing Site"
-                    value={createForm.name}
-                    onChange={e => setCreateForm(p => ({ ...p, name: e.target.value }))}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">City</Form.Label>
-                  <Form.Control
-                    placeholder="e.g. Noida"
-                    value={createForm.city}
-                    onChange={e => setCreateForm(p => ({ ...p, city: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">State</Form.Label>
-                  <Form.Control
-                    placeholder="e.g. Uttar Pradesh"
-                    value={createForm.state}
-                    onChange={e => setCreateForm(p => ({ ...p, state: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Sochiot Location ID</Form.Label>
-                  <Form.Control
-                    type="number"
-                    placeholder="e.g. 7"
-                    value={createForm.sochiotLocationId}
-                    onChange={e => setCreateForm(p => ({ ...p, sochiotLocationId: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <div className="d-flex justify-content-end gap-3 mt-4">
-              <Button variant="outline-secondary" onClick={() => setShowCreateModal(false)} style={{ borderRadius: 12, padding: '10px 24px' }}>
-                Cancel
-              </Button>
-              <button type="submit" className="create-site-btn text-white d-flex align-items-center gap-2" disabled={submitting}>
-                {submitting ? <Spinner size="sm" /> : <Plus size={16} />}
-                {submitting ? 'Creating...' : 'Create Site'}
-              </button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Edit Site Modal (PATCH /api/sites/:siteId) */}
-      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered size="lg" className="site-modal" backdrop="static">
-        <Modal.Header closeButton closeVariant="white" style={{ border: 'none', padding: '24px 28px 8px' }}>
-          <Modal.Title className="d-flex align-items-center gap-2 fw-bold" style={{ fontSize: '1.15rem' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Edit3 size={18} color="#fff" />
-            </div>
-            Edit Site Configuration
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ padding: '20px 28px 28px' }}>
-          <Form onSubmit={handleUpdateSite}>
-            <Row className="g-3">
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Organization / Tenant *</Form.Label>
-                  <Form.Select
-                    disabled
-                    value={editForm.tenantId}
-                    onChange={e => {
-                      const tId = e.target.value;
-                      const selTenant = tenants.find(t => t.id === tId);
-                      setEditForm(p => ({
-                        ...p,
-                        tenantId: tId,
-                        organizationId: selTenant?.sochiotOrgId || p.organizationId,
-                        zoneId: '',
-                        areaId: ''
-                      }));
-                    }}
-                    style={{ opacity: 0.7, cursor: 'not-allowed' }}
-                  >
-                    <option value="">Select Organization / Tenant...</option>
-                    {tenants.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted small fs-11 mt-1 d-block">
-                    Organization cannot be edited after site creation.
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Geographic Zone</Form.Label>
-                  <Form.Select
-                    value={editForm.zoneId}
-                    onChange={e => setEditForm(p => ({ ...p, zoneId: e.target.value, areaId: '' }))}
-                  >
-                    <option value="">Select Geographic Zone...</option>
-                    {zones
-                      .filter(z => !editForm.tenantId || z.tenantId === editForm.tenantId)
-                      .map(z => (
-                        <option key={z.id} value={z.id}>{z.name}</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Tenant Area</Form.Label>
-                  <Form.Select
-                    value={editForm.areaId}
-                    onChange={e => setEditForm(p => ({ ...p, areaId: e.target.value }))}
-                  >
-                    <option value="">Select Tenant Area...</option>
-                    {areas
-                      .filter(a => {
-                        if (editForm.zoneId && a.zoneId !== editForm.zoneId) return false;
-                        if (editForm.tenantId && a.tenantId !== editForm.tenantId) return false;
-                        return true;
-                      })
-                      .map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Site Name *</Form.Label>
-                  <Form.Control
-                    placeholder="Site Name"
-                    value={editForm.name}
-                    onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Status (Enable/Disable)</Form.Label>
-                  <Form.Select
-                    value={editForm.status}
-                    onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))}
-                  >
-                    <option value="ACTIVE">ACTIVE (Enabled)</option>
-                    <option value="INACTIVE">INACTIVE (Disabled)</option>
-                    <option value="MAINTENANCE">MAINTENANCE</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">City</Form.Label>
-                  <Form.Control
-                    placeholder="City"
-                    value={editForm.city}
-                    onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">State</Form.Label>
-                  <Form.Control
-                    placeholder="State"
-                    value={editForm.state}
-                    onChange={e => setEditForm(p => ({ ...p, state: e.target.value }))}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <div className="d-flex justify-content-end gap-3 mt-4">
-              <Button variant="outline-secondary" onClick={() => setShowEditModal(false)} style={{ borderRadius: 12, padding: '10px 24px' }}>
-                Cancel
-              </Button>
-              <button type="submit" className="create-site-btn text-white d-flex align-items-center gap-2" disabled={submitting}>
-                {submitting ? <Spinner size="sm" /> : <Edit3 size={16} />}
-                {submitting ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Site Detail Modal */}
-      <Modal show={showDetailModal} onHide={() => setShowDetailModal(false)} centered size="lg" className="site-modal">
-        <Modal.Header closeButton closeVariant="white" style={{ border: 'none', padding: '24px 28px 8px' }}>
-          <Modal.Title className="d-flex align-items-center gap-3 fw-bold" style={{ fontSize: '1.15rem' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Building2 size={20} color="#fff" />
-            </div>
-            {selectedSite?.name || 'Site Details'}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ padding: '16px 28px 28px' }}>
-          {selectedSite && (
-            <>
-              <div className="d-flex flex-wrap align-items-center gap-3 mb-4 modal-subtitle-text" style={{ fontSize: '0.9rem' }}>
-                <span><MapPin size={14} className="me-1" /> {selectedSite.city || 'N/A'}{selectedSite.state ? `, ${selectedSite.state}` : ''}</span>
-                <span>|</span>
-                {statusBadge(selectedSite.status)}
-                <span>|</span>
-                <span><Clock size={14} className="me-1" /> Created {formatDate(selectedSite.createdAt)}</span>
+        <Modal.Body>
+          {/* Target Site Identity Box */}
+          <div
+            className="rounded-3 mb-3 d-flex align-items-center justify-content-between"
+            style={{
+              padding: '12px 16px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              gap: '12px'
+            }}
+          >
+            <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  minWidth: 38,
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  color: '#38bdf8',
+                  flexShrink: 0
+                }}
+              >
+                <Building2 size={18} />
               </div>
-
-              {/* Stats */}
-              <h6 className="fw-bold mb-3 section-subtitle-text" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <Activity size={14} className="me-2" /> Site Stats & Metrics
-              </h6>
-              {siteStats ? (
-                <Row className="g-3 mb-4">
-                  {[
-                    { label: 'Total Devices', value: siteStats.totalDevices || selectedSite.devicesCount || 0, icon: <Server size={22} />, color: '#8b5cf6' },
-                    { label: 'Active Alarms', value: siteStats.activeAlarms ?? selectedSite.alarmsCount ?? 0, icon: <AlertTriangle size={22} />, color: '#f59e0b' },
-                    { label: 'Energy (kWh)', value: (siteStats.energyConsumption || selectedSite.energyKwh || 0).toLocaleString(), icon: <Zap size={22} />, color: '#10b981' },
-                    { label: 'Uptime %', value: `${siteStats.uptime || '99.2'}%`, icon: <TrendingUp size={22} />, color: '#06b6d4' },
-                    { label: 'Buildings', value: siteStats.buildingsCount || selectedSite.buildingsCount || 0, icon: <Building2 size={22} />, color: '#ec4899' }
-                  ].map((s, i) => (
-                    <Col xs={6} md={4} lg key={i}>
-                      <div className="detail-stat-card">
-                        <div style={{ color: s.color, marginBottom: 8 }}>{s.icon}</div>
-                        <div className="stat-val-text" style={{ fontSize: '1.5rem', fontWeight: 700 }}>{s.value}</div>
-                        <div className="stat-lbl-text" style={{ fontSize: '0.75rem', marginTop: 4 }}>{s.label}</div>
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
-              ) : (
-                <div className="text-center py-3">
-                  <Spinner size="sm" variant="info" /> <span className="ms-2 stat-lbl-text">Loading stats...</span>
+              <div style={{ minWidth: 0 }}>
+                <div className="fw-bold text-white fs-14 text-truncate" style={{ letterSpacing: '0.01em' }}>
+                  {confirmToggleSite?.name}
                 </div>
-              )}
-
-              {/* Site Info */}
-              <h6 className="fw-bold mb-3 section-subtitle-text" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Site Configuration
-              </h6>
-              <div className="site-config-box" style={{ borderRadius: 14, padding: 20 }}>
-                {[
-                  { label: 'Site ID', value: selectedSite.id },
-                  { label: 'Sochiot Location ID', value: selectedSite.sochiotLocationId },
-                  { label: 'Organization ID', value: selectedSite.organizationId },
-                  { label: 'Tenant ID', value: selectedSite.tenantId }
-                ].map((item, i) => (
-                  <div key={i} className="d-flex justify-content-between py-2 site-config-row">
-                    <span className="config-lbl-text" style={{ fontSize: '0.85rem' }}>{item.label}</span>
-                    <span className="config-val-text" style={{ fontWeight: 500, fontSize: '0.85rem', fontFamily: 'monospace' }}>{item.value || '—'}</span>
-                  </div>
-                ))}
+                <div className="text-muted fs-12 d-flex align-items-center gap-1 mt-0.5 text-truncate">
+                  <MapPin size={12} className="text-secondary flex-shrink-0" />
+                  <span>{confirmToggleSite?.city || 'Location unset'}{confirmToggleSite?.state ? `, ${confirmToggleSite?.state}` : ''}</span>
+                </div>
               </div>
+            </div>
 
-              {/* Building Settings Quick Link */}
-              <div className="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
-                <Button
-                  variant="outline-info"
-                  size="sm"
-                  className="d-flex align-items-center gap-2 fw-semibold"
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    navigate(`/manage-organisation?tab=building&siteId=${selectedSite.id}`);
-                  }}
-                >
-                  <Building2 size={16} /> Manage Buildings for this Site
-                </Button>
-                <Button variant="outline-light" size="sm" onClick={() => setShowDetailModal(false)}>
-                  Close
-                </Button>
-              </div>
-            </>
-          )}
+            <div
+              style={{
+                flexShrink: 0,
+                backgroundColor: isSiteActive(confirmToggleSite) ? 'rgba(16, 185, 129, 0.16)' : 'rgba(100, 116, 139, 0.16)',
+                color: isSiteActive(confirmToggleSite) ? '#34d399' : '#94a3b8',
+                border: `1px solid ${isSiteActive(confirmToggleSite) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(100, 116, 139, 0.4)'}`,
+                borderRadius: '6px',
+                padding: '5px 12px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: isSiteActive(confirmToggleSite) ? '#34d399' : '#94a3b8',
+                  boxShadow: isSiteActive(confirmToggleSite) ? '0 0 8px rgba(52, 211, 153, 0.8)' : 'none',
+                  flexShrink: 0
+                }}
+              />
+              <span>{isSiteActive(confirmToggleSite) ? 'ACTIVE' : 'INACTIVE'}</span>
+            </div>
+          </div>
+
+          {/* Impact Statement Box */}
+          <div
+            className="rounded-3"
+            style={{
+              padding: '16px 18px',
+              background: isSiteActive(confirmToggleSite) ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+              borderLeft: `4px solid ${isSiteActive(confirmToggleSite) ? '#ef4444' : '#10b981'}`,
+              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '10px'
+            }}
+          >
+            <div
+              className="d-flex align-items-center gap-2 mb-2"
+              style={{
+                color: isSiteActive(confirmToggleSite) ? '#f87171' : '#34d399',
+                fontSize: '0.88rem',
+                fontWeight: 600
+              }}
+            >
+              <AlertTriangle size={17} className="flex-shrink-0" />
+              <span>{isSiteActive(confirmToggleSite) ? 'Real-time telemetry will be paused' : 'Real-time telemetry will resume'}</span>
+            </div>
+            <p
+              className="mb-0 text-slate-300"
+              style={{
+                fontSize: '0.82rem',
+                lineHeight: 1.6,
+                paddingLeft: '25px'
+              }}
+            >
+              {isSiteActive(confirmToggleSite)
+                ? 'Disabling this site will stop sensor data aggregation, mute automated threshold alarms, and mark connected assets as offline.'
+                : 'Enabling this site will reconnect live SCADA telemetry, resume background health checks, and re-engage automated alert monitoring.'}
+            </p>
+          </div>
         </Modal.Body>
+
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            disabled={togglingStatus}
+            className="px-4 py-2 text-slate-200 border-secondary border-opacity-40"
+            style={{
+              borderRadius: '8px',
+              fontWeight: 500,
+              fontSize: '0.85rem',
+              background: 'rgba(255, 255, 255, 0.04)',
+              transition: 'all 0.15s ease'
+            }}
+            onClick={() => setConfirmToggleSite(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={togglingStatus}
+            onClick={handleConfirmToggleStatus}
+            className="px-4 py-2 border-0 d-inline-flex align-items-center gap-2 text-white"
+            style={{
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              background: isSiteActive(confirmToggleSite)
+                ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+              boxShadow: isSiteActive(confirmToggleSite)
+                ? '0 4px 16px rgba(220, 38, 38, 0.45)'
+                : '0 4px 16px rgba(5, 150, 105, 0.45)'
+            }}
+          >
+            {togglingStatus ? (
+              <>
+                <Spinner size="sm" animation="border" />
+                <span>Updating...</span>
+              </>
+            ) : (
+              <>
+                <Power size={15} />
+                <span>{isSiteActive(confirmToggleSite) ? 'Yes, Disable Site' : 'Yes, Enable Site'}</span>
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
       </Modal>
-    </Container>
+    </div>
   );
 };
 

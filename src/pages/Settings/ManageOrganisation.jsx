@@ -153,7 +153,8 @@ const ManageOrganisation = () => {
           />
         )}
 
-        {org.activeTab === 'building' && (
+        {/* Building Section - Commented out: building is now managed as an asset */}
+        {/* {org.activeTab === 'building' && (
           <BuildingSection
             selectedBuildingSiteId={org.selectedBuildingSiteId}
             setSelectedBuildingSiteId={org.setSelectedBuildingSiteId}
@@ -164,15 +165,8 @@ const ManageOrganisation = () => {
             handleOpenEditBuilding={org.handleOpenEditBuilding}
             handleDeleteBuilding={org.handleDeleteBuilding}
           />
-        )}
+        )} */}
 
-        {org.activeTab === 'asset' && (
-          <AssetSection
-            filteredAssets={org.filteredAssets}
-            handleOpenEditAsset={org.handleOpenEditAsset}
-            handleDeleteAsset={org.handleDeleteAsset}
-          />
-        )}
 
         {org.activeTab === 'device' && (
           <DeviceSection
@@ -262,6 +256,7 @@ const ManageOrganisation = () => {
       </Card>
 
       {org.activeTab === 'site' && <SiteSection />}
+      {org.activeTab === 'asset' && <AssetSection />}
 
       {/* Modals Group Component */}
       <ManageOrganisationModals org={org} />

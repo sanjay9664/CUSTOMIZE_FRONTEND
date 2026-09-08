@@ -3,7 +3,7 @@
  * Environment variables (import.meta.env) are the single source of truth.
  */
 
-const RAW_BACKEND = import.meta.env.VITE_BACKEND_API_URL || '/api/v1';
+const RAW_BACKEND = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BACKEND_API_URL) || '/api/v1';
 const BACKEND_BASE = RAW_BACKEND.replace(/\/+$/, '');
 
 /**
@@ -42,9 +42,9 @@ export const AUTH_ENDPOINTS = {
 };
 
 export const EXTERNAL_URLS = {
-  authEngine: import.meta.env.VITE_EXTERNAL_API_URL || '/sochiot-auth',
-  configEngine: import.meta.env.VITE_CONFIG_API_URL || '/sochiot-config',
-  ruleEngine: import.meta.env.VITE_RULE_ENGINE_API || '/sochiot-triggers'
+  authEngine: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_EXTERNAL_API_URL) || '/sochiot-auth',
+  configEngine: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CONFIG_API_URL) || '/sochiot-config',
+  ruleEngine: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_RULE_ENGINE_API) || '/sochiot-triggers'
 };
 
 export default {
