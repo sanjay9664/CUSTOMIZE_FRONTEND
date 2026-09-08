@@ -6,6 +6,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteProvider } from './context/SiteContext';
 import { DeviceStatusProvider } from './services/DeviceStatusContext';
 
+const MainLayout = lazy(() => import('./layout/MainLayout'));
+const AppRoutes = lazy(() => import('./routes/AppRoutes'));
+
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
 
