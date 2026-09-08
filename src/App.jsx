@@ -6,11 +6,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteProvider } from './context/SiteContext';
 import { DeviceStatusProvider } from './services/DeviceStatusContext';
 
-// Keep the login bundle small. The authenticated application is downloaded
-// only after a valid session is available.
-const MainLayout = lazy(() => import('./layout/MainLayout'));
-const AppRoutes = lazy(() => import('./routes/AppRoutes'));
-
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
 

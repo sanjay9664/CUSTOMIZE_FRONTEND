@@ -48,6 +48,7 @@ export const performTokenRefresh = async (force = false) => {
       console.log('[AuthRefresh] Regenerating access token...');
       const response = await fetch(AUTH_ENDPOINTS.refresh, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
