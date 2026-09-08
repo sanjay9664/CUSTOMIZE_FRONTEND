@@ -63,10 +63,11 @@ const DeviceModal = ({
     if (show) {
       setError(null);
       if (editingDevice) {
+        const resolvedSiteId = editingDevice.siteId || editingDevice.site?.id;
         setForm({
           name: editingDevice.name || '',
           category: editingDevice.category || 'ENERGY_METER',
-          siteId: editingDevice.siteId ? String(editingDevice.siteId) : (sites[0]?.id ? String(sites[0].id) : '7'),
+          siteId: resolvedSiteId ? String(resolvedSiteId) : (sites[0]?.id ? String(sites[0].id) : '7'),
           assetId: editingDevice.assetId ? String(editingDevice.assetId) : '',
           serialNumber: editingDevice.serialNumber || '',
           bmsDeviceId: editingDevice.bmsDeviceId || '',

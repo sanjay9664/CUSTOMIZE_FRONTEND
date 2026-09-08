@@ -193,8 +193,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </div>
       </div>
 
-      {/* Header Banner (Suppressed for site & asset tabs to eliminate redundant header stacking) */}
-      {org.activeTab !== 'site' && org.activeTab !== 'asset' && (
+      {/* Header Banner (Suppressed for site, asset & device tabs to eliminate redundant header stacking) */}
+      {org.activeTab !== 'site' && org.activeTab !== 'asset' && org.activeTab !== 'device' && (
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-3">
           <div className="d-flex align-items-center gap-3">
             <Button variant="outline-secondary" size="sm" onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 rounded-3 px-3 py-1-5 fw-semibold">
@@ -263,8 +263,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </div>
       )}
 
-      {/* Sub-Navigation Pills (Hidden for site & asset tabs because they have their own internal KPI & toolbar controls) */}
-      {!org.isSiteGroup && !org.isAssetGroup && (
+      {/* Sub-Navigation Pills (Hidden for site, asset & device tabs because they have their own internal controls) */}
+      {!org.isSiteGroup && !org.isAssetGroup && !org.isDeviceGroup && (
         <Nav variant="pills" activeKey={org.activeTab} onSelect={org.handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
           {org.isOrgGroup && (
             <>
