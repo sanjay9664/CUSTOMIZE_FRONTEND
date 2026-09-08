@@ -32,6 +32,18 @@ const getTypeBadgeClass = (type) => {
   return 'type-equipment';
 };
 
+const findAssetInTree = (nodes, id) => {
+  if (!Array.isArray(nodes) || !id) return null;
+  for (const n of nodes) {
+    if (String(n.id) === String(id)) return n;
+    if (Array.isArray(n.children) && n.children.length > 0) {
+      const found = findAssetInTree(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
 const AssetManagement = ({ embedded = false }) => {
   const { sites, fetchSites, selectedSite } = useSiteStore();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1957,6 +1969,9 @@ const AssetManagement = ({ embedded = false }) => {
                       const isInactive = a.status === 'INACTIVE' || a.deletedAt;
                       const isMaintenance = a.status === 'MAINTENANCE';
                       const siteObj = sites.find(s => String(s.id) === String(a.siteId));
+                      const parentId = a.parentId || a.parentAssetId;
+                      const parentObj = parentId ? (tableAssets.find(p => String(p.id) === String(parentId)) || findAssetInTree(hierarchyTree, parentId)) : null;
+                      const parentLabel = parentObj ? (parentObj.name || parentObj.serialNumber) : parentId;
 
                       return (
                         <tr key={a.id}>
@@ -1986,10 +2001,10 @@ const AssetManagement = ({ embedded = false }) => {
 
                           {/* Parent */}
                           <td className="asset-meta-text">
-                            {a.parentId || a.parentAssetId ? (
-                              <div className="d-flex align-items-center gap-1 text-truncate" style={{ maxWidth: 200 }}>
+                            {parentId ? (
+                              <div className="d-flex align-items-center gap-1 text-truncate" style={{ maxWidth: 200 }} title={parentObj ? `${parentObj.name}${parentObj.serialNumber ? ` (${parentObj.serialNumber})` : ''}` : parentId}>
                                 <CornerDownRight size={12} className="text-muted flex-shrink-0" />
-                                <span className="font-monospace">{a.parentId || a.parentAssetId}</span>
+                                <span className="font-monospace">{parentLabel}</span>
                               </div>
                             ) : (
                               <span className="text-muted fs-11">Root Node</span>

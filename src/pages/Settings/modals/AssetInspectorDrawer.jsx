@@ -501,7 +501,7 @@ const AssetInspectorDrawer = ({
                         <Box size={16} className="text-info" />
                         <div>
                           <div className="fs-13 fw-semibold drawer-text-primary">{child.name}</div>
-                          <div className="fs-11 text-muted font-monospace">{child.id}</div>
+                          <div className="fs-11 text-muted font-monospace">{child.serialNumber || child.id}</div>
                         </div>
                       </div>
                       <span className={`asset-type-badge ${getTypeBadgeClass(child.assetType)}`}>
