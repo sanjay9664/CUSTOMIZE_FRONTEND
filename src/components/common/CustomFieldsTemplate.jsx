@@ -3,18 +3,36 @@ import { Row, Col, Form, Button, Badge } from 'react-bootstrap';
 import { Plus, Trash2, Sliders, Layers, CheckSquare, Sparkles } from 'lucide-react';
 
 export const DEFAULT_SITE_TEMPLATES = [
-  { id: 'mouldings', label: 'Mouldings' },
-  { id: 'extrusion', label: 'Extrusion' },
-  { id: 'punch_press', label: 'Punch Press' },
-  { id: 'cnc', label: 'CNC' }
+  { id: 'EnergyMeter', label: 'Energy Meter' },
+  { id: 'Smart-DG', label: 'Smart DG' },
+  { id: 'AirCompressor', label: 'Air Compressor' },
+  { id: 'SolarSystem', label: 'Solar System' },
+  { id: 'Pumps', label: 'Pumps' },
+  { id: 'Chillers', label: 'Chillers' },
+  { id: 'AHUs', label: 'AHUs' },
+  { id: 'Cooling-Towers', label: 'Cooling Towers' },
+  { id: 'Boilers', label: 'Boilers' },
+  { id: 'HVAC-System', label: 'HVAC System' },
 ];
 
 export const DEFAULT_SITE_FEATURES = [
-  { id: 'andon', label: 'Andon System' },
-  { id: 'breakdown', label: 'Breakdown Reports' },
-  { id: 'alert', label: 'Alert System' },
-  { id: 'erp', label: 'ERP Integration' },
-  { id: 'pnl', label: 'Profit & Loss' }
+  { id: 'Dashboard', label: 'Dashboard' },
+  { id: 'Water-Management', label: 'Water Management' },
+  { id: 'Motors', label: 'Motors' },
+  { id: 'DG-Set', label: 'DG Set' },
+  { id: 'Alarm-System', label: 'Alarm System' },
+  { id: 'LT-Panel', label: 'LT Panel' },
+  { id: 'Transformer', label: 'Transformer' },
+  { id: 'Fire', label: 'Fire' },
+  { id: 'Ticketing', label: 'Ticketing' },
+  { id: 'Maintenance', label: 'Maintenance' },
+  { id: 'Service-History', label: 'Service History' },
+  { id: 'Daily-DPR', label: 'Daily DPR' },
+  { id: 'Energy-Metering', label: 'Energy Metering' },
+  { id: 'VRV', label: 'VRV' },
+  { id: 'AQI-Sensor', label: 'AQI Sensor' },
+  { id: 'HVAC', label: 'HVAC' },
+  { id: 'AC', label: 'AC' },
 ];
 
 const CustomFieldsTemplate = ({
@@ -57,7 +75,7 @@ const CustomFieldsTemplate = ({
           <div className="template-box-panel p-3 rounded-3 h-100">
             <div className="d-flex align-items-center gap-2 mb-3">
               <Layers size={16} className="text-info" />
-              <h6 className="mb-0 fw-bold fs-14 text-white">Select Template</h6>
+              <h6 className="mb-0 fw-bold fs-14 cft-heading">Select Template</h6>
             </div>
 
             <div className="template-checkbox-list d-flex flex-column gap-2">
@@ -67,7 +85,7 @@ const CustomFieldsTemplate = ({
                   <div
                     key={tpl.id}
                     className={`template-check-card p-2 rounded-2 border d-flex align-items-center justify-content-between ${
-                      isChecked ? 'border-info bg-info bg-opacity-10' : 'border-secondary border-opacity-25'
+                      isChecked ? 'border-info active-info' : 'border-secondary border-opacity-25'
                     }`}
                     style={{ cursor: readOnly ? 'default' : 'pointer' }}
                     onClick={() => {
@@ -98,7 +116,7 @@ const CustomFieldsTemplate = ({
           <div className="template-box-panel p-3 rounded-3 h-100">
             <div className="d-flex align-items-center gap-2 mb-3">
               <CheckSquare size={16} className="text-success" />
-              <h6 className="mb-0 fw-bold fs-14 text-white">Select Feature</h6>
+              <h6 className="mb-0 fw-bold fs-14 cft-heading">Select Feature</h6>
             </div>
 
             <div className="feature-checkbox-list d-flex flex-column gap-2">
@@ -108,7 +126,7 @@ const CustomFieldsTemplate = ({
                   <div
                     key={feat.id}
                     className={`feature-check-card p-2 rounded-2 border d-flex align-items-center justify-content-between ${
-                      isChecked ? 'border-success bg-success bg-opacity-10' : 'border-secondary border-opacity-25'
+                      isChecked ? 'border-success active-success' : 'border-secondary border-opacity-25'
                     }`}
                     style={{ cursor: readOnly ? 'default' : 'pointer' }}
                     onClick={() => {
@@ -140,7 +158,7 @@ const CustomFieldsTemplate = ({
         <div className="d-flex align-items-center justify-content-between mb-3">
           <div className="d-flex align-items-center gap-2">
             <Sliders size={16} className="text-warning" />
-            <h6 className="mb-0 fw-bold fs-14 text-white">Custom Metadata Fields</h6>
+            <h6 className="mb-0 fw-bold fs-14 cft-heading">Custom Metadata Fields</h6>
           </div>
           <small className="text-muted fs-11">Extend site parameters modularly</small>
         </div>
@@ -151,7 +169,7 @@ const CustomFieldsTemplate = ({
             {customFields.map((field, idx) => (
               <div
                 key={field.id || idx}
-                className="d-flex align-items-center gap-2 p-2 rounded-2 bg-dark bg-opacity-50 border border-secondary border-opacity-25"
+                className="cft-custom-field-row d-flex align-items-center gap-2 p-2 rounded-2"
               >
                 <span className="badge bg-secondary text-white font-monospace fs-11" style={{ minWidth: '90px' }}>
                   {field.name}
@@ -164,7 +182,7 @@ const CustomFieldsTemplate = ({
                   type={field.type === 'number' ? 'number' : 'text'}
                   value={field.value || ''}
                   placeholder="Field value..."
-                  className="bg-dark border-secondary text-white fs-12 flex-grow-1"
+                  className="cft-input-sm flex-grow-1"
                   disabled={readOnly}
                   onChange={(e) => {
                     if (typeof onCustomFieldChange === 'function') {
@@ -193,20 +211,20 @@ const CustomFieldsTemplate = ({
 
         {/* Add Field Input Group */}
         {!readOnly && (
-          <div className="add-field-row d-flex flex-wrap align-items-center gap-2 p-2 rounded-2 bg-dark border border-secondary border-opacity-25">
+          <div className="cft-add-field-row d-flex flex-wrap align-items-center gap-2 p-2 rounded-2">
             <Form.Control
               size="sm"
               placeholder="Field name (e.g. Sanctioned Load)..."
               value={newFieldName}
               onChange={(e) => setNewFieldName(e.target.value)}
-              className="bg-secondary bg-opacity-10 border-secondary text-white fs-12"
+              className="cft-input-sm"
               style={{ maxWidth: '200px' }}
             />
             <Form.Select
               size="sm"
               value={newFieldType}
               onChange={(e) => setNewFieldType(e.target.value)}
-              className="bg-secondary bg-opacity-10 border-secondary text-white fs-12"
+              className="cft-input-sm"
               style={{ maxWidth: '110px' }}
             >
               <option value="text">Text</option>
@@ -218,7 +236,7 @@ const CustomFieldsTemplate = ({
               placeholder="Initial value..."
               value={newFieldValue}
               onChange={(e) => setNewFieldValue(e.target.value)}
-              className="bg-secondary bg-opacity-10 border-secondary text-white fs-12 flex-grow-1"
+              className="cft-input-sm flex-grow-1"
             />
             <Button
               size="sm"
@@ -238,6 +256,9 @@ const CustomFieldsTemplate = ({
           background: rgba(30, 41, 59, 0.4);
           border: 1px solid rgba(255, 255, 255, 0.08);
         }
+        .custom-fields-template-wrapper .cft-heading {
+          color: #f8fafc;
+        }
         .custom-fields-template-wrapper .template-check-card,
         .custom-fields-template-wrapper .feature-check-card {
           background: rgba(15, 23, 42, 0.6);
@@ -247,8 +268,69 @@ const CustomFieldsTemplate = ({
         .custom-fields-template-wrapper .feature-check-card:hover {
           background: rgba(30, 41, 59, 0.8);
         }
+        .custom-fields-template-wrapper .template-check-card.active-info {
+          background: rgba(6, 182, 212, 0.12) !important;
+        }
+        .custom-fields-template-wrapper .feature-check-card.active-success {
+          background: rgba(34, 197, 94, 0.12) !important;
+        }
+        .custom-fields-template-wrapper .cft-custom-field-row {
+          background: rgba(30, 41, 59, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .custom-fields-template-wrapper .cft-add-field-row {
+          background: #1e293b;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .custom-fields-template-wrapper .cft-input-sm {
+          background-color: #0f172a !important;
+          border: 1px solid #334155 !important;
+          color: #f8fafc !important;
+          font-size: 12px !important;
+          border-radius: 4px !important;
+        }
+        .custom-fields-template-wrapper .cft-input-sm::placeholder {
+          color: #94a3b8 !important;
+          opacity: 1 !important;
+        }
         .hover-opacity:hover {
           opacity: 0.75;
+        }
+
+        /* ── Light Mode Overrides ── */
+        body.light-mode .custom-fields-template-wrapper .template-box-panel {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .custom-fields-template-wrapper .cft-heading {
+          color: #0f172a !important;
+        }
+        body.light-mode .custom-fields-template-wrapper .template-check-card,
+        body.light-mode .custom-fields-template-wrapper .feature-check-card {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .custom-fields-template-wrapper .template-check-card:hover,
+        body.light-mode .custom-fields-template-wrapper .feature-check-card:hover {
+          background: #f1f5f9 !important;
+        }
+        body.light-mode .custom-fields-template-wrapper .cft-custom-field-row {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .custom-fields-template-wrapper .cft-add-field-row {
+          background: #f8fafc !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .custom-fields-template-wrapper .cft-input-sm {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .custom-fields-template-wrapper .cft-input-sm::placeholder {
+          color: #64748b !important;
+          opacity: 1 !important;
         }
       `}} />
     </div>

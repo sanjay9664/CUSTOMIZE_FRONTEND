@@ -34,15 +34,10 @@ const BuildingSection = ({
             <option value="ALL">🏢 All Physical Sites ({safeSites.length})</option>
             {safeSites.map(s => (
               <option key={s.id} value={s.id}>
-                {s.name} (Site #{s.id}{s.city ? ` • ${s.city}` : ''})
+                {s.name}{s.city ? ` • ${s.city}` : ''}
               </option>
             ))}
           </Form.Select>
-          {selectedBuildingSiteId !== 'ALL' && (
-            <Badge bg="info" className="text-dark fw-bold px-2 py-1 fs-12">
-              Site ID: {selectedBuildingSiteId}
-            </Badge>
-          )}
         </div>
 
         <div className="d-flex align-items-center gap-2">
@@ -92,7 +87,7 @@ const BuildingSection = ({
                   <td className="text-slate-300 font-monospace fs-13">{b.code || `BLD-${b.id}`}</td>
                   <td className="text-slate-300 fs-13">
                     <span className="badge bg-secondary bg-opacity-25 text-info border border-info border-opacity-25">
-                      {b.siteName || `Site #${b.siteId || 'N/A'}`}
+                      {b.siteName || '—'}
                     </span>
                   </td>
                   <td className="text-slate-300 font-monospace fs-13 fw-semibold">

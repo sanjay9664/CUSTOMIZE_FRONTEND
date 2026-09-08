@@ -21,6 +21,7 @@ const BreakerStatus = lazy(() => import('../pages/LTPanel/BreakerStatus'));
 const TransformerOverview = lazy(() => import('../pages/Transformer/Overview'));
 const SettingsIndex = lazy(() => import('../pages/Settings/SettingsIndex'));
 const ManageOrganisation = lazy(() => import('../pages/Settings/ManageOrganisation'));
+const AssetManagement = lazy(() => import('../pages/Settings/AssetManagement'));
 const UserManagement = lazy(() => import('../pages/Admin/UserManagement'));
 const AuditLogViewer = lazy(() => import('../pages/Admin/AuditLogViewer'));
 const MaintenancePage = lazy(() => import('../pages/Maintenance/Index'));
@@ -167,6 +168,8 @@ const AppRoutes = () => {
       <Route path="/settings" element={<SettingsIndex />} />
       <Route path="/settings/users" element={<SettingsIndex />} />
       <Route path="/settings/sites" element={<SettingsIndex />} />
+      <Route path="/settings/assets" element={<AssetManagement />} />
+      <Route path="/asset-management" element={<AssetManagement />} />
       <Route path="/manage-organisation" element={<ManageOrganisation />} />
       <Route path="/settings/manage-organisation" element={<ManageOrganisation />} />
 

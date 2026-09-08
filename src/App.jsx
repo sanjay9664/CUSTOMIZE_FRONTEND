@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteProvider } from './context/SiteContext';
+import { DeviceStatusProvider } from './services/DeviceStatusContext';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
