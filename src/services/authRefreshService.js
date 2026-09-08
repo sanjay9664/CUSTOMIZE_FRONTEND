@@ -5,7 +5,9 @@
 import { getCookie, getAuthToken, setAuthSession, getUserRole, getUserData } from '../utils/cookieUtils';
 import { AUTH_ENDPOINTS } from '../utils/apiConfig';
 
-const REFRESH_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+// The BMS access token is valid for 15 minutes. Refreshing at 12 minutes
+// leaves a safe buffer for slow networks and browser timer throttling.
+const REFRESH_INTERVAL_MS = 12 * 60 * 1000;
 
 let refreshTimer = null;
 let activeRefreshPromise = null;
@@ -35,6 +37,7 @@ export const performTokenRefresh = async (force = false) => {
       console.log('[AuthRefresh] Performing silent token refresh...');
       const response = await fetch(AUTH_ENDPOINTS.refresh, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...(currentAccessToken ? { Authorization: `Bearer ${currentAccessToken}` } : {})
@@ -78,7 +81,8 @@ export const performTokenRefresh = async (force = false) => {
 export const startAutoTokenRefresh = () => {
   stopAutoTokenRefresh();
   
-  // Schedule periodic silent refresh every 10 minutes
+  // A refresh rotates the refresh token too, extending an active session
+  // without waiting for a protected API request to fail with 401.
   refreshTimer = setInterval(() => {
     performTokenRefresh();
   }, REFRESH_INTERVAL_MS);
@@ -86,7 +90,7 @@ export const startAutoTokenRefresh = () => {
   // Trigger initial check immediately
   performTokenRefresh();
 
-  console.log('[AuthRefresh] Auto token refresh scheduler activated (Every 10 minutes).');
+  console.log('[AuthRefresh] Auto token refresh scheduler activated (Every 12 minutes).');
 };
 
 export const stopAutoTokenRefresh = () => {
