@@ -52,6 +52,13 @@ const DeviceDeleteModal = ({
         body.light-mode .scada-delete-device-modal .modal-footer {
           border-top-color: #e2e8f0 !important;
         }
+        body.light-mode .scada-delete-device-modal .device-details-box {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .scada-delete-device-modal .modal-text-primary {
+          color: #0f172a !important;
+        }
       `}</style>
 
       <Modal.Header closeButton>
@@ -68,14 +75,14 @@ const DeviceDeleteModal = ({
           </Alert>
         )}
 
-        <p className="fs-13 text-slate-200 mb-3">
+        <p className="fs-13 modal-text-primary mb-3">
           Are you sure you want to decommission and soft-delete device <strong>"{device.name}"</strong>?
         </p>
 
-        <div className="p-3 mb-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-20 fs-12">
+        <div className="p-3 mb-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-20 fs-12 device-details-box">
           <div className="d-flex align-items-center justify-content-between mb-1">
             <span className="text-muted">Device Name:</span>
-            <strong className="text-slate-200">{device.name}</strong>
+            <strong className="modal-text-primary">{device.name}</strong>
           </div>
           <div className="d-flex align-items-center justify-content-between mb-1">
             <span className="text-muted">Serial Number:</span>
@@ -83,15 +90,15 @@ const DeviceDeleteModal = ({
           </div>
           <div className="d-flex align-items-center justify-content-between mb-1">
             <span className="text-muted">Category:</span>
-            <span className="text-slate-200">{device.category ? device.category.replace(/_/g, ' ') : 'ENERGY_METER'}</span>
+            <span className="modal-text-primary">{device.category ? device.category.replace(/_/g, ' ') : 'ENERGY_METER'}</span>
           </div>
           <div className="d-flex align-items-center justify-content-between mb-1">
             <span className="text-muted">Site:</span>
-            <span className="text-slate-200">{siteName}</span>
+            <span className="modal-text-primary">{siteName}</span>
           </div>
           <div className="d-flex align-items-center justify-content-between">
             <span className="text-muted">Linked Asset:</span>
-            <span className="text-slate-200">{linkedAsset ? linkedAsset.name : 'Unassigned'}</span>
+            <span className="modal-text-primary">{linkedAsset ? linkedAsset.name : 'Unassigned'}</span>
           </div>
         </div>
 

@@ -171,8 +171,10 @@ export const useManageOrganisation = () => {
   const [auditLogs, setAuditLogs] = useState([]);
 
   const [showRecentEventsModal, setShowRecentEventsModal] = useState(false);
+  const [showConfigDevicesModal, setShowConfigDevicesModal] = useState(false);
   const [recentEventsList, setRecentEventsList] = useState([]);
 
+  const [selectedSiteFilter, setSelectedSiteFilter] = useState('ALL');
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [selectedDeviceForRules, setSelectedDeviceForRules] = useState(null);
   const [deviceRules, setDeviceRules] = useState([]);
@@ -982,8 +984,27 @@ export const useManageOrganisation = () => {
   // Device Actions
   const handleOpenEditDevice = (d) => {
     setEditingDeviceItem(d);
-    setEditDeviceForm({ name: d.name || '', category: d.category || 'ENERGY_METER', serialNumber: d.serialNumber || '' });
-    setShowEditDeviceModal(true);
+    setRegisterStep(1);
+    setRegisterForm({
+      id: d.id,
+      siteId: d.siteId || '',
+      name: d.name || '',
+      sochiotDeviceIds: Array.isArray(d.sochiotDeviceIds) ? d.sochiotDeviceIds.join(', ') : (d.sochiotDeviceIds || d.sochiot_device_ids || ''),
+      category: d.category || '',
+      areaId: d.areaId || '',
+      buildingId: d.buildingId || '',
+      floorNo: d.floorNo || '',
+      roomNo: d.roomNo || '',
+      energyGroupId: d.energyGroupId || '',
+      description: d.description || '',
+      serialNumber: d.serialNumber || '',
+      profileId: d.profileId || '',
+      templateName: d.templateName || ''
+    });
+    if (typeof setDynamicTemplateFields === 'function') {
+      setDynamicTemplateFields(d.templateFields || []);
+    }
+    setShowRegisterDeviceModal(true);
   };
 
   const handleSaveEditDevice = async (e) => {
@@ -1135,7 +1156,7 @@ export const useManageOrganisation = () => {
   };
 
   const handleGlobalResyncEventStats = () => {
-    showToast('info', 'Triggered global Sochiot events resync across all devices.');
+    setShowConfigDevicesModal(true);
   };
 
   // Widgets Actions
@@ -1404,9 +1425,10 @@ export const useManageOrganisation = () => {
       safeLower(d.name).includes(searchLower) ||
       safeLower(d.bmsDeviceId).includes(searchLower) ||
       safeLower(d.serialNumber).includes(searchLower);
+    const matchesSite = !selectedSiteFilter || selectedSiteFilter === 'ALL' || String(d.siteId) === String(selectedSiteFilter);
     const matchesBuilding = !selectedBuildingFilter || selectedBuildingFilter === 'ALL' || String(d.buildingId) === String(selectedBuildingFilter);
     const matchesArea = !selectedAreaFilter || selectedAreaFilter === 'ALL' || String(d.areaId) === String(selectedAreaFilter);
-    return matchesSearch && matchesBuilding && matchesArea;
+    return matchesSearch && matchesSite && matchesBuilding && matchesArea;
   });
 
   const isOrgGroup = ['company', 'tenant'].includes(activeTab);
@@ -1453,7 +1475,7 @@ export const useManageOrganisation = () => {
     telemetryLogs, setTelemetryLogs, reportsList, setReportsList, alarmsList, setAlarmsList,
     loading, setLoading, message, setMessage, showToast,
     activeCompanies, activeTenants, activeZones, activeAreas, activeSites, activeBuildings, activeAssets, activeDevices,
-    searchTerm, setSearchTerm, selectedTenantFilter, setSelectedTenantFilter, selectedZoneFilter, setSelectedZoneFilter,
+    searchTerm, setSearchTerm, selectedTenantFilter, setSelectedTenantFilter, selectedZoneFilter, setSelectedZoneFilter, selectedSiteFilter, setSelectedSiteFilter,
     selectedBuildingSiteId, setSelectedBuildingSiteId, selectedBuildingFilter, setSelectedBuildingFilter, selectedAreaFilter, setSelectedAreaFilter,
     showCompanyModal, setShowCompanyModal, editingCompany, companyForm, setCompanyForm, handleOpenCreateCompany, handleOpenEditCompany, handleSaveCompany, handleDeleteCompany,
     showTenantModal, setShowTenantModal, editingTenant, tenantForm, setTenantForm, handleOpenCreateTenant, handleOpenEditTenant, handleSaveTenant, handleReactivateTenant, handleDeleteTenant,
@@ -1467,7 +1489,7 @@ export const useManageOrganisation = () => {
     showSettingsModal, setShowSettingsModal, selectedDeviceForSettings, deviceSettingsForm, setDeviceSettingsForm, handleOpenSettingsModal, handleSaveSettings,
     showThresholdsModal, setShowThresholdsModal, selectedDeviceForThresholds, thresholdsForm, setThresholdsForm, handleOpenThresholdsModal, handleSaveThresholds,
     showAuditLogModal, setShowAuditLogModal, selectedDeviceForAudit, setSelectedDeviceForAudit, auditLogList: auditLogs, handleOpenAuditLog,
-    showRecentEventsModal, setShowRecentEventsModal, recentEventsList, handleOpenRecentEvents, handleGlobalResyncEventStats,
+    showRecentEventsModal, setShowRecentEventsModal, recentEventsList, handleOpenRecentEvents, handleGlobalResyncEventStats, showConfigDevicesModal, setShowConfigDevicesModal,
     showRulesModal, setShowRulesModal, selectedDeviceForRules, deviceRulesForm: ruleForm, setDeviceRulesForm: setRuleForm, handleOpenRulesModal, handleSaveRules,
     showEditDeviceModal, setShowEditDeviceModal, editingDeviceItem, editDeviceForm, setEditDeviceForm, handleOpenEditDevice, handleSaveEditDevice, handleDeleteDevice,
     showCreateWidgetModal, setShowCreateWidgetModal, widgetFilterActiveOnly, setWidgetFilterActiveOnly, selectedDeviceForWidgets, setSelectedDeviceForWidgets, widgetsList, widgetForm, setWidgetForm, handleSyncWidgetsFromSochiot, handleReorderWidgets, handleDeleteAllWidgets, handleFetchWidgets, showEditWidgetModal, setShowEditWidgetModal, editingWidget, handleOpenEditWidgetModal, handleSaveWidget, handleDeleteWidget,

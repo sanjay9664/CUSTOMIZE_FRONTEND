@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Form, Button, Row, Col, Badge, Card, Spinner } from 'react-bootstrap';
-import { Activity, Eye, Sliders, Shield, Cpu, Zap, FileText } from 'lucide-react';
+import { Activity, Eye, Sliders, Shield, Cpu, Zap, FileText, Layers, Rocket } from 'lucide-react';
 
 const DeviceModalsGroup = ({
   // Thresholds Modal
@@ -52,6 +52,11 @@ const DeviceModalsGroup = ({
   selectedDeviceForAudit,
   auditLogList = [],
 
+  // Config Devices Modal
+  showConfigDevicesModal,
+  setShowConfigDevicesModal,
+
+  showToast,
   loading
 }) => {
   const safeEvents = Array.isArray(recentEventsList) ? recentEventsList : [];
