@@ -14,15 +14,18 @@ import RulesSection from './OrganizationHub/sections/RulesSection';
 import CommandsSection from './OrganizationHub/sections/CommandsSection';
 import ReportSection from './OrganizationHub/sections/ReportSection';
 import SiteSection from './OrganizationHub/sections/SiteSection';
+import TemplatesTab from './OrganizationHub/tabs/TemplatesTab';
 
 const ManageOrganisation = () => {
   const org = useManageOrganisation();
 
   return (
-    <div className="manage-organisation-page p-4">
+    <div className="manage-organisation-page p-0 m-0 w-100">
       <style>{`
         .manage-organisation-page {
-          min-height: 100vh;
+          min-height: auto;
+          margin: 0 !important;
+          padding: 0 !important;
           transition: background-color 0.3s ease, color 0.3s ease;
         }
 
@@ -102,10 +105,68 @@ const ManageOrganisation = () => {
           background-color: #0f172a !important;
           color: #f8fafc !important;
         }
+
+        .config-option-card {
+          background: rgba(15, 23, 42, 0.6) !important;
+          border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+          transition: all 0.25s ease-in-out !important;
+          cursor: pointer !important;
+        }
+        .config-option-card:hover {
+          transform: translateY(-4px) !important;
+          border-color: rgba(56, 189, 248, 0.6) !important;
+          background: rgba(30, 41, 59, 0.8) !important;
+          box-shadow: 0 10px 25px rgba(56, 189, 248, 0.15) !important;
+        }
+        .dashed-icon-box {
+          width: 90px !important;
+          height: 90px !important;
+          border-radius: 16px !important;
+          border: 2px dashed rgba(255, 255, 255, 0.25) !important;
+          background: rgba(255, 255, 255, 0.02) !important;
+          color: #94a3b8 !important;
+          transition: all 0.25s ease-in-out !important;
+          margin: 0 auto !important;
+        }
+        .config-option-card:hover .dashed-icon-box {
+          border-color: #38bdf8 !important;
+          background: rgba(56, 189, 248, 0.1) !important;
+          color: #38bdf8 !important;
+        }
+
+        body.light-mode .config-option-card {
+          background: #ffffff !important;
+          border: 1.5px solid #e2e8f0 !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+        }
+        body.light-mode .config-option-card:hover {
+          background: #f8fafc !important;
+          border-color: #0284c7 !important;
+          box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12) !important;
+        }
+        body.light-mode .config-option-card .card-title-text {
+          color: #0f172a !important;
+        }
+        body.light-mode .config-option-card .card-subtitle-text {
+          color: #64748b !important;
+        }
+        body.light-mode .config-option-card .dashed-icon-box {
+          border-color: #cbd5e1 !important;
+          background: #f1f5f9 !important;
+          color: #64748b !important;
+        }
+        body.light-mode .config-option-card:hover .dashed-icon-box {
+          border-color: #0284c7 !important;
+          background: rgba(2, 132, 199, 0.08) !important;
+          color: #0284c7 !important;
+        }
+        body.light-mode .footer-note-text {
+          color: #64748b !important;
+        }
       `}</style>
 
       {/* Header & Sub-Nav Component */}
-      <ManageOrganisationHeader org={org} />
+      {org.activeTab !== 'templates' && <ManageOrganisationHeader org={org} />}
 
       {/* Floating Toast Notification */}
       {org.message && (
@@ -142,12 +203,12 @@ const ManageOrganisation = () => {
           <LocationSection
             activeTab={org.activeTab}
             filteredZones={org.filteredZones}
-            tenants={org.tenants}
+            tenants={org.activeTenants || org.filteredTenants}
             handleOpenEditZone={org.handleOpenEditZone}
             handleReactivateZone={org.handleReactivateZone}
             handleDeleteZone={org.handleDeleteZone}
             filteredAreas={org.filteredAreas}
-            zones={org.zones}
+            zones={org.activeZones || org.filteredZones}
             handleOpenEditArea={org.handleOpenEditArea}
             handleDeleteArea={org.handleDeleteArea}
           />
@@ -172,6 +233,9 @@ const ManageOrganisation = () => {
           <DeviceSection
             searchTerm={org.searchTerm}
             setSearchTerm={org.setSearchTerm}
+            selectedSiteFilter={org.selectedSiteFilter}
+            setSelectedSiteFilter={org.setSelectedSiteFilter}
+            activeSites={org.activeSites}
             selectedBuildingFilter={org.selectedBuildingFilter}
             setSelectedBuildingFilter={org.setSelectedBuildingFilter}
             selectedAreaFilter={org.selectedAreaFilter}
@@ -181,6 +245,10 @@ const ManageOrganisation = () => {
             filteredDevices={org.filteredDevices}
             handleOpenRecentEvents={org.handleOpenRecentEvents}
             handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}
+            showConfigDevicesModal={org.showConfigDevicesModal}
+            setShowConfigDevicesModal={org.setShowConfigDevicesModal}
+            handleTabSelect={org.handleTabSelect}
+            showToast={org.showToast}
             setRegisterStep={org.setRegisterStep}
             setRegisterForm={org.setRegisterForm}
             setShowRegisterDeviceModal={org.setShowRegisterDeviceModal}
@@ -191,6 +259,16 @@ const ManageOrganisation = () => {
             handleOpenRulesModal={org.handleOpenRulesModal}
             handleOpenAuditLogModal={org.handleOpenAuditLogModal}
             handleDeleteDevice={org.handleDeleteDevice}
+          />
+        )}
+
+        {org.activeTab === 'templates' && (
+          <TemplatesTab
+            handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}
+            showConfigDevicesModal={org.showConfigDevicesModal}
+            setShowConfigDevicesModal={org.setShowConfigDevicesModal}
+            handleTabSelect={org.handleTabSelect}
+            showToast={org.showToast}
           />
         )}
 

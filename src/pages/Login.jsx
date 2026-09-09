@@ -280,6 +280,7 @@ const Login = () => {
       const result = await authLogin({
         identifier: credentials.identifier,
         password: credentials.password,
+        rememberMe,
       });
 
       storeSessionAndRedirect(result.data);

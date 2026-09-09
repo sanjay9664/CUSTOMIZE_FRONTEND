@@ -11,6 +11,7 @@ const LocationSection = ({
   handleDeleteZone = () => {},
   filteredAreas = [],
   zones = [],
+  sites = [],
   handleOpenEditArea = () => {},
   handleDeleteArea = () => {}
 }) => {
@@ -18,6 +19,7 @@ const LocationSection = ({
   const safeAreas = Array.isArray(filteredAreas) ? filteredAreas : [];
   const safeTenants = Array.isArray(tenants) ? tenants : [];
   const safeAllZones = Array.isArray(zones) ? zones : [];
+  const safeSites = Array.isArray(sites) ? sites : [];
 
   return (
     <div>
@@ -29,8 +31,7 @@ const LocationSection = ({
               <tr>
                 <th>Zone Name</th>
                 <th>Assigned Organization</th>
-                <th>Region / Country</th>
-                <th>Timezone</th>
+                <th>Assigned Site</th>
                 <th>Status</th>
                 <th className="text-end">Actions</th>
               </tr>
@@ -41,7 +42,8 @@ const LocationSection = ({
                   <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No zones found</td>
                 </tr>
               ) : safeZones.map(z => {
-                const assignedTenant = safeTenants.find(t => t.id === z.tenantId);
+                const assignedTenant = safeTenants.find(t => String(t.id) === String(z.tenantId));
+                const assignedSite = safeSites.find(s => String(s.id) === String(z.siteId));
                 const isInactive = z.status === 'INACTIVE' || z.deletedAt;
                 return (
                   <tr key={z.id}>
@@ -54,11 +56,8 @@ const LocationSection = ({
                         </div>
                       </div>
                     </td>
-                    <td className="text-slate-300">{assignedTenant ? assignedTenant.name : z.tenantId}</td>
-                    <td className="text-slate-300 fs-13">
-                      {z.region || 'N/A'} {z.country ? `, ${z.country}` : ''}
-                    </td>
-                    <td className="text-slate-400 fs-12">{z.timezone || 'Asia/Kolkata'}</td>
+                    <td className="text-slate-300">{assignedTenant ? assignedTenant.name : 'N/A'}</td>
+                    <td className="text-slate-300 fs-13">{assignedSite ? assignedSite.name : 'N/A'}</td>
                     <td>
                       <Badge bg={isInactive ? 'secondary' : 'success'} className="px-2 py-1">
                         {isInactive ? 'INACTIVE' : 'ACTIVE'}
@@ -113,8 +112,8 @@ const LocationSection = ({
                   <td colSpan={5} className="text-center py-4 empty-text fw-semibold">No operational areas found</td>
                 </tr>
               ) : safeAreas.map(a => {
-                const parentZone = safeAllZones.find(z => z.id === a.zoneId);
-                const parentTenant = safeTenants.find(t => t.id === a.tenantId);
+                const parentZone = safeAllZones.find(z => String(z.id) === String(a.zoneId));
+                const parentTenant = safeTenants.find(t => String(t.id) === String(a.tenantId));
 
                 return (
                   <tr key={a.id}>
@@ -124,8 +123,8 @@ const LocationSection = ({
                         {a.name}
                       </div>
                     </td>
-                    <td className="text-slate-300">{parentZone ? parentZone.name : (a.zoneId ? `Zone #${a.zoneId}` : 'N/A')}</td>
-                    <td className="text-slate-300">{parentTenant ? parentTenant.name : (a.tenantId ? `Org #${a.tenantId}` : 'N/A')}</td>
+                    <td className="text-slate-300">{parentZone ? parentZone.name : 'N/A'}</td>
+                    <td className="text-slate-300">{parentTenant ? parentTenant.name : 'N/A'}</td>
                     <td className="text-slate-400 fs-13">{a.description || 'N/A'}</td>
                     <td className="text-end">
                       <div className="d-flex align-items-center justify-content-end gap-2">

@@ -40,18 +40,23 @@ export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
   return session;
 });
 
-export const login = createAsyncThunk('auth/login', async ({ identifier, password }, { rejectWithValue }) => {
+export const login = createAsyncThunk('auth/login', async ({ identifier, password, rememberMe }, { rejectWithValue }) => {
   const cleanId = typeof identifier === 'string' ? identifier.trim() : '';
   if (!cleanId || !password) {
     return rejectWithValue('Please enter both username/email and password.');
   }
 
   try {
+    const payload = { identifier: cleanId, email: cleanId, password };
+    if (rememberMe) {
+      payload.rememberMe = true;
+    }
+
     const response = await fetch(AUTH_ENDPOINTS.login, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ identifier: cleanId, email: cleanId, password })
+      body: JSON.stringify(payload)
     });
     const result = await response.json();
     if (!response.ok) {

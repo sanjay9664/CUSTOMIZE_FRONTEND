@@ -120,7 +120,11 @@ const ManageOrganisationModals = ({ org }) => {
 
       <RegisterDeviceModal
         show={org.showRegisterDeviceModal}
-        onHide={() => org.setShowRegisterDeviceModal(false)}
+        onHide={() => {
+          org.setShowRegisterDeviceModal(false);
+          if (typeof org.setEditingDeviceItem === 'function') org.setEditingDeviceItem(null);
+        }}
+        editingDevice={org.editingDeviceItem}
         registerStep={org.registerStep}
         setRegisterStep={org.setRegisterStep}
         registerForm={org.registerForm}
@@ -181,6 +185,9 @@ const ManageOrganisationModals = ({ org }) => {
         showRecentEventsModal={org.showRecentEventsModal}
         setShowRecentEventsModal={org.setShowRecentEventsModal}
         recentEventsList={org.recentEventsList || []}
+        showConfigDevicesModal={org.showConfigDevicesModal}
+        setShowConfigDevicesModal={org.setShowConfigDevicesModal}
+        showToast={org.showToast}
         loading={org.loading}
       />
 

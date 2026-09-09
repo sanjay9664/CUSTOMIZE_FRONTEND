@@ -39,7 +39,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
   return (
     <>
       {/* Sub-Header Tabs Row */}
-      <div className="px-4 py-2-5 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
+      <div className="px-2 py-1.5 mb-2 rounded-2 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '0 0 0.5rem 0', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
           <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center">
             <Nav.Item>
@@ -193,8 +193,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </div>
       </div>
 
-      {/* Header Banner (Suppressed for site & asset tabs to eliminate redundant header stacking) */}
-      {org.activeTab !== 'site' && org.activeTab !== 'asset' && (
+      {/* Header Banner (Suppressed for site, asset & device tabs to eliminate redundant header stacking) */}
+      {org.activeTab !== 'site' && org.activeTab !== 'asset' && org.activeTab !== 'device' && (
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 gap-3">
           <div className="d-flex align-items-center gap-3">
             <Button variant="outline-secondary" size="sm" onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 rounded-3 px-3 py-1-5 fw-semibold">
@@ -263,8 +263,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         </div>
       )}
 
-      {/* Sub-Navigation Pills (Hidden for site & asset tabs because they have their own internal KPI & toolbar controls) */}
-      {!org.isSiteGroup && !org.isAssetGroup && (
+      {/* Sub-Navigation Pills (Hidden for site, asset & device tabs because they have their own internal controls) */}
+      {!org.isSiteGroup && !org.isAssetGroup && !org.isDeviceGroup && (
         <Nav variant="pills" activeKey={org.activeTab} onSelect={org.handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
           {org.isOrgGroup && (
             <>

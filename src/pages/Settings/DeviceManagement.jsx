@@ -3,7 +3,9 @@ import { Container, Row, Col, Badge, Button, Form, Spinner, InputGroup, Paginati
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Cpu, Plus, RefreshCw, Search, Filter, X, Eye, Edit3, Trash2,
-  Box, MapPin, Activity, CheckCircle2, AlertTriangle, Layers, Zap, MoreVertical
+  Box, MapPin, Activity, CheckCircle2, AlertTriangle, Layers, Zap,
+  MoreVertical, ExternalLink, ChevronRight, Droplets, Flame, Wind,
+  Snowflake, ShieldAlert, Sliders, Radio, ArrowUpRight
 } from 'lucide-react';
 import { useSiteStore } from '../../context/SiteContext';
 import bmsService from '../../services/bmsService';
@@ -21,6 +23,27 @@ const formatDate = (dateStr) => {
 };
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+// Category Icon & Color Mapping for Premium Visual Hierarchy
+const getCategoryIcon = (category) => {
+  const c = String(category || '').toUpperCase();
+  if (c.includes('ENERGY') || c.includes('METER') || c === 'BREAKER') return <Zap size={14} className="text-info" />;
+  if (c.includes('TANK') || c.includes('PUMP') || c.includes('VALVE') || c === 'STP' || c === 'WTP') return <Droplets size={14} className="text-teal" style={{ color: '#2dd4bf' }} />;
+  if (c.includes('HVAC') || c === 'AC' || c === 'VRV') return <Snowflake size={14} className="text-sky" style={{ color: '#38bdf8' }} />;
+  if (c.includes('GENERATOR') || c.includes('FIRE')) return <Flame size={14} className="text-amber" style={{ color: '#f59e0b' }} />;
+  if (c.includes('SENSOR') || c.includes('AQI')) return <Activity size={14} className="text-purple" style={{ color: '#c084fc' }} />;
+  return <Cpu size={14} className="text-slate-400" />;
+};
+
+const getCategoryBadgeClass = (category) => {
+  const c = String(category || '').toUpperCase();
+  if (c.includes('ENERGY') || c.includes('METER')) return 'cat-badge-energy';
+  if (c.includes('TANK') || c.includes('PUMP') || c.includes('VALVE')) return 'cat-badge-water';
+  if (c.includes('HVAC') || c === 'AC' || c === 'VRV') return 'cat-badge-hvac';
+  if (c.includes('GENERATOR') || c.includes('FIRE')) return 'cat-badge-fire';
+  if (c.includes('SENSOR') || c.includes('AQI')) return 'cat-badge-sensor';
+  return 'cat-badge-generic';
+};
 
 const DeviceManagement = ({ embedded = false }) => {
   const { sites, fetchSites, selectedSite } = useSiteStore();
@@ -273,42 +296,65 @@ const DeviceManagement = ({ embedded = false }) => {
   return (
     <div className={`device-management-wrapper ${embedded ? 'embedded-mode' : 'standalone-page'}`}>
       <style>{`
-        /* ── Core Wrapper & Base Colors ── */
+        /* ── Core Wrapper & Ambient Glow ── */
         .device-management-wrapper {
           min-height: 100vh;
-          background-color: #090d16;
+          background: #090d16;
           color: #f8fafc;
-          padding: 24px;
+          padding: 28px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .device-management-wrapper.embedded-mode {
           min-height: auto;
           padding: 0;
-          background-color: transparent !important;
+          background: transparent !important;
         }
         body.light-mode .device-management-wrapper {
-          background-color: #f8fafc;
+          background: #f8fafc;
           color: #0f172a;
         }
         body.light-mode .device-management-wrapper.embedded-mode {
-          background-color: transparent !important;
+          background: transparent !important;
         }
 
-        /* ── SCADA Card Surfaces ── */
+        /* ── SCADA Card Surfaces & Glassmorphism ── */
         .device-management-wrapper .scada-card-surface {
-          background: rgba(15, 23, 42, 0.95);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85));
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 14px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(56, 189, 248, 0.03);
+          backdrop-filter: blur(12px);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
         body.light-mode .device-management-wrapper .scada-card-surface {
           background: #ffffff !important;
-          border-color: #cbd5e1 !important;
-          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+          border-color: #e2e8f0 !important;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
         }
 
-        /* ── Header Typography & Badges ── */
+        /* ── Header Bar Styling ── */
+        .device-header-icon-box {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(14, 165, 233, 0.08));
+          border: 1px solid rgba(56, 189, 248, 0.4);
+          color: #38bdf8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+        body.light-mode .device-header-icon-box {
+          background: #e0f2fe;
+          border-color: #bae6fd;
+          color: #0284c7;
+          box-shadow: none;
+        }
         .device-management-wrapper .device-header-title {
           color: #f8fafc;
+          font-weight: 700;
+          letter-spacing: -0.01em;
         }
         body.light-mode .device-management-wrapper .device-header-title {
           color: #0f172a !important;
@@ -319,58 +365,116 @@ const DeviceManagement = ({ embedded = false }) => {
         body.light-mode .device-management-wrapper .device-header-subtitle {
           color: #64748b !important;
         }
-        .device-management-wrapper .device-total-badge {
-          background: rgba(14, 165, 233, 0.15);
-          border: 1px solid rgba(14, 165, 233, 0.35);
+        .device-total-badge {
+          background: rgba(14, 165, 233, 0.12);
+          border: 1px solid rgba(14, 165, 233, 0.3);
           color: #38bdf8;
           font-weight: 600;
+          letter-spacing: 0.02em;
         }
-        body.light-mode .device-management-wrapper .device-total-badge {
+        body.light-mode .device-total-badge {
           background: #e0f2fe !important;
           border-color: #bae6fd !important;
           color: #0284c7 !important;
-          font-weight: 700 !important;
         }
 
-        /* ── Compact KPI Strip ── */
-        .device-kpi-strip {
+        /* ── Pulse System Live Pill ── */
+        .system-live-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 20px;
+          background: rgba(34, 197, 94, 0.12);
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          color: #4ade80;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .live-dot-pulse {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: #22c55e;
+          box-shadow: 0 0 8px #22c55e;
+          animation: pulseGlow 2s infinite ease-in-out;
+        }
+        @keyframes pulseGlow {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.6; }
+        }
+
+        /* ── Dynamic KPI Metric Strip ── */
+        .device-kpi-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 12px;
-          margin-bottom: 16px;
+          gap: 14px;
+          margin-bottom: 20px;
         }
-        @media (max-width: 767.98px) {
-          .device-kpi-strip {
+        @media (max-width: 991.98px) {
+          .device-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
-        .device-kpi-item {
-          background: rgba(15, 23, 42, 0.6);
+        @media (max-width: 575.98px) {
+          .device-kpi-grid {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+          }
+        }
+        .device-kpi-card {
+          background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 8px;
-          padding: 10px 14px;
+          border-radius: 12px;
+          padding: 14px 18px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          transition: all 0.2s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
         }
-        body.light-mode .device-kpi-item {
+        .device-kpi-card::before {
+          content: '';
+          position: absolute;
+          left: 0; top: 0; bottom: 0;
+          width: 4px;
+          background: #38bdf8;
+          border-radius: 12px 0 0 12px;
+        }
+        .device-kpi-card.kpi-active::before { background: #22c55e; }
+        .device-kpi-card.kpi-inactive::before { background: #94a3b8; }
+        .device-kpi-card.kpi-unassigned::before { background: #f59e0b; }
+
+        .device-kpi-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(56, 189, 248, 0.3);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        body.light-mode .device-kpi-card {
           background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+          border-color: #e2e8f0 !important;
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
         }
         .device-kpi-lbl {
           font-size: 0.68rem;
           text-transform: uppercase;
           font-weight: 700;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.05em;
           color: #94a3b8;
+          margin-bottom: 2px;
         }
         body.light-mode .device-kpi-lbl {
           color: #64748b !important;
         }
+        .device-kpi-num {
+          font-size: 1.45rem;
+          font-weight: 700;
+          line-height: 1.2;
+        }
 
-        /* ── Filter Controls ── */
+        /* ── Filter Controls Toolbar ── */
         .device-management-wrapper .scada-input-group-addon {
           background-color: rgba(15, 23, 42, 0.8) !important;
           border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -388,20 +492,72 @@ const DeviceManagement = ({ embedded = false }) => {
           border: 1px solid rgba(255, 255, 255, 0.12) !important;
           color: #f8fafc !important;
           border-radius: 6px;
-          font-size: 0.82rem;
+          font-size: 0.84rem;
         }
         body.light-mode .device-management-wrapper .filter-input-scada {
           background-color: #ffffff !important;
           border-color: #cbd5e1 !important;
           color: #0f172a !important;
         }
+        .device-management-wrapper .filter-input-scada:focus {
+          border-color: #0284c7 !important;
+          box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+        }
         .device-management-wrapper .btn-clear-filters {
           border: 1px solid rgba(56, 189, 248, 0.4);
           color: #38bdf8;
-          background: transparent;
-          font-size: 0.75rem;
+          background: rgba(56, 189, 248, 0.08);
+          font-size: 0.78rem;
           font-weight: 600;
           border-radius: 6px;
+          transition: all 0.15s ease;
+        }
+        .device-management-wrapper .btn-clear-filters:hover {
+          background: #0284c7;
+          color: #ffffff;
+        }
+
+        /* ── Category Badges Styling ── */
+        .cat-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 3px 9px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+        }
+        .cat-badge-energy {
+          background: rgba(14, 165, 233, 0.12);
+          border: 1px solid rgba(14, 165, 233, 0.3);
+          color: #38bdf8;
+        }
+        .cat-badge-water {
+          background: rgba(20, 184, 166, 0.12);
+          border: 1px solid rgba(20, 184, 166, 0.3);
+          color: #2dd4bf;
+        }
+        .cat-badge-hvac {
+          background: rgba(56, 189, 248, 0.12);
+          border: 1px solid rgba(56, 189, 248, 0.3);
+          color: #7dd3fc;
+        }
+        .cat-badge-fire {
+          background: rgba(245, 158, 11, 0.12);
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          color: #fbbf24;
+        }
+        .cat-badge-sensor {
+          background: rgba(168, 85, 247, 0.12);
+          border: 1px solid rgba(168, 85, 247, 0.3);
+          color: #c084fc;
+        }
+        .cat-badge-generic {
+          background: rgba(148, 163, 184, 0.12);
+          border: 1px solid rgba(148, 163, 184, 0.25);
+          color: #cbd5e1;
         }
 
         /* ── Table Customization ── */
@@ -412,8 +568,8 @@ const DeviceManagement = ({ embedded = false }) => {
           font-size: 11px;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.04em;
-          padding: 10px 14px;
+          letter-spacing: 0.05em;
+          padding: 12px 16px;
         }
         body.light-mode .device-management-wrapper .table-custom th {
           background-color: #f1f5f9 !important;
@@ -423,9 +579,10 @@ const DeviceManagement = ({ embedded = false }) => {
         .device-management-wrapper .table-custom td {
           background-color: #0f172a !important;
           color: #f8fafc !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-          padding: 10px 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+          padding: 12px 16px;
           vertical-align: middle;
+          transition: background 0.15s ease;
         }
         body.light-mode .device-management-wrapper .table-custom td {
           background-color: #ffffff !important;
@@ -433,7 +590,7 @@ const DeviceManagement = ({ embedded = false }) => {
           border-bottom: 1px solid #f1f5f9 !important;
         }
         .device-management-wrapper .table-custom tbody tr:hover td {
-          background-color: rgba(255, 255, 255, 0.025) !important;
+          background-color: rgba(255, 255, 255, 0.03) !important;
         }
         body.light-mode .device-management-wrapper .table-custom tbody tr:hover td {
           background-color: #f8fafc !important;
@@ -443,7 +600,7 @@ const DeviceManagement = ({ embedded = false }) => {
         .device-primary-name {
           color: #f8fafc;
           font-weight: 600;
-          font-size: 0.84rem;
+          font-size: 0.86rem;
         }
         body.light-mode .device-primary-name {
           color: #0f172a !important;
@@ -462,10 +619,10 @@ const DeviceManagement = ({ embedded = false }) => {
           border: 1px solid rgba(56, 189, 248, 0.4);
           color: #38bdf8;
           background: rgba(56, 189, 248, 0.08);
-          font-size: 0.72rem;
+          font-size: 0.74rem;
           font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 5px;
+          padding: 3px 10px;
+          border-radius: 6px;
           display: inline-flex;
           align-items: center;
           gap: 4px;
@@ -489,60 +646,55 @@ const DeviceManagement = ({ embedded = false }) => {
           border: 1px solid rgba(255, 255, 255, 0.15);
           color: #cbd5e1;
           background: rgba(255, 255, 255, 0.04);
-          font-size: 0.72rem;
+          font-size: 0.74rem;
           font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 5px;
+          padding: 3px 10px;
+          border-radius: 6px;
           display: inline-flex;
           align-items: center;
           gap: 4px;
+          transition: all 0.15s ease;
+        }
+        .btn-scada-edit:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
         }
         body.light-mode .btn-scada-edit {
           border: 1px solid #cbd5e1 !important;
           color: #334155 !important;
           background: #ffffff !important;
         }
+        body.light-mode .btn-scada-edit:hover {
+          background: #f1f5f9 !important;
+          color: #0f172a !important;
+        }
 
         .btn-scada-more {
           border: 1px solid transparent;
           color: #94a3b8;
           background: transparent;
-          padding: 3px 5px;
-          border-radius: 5px;
+          padding: 4px 6px;
+          border-radius: 6px;
           display: inline-flex;
           align-items: center;
+        }
+        .btn-scada-more:hover {
+          color: #f8fafc;
+          background: rgba(255, 255, 255, 0.08);
         }
       `}</style>
 
       <Container fluid className="px-0">
         {/* Header Bar */}
-        <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
-          <div>
-            <div className="d-flex align-items-center gap-2.5 mb-1">
-              <div
-                className="d-flex align-items-center justify-content-center"
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.1))',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  color: '#38bdf8'
-                }}
-              >
-                <Cpu size={18} />
-              </div>
+        <div className="mb-3">
+          <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center gap-2">
               <h4 className="fs-5 fw-bold mb-0 device-header-title">Device Management</h4>
-              <Badge className="device-total-badge px-2.5 py-1 fs-11 rounded-pill">
-                {totalRecords} Devices
-              </Badge>
+              <div className="system-live-pill ms-1">
+                <span className="live-dot-pulse" />
+                <span>SYSTEM LIVE</span>
+              </div>
             </div>
-            <p className="fs-12 mb-0 device-header-subtitle">
-              Manage devices, controllers, meters, sensors, and field equipment connected to physical assets.
-            </p>
-          </div>
-
-          <div className="d-flex align-items-center gap-2">
             <button
               type="button"
               className="btn btn-sm btn-scada-edit d-flex align-items-center gap-1.5"
@@ -552,56 +704,74 @@ const DeviceManagement = ({ embedded = false }) => {
               <RefreshCw size={14} className={loading ? 'spin' : ''} />
               <span>Refresh</span>
             </button>
+          </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              className="d-flex align-items-center gap-1.5 px-3 py-1.5 fs-12 fw-semibold rounded-2"
-              onClick={handleOpenCreate}
-              style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
-            >
-              <Plus size={15} />
-              <span>+ Add Device</span>
-            </Button>
+          <div className="d-flex align-items-center justify-content-between">
+            <p className="fs-12 mb-0 device-header-subtitle">
+              BMS IoT Device Provisioning, Serial Numbers & Telemetry Controls
+            </p>
+            <div className="d-flex align-items-center gap-2">
+              <Badge className="device-total-badge px-2.5 py-1 fs-11 rounded-pill">
+                {totalRecords} Devices
+              </Badge>
+              <Button
+                variant="primary"
+                size="sm"
+                className="d-flex align-items-center gap-1.5 px-3 py-1.5 fs-12 fw-semibold rounded-2 shadow-sm"
+                onClick={handleOpenCreate}
+                style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
+              >
+                <Plus size={15} />
+                <span>+ Add Device</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Compact KPI Strip */}
-        <div className="device-kpi-strip">
-          <div className="device-kpi-item">
+        {/* Dynamic KPI Metric Cards */}
+        <div className="device-kpi-grid mb-3">
+          <div className="device-kpi-card">
             <div>
               <div className="device-kpi-lbl">Total Inventory</div>
-              <div className="fs-5 fw-bold text-slate-100">{summary.total}</div>
+              <div className="device-kpi-num text-slate-100">{summary.total}</div>
             </div>
-            <Cpu size={20} className="text-info opacity-75" />
+            <div className="p-2 rounded-3 bg-info bg-opacity-10 text-info">
+              <Cpu size={22} />
+            </div>
           </div>
 
-          <div className="device-kpi-item">
+          <div className="device-kpi-card kpi-active">
             <div>
               <div className="device-kpi-lbl">Active / Online</div>
-              <div className="fs-5 fw-bold text-success">{summary.active}</div>
+              <div className="device-kpi-num text-success">{summary.active}</div>
             </div>
-            <CheckCircle2 size={20} className="text-success opacity-75" />
+            <div className="p-2 rounded-3 bg-success bg-opacity-10 text-success">
+              <CheckCircle2 size={22} />
+            </div>
           </div>
 
-          <div className="device-kpi-item">
+          <div className="device-kpi-card kpi-inactive">
             <div>
               <div className="device-kpi-lbl">Inactive / Offline</div>
-              <div className="fs-5 fw-bold text-slate-400">{summary.inactive}</div>
+              <div className="device-kpi-num text-slate-400">{summary.inactive}</div>
             </div>
-            <Activity size={20} className="text-slate-400 opacity-75" />
+            <div className="p-2 rounded-3 bg-slate-500 bg-opacity-10 text-slate-400">
+              <Activity size={22} />
+            </div>
           </div>
 
-          <div className="device-kpi-item">
+          <div className="device-kpi-card kpi-unassigned">
             <div>
               <div className="device-kpi-lbl">Unassigned Devices</div>
-              <div className="fs-5 fw-bold text-warning">{summary.unassigned}</div>
+              <div className="device-kpi-num text-warning">{summary.unassigned}</div>
             </div>
-            <Layers size={20} className="text-warning opacity-75" />
+            <div className="p-2 rounded-3 bg-warning bg-opacity-10 text-warning">
+              <Layers size={22} />
+            </div>
           </div>
         </div>
 
-        {/* Filter & Toolbar */}
+        {/* Filter Toolbar */}
         <div className="scada-card-surface p-3 mb-4">
           <Row className="g-2 align-items-center">
             {/* Search Input */}
@@ -674,7 +844,7 @@ const DeviceManagement = ({ embedded = false }) => {
               <Col xs={6} md="auto">
                 <button
                   type="button"
-                  className="btn btn-clear-filters px-2.5 py-1"
+                  className="btn btn-clear-filters px-3 py-1"
                   onClick={handleClearAllFilters}
                 >
                   <X size={12} className="me-1" />
@@ -685,7 +855,7 @@ const DeviceManagement = ({ embedded = false }) => {
           </Row>
         </div>
 
-        {/* Content Area Table */}
+        {/* Device Table Card */}
         <div className="scada-card-surface overflow-hidden">
           {loading ? (
             <div className="text-center py-5">
@@ -732,12 +902,12 @@ const DeviceManagement = ({ embedded = false }) => {
               <table className="table table-custom mb-0">
                 <thead>
                   <tr>
-                    <th style={{ minWidth: 200 }}>Device</th>
-                    <th style={{ minWidth: 120 }}>Category</th>
-                    <th style={{ minWidth: 160 }}>Linked Asset</th>
-                    <th style={{ minWidth: 120 }}>Site</th>
-                    <th style={{ minWidth: 100 }}>Status</th>
-                    <th style={{ minWidth: 110 }}>Installed / Last Seen</th>
+                    <th style={{ minWidth: 220 }}>Device</th>
+                    <th style={{ minWidth: 140 }}>Category</th>
+                    <th style={{ minWidth: 170 }}>Linked Asset</th>
+                    <th style={{ minWidth: 130 }}>Site</th>
+                    <th style={{ minWidth: 110 }}>Status</th>
+                    <th style={{ minWidth: 130 }}>Installed / Last Seen</th>
                     <th className="text-end" style={{ minWidth: 150 }}>Actions</th>
                   </tr>
                 </thead>
@@ -751,19 +921,19 @@ const DeviceManagement = ({ embedded = false }) => {
                       <tr key={dev.id}>
                         {/* Device Name Primary, Serial / BMS ID Secondary */}
                         <td>
-                          <div className="d-flex align-items-center gap-2">
+                          <div className="d-flex align-items-center gap-2.5">
                             <div
                               className="d-flex align-items-center justify-content-center flex-shrink-0"
                               style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 6,
+                                width: 34,
+                                height: 34,
+                                borderRadius: 8,
                                 background: 'rgba(56, 189, 248, 0.1)',
-                                border: '1px solid rgba(56, 189, 248, 0.2)',
+                                border: '1px solid rgba(56, 189, 248, 0.25)',
                                 color: '#38bdf8'
                               }}
                             >
-                              <Cpu size={14} />
+                              {getCategoryIcon(dev.category)}
                             </div>
                             <div className="min-w-0">
                               <div className="fw-bold device-primary-name text-truncate" title={dev.name}>
@@ -778,22 +948,24 @@ const DeviceManagement = ({ embedded = false }) => {
 
                         {/* Category */}
                         <td>
-                          <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 fs-11">
-                            {dev.category ? dev.category.replace(/_/g, ' ') : 'ENERGY_METER'}
+                          <span className={`cat-badge ${getCategoryBadgeClass(dev.category)}`}>
+                            {getCategoryIcon(dev.category)}
+                            <span>{dev.category ? dev.category.replace(/_/g, ' ') : 'ENERGY METER'}</span>
                           </span>
                         </td>
 
                         {/* Linked Asset */}
                         <td>
                           {linkedAsset ? (
-                            <div className="d-flex align-items-center gap-1.5 text-truncate" style={{ maxWidth: 180 }}>
-                              <Box size={13} className="text-info flex-shrink-0" />
+                            <div className="d-flex align-items-center gap-1.5 text-truncate" style={{ maxWidth: 190 }}>
+                              <Box size={14} className="text-info flex-shrink-0" />
                               <span
-                                className="fw-semibold text-slate-200 fs-12 text-truncate cursor-pointer hover-text-info"
+                                className="fw-semibold text-slate-200 fs-12 text-truncate cursor-pointer hover-text-info d-inline-flex align-items-center gap-1"
                                 onClick={() => handleOpenAssetFromDevice(linkedAsset)}
                                 title={`Linked Asset: ${linkedAsset.name}`}
                               >
-                                {linkedAsset.name}
+                                <span>{linkedAsset.name}</span>
+                                <ArrowUpRight size={11} className="text-muted flex-shrink-0" />
                               </span>
                             </div>
                           ) : (
@@ -802,7 +974,7 @@ const DeviceManagement = ({ embedded = false }) => {
                         </td>
 
                         {/* Site */}
-                        <td className="text-truncate" style={{ maxWidth: 130 }}>
+                        <td className="text-truncate" style={{ maxWidth: 140 }}>
                           <span className="fs-12 text-slate-200">
                             {siteObj?.name || (dev.siteId ? `Site #${dev.siteId}` : 'Universal')}
                           </span>
@@ -816,7 +988,8 @@ const DeviceManagement = ({ embedded = false }) => {
                                 width: 7,
                                 height: 7,
                                 borderRadius: '50%',
-                                backgroundColor: isActive ? '#22c55e' : '#94a3b8'
+                                backgroundColor: isActive ? '#22c55e' : '#94a3b8',
+                                boxShadow: isActive ? '0 0 6px #22c55e' : 'none'
                               }}
                             />
                             <span className="fs-11 fw-semibold text-slate-300">
