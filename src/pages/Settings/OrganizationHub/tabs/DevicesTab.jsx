@@ -1,7 +1,8 @@
 import React from 'react';
 import { Form, Button, Badge } from 'react-bootstrap';
-import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText } from 'lucide-react';
+import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText, X } from 'lucide-react';
 import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
+import CommonFilterPopover from '../../../../components/common/CommonFilterPopover';
 
 const DevicesTab = ({
   searchTerm = '',
@@ -15,6 +16,11 @@ const DevicesTab = ({
   setSelectedAreaFilter = () => {},
   activeBuildings = [],
   activeAreas = [],
+  activeAssets = [],
+  selectedAssetFilter = 'ALL',
+  setSelectedAssetFilter = () => {},
+  selectedAssetTypeFilter = 'ALL',
+  setSelectedAssetTypeFilter = () => {},
   filteredDevices = [],
   handleOpenRecentEvents = () => {},
   handleGlobalResyncEventStats = () => {},
@@ -42,7 +48,95 @@ const DevicesTab = ({
   const safeSites = Array.isArray(activeSites) ? activeSites : [];
   const safeBuildings = Array.isArray(activeBuildings) ? activeBuildings : [];
   const safeAreas = Array.isArray(activeAreas) ? activeAreas : [];
+  const safeAssets = Array.isArray(activeAssets) ? activeAssets : [];
   const safeDevices = Array.isArray(filteredDevices) ? filteredDevices : [];
+
+  const getTabFilters = (draftValues) => {
+    const currentSiteId = draftValues?.siteId !== undefined ? draftValues.siteId : (selectedSiteFilter || 'ALL');
+
+    // Filter assets by selected site
+    const assetsForSite = currentSiteId === 'ALL'
+      ? safeAssets
+      : safeAssets.filter(a => String(a.siteId) === String(currentSiteId));
+
+    // Dynamic asset types list for the selected site's assets
+    const assetTypesList = Array.from(
+      new Set(assetsForSite.map(a => a.assetType).filter(Boolean))
+    ).sort();
+
+    return [
+      {
+        id: 'siteId',
+        label: 'Site',
+        options: [
+          { value: 'ALL', label: 'All Sites' },
+          ...safeSites.map(s => ({ value: String(s.id), label: s.name }))
+        ],
+        onChange: (newSiteVal, currentDrafts) => {
+          let nextAssetId = currentDrafts.assetId;
+          let nextAssetType = currentDrafts.assetType;
+          if (newSiteVal !== 'ALL') {
+            const assetStillValid = safeAssets.some(
+              a => String(a.siteId) === String(newSiteVal) && String(a.id) === String(nextAssetId)
+            );
+            if (!assetStillValid) nextAssetId = 'ALL';
+
+            const siteAssets = safeAssets.filter(a => String(a.siteId) === String(newSiteVal));
+            const typeStillValid = siteAssets.some(a => a.assetType === nextAssetType);
+            if (!typeStillValid) nextAssetType = 'ALL';
+          }
+          return {
+            ...currentDrafts,
+            siteId: newSiteVal,
+            assetId: nextAssetId,
+            assetType: nextAssetType
+          };
+        }
+      },
+      {
+        id: 'assetId',
+        label: 'Asset',
+        options: [
+          { value: 'ALL', label: currentSiteId === 'ALL' ? 'All Assets' : 'All Site Assets' },
+          ...assetsForSite.map(a => ({
+            value: String(a.id),
+            label: a.name ? `${a.name}${a.assetType ? ` [${a.assetType}]` : ''}` : `Asset #${a.id}`
+          }))
+        ]
+      },
+      {
+        id: 'assetType',
+        label: 'Asset type',
+        options: [
+          { value: 'ALL', label: 'All Asset Types' },
+          ...assetTypesList.map(type => ({
+            value: type,
+            label: type.replace(/_/g, ' ')
+          }))
+        ]
+      }
+    ];
+  };
+
+  const tabFilterValues = {
+    siteId: selectedSiteFilter,
+    assetId: selectedAssetFilter,
+    assetType: selectedAssetTypeFilter
+  };
+
+  const handleApplyTabFilters = (newVals) => {
+    if (newVals.siteId !== undefined) setSelectedSiteFilter(newVals.siteId);
+    if (newVals.assetId !== undefined) setSelectedAssetFilter(newVals.assetId);
+    if (newVals.assetType !== undefined) setSelectedAssetTypeFilter(newVals.assetType);
+  };
+
+  const handleResetTabFilters = () => {
+    setSelectedSiteFilter('ALL');
+    setSelectedAssetFilter('ALL');
+    setSelectedAssetTypeFilter('ALL');
+  };
+
+  const hasActiveTabFilters = selectedSiteFilter !== 'ALL' || selectedAssetFilter !== 'ALL' || selectedAssetTypeFilter !== 'ALL';
 
   return (
     <div className="d-flex flex-column gap-2 p-0 m-0 mb-0 devices-tab-wrapper">
@@ -173,43 +267,49 @@ const DevicesTab = ({
 
       {/* Top Filter Controls */}
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 rounded devices-filter-bar">
-        <div className="d-flex align-items-center gap-2 flex-grow-1" style={{ maxWidth: 400 }}>
-          <Search size={16} className="device-sub-text" />
+        <div className="d-flex align-items-center gap-2 flex-grow-1 position-relative" style={{ maxWidth: 400 }}>
+          <Search size={15} className="device-sub-text position-absolute" style={{ left: 12, pointerEvents: 'none' }} />
           <Form.Control
             type="text"
             placeholder="Search devices by name, serial or BMS ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="devices-filter-input fs-13"
+            style={{ paddingLeft: 34, paddingRight: searchTerm ? 32 : 12 }}
           />
+          {searchTerm && (
+            <button
+              type="button"
+              className="btn btn-link p-0 position-absolute"
+              style={{ right: 10, color: '#94a3b8', textDecoration: 'none' }}
+              onClick={() => setSearchTerm('')}
+              title="Clear search"
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
-          <Form.Select
-            size="sm"
-            value={selectedSiteFilter}
-            onChange={(e) => setSelectedSiteFilter(e.target.value)}
-            className="devices-filter-select fs-12"
-            style={{ width: 160 }}
-          >
-            <option value="ALL">All Sites</option>
-            {safeSites.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </Form.Select>
-
-          <Form.Select
-            size="sm"
-            value={selectedAreaFilter}
-            onChange={(e) => setSelectedAreaFilter(e.target.value)}
-            className="devices-filter-select fs-12"
-            style={{ width: 160 }}
-          >
-            <option value="ALL">All Areas</option>
-            {safeAreas.map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </Form.Select>
+          <CommonFilterPopover
+            buttonLabel="Device filter"
+            filters={getTabFilters}
+            values={tabFilterValues}
+            onApply={handleApplyTabFilters}
+            onReset={handleResetTabFilters}
+          />
+          {hasActiveTabFilters && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 fs-12 px-2.5 py-1"
+              style={{ borderColor: 'rgba(255, 255, 255, 0.15)', color: '#94a3b8' }}
+              onClick={handleResetTabFilters}
+              title="Clear all active filters"
+            >
+              <X size={12} />
+              <span>Clear</span>
+            </button>
+          )}
 
           <Button
             variant="outline-warning"

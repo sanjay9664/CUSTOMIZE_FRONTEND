@@ -180,7 +180,7 @@ const ManageOrganisation = () => {
       )}
 
       {/* TAB CONTENT TABLES */}
-      <Card className="bg-dark-card border-0 shadow-sm overflow-hidden">
+      <Card className="bg-dark-card border-0 shadow-sm" style={{ overflow: 'visible' }}>
         {(org.activeTab === 'company' || org.activeTab === 'tenant') && (
           <OrganizationSection
             activeTab={org.activeTab}
@@ -242,6 +242,11 @@ const ManageOrganisation = () => {
             setSelectedAreaFilter={org.setSelectedAreaFilter}
             activeBuildings={org.activeBuildings}
             activeAreas={org.activeAreas}
+            activeAssets={org.activeAssets}
+            selectedAssetFilter={org.selectedAssetFilter}
+            setSelectedAssetFilter={org.setSelectedAssetFilter}
+            selectedAssetTypeFilter={org.selectedAssetTypeFilter}
+            setSelectedAssetTypeFilter={org.setSelectedAssetTypeFilter}
             filteredDevices={org.filteredDevices}
             handleOpenRecentEvents={org.handleOpenRecentEvents}
             handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}
@@ -257,8 +262,12 @@ const ManageOrganisation = () => {
             handleOpenSettingsModal={org.handleOpenSettingsModal}
             handleOpenThresholdsModal={org.handleOpenThresholdsModal}
             handleOpenRulesModal={org.handleOpenRulesModal}
-            handleOpenAuditLogModal={org.handleOpenAuditLogModal}
+            handleOpenAuditLog={org.handleOpenAuditLog}
+            setSelectedDeviceForAudit={org.setSelectedDeviceForAudit}
+            setSelectedDeviceForCommandsTab={org.setSelectedDeviceForCommandsTab}
+            setShowSendCommandModal={org.setShowSendCommandModal}
             handleDeleteDevice={org.handleDeleteDevice}
+            fetchDevices={org.fetchDevices}
           />
         )}
 

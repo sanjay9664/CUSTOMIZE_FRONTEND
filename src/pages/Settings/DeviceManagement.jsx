@@ -14,6 +14,7 @@ import DeviceModal, { DEVICE_CATEGORIES } from './modals/DeviceModal';
 import DeviceInspectorDrawer from './modals/DeviceInspectorDrawer';
 import DeviceDeleteModal from './modals/DeviceDeleteModal';
 import AssetInspectorDrawer from './modals/AssetInspectorDrawer';
+import CommonFilterPopover from '../../components/common/CommonFilterPopover';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -62,6 +63,8 @@ const DeviceManagement = ({ embedded = false }) => {
   const [currentPage, setCurrentPage] = useState(initialPage > 0 ? initialPage : 1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS.includes(initialLimit) ? initialLimit : 25);
   const [selectedSiteFilter, setSelectedSiteFilter] = useState(initialSite);
+  const [selectedAssetFilter, setSelectedAssetFilter] = useState('ALL');
+  const [selectedAssetTypeFilter, setSelectedAssetTypeFilter] = useState('ALL');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(initialCategory);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState(initialStatus);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
@@ -105,24 +108,54 @@ const DeviceManagement = ({ embedded = false }) => {
     if (sites.length === 0) fetchSites();
   }, [sites.length, fetchSites]);
 
-  // Load assets for asset name mapping in device list
+  // Load assets for asset filter and mapping per OpenAPI:
+  // If ALL sites selected -> GET /assets
+  // If specific site selected -> GET /sites/{siteId}/assets
+  const [allAssets, setAllAssets] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadAllAssets = async () => {
+      try {
+        const res = await bmsService.getAssets(null, { limit: 500 });
+        if (isMounted) {
+          const list = normalizeList(res, 'assets');
+          setAllAssets(list);
+          if (selectedSiteFilter === 'ALL') {
+            setAssets(list);
+          }
+        }
+      } catch (err) {
+        if (isMounted) setAllAssets([]);
+      }
+    };
+    loadAllAssets();
+    return () => { isMounted = false; };
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     const fetchAssetsData = async () => {
       try {
         const siteIdParam = selectedSiteFilter !== 'ALL' ? selectedSiteFilter : null;
-        const res = await bmsService.getAssets(siteIdParam, { limit: 200 });
+        const res = await bmsService.getAssets(siteIdParam, { limit: 500 });
         if (isMounted) {
           const list = normalizeList(res, 'assets');
           setAssets(list);
         }
       } catch (err) {
-        if (isMounted) setAssets([]);
+        if (isMounted) {
+          if (selectedSiteFilter !== 'ALL') {
+            setAssets(allAssets.filter(a => String(a.siteId) === String(selectedSiteFilter)));
+          } else {
+            setAssets(allAssets);
+          }
+        }
       }
     };
     fetchAssetsData();
     return () => { isMounted = false; };
-  }, [selectedSiteFilter]);
+  }, [selectedSiteFilter, allAssets]);
 
   // ── Debounce Search Input (350ms) ──────────────────────────────────────
   const searchTimeoutRef = useRef(null);
@@ -175,25 +208,41 @@ const DeviceManagement = ({ embedded = false }) => {
       if (selectedStatusFilter !== 'ALL') queryParams.isActive = selectedStatusFilter === 'ACTIVE';
 
       let res;
-      if (selectedSiteFilter !== 'ALL') {
+      if (selectedAssetFilter !== 'ALL') {
+        // Follow OpenAPI: GET /assets/{id}/devices
+        res = await bmsService.getAssetDevices(selectedAssetFilter);
+      } else if (selectedSiteFilter !== 'ALL') {
+        // Follow OpenAPI: GET /sites/{siteId}/devices
         res = await bmsService.getSiteDevices(selectedSiteFilter, queryParams);
       } else {
+        // Follow OpenAPI: GET /devices
         res = await bmsService.getDevices(queryParams);
       }
 
       const { items, total, totalPages } = normalizePaginatedResponse(res, 'devices');
 
-      setDevices(items);
-      setTotalRecords(total);
+      let itemsToUse = items;
+      if (selectedAssetFilter !== 'ALL') {
+        itemsToUse = itemsToUse.filter(d => String(d.assetId) === String(selectedAssetFilter));
+      }
+      if (selectedAssetTypeFilter !== 'ALL') {
+        itemsToUse = itemsToUse.filter(d => {
+          const la = assets.find(a => String(a.id) === String(d.assetId)) || d.asset;
+          return la && String(la.assetType || '').toUpperCase() === String(selectedAssetTypeFilter).toUpperCase();
+        });
+      }
+
+      setDevices(itemsToUse);
+      setTotalRecords(itemsToUse.length === items.length ? total : itemsToUse.length);
       setServerTotalPages(Math.max(1, totalPages));
 
       // Calculate summary statistics
-      const activeCount = items.filter(d => d.isActive !== false).length;
-      const inactiveCount = items.filter(d => d.isActive === false).length;
-      const unassignedCount = items.filter(d => !d.assetId).length;
+      const activeCount = itemsToUse.filter(d => d.isActive !== false).length;
+      const inactiveCount = itemsToUse.filter(d => d.isActive === false).length;
+      const unassignedCount = itemsToUse.filter(d => !d.assetId).length;
 
       setSummary({
-        total: total || items.length,
+        total: total || itemsToUse.length,
         active: activeCount,
         inactive: inactiveCount,
         unassigned: unassignedCount
@@ -206,7 +255,7 @@ const DeviceManagement = ({ embedded = false }) => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, selectedSiteFilter, selectedCategoryFilter, selectedStatusFilter, debouncedSearch]);
+  }, [currentPage, pageSize, selectedSiteFilter, selectedCategoryFilter, selectedStatusFilter, selectedAssetFilter, selectedAssetTypeFilter, debouncedSearch, assets]);
 
   useEffect(() => {
     fetchDevicesData();
@@ -237,6 +286,8 @@ const DeviceManagement = ({ embedded = false }) => {
     setSearchQuery('');
     setDebouncedSearch('');
     setSelectedSiteFilter('ALL');
+    setSelectedAssetFilter('ALL');
+    setSelectedAssetTypeFilter('ALL');
     setSelectedCategoryFilter('ALL');
     setSelectedStatusFilter('ALL');
     setCurrentPage(1);
@@ -244,8 +295,114 @@ const DeviceManagement = ({ embedded = false }) => {
 
   const hasActiveFilters = debouncedSearch !== '' ||
     selectedSiteFilter !== 'ALL' ||
+    selectedAssetFilter !== 'ALL' ||
+    selectedAssetTypeFilter !== 'ALL' ||
     selectedCategoryFilter !== 'ALL' ||
     selectedStatusFilter !== 'ALL';
+
+  const getDeviceFilters = (draftValues) => {
+    const currentSiteId = draftValues?.siteId !== undefined ? draftValues.siteId : (selectedSiteFilter || 'ALL');
+
+    // Follow OpenAPI:
+    // If all sites selected -> all assets are shown, user can choose any asset
+    // If one site is selected -> show only the assets under that site
+    const assetsForSite = currentSiteId === 'ALL'
+      ? (allAssets.length > 0 ? allAssets : assets)
+      : (allAssets.length > 0
+          ? allAssets.filter(a => String(a.siteId) === String(currentSiteId))
+          : assets.filter(a => String(a.siteId) === String(currentSiteId)));
+
+    const assetTypesList = Array.from(
+      new Set(assetsForSite.map(a => a.assetType).filter(Boolean))
+    ).sort();
+
+    return [
+      {
+        id: 'siteId',
+        label: 'Site',
+        options: [
+          { value: 'ALL', label: 'All Sites' },
+          ...sites.map(s => ({ value: String(s.id), label: s.name }))
+        ],
+        onChange: (newSiteVal, currentDrafts) => {
+          let nextAssetId = currentDrafts.assetId;
+          let nextAssetType = currentDrafts.assetType;
+          if (newSiteVal !== 'ALL') {
+            const assetStillValid = assets.some(
+              a => String(a.siteId) === String(newSiteVal) && String(a.id) === String(nextAssetId)
+            );
+            if (!assetStillValid) nextAssetId = 'ALL';
+
+            const siteAssets = assets.filter(a => String(a.siteId) === String(newSiteVal));
+            const typeStillValid = siteAssets.some(a => a.assetType === nextAssetType);
+            if (!typeStillValid) nextAssetType = 'ALL';
+          }
+          return {
+            ...currentDrafts,
+            siteId: newSiteVal,
+            assetId: nextAssetId,
+            assetType: nextAssetType
+          };
+        }
+      },
+      {
+        id: 'assetId',
+        label: 'Asset',
+        options: [
+          { value: 'ALL', label: currentSiteId === 'ALL' ? 'All Assets' : 'All Site Assets' },
+          ...assetsForSite.map(a => ({
+            value: String(a.id),
+            label: a.name ? `${a.name}${a.assetType ? ` [${a.assetType}]` : ''}` : `Asset #${a.id}`
+          }))
+        ]
+      },
+      {
+        id: 'assetType',
+        label: 'Asset type',
+        options: [
+          { value: 'ALL', label: 'All Asset Types' },
+          ...assetTypesList.map(type => ({
+            value: type,
+            label: type.replace(/_/g, ' ')
+          }))
+        ]
+      },
+      {
+        id: 'category',
+        label: 'Device profile',
+        options: [
+          { value: 'ALL', label: 'All' },
+          ...DEVICE_CATEGORIES.map(cat => ({ value: cat, label: cat.replace(/_/g, ' ') }))
+        ]
+      },
+      {
+        id: 'status',
+        label: 'Device state',
+        options: [
+          { value: 'ALL', label: 'Any' },
+          { value: 'ACTIVE', label: 'Active' },
+          { value: 'INACTIVE', label: 'Inactive' }
+        ]
+      }
+    ];
+  };
+
+  const activeFilterValues = {
+    siteId: selectedSiteFilter,
+    assetId: selectedAssetFilter,
+    assetType: selectedAssetTypeFilter,
+    category: selectedCategoryFilter,
+    status: selectedStatusFilter
+  };
+
+  const handleApplyFilters = (newValues) => {
+    if (newValues.siteId !== undefined) setSelectedSiteFilter(newValues.siteId);
+    if (newValues.assetId !== undefined) setSelectedAssetFilter(newValues.assetId);
+    if (newValues.assetType !== undefined) setSelectedAssetTypeFilter(newValues.assetType);
+    if (newValues.category !== undefined) setSelectedCategoryFilter(newValues.category);
+    if (newValues.status !== undefined) setSelectedStatusFilter(newValues.status);
+    setCurrentPage(1);
+  };
 
   // ── Modal & Drawer Handlers ───────────────────────────────────────────
   const handleOpenCreate = () => {
@@ -773,9 +930,9 @@ const DeviceManagement = ({ embedded = false }) => {
 
         {/* Filter Toolbar */}
         <div className="scada-card-surface p-3 mb-4">
-          <Row className="g-2 align-items-center">
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
             {/* Search Input */}
-            <Col xs={12} md={4} lg={3}>
+            <div style={{ minWidth: 260, flex: 1, maxWidth: 400 }}>
               <InputGroup size="sm">
                 <InputGroup.Text className="scada-input-group-addon">
                   <Search size={14} />
@@ -793,55 +950,26 @@ const DeviceManagement = ({ embedded = false }) => {
                   </Button>
                 )}
               </InputGroup>
-            </Col>
+            </div>
 
-            {/* Site Filter */}
-            <Col xs={6} md={3} lg={2.5}>
-              <Form.Select
-                size="sm"
-                className="filter-input-scada"
-                value={selectedSiteFilter}
-                onChange={(e) => handleSiteChange(e.target.value)}
-              >
-                <option value="ALL">All Sites</option>
-                {sites.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </Form.Select>
-            </Col>
-
-            {/* Category Filter */}
-            <Col xs={6} md={3} lg={2.5}>
-              <Form.Select
-                size="sm"
-                className="filter-input-scada"
-                value={selectedCategoryFilter}
-                onChange={(e) => handleCategoryChange(e.target.value)}
-              >
-                <option value="ALL">All Categories</option>
-                {DEVICE_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat.replace(/_/g, ' ')}</option>
-                ))}
-              </Form.Select>
-            </Col>
-
-            {/* Status Filter */}
-            <Col xs={6} md={2} lg={2}>
-              <Form.Select
-                size="sm"
-                className="filter-input-scada"
-                value={selectedStatusFilter}
-                onChange={(e) => handleStatusChange(e.target.value)}
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </Form.Select>
-            </Col>
-
-            {/* Clear Filters Button */}
-            {hasActiveFilters && (
-              <Col xs={6} md="auto">
+            {/* Reusable Common Filter Popover */}
+            <div className="d-flex align-items-center gap-2">
+              <CommonFilterPopover
+                buttonLabel="Device filter"
+                filters={getDeviceFilters}
+                values={activeFilterValues}
+                onApply={handleApplyFilters}
+                onReset={handleClearAllFilters}
+                extraHeader={
+                  <Form.Check
+                    type="switch"
+                    id="include-customer-entities-switch"
+                    label={<span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Include customer entities</span>}
+                    defaultChecked
+                  />
+                }
+              />
+              {hasActiveFilters && (
                 <button
                   type="button"
                   className="btn btn-clear-filters px-3 py-1"
@@ -850,9 +978,9 @@ const DeviceManagement = ({ embedded = false }) => {
                   <X size={12} className="me-1" />
                   Clear Filters
                 </button>
-              </Col>
-            )}
-          </Row>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Device Table Card */}
