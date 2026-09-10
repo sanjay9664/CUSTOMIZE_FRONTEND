@@ -5,24 +5,33 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
-const Header = ({ collapsed, toggleSidebar }) => {
+import logo from "../assets/logo.png";
+
+const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonating = false }) => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { userRole, logout } = useAuth();
 
   return (
-    <header className={`scada-header ${collapsed ? 'collapsed' : ''}`}>
-      <div className="header-left d-flex align-items-center">
+    <header 
+      className={`scada-header ${collapsed ? 'collapsed' : ''}`}
+      style={{ 
+        left: sidebarWidth,
+        top: isImpersonating ? '40px' : '0px'
+      }}
+    >
+      <div className="header-left d-flex align-items-center gap-3">
         <Button 
           variant="link" 
-          className="text-white p-0 me-3" 
+          className="text-white p-0 me-2 d-flex align-items-center justify-content-center" 
           onClick={toggleSidebar}
+          aria-label="Toggle Navigation Sidebar"
         >
-          <Menu size={24} />
+          <Menu size={22} />
         </Button>
 
         {/* Global Search Bar */}
-        <InputGroup style={{ maxWidth: '400px' }}>
+        <InputGroup style={{ width: '360px', maxWidth: '100%' }}>
           <InputGroup.Text className="bg-dark border-secondary border-opacity-25 text-muted">
             <Search size={18} />
           </InputGroup.Text>

@@ -56,15 +56,32 @@ const MainLayout = ({ children }) => {
     setCollapsed(!collapsed);
   };
 
+  const isExpanded = !collapsed || sidebarHover;
+  const sidebarWidth = isExpanded ? '270px' : '64px';
+
   return (
     <div className="scada-container">
       <Sidebar collapsed={collapsed} onClose={() => setCollapsed(true)} onOpen={() => setCollapsed(false)} onHoverChange={setSidebarHover} />
+      <Header collapsed={collapsed} toggleSidebar={toggleSidebar} sidebarWidth={sidebarWidth} isImpersonating={isImpersonating} />
+
       <div 
         className={`scada-main-content w-100`}
-        style={{ marginLeft: (!collapsed || sidebarHover) ? '270px' : '62px', transition: 'margin-left 0.4s cubic-bezier(0.25, 0.1, 0.25, 1)' }}
+        style={{
+          marginLeft: sidebarWidth,
+          paddingTop: isImpersonating ? '114px' : '74px',
+          transition: 'margin-left 0.28s cubic-bezier(0.25, 0.1, 0.25, 1)'
+        }}
       >
         {isImpersonating && (
-          <div className="bg-warning text-dark px-4 py-2 d-flex justify-content-between align-items-center position-sticky top-0 z-3 shadow-sm border-bottom border-warning">
+          <div 
+            className="bg-warning text-dark px-4 py-2 d-flex justify-content-between align-items-center position-fixed top-0 z-3 shadow-sm border-bottom border-warning"
+            style={{
+              left: sidebarWidth,
+              right: 0,
+              height: '40px',
+              transition: 'left 0.28s cubic-bezier(0.25, 0.1, 0.25, 1)'
+            }}
+          >
             <div className="d-flex align-items-center gap-2">
               <i className="bi bi-exclamation-triangle-fill"></i>
               <span className="fw-bold tracking-widest uppercase fs-7">
@@ -82,7 +99,6 @@ const MainLayout = ({ children }) => {
             </button>
           </div>
         )}
-        <Header collapsed={collapsed} toggleSidebar={toggleSidebar} />
         <main className="px-3 px-md-4 pb-5">
           {children}
         </main>

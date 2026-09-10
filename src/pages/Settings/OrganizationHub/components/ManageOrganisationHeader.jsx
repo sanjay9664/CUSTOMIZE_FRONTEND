@@ -39,107 +39,107 @@ const ManageOrganisationHeader = ({ org = {} }) => {
   return (
     <>
       {/* Sub-Header Tabs Row */}
-      <div className="px-2 py-1.5 mb-2 rounded-2 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '0 0 0.5rem 0', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
+      <div className="px-3 py-2 mb-3.5 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '0 0 1.35rem 0', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
-          <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center">
-            <Nav.Item>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
-                <Sparkles size={15} className="text-info" /> Settings
+          <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-2.5 align-items-center">
+            <Nav.Item style={{ marginRight: '8px' }}>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-secondary border-opacity-25 hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
+                <Sparkles size={15} className="text-info me-1.5 flex-shrink-0" /> Settings
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
-                <Settings size={15} className="text-slate-400" /> Global
+            <Nav.Item style={{ marginRight: '8px' }}>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-secondary border-opacity-25 hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
+                <Settings size={15} className="text-slate-400 me-1.5 flex-shrink-0" /> Global
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings/users')} className="d-flex align-items-center gap-1.5 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-transparent hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
-                <Users size={15} className="text-slate-400" /> Users
+            <Nav.Item style={{ marginRight: '8px' }}>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings/users')} className="d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-secondary border-opacity-25 hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
+                <Users size={15} className="text-slate-400 me-1.5 flex-shrink-0" /> Users
               </Nav.Link>
             </Nav.Item>
 
-            <div className="vr bg-secondary opacity-30 mx-1" style={{ height: '24px' }} />
+            <div className="vr bg-secondary opacity-30 mx-2" style={{ height: '24px' }} />
 
             {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
-            <Nav.Item>
+            <Nav.Item style={{ marginRight: '6px' }}>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('company')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'company' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'company' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
                 style={{ fontSize: '0.83rem' }}
               >
-                <Building size={15} /> Company
+                <Building size={15} className="me-1.5 flex-shrink-0" /> Company
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
 
-            <Nav.Item>
+            <Nav.Item style={{ marginRight: '6px' }}>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('tenant')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'tenant' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'tenant' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
                 style={{ fontSize: '0.83rem' }}
               >
-                <Building2 size={15} /> Organization
+                <Building2 size={15} className="me-1.5 flex-shrink-0" /> Organization
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
 
-            <Nav.Item>
+            <Nav.Item style={{ marginRight: '6px' }}>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('zone')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'zone' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'zone' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
                 style={{ fontSize: '0.83rem' }}
               >
-                <Globe size={15} /> Zone
+                <Globe size={15} className="me-1.5 flex-shrink-0" /> Zone
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
 
-            <Nav.Item>
+            <Nav.Item style={{ marginRight: '6px' }}>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('area')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'area' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'area' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
                 style={{ fontSize: '0.83rem' }}
               >
-                <Layers size={15} /> Area
+                <Layers size={15} className="me-1.5 flex-shrink-0" /> Area
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
 
-            <Nav.Item>
+            <Nav.Item style={{ marginRight: '6px' }}>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('site')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'site' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'site' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
                 style={{ fontSize: '0.83rem' }}
               >
-                <MapPin size={15} /> Site
+                <MapPin size={15} className="me-1.5 flex-shrink-0" /> Site
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
 
-            <Nav.Item>
+            <Nav.Item style={{ marginRight: '6px' }}>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('asset')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'asset' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'asset' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
                 style={{ fontSize: '0.83rem' }}
               >
-                <Sliders size={15} /> Asset
+                <Sliders size={15} className="me-1.5 flex-shrink-0" /> Asset
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
 
-            <Nav.Item>
+            <Nav.Item style={{ marginRight: '6px' }}>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('device')}
-                className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'device' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'device' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
                 style={{ fontSize: '0.83rem' }}
               >
-                <Cpu size={15} /> Device
+                <Cpu size={15} className="me-1.5 flex-shrink-0" /> Device
               </Nav.Link>
             </Nav.Item>
           </Nav>
@@ -147,32 +147,27 @@ const ManageOrganisationHeader = ({ org = {} }) => {
           {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
           <div className="d-flex align-items-center gap-2 ms-auto">
             {showExtraTabs && (
-              <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center">
-                <Nav.Item>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('widgets')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isWidgetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
-                    <Grid size={15} /> Widgets
+              <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-2 align-items-center">
+                <Nav.Item style={{ marginRight: '6px' }}>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('widgets')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isWidgetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
+                    <Grid size={15} className="me-1.5 flex-shrink-0" /> Widgets
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('rules')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isRuleGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
-                    <Shield size={15} /> Rules
+                <Nav.Item style={{ marginRight: '6px' }}>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('rules')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isRuleGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
+                    <Shield size={15} className="me-1.5 flex-shrink-0" /> Rules
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('commands')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isCommandGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
-                    <Zap size={15} /> Commands
+                <Nav.Item style={{ marginRight: '6px' }}>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('commands')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isCommandGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
+                    <Zap size={15} className="me-1.5 flex-shrink-0" /> Commands
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isReportGroup ? org.activeTab : 'telemetry')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isReportGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
-                    <FileText size={15} /> Report
+                <Nav.Item style={{ marginRight: '6px' }}>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isReportGroup ? org.activeTab : 'telemetry')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isReportGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
+                    <FileText size={15} className="me-1.5 flex-shrink-0" /> Report
                   </Nav.Link>
                 </Nav.Item>
-                {/* <Nav.Item>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('building')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${org.isBuildingGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
-                    <Building2 size={15} /> Building
-                  </Nav.Link>
-                </Nav.Item> */}
               </Nav>
             )}
 

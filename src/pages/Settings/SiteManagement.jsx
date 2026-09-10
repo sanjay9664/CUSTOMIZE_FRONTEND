@@ -786,9 +786,9 @@ const SiteManagement = ({ embedded = false }) => {
           box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
         }
         .touch-action-btn {
-          min-width: 40px;
-          min-height: 40px;
-          border-radius: 8px;
+          min-width: 38px;
+          height: 38px;
+          border-radius: 9px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -796,6 +796,8 @@ const SiteManagement = ({ embedded = false }) => {
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: var(--scada-text-muted, #94a3b8);
           transition: all 0.2s;
+          margin-right: 12px !important;
+          flex-shrink: 0;
         }
         .touch-action-btn:hover {
           color: #ffffff;
@@ -813,17 +815,22 @@ const SiteManagement = ({ embedded = false }) => {
         }
         .stat-pill-action {
           min-height: 36px;
-          padding: 5px 11px;
-          border-radius: 8px;
+          padding: 6px 14px;
+          border-radius: 9px;
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.78rem;
+          gap: 8px !important;
+          margin-right: 10px !important;
+          margin-bottom: 6px !important;
+          font-size: 0.8rem;
           font-weight: 500;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           cursor: pointer;
           border: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.03);
+        }
+        .stat-pill-action:last-child {
+          margin-right: 0 !important;
         }
         .stat-pill-action:hover {
           transform: translateY(-1px);
@@ -1114,13 +1121,15 @@ const SiteManagement = ({ embedded = false }) => {
             onClick={() => setKpiFilter('ALL')}
             title="Click to view all sites"
           >
-            <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center justify-content-between mb-1.5">
               <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
                 TOTAL SITES
               </span>
-              <Building2 size={15} className="text-info" />
+              <div className="kpi-icon-badge">
+                <Building2 size={15} className="text-info" />
+              </div>
             </div>
-            <div className="fw-bold tabular-nums" style={{ fontSize: '1.4rem' }}>{kpiData.total}</div>
+            <div className="fw-bold tabular-nums" style={{ fontSize: '1.45rem' }}>{kpiData.total}</div>
             <small className="text-muted d-block mt-0.5" style={{ fontSize: '0.7rem' }}>All campuses</small>
           </div>
         </Col>
@@ -1131,13 +1140,15 @@ const SiteManagement = ({ embedded = false }) => {
             onClick={() => setKpiFilter(prev => prev === 'ACTIVE' ? 'ALL' : 'ACTIVE')}
             title="Click to filter operational sites"
           >
-            <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center justify-content-between mb-1.5">
               <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
                 OPERATIONAL
               </span>
-              <CheckCircle2 size={15} className="text-success" />
+              <div className="kpi-icon-badge">
+                <CheckCircle2 size={15} className="text-success" />
+              </div>
             </div>
-            <div className="fw-bold text-success tabular-nums" style={{ fontSize: '1.4rem' }}>{kpiData.operational}</div>
+            <div className="fw-bold text-success tabular-nums" style={{ fontSize: '1.45rem' }}>{kpiData.operational}</div>
             <small className="text-muted d-block mt-0.5" style={{ fontSize: '0.7rem' }}>Active & reporting</small>
           </div>
         </Col>
@@ -1148,13 +1159,15 @@ const SiteManagement = ({ embedded = false }) => {
             onClick={() => setKpiFilter(prev => prev === 'ALARM' ? 'ALL' : 'ALARM')}
             title="Click to filter sites with active alarms"
           >
-            <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center justify-content-between mb-1.5">
               <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
                 IN ALARM
               </span>
-              <AlertTriangle size={15} className={kpiData.inAlarm > 0 ? 'text-danger' : 'text-muted'} />
+              <div className="kpi-icon-badge">
+                <AlertTriangle size={15} className={kpiData.inAlarm > 0 ? 'text-danger' : 'text-muted'} />
+              </div>
             </div>
-            <div className={`fw-bold tabular-nums ${kpiData.inAlarm > 0 ? 'text-danger' : 'text-muted'}`} style={{ fontSize: '1.4rem' }}>
+            <div className={`fw-bold tabular-nums ${kpiData.inAlarm > 0 ? 'text-danger' : 'text-muted'}`} style={{ fontSize: '1.45rem' }}>
               {kpiData.inAlarm}
             </div>
             <small className="text-muted d-block mt-0.5" style={{ fontSize: '0.7rem' }}>Sites with open alerts</small>
@@ -1167,13 +1180,15 @@ const SiteManagement = ({ embedded = false }) => {
             title="View fleet devices"
             onClick={() => navigate('/manage-organisation?tab=device')}
           >
-            <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center justify-content-between mb-1.5">
               <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
                 CONNECTED ASSETS
               </span>
-              <Server size={15} className="text-primary" />
+              <div className="kpi-icon-badge">
+                <Server size={15} className="text-primary" />
+              </div>
             </div>
-            <div className="fw-bold tabular-nums" style={{ fontSize: '1.4rem' }}>{kpiData.totalDevices}</div>
+            <div className="fw-bold tabular-nums" style={{ fontSize: '1.45rem' }}>{kpiData.totalDevices}</div>
             <small className="text-info d-block mt-0.5" style={{ fontSize: '0.7rem' }}>View Assets &rarr;</small>
           </div>
         </Col>
@@ -1184,13 +1199,15 @@ const SiteManagement = ({ embedded = false }) => {
             title="View energy metering"
             onClick={() => navigate('/energy-metering/overview')}
           >
-            <div className="d-flex align-items-center justify-content-between mb-1">
+            <div className="d-flex align-items-center justify-content-between mb-1.5">
               <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
                 CUMULATIVE ENERGY
               </span>
-              <Zap size={15} className="text-warning" />
+              <div className="kpi-icon-badge">
+                <Zap size={15} className="text-warning" />
+              </div>
             </div>
-            <div className="fw-bold text-warning tabular-nums" style={{ fontSize: '1.4rem' }}>
+            <div className="fw-bold text-warning tabular-nums" style={{ fontSize: '1.45rem' }}>
               {kpiData.totalEnergy.toLocaleString()} <span style={{ fontSize: '0.85rem' }}>kWh</span>
             </div>
             <small className="text-info d-block mt-0.5" style={{ fontSize: '0.7rem' }}>View Metering &rarr;</small>
@@ -1386,52 +1403,79 @@ const SiteManagement = ({ embedded = false }) => {
                 >
                   {/* Top Row: Title + Operational Status */}
                   <div>
-                    {/* Organization / Zone / Area Breadcrumb Trail */}
-                    {(tenantName || zoneName) && (
-                      <div className="site-hierarchy-trail">
-                        {tenantName && (
-                          <span className="site-hierarchy-crumb" title={`Organization: ${tenantName}`}>
-                            <Building2 size={11} className="text-info" /> {tenantName}
-                          </span>
-                        )}
-                        {zoneName && (
-                          <>
-                            <ChevronRight size={10} className="text-muted opacity-75" />
-                            <span className="site-hierarchy-crumb" title={`Zone: ${zoneName}`}>
-                              <MapPin size={11} className="text-info" /> {zoneName}
+                    {/* Organization / Zone / Area Breadcrumb Trail (Always rendered for uniform alignment) */}
+                    <div className="site-hierarchy-trail mb-2" style={{ minHeight: '20px', display: 'flex', alignItems: 'center' }}>
+                      {tenantName || zoneName ? (
+                        <>
+                          {tenantName && (
+                            <span className="site-hierarchy-crumb" title={`Organization: ${tenantName}`}>
+                              <Building2 size={11} className="text-info flex-shrink-0 me-1" /> {tenantName}
                             </span>
-                          </>
-                        )}
-                        {areaName && (
-                          <>
-                            <ChevronRight size={10} className="text-muted opacity-75" />
-                            <span className="site-hierarchy-crumb text-muted" title={`Area: ${areaName}`}>
-                              {areaName}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <div className="pe-2">
-                        <div className="d-flex align-items-center gap-2 flex-wrap">
-                          <h6 className="fw-bold mb-0 text-white" style={{ fontSize: '1.02rem', letterSpacing: '-0.01em' }}>
-                            {site.name}
-                          </h6>
-                          {isSelectedActive && (
-                            <Badge
-                              bg="info"
-                              className="text-dark d-inline-flex align-items-center gap-1"
-                              style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em', padding: '3px 7px' }}
-                            >
-                              <Radio size={10} /> CURRENT
-                            </Badge>
                           )}
+                          {zoneName && (
+                            <>
+                              <ChevronRight size={10} className="text-muted opacity-75 flex-shrink-0 mx-1" />
+                              <span className="site-hierarchy-crumb" title={`Zone: ${zoneName}`}>
+                                <MapPin size={11} className="text-info flex-shrink-0 me-1" /> {zoneName}
+                              </span>
+                            </>
+                          )}
+                          {areaName && (
+                            <>
+                              <ChevronRight size={10} className="text-muted opacity-75 flex-shrink-0 mx-1" />
+                              <span className="site-hierarchy-crumb text-muted" title={`Area: ${areaName}`}>
+                                {areaName}
+                              </span>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <span className="site-hierarchy-crumb text-muted opacity-50" style={{ fontSize: '0.7rem' }}>
+                          <Globe size={11} className="text-info opacity-75 me-1 flex-shrink-0" /> Global Campus Site
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div className="d-flex align-items-center gap-3 pe-2" style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '11px',
+                            background: isSelectedActive
+                              ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(2, 132, 199, 0.35) 100%)'
+                              : 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)',
+                            border: `1px solid ${isSelectedActive ? 'rgba(56, 189, 248, 0.45)' : 'rgba(255, 255, 255, 0.12)'}`,
+                            color: isSelectedActive ? '#38bdf8' : '#cbd5e1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            boxShadow: isSelectedActive ? '0 0 14px rgba(56, 189, 248, 0.25)' : 'none'
+                          }}
+                        >
+                          <Building2 size={20} />
                         </div>
-                        <div className="d-flex align-items-center gap-1 text-muted mt-1" style={{ fontSize: '0.78rem' }}>
-                          <MapPin size={12} className="text-secondary" />
-                          <span>{site.city || 'Location unset'}{site.state ? `, ${site.state}` : ''}</span>
+                        <div style={{ minWidth: 0 }} className="d-flex flex-column justify-content-center">
+                          <div className="d-flex align-items-center gap-2 flex-wrap">
+                            <h6 className="fw-bold mb-0 site-title-text text-truncate" style={{ fontSize: '1.05rem', letterSpacing: '-0.01em', lineHeight: '1.2' }}>
+                              {site.name}
+                            </h6>
+                            {isSelectedActive && (
+                              <Badge
+                                bg="info"
+                                className="text-dark d-inline-flex align-items-center gap-1"
+                                style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', padding: '3px 7px', borderRadius: '6px' }}
+                              >
+                                <Radio size={10} /> CURRENT
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="d-flex align-items-center gap-1.5 text-muted mt-1 text-truncate" style={{ fontSize: '0.78rem' }}>
+                            <MapPin size={13} className="text-info opacity-80 flex-shrink-0 me-1" />
+                            <span className="text-truncate">{site.city || 'Location unset'}{site.state ? `, ${site.state}` : ''}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1442,7 +1486,7 @@ const SiteManagement = ({ embedded = false }) => {
                       >
                         <button
                           type="button"
-                          className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'}`}
+                          className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'} flex-shrink-0`}
                           onClick={(e) => handleToggleSiteStatus(site, e)}
                           aria-label={isEnabled ? 'Site is active. Click to disable' : 'Site is disabled. Click to enable'}
                         >
@@ -1452,8 +1496,8 @@ const SiteManagement = ({ embedded = false }) => {
                       </OverlayTrigger>
                     </div>
 
-                    {/* Telemetry Metric Pills */}
-                    <div className="d-flex flex-wrap gap-2 my-2.5">
+                    {/* Telemetry Metric Pills with clear icon & text gaps */}
+                    <div className="d-flex flex-wrap gap-2.5 my-3">
                       <div
                         className="stat-pill-action pill-devices"
                         title="Click to view site devices"
@@ -1462,8 +1506,9 @@ const SiteManagement = ({ embedded = false }) => {
                           navigate(`/manage-organisation?tab=device&siteId=${site.id}`);
                         }}
                       >
-                        <Server size={13} className="text-info" />
-                        <span className="tabular-nums fw-bold text-white">{devices}</span> Devices
+                        <Server size={14} className="text-info flex-shrink-0 me-1.5" />
+                        <span className="tabular-nums fw-bold text-white me-1">{devices}</span>
+                        <span className="opacity-90">Devices</span>
                       </div>
 
                       {/* Alarms Pill: Quiet when 0, Alert when > 0 */}
@@ -1476,11 +1521,12 @@ const SiteManagement = ({ embedded = false }) => {
                         }}
                       >
                         {alarms > 0 ? (
-                          <AlertTriangle size={13} className="text-danger" />
+                          <AlertTriangle size={14} className="text-danger flex-shrink-0 me-1.5" />
                         ) : (
-                          <CheckCircle2 size={13} className="text-success" />
+                          <CheckCircle2 size={14} className="text-success flex-shrink-0 me-1.5" />
                         )}
-                        <span className={`tabular-nums fw-bold ${alarms > 0 ? 'text-danger' : 'text-white'}`}>{alarms}</span> Alarms
+                        <span className={`tabular-nums fw-bold me-1 ${alarms > 0 ? 'text-danger' : 'text-white'}`}>{alarms}</span>
+                        <span className="opacity-90">Alarms</span>
                       </div>
 
                       <div
@@ -1491,20 +1537,21 @@ const SiteManagement = ({ embedded = false }) => {
                           navigate('/energy-metering/overview');
                         }}
                       >
-                        <Zap size={13} className="text-warning" />
-                        <span className="tabular-nums fw-bold text-white">{energy.toLocaleString()}</span> kWh
+                        <Zap size={14} className="text-warning flex-shrink-0 me-1.5" />
+                        <span className="tabular-nums fw-bold text-white me-1">{energy.toLocaleString()}</span>
+                        <span className="opacity-90">kWh</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Card Footer: Metadata & Actions */}
-                  <div className="pt-2.5 border-top d-flex align-items-center justify-content-between" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-                    <div className="text-muted" style={{ fontSize: '0.72rem' }}>
-                      <Clock size={11} className="me-1" />
-                      {formatDate(site.createdAt)}
+                  {/* Card Footer: Metadata & Spaced Action Buttons */}
+                  <div className="pt-3 mt-3 border-top d-flex align-items-center justify-content-between" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+                    <div className="text-muted d-flex align-items-center gap-1.5" style={{ fontSize: '0.72rem' }}>
+                      <Clock size={12} className="text-info opacity-75" />
+                      <span>{formatDate(site.createdAt)}</span>
                     </div>
 
-                    <div className="d-flex align-items-center gap-1.5">
+                    <div className="d-flex align-items-center gap-3">
                       <OverlayTrigger placement="top" overlay={<Tooltip>Edit Site Configuration</Tooltip>}>
                         <button
                           type="button"
@@ -1528,7 +1575,7 @@ const SiteManagement = ({ embedded = false }) => {
                         }}
                       >
                         <span>Inspect</span>
-                        <ChevronRight size={14} />
+                        <ChevronRight size={14} className="ms-1 flex-shrink-0 inspect-arrow" />
                       </button>
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Droplets, Activity, Zap, Bell, ShieldAlert, Settings,
@@ -30,7 +30,7 @@ const THEMES = {
 };
 
 const SIDEBAR_W = 270;     // expanded width
-const STRIP_W = 70;        // collapsed icon strip width
+const STRIP_W = 64;        // collapsed icon strip width
 
 const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const location = useLocation();
@@ -57,81 +57,9 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const isAdmin = userRole === 'ADMIN';
   const isImpersonating = !!localStorage.getItem('impersonator_backup_role');
 
-  // Is the sidebar showing full content?
   const isExpanded = !collapsed || hoverExpanded;
 
-  // Auto-open the section containing active route
-  useEffect(() => {
-    const autoOpen = {};
-    menuItems.forEach(item => {
-      if (item.subItems?.some(s => location.pathname === s.path)) {
-        autoOpen[item.title] = true;
-      }
-    });
-    setOpenSections(prev => ({ ...prev, ...autoOpen }));
-  }, [location.pathname]);
-
-  // Hover open/close — smooth, stable, no flicker
-  const handleMouseEnter = useCallback(() => {
-    if (!collapsed) return;
-    clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => {
-      setHoverExpanded(true);
-      onHoverChange?.(true);
-    }, 200);
-  }, [collapsed, onHoverChange]);
-
-  const handleMouseLeave = useCallback(() => {
-    clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => {
-      setHoverExpanded(false);
-      onHoverChange?.(false);
-    }, 350);
-  }, [onHoverChange]);
-
-  useEffect(() => () => clearTimeout(hoverTimer.current), []);
-
-  const toggleSection = (title) => {
-    setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
-  };
-
-  // Sidebar uses cached configuration. Do not request an unsupported config
-  // endpoint every time the layout mounts; the Settings screen owns config edits.
-  useEffect(() => {
-    if (!modulesConfig) {
-      const defaults = { "Dashboard": true, "Water Management": true, "Motors": true, "DG Set": true, "Setting Templates": true, "Alarm System": true, "LT Panel": true, "Transformer": true, "Fire": true, "Ticketing": true, "Maintenance": true, "Service History": true, "Daily DPR": true, "Energy Metering": true, "VRV": true, "AQI Sensor": true, "HVAC": true, "AC": true };
-      setModulesConfig(defaults);
-      localStorage.setItem('scada_modules_config', JSON.stringify(defaults));
-    }
-    const upd = () => {
-      const a = localStorage.getItem('scada_modules_config');
-      const b = localStorage.getItem('scada_submodules_config');
-      try {
-        if (a) setModulesConfig(JSON.parse(a));
-        if (b) setSubmodulesConfig(JSON.parse(b));
-      } catch {
-        // Keep the last valid cached settings instead of breaking the sidebar.
-      }
-    };
-    window.addEventListener('storage-update', upd);
-    return () => window.removeEventListener('storage-update', upd);
-  }, [modulesConfig]);
-
-  const handleExitImpersonation = () => {
-    const u = localStorage.getItem('impersonator_backup_user');
-    const r = localStorage.getItem('impersonator_backup_role');
-    if (u && r) {
-      localStorage.setItem('userData', u);
-      localStorage.setItem('userRole', r);
-      localStorage.removeItem('impersonator_backup_user');
-      localStorage.removeItem('impersonator_backup_role');
-      localStorage.removeItem('scada_modules_config');
-      localStorage.removeItem('scada_submodules_config');
-      window.location.href = r === 'ADMIN' ? '/admin/manage-users' : '/dashboard';
-    }
-  };
-
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", disabled: modulesConfig ? !modulesConfig["Dashboard"] : false },
     { title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? !modulesConfig["Water Management"] : false,
       subItems: [{ title: "Overview", path: "/water-management/overview" }, { title: "AG TANK", path: "/water-management/ag-pump" }, { title: "UG TANK", path: "/water-management/ug-pump" }].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
@@ -164,20 +92,87 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       subItems: [{ title: "Chiller", path: "/hvac/chiller" }, { title: "AHU", path: "/hvac/ahu" }, { title: "Cooling Tower", path: "/hvac/cooling-tower" }, { title: "PDF Report", path: "/hvac/report" }].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true) },
     { title: "AC", icon: <Wind size={20} />, disabled: modulesConfig ? !modulesConfig["AC"] : false,
       subItems: [{ title: "Overview", path: "/ac/overview" }, { title: "PDF Report", path: "/ac/report" }].filter(s => submodulesConfig.showAC?.[s.title] ?? true) }
-  ];
+  ], [modulesConfig, submodulesConfig]);
 
-  const filteredItems = menuItems.filter(item => {
-    const byRole = !item.adminOnly || isAdmin || isSuperAdmin;
-    const byCfg = !modulesConfig || modulesConfig[item.title] === true;
-    return byRole && byCfg;
-  });
+  const filteredItems = useMemo(() => {
+    return menuItems.filter(item => {
+      const byRole = !item.adminOnly || isAdmin || isSuperAdmin;
+      const byCfg = !modulesConfig || modulesConfig[item.title] === true;
+      return byRole && byCfg;
+    });
+  }, [menuItems, isAdmin, isSuperAdmin, modulesConfig]);
+
+  // Auto-open the section containing active route
+  useEffect(() => {
+    const autoOpen = {};
+    filteredItems.forEach(item => {
+      if (item.subItems?.some(s => location.pathname === s.path)) {
+        autoOpen[item.title] = true;
+      }
+    });
+    setOpenSections(prev => ({ ...prev, ...autoOpen }));
+  }, [location.pathname, filteredItems]);
+
+  // High performance hardware-accelerated hover transition
+  const handleMouseEnter = useCallback(() => {
+    if (!collapsed) return;
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => {
+      setHoverExpanded(true);
+      onHoverChange?.(true);
+    }, 40);
+  }, [collapsed, onHoverChange]);
+
+  const handleMouseLeave = useCallback(() => {
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => {
+      setHoverExpanded(false);
+      onHoverChange?.(false);
+    }, 160);
+  }, [onHoverChange]);
+
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+  const toggleSection = (title) => {
+    setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  useEffect(() => {
+    if (!modulesConfig) {
+      const defaults = { "Dashboard": true, "Water Management": true, "Motors": true, "DG Set": true, "Setting Templates": true, "Alarm System": true, "LT Panel": true, "Transformer": true, "Fire": true, "Ticketing": true, "Maintenance": true, "Service History": true, "Daily DPR": true, "Energy Metering": true, "VRV": true, "AQI Sensor": true, "HVAC": true, "AC": true };
+      setModulesConfig(defaults);
+      localStorage.setItem('scada_modules_config', JSON.stringify(defaults));
+    }
+    const upd = () => {
+      const a = localStorage.getItem('scada_modules_config');
+      const b = localStorage.getItem('scada_submodules_config');
+      try {
+        if (a) setModulesConfig(JSON.parse(a));
+        if (b) setSubmodulesConfig(JSON.parse(b));
+      } catch {}
+    };
+    window.addEventListener('storage-update', upd);
+    return () => window.removeEventListener('storage-update', upd);
+  }, [modulesConfig]);
+
+  const handleExitImpersonation = () => {
+    const u = localStorage.getItem('impersonator_backup_user');
+    const r = localStorage.getItem('impersonator_backup_role');
+    if (u && r) {
+      localStorage.setItem('userData', u);
+      localStorage.setItem('userRole', r);
+      localStorage.removeItem('impersonator_backup_user');
+      localStorage.removeItem('impersonator_backup_role');
+      localStorage.removeItem('scada_modules_config');
+      localStorage.removeItem('scada_submodules_config');
+      window.location.href = r === 'ADMIN' ? '/admin/manage-users' : '/dashboard';
+    }
+  };
 
   const handleNavClick = () => {
-    // On mobile, close the drawer after navigation
     if (window.innerWidth <= 992 && onClose) onClose();
   };
 
-  // Build class names for sidebar state
   let sidebarClass = 'sb';
   if (collapsed && !hoverExpanded) sidebarClass += ' sb--collapsed';
   if (collapsed && hoverExpanded) sidebarClass += ' sb--hover-open';
@@ -185,7 +180,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
 
   return (
     <>
-      {/* Mobile Backdrop (when open on mobile) */}
+      {/* Mobile Backdrop */}
       {!collapsed && <div className="sb-backdrop d-lg-none" onClick={onClose} />}
 
       <aside
@@ -196,22 +191,19 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
         {/* Mobile Close */}
         <button className="sb-close-btn d-lg-none" onClick={onClose}><X size={18} /></button>
 
-        {/* Logo */}
+        {/* Brand Logo */}
         <div className="sb-brand">
-          {isExpanded ? (
-            <img src={logo} alt="Logo" className="sb-logo" />
-          ) : (
-            <div className="sb-logo-mini">S</div>
-          )}
+          <img src={logo} alt="Logo" className="sb-logo" />
+          <div className="sb-logo-mini">S</div>
         </div>
 
-        {/* Scrollable Content */}
+        {/* Scrollable Nav Content */}
         <nav className="sb-nav">
           {/* Verification */}
           {isImpersonating && (
             <div className="sb-verify" onClick={handleExitImpersonation}>
               <ShieldAlert size={14} />
-              {isExpanded && <span>Exit Verification</span>}
+              <span className="sb-verify-txt">Exit Verification</span>
             </div>
           )}
 
@@ -219,14 +211,14 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           <NavLink to="/settings" onClick={handleNavClick}
             className={({ isActive }) => `sb-link sb-settings ${isActive ? 'active' : ''}`}>
             <span className="sb-link-icon"><Settings size={18} /></span>
-            {isExpanded && <span className="sb-link-text">Settings</span>}
+            <span className="sb-link-text">Settings</span>
           </NavLink>
 
           {isAdmin && (
             <NavLink to="/admin/manage-users" onClick={handleNavClick}
               className={({ isActive }) => `sb-link sb-admin ${isActive ? 'active' : ''}`}>
               <span className="sb-link-icon"><User size={18} /></span>
-              {isExpanded && <span className="sb-link-text">Manage Users</span>}
+              <span className="sb-link-text">Manage Users</span>
             </NavLink>
           )}
 
@@ -243,7 +235,6 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
 
             return (
               <div key={idx} className="sb-mod">
-                {/* Module Header */}
                 {item.path && !hasSubs ? (
                   <NavLink
                     to={item.path}
@@ -252,26 +243,22 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
                     style={{ '--mc': t.c, '--mbg': t.bg, '--mb': t.b }}
                   >
                     <span className="sb-mod-ico">{item.icon}</span>
-                    {isExpanded && <span className="sb-mod-txt">{item.title}</span>}
+                    <span className="sb-mod-txt">{item.title}</span>
                   </NavLink>
                 ) : (
                   <button
-                    className={`sb-mod-head ${hasActiveSub ? 'sb-mod-active' : ''} ${isOpen && isExpanded ? 'sb-mod-opened' : ''}`}
+                    className={`sb-mod-head ${hasActiveSub ? 'sb-mod-active' : ''} ${isOpen ? 'sb-mod-opened' : ''}`}
                     style={{ '--mc': t.c, '--mbg': t.bg, '--mb': t.b }}
-                    onClick={() => isExpanded ? toggleSection(item.title) : null}
+                    onClick={() => toggleSection(item.title)}
                   >
                     <span className="sb-mod-ico">{item.icon}</span>
-                    {isExpanded && (
-                      <>
-                        <span className="sb-mod-txt">{item.title}</span>
-                        {hasSubs && <ChevronDown size={14} className={`sb-chev ${isOpen ? 'sb-chev-up' : ''}`} />}
-                      </>
-                    )}
+                    <span className="sb-mod-txt">{item.title}</span>
+                    {hasSubs && <ChevronDown size={14} className={`sb-chev ${isOpen ? 'sb-chev-up' : ''}`} />}
                   </button>
                 )}
 
-                {/* Dropdown */}
-                {hasSubs && isExpanded && (
+                {/* Dropdown Menu */}
+                {hasSubs && (
                   <div className={`sb-dd ${isOpen ? 'sb-dd-open' : ''}`}>
                     <div className="sb-dd-inner">
                       {item.subItems.map((sub, sIdx) => (
@@ -300,12 +287,8 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   );
 };
 
-/* ── CSS ── */
+/* ── Hardware-Accelerated 60FPS CSS ── */
 const STYLES = `
-/* ============================================
-   SIDEBAR — Collapsible Strip + Hover Expand
-   ============================================ */
-
 .sb {
   position: fixed;
   left: 0; top: 0;
@@ -316,8 +299,9 @@ const STYLES = `
   background: linear-gradient(175deg, #080e1e 0%, #0c1428 40%, #0f172a 100%);
   border-right: 1px solid rgba(56,189,248,0.06);
   overflow: hidden;
-  transition: width 0.4s cubic-bezier(0.25,0.1,0.25,1);
   will-change: width;
+  transform: translateZ(0);
+  transition: width 0.28s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 body.light-mode .sb {
@@ -325,45 +309,77 @@ body.light-mode .sb {
   border-right-color: #e2e8f0 !important;
 }
 
-/* States */
-.sb--open      { width: ${SIDEBAR_W}px; }
+/* Width States */
+.sb--open { width: ${SIDEBAR_W}px; }
 .sb--collapsed { width: ${STRIP_W}px; }
 .sb--hover-open {
   width: ${SIDEBAR_W}px;
-  box-shadow: 6px 0 30px rgba(0,0,0,0.35);
+  box-shadow: 6px 0 30px rgba(0,0,0,0.38);
 }
 
 body.light-mode .sb--hover-open { box-shadow: 6px 0 30px rgba(0,0,0,0.1); }
 
-/* Close btn (mobile) */
-.sb-close-btn {
-  position: absolute; top: 12px; right: 10px; z-index: 10;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #94a3b8; border-radius: 8px;
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.2s;
-}
-.sb-close-btn:hover { background: rgba(248,113,113,0.15); color: #f87171; }
-
-/* Brand */
+/* Brand Logo Smooth Cross-Fade */
 .sb-brand {
+  position: relative;
   display: flex; align-items: center; justify-content: center;
-  padding: 16px 10px; min-height: 66px;
+  padding: 14px 10px; min-height: 64px; height: 64px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
 }
 body.light-mode .sb-brand { border-bottom-color: #e2e8f0; }
 
-.sb-logo { width: 140px; height: 42px; object-fit: contain; animation: sbLogoIn 0.25s ease; }
-@keyframes sbLogoIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+.sb-logo {
+  width: 140px; height: 38px; object-fit: contain;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 .sb-logo-mini {
+  position: absolute;
   width: 34px; height: 34px; border-radius: 50%;
   background: rgba(56,189,248,0.12); border: 1.5px solid rgba(56,189,248,0.3);
   color: #38bdf8; font-weight: 700; font-size: 14px;
   display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed Visibility */
+.sb--collapsed .sb-logo { opacity: 0; visibility: hidden; transform: scale(0.85); pointer-events: none; }
+.sb--collapsed .sb-logo-mini { opacity: 1; visibility: visible; transform: scale(1); }
+
+.sb--open .sb-logo,
+.sb--hover-open .sb-logo { opacity: 1; visibility: visible; transform: scale(1); }
+.sb--open .sb-logo-mini,
+.sb--hover-open .sb-logo-mini { opacity: 0; visibility: hidden; transform: scale(0.85); pointer-events: none; }
+
+/* Text & Icons Fade Transitions */
+.sb-link-text,
+.sb-mod-txt,
+.sb-chev,
+.sb-verify-txt {
+  white-space: nowrap;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.22s;
+}
+
+.sb--collapsed .sb-link-text,
+.sb--collapsed .sb-mod-txt,
+.sb--collapsed .sb-chev,
+.sb--collapsed .sb-verify-txt {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.sb--open .sb-link-text,
+.sb--open .sb-mod-txt,
+.sb--open .sb-chev,
+.sb--open .sb-verify-txt,
+.sb--hover-open .sb-link-text,
+.sb--hover-open .sb-mod-txt,
+.sb--hover-open .sb-chev,
+.sb--hover-open .sb-verify-txt {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Nav scroll */
@@ -378,27 +394,25 @@ body.light-mode .sb-brand { border-bottom-color: #e2e8f0; }
 
 /* Top Links */
 .sb-link {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: flex-start;
   gap: 10px; padding: 9px 12px; margin-bottom: 2px;
   border-radius: 10px; text-decoration: none;
-  font-size: 13px; font-weight: 600; transition: all 0.2s;
+  font-size: 13px; font-weight: 600; transition: background 0.2s;
   white-space: nowrap;
 }
 
 .sb-link-icon {
   display: flex; align-items: center; justify-content: center;
-  width: 28px; flex-shrink: 0;
+  width: 28px; height: 28px; flex-shrink: 0;
 }
 
-.sb-link-text { opacity: 1; transition: opacity 0.2s ease; }
-
 .sb-settings { color: #f59e0b; }
-.sb-settings:hover, .sb-settings.active { background: rgba(245,158,11,0.1); color: #fbbf24; }
+.sb-settings:hover, .sb-settings.active { background: rgba(245,158,11,0.12); color: #fbbf24; }
 body.light-mode .sb-settings { color: #b45309; }
 body.light-mode .sb-settings:hover, body.light-mode .sb-settings.active { background: rgba(245,158,11,0.08); color: #d97706; }
 
 .sb-admin { color: #10b981; }
-.sb-admin:hover, .sb-admin.active { background: rgba(16,185,129,0.1); color: #34d399; }
+.sb-admin:hover, .sb-admin.active { background: rgba(16,185,129,0.12); color: #34d399; }
 
 /* Separator */
 .sb-sep {
@@ -409,8 +423,8 @@ body.light-mode .sb-sep { background: linear-gradient(90deg, transparent, rgba(0
 
 /* Verify banner */
 .sb-verify {
-  display: flex; align-items: center; justify-content: center;
-  gap: 6px; margin: 4px 0 6px; padding: 7px;
+  display: flex; align-items: center; justify-content: flex-start;
+  gap: 8px; margin: 4px 0 6px; padding: 7px 12px;
   border-radius: 8px; background: rgba(245,158,11,0.1);
   border: 1px solid rgba(245,158,11,0.25);
   color: #f59e0b; font-weight: 700; font-size: 10px;
@@ -418,33 +432,23 @@ body.light-mode .sb-sep { background: linear-gradient(90deg, transparent, rgba(0
   cursor: pointer;
 }
 
-/* ============================================
-   MODULE SECTION
-   ============================================ */
-
+/* Module Section */
 .sb-mod { margin-bottom: 1px; }
 
 .sb-mod-head {
   display: flex; align-items: center;
-  gap: 10px; width: 100%; padding: 9px 14px;
+  gap: 10px; width: 100%; padding: 7px 10px;
   border: none; border-radius: 10px; background: transparent;
   color: #8899b4; font-size: 13.5px; font-weight: 600;
   text-align: left; cursor: pointer;
-  transition: all 0.2s; text-decoration: none;
+  transition: background 0.2s, color 0.2s; text-decoration: none;
   font-family: inherit; white-space: nowrap;
   min-height: 44px;
 }
 
-/* Collapsed: center icon only */
-.sb--collapsed .sb-mod-head,
-.sb--collapsed .sb-link {
-  justify-content: center;
-  padding: 9px 0;
-}
-
-.sb-mod-head:hover { color: #cbd5e1; background: rgba(255,255,255,0.03); }
+.sb-mod-head:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
 body.light-mode .sb-mod-head { color: #475569; }
-body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.03); }
+body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04); }
 
 .sb-mod-active { color: var(--mc) !important; background: var(--mbg) !important; }
 .sb-mod-opened { color: var(--mc) !important; }
@@ -454,30 +458,26 @@ body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.03
   display: flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--mbg); border: 1.5px solid var(--mb);
-  color: var(--mc); flex-shrink: 0; transition: all 0.25s;
+  color: var(--mc); flex-shrink: 0; transition: transform 0.25s, box-shadow 0.25s;
 }
 
 .sb-mod-head:hover .sb-mod-ico {
-  transform: scale(1.08);
-  box-shadow: 0 0 14px var(--mbg);
+  transform: scale(1.06);
+  box-shadow: 0 0 12px var(--mbg);
 }
 
-.sb-mod-txt { flex: 1; text-align: left; opacity: 1; transition: opacity 0.2s ease; }
+.sb-mod-txt { flex: 1; text-align: left; }
 
-/* Chevron */
 .sb-chev {
   color: #475569; flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
 }
 .sb-chev-up { transform: rotate(180deg); color: var(--mc); }
 
-/* ============================================
-   DROPDOWN
-   ============================================ */
-
+/* Dropdown */
 .sb-dd {
   max-height: 0; overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1);
 }
 .sb-dd-open { max-height: 600px; }
 
@@ -485,15 +485,15 @@ body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.03
 
 .sb-sub {
   display: flex; align-items: center;
-  gap: 8px; padding: 7px 14px 7px 56px;
+  gap: 8px; padding: 7px 14px 7px 54px;
   border-radius: 8px; font-size: 12.5px; color: #5a6a82;
   text-decoration: none; transition: color 0.2s ease;
-  background: transparent;
+  background: transparent; white-space: nowrap;
 }
 
 .sb-dot {
   width: 5px; height: 5px; border-radius: 50%;
-  background: #2a3548; flex-shrink: 0; transition: all 0.2s;
+  background: #2a3548; flex-shrink: 0; transition: background 0.2s, box-shadow 0.2s;
 }
 
 .sb-sub:hover { color: #e2e8f0; }
@@ -503,7 +503,6 @@ body.light-mode .sb-sub { color: #64748b; }
 body.light-mode .sb-sub:hover { color: #0f172a; }
 body.light-mode .sb-dot { background: #cbd5e1; }
 
-/* Active sub — transparent bg, only colored text + dot */
 .sb-sub-on {
   color: var(--mc) !important;
   background: transparent !important;
@@ -515,9 +514,17 @@ body.light-mode .sb-dot { background: #cbd5e1; }
   width: 6px; height: 6px;
 }
 
-/* ============================================
-   MOBILE
-   ============================================ */
+/* Mobile */
+.sb-close-btn {
+  position: absolute; top: 12px; right: 10px; z-index: 10;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8; border-radius: 8px;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.2s, color 0.2s;
+}
+.sb-close-btn:hover { background: rgba(248,113,113,0.15); color: #f87171; }
 
 .sb-backdrop {
   position: fixed; inset: 0; z-index: 1040;
