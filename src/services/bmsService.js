@@ -101,7 +101,33 @@ export const bmsService = {
   getCommands: (siteId, deviceId, params = {}) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/commands`, params),
 
   // Reports & Telemetry Service
-  getReports: (params = {}) => apiClient.get('/reports', params)
+  getReports: (params = {}) => apiClient.get('/reports', params),
+
+  // Sochiot Platform Token Service
+  getSochiotAccessToken: () => apiClient.get('/auth/Access-token')
+};
+
+export const fetchAndStoreSochiotAccessToken = async () => {
+  try {
+    const res = await bmsService.getSochiotAccessToken();
+    const token = res?.data?.token || res?.token || (typeof res?.data === 'string' ? res.data : null);
+    if (token) {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('Sochiot-accesstoken', token);
+      }
+      try {
+        const { store } = await import('../store/store.js');
+        const { setSochiotAccessToken } = await import('../store/authSlice.js');
+        if (store?.dispatch && setSochiotAccessToken) {
+          store.dispatch(setSochiotAccessToken(token));
+        }
+      } catch (e) {}
+      return token;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch and store Sochiot-accesstoken:', err);
+  }
+  return null;
 };
 
 export default bmsService;

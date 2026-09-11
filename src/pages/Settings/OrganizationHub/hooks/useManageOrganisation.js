@@ -4,6 +4,7 @@ import { getCookie, getAuthToken } from '../../../../utils/cookieUtils';
 import { getApiUrl } from '../../../../utils/apiConfig';
 import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, FileText } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
+import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
 
 export const API_BASE_URL = getApiUrl();
 
@@ -994,6 +995,7 @@ export const useManageOrganisation = () => {
 
   // Device Actions
   const handleOpenEditDevice = (d) => {
+    fetchAndStoreSochiotAccessToken();
     setEditingDeviceItem(d);
     setRegisterStep(1);
     setRegisterForm({
@@ -1019,6 +1021,7 @@ export const useManageOrganisation = () => {
   };
 
   const handleOpenRegisterDevice = () => {
+    fetchAndStoreSochiotAccessToken();
     setEditingDeviceItem(null);
     setRegisterStep(1);
     setRegisterForm({
@@ -1048,6 +1051,7 @@ export const useManageOrganisation = () => {
     if (!editingDeviceItem) return;
     setLoading(true);
     try {
+      await fetchAndStoreSochiotAccessToken();
       const siteId = editingDeviceItem.siteId || 7;
       const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDeviceItem.id}`, {
         method: 'PATCH',

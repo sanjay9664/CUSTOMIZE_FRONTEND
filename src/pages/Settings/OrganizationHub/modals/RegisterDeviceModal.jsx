@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
 import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
+import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
 
 const RegisterDeviceModal = ({
   show,
@@ -11,6 +12,7 @@ const RegisterDeviceModal = ({
   registerForm = {},
   setRegisterForm = () => {},
   sites = [],
+  activeAssets = [],
   editingDevice = null,
   activeAreas = [],
   activeBuildings = [],
@@ -29,6 +31,12 @@ const RegisterDeviceModal = ({
 }) => {
   const { activeSites: storeActiveSites } = useSiteStore();
   const effectiveSites = (sites && sites.length > 0) ? sites : (storeActiveSites || []);
+
+  useEffect(() => {
+    if (show) {
+      fetchAndStoreSochiotAccessToken();
+    }
+  }, [show]);
   return (
     <Offcanvas
       show={show}
@@ -451,96 +459,158 @@ const RegisterDeviceModal = ({
           {registerStep === 1 && (
             <div>
               <Row className="g-4">
-                {/* Company / Site */}
-                <Col md={4}>
+                {/* 1. Initial Site Selector */}
+                <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="wizard-label">Company / Site</Form.Label>
+                    <Form.Label className="wizard-label">Company / Site *</Form.Label>
                     <Form.Select
                       disabled={!!editingDevice}
                       value={registerForm.siteId || ''}
-                      onChange={(e) => setRegisterForm({ ...registerForm, siteId: e.target.value })}
+                      onChange={(e) => setRegisterForm({ ...registerForm, siteId: e.target.value, assetId: '' })}
                       className="wizard-select"
                       style={editingDevice ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
                     >
-                      <option value="">Select Company / Site</option>
+                      <option value="">Select Site</option>
                       {effectiveSites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </Form.Select>
                   </Form.Group>
                 </Col>
 
-                {/* Machine Name / Device Name */}
-                <Col md={4}>
+                {/* 2. Asset Selector (Filtered to selected site; only active after site selection) */}
+                <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="wizard-label">Machine / Device Name *</Form.Label>
+                    <Form.Label className="wizard-label">Asset</Form.Label>
+                    <Form.Select
+                      disabled={!registerForm.siteId}
+                      value={registerForm.assetId || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, assetId: e.target.value })}
+                      className="wizard-select"
+                    >
+                      {!registerForm.siteId ? (
+                        <option value="">-- Select Site First --</option>
+                      ) : (
+                        <>
+                          <option value="">Select Asset</option>
+                          {(activeAssets || [])
+                            .filter(a => String(a.siteId) === String(registerForm.siteId))
+                            .map(a => (
+                              <option key={a.id} value={a.id}>
+                                {a.name} [{a.assetType || 'EQUIPMENT'}]
+                              </option>
+                            ))}
+                        </>
+                      )}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                {/* 3. Machine Name / Device Name (Only after site selection) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Device Name *</Form.Label>
                     <Form.Control
                       type="text"
-                      placeholder="e.g. Incomer-1 LT Panel"
+                      placeholder={registerForm.siteId ? "e.g. Incomer-1 LT Panel" : "Select site first"}
                       value={registerForm.name || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                      disabled={!registerForm.siteId}
                       required
                       className="wizard-input"
                     />
                   </Form.Group>
                 </Col>
 
-                {/* Template / Device Category */}
-                <Col md={4}>
+                {/* 4. Device Profile / Category (Only after site selection) */}
+                <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="wizard-label">Template / Category</Form.Label>
+                    <Form.Label className="wizard-label">Device Profile</Form.Label>
                     <Form.Select
                       value={registerForm.category || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, category: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
-                      <option value="">Select Template / Category</option>
-                      <option value="ENERGY_METER">ENERGY_METER (Energy Meter)</option>
-                      <option value="DIESEL_GENERATOR">DIESEL_GENERATOR (Diesel Generator)</option>
-                      <option value="UPS">UPS (Uninterruptible Power Supply)</option>
-                      <option value="HVAC">HVAC (Heating &amp; Air Conditioning)</option>
-                      <option value="WATER_PUMP">WATER_PUMP (Water &amp; Hydro Pump)</option>
-                      <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR (AQI &amp; Ambient)</option>
-                      <option value="OTHER">OTHER (General Device)</option>
+                      <option value="">Select Profile</option>
+                      <option value="ENERGY_METER">ENERGY_METER</option>
+                      <option value="DIESEL_GENERATOR">DIESEL_GENERATOR</option>
+                      <option value="UPS">UPS</option>
+                      <option value="HVAC">HVAC</option>
+                      <option value="WATER_PUMP">WATER_PUMP</option>
+                      <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR</option>
+                      <option value="OTHER">OTHER</option>
                     </Form.Select>
                   </Form.Group>
                 </Col>
 
-                {/* Building / Block (Optional) */}
-                <Col md={4}>
+                {/* 5. Serial Number (Only after site selection) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Serial Number</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder={registerForm.siteId ? "e.g. SN-492019" : "Select site first"}
+                      value={registerForm.serialNumber || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, serialNumber: e.target.value })}
+                      disabled={!registerForm.siteId}
+                      className="wizard-input"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* 6. Description / Location Notes (Only after site selection) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Description</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={1}
+                      placeholder={registerForm.siteId ? "e.g. Ground floor plant room..." : "Select site first"}
+                      value={registerForm.description || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, description: e.target.value })}
+                      disabled={!registerForm.siteId}
+                      className="wizard-input"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Location Hierarchy & Grouping */}
+                {/* <Col md={4}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Building / Block (Optional)</Form.Label>
                     <Form.Select
                       value={registerForm.buildingId || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, buildingId: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
                       <option value="">Select Building</option>
                       {activeBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </Form.Select>
                   </Form.Group>
-                </Col>
+                </Col> */}
 
-                {/* Area (Optional) */}
-                <Col md={4}>
+                {/* <Col md={4}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Area (Optional)</Form.Label>
                     <Form.Select
                       value={registerForm.areaId || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, areaId: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
                       <option value="">Select Area</option>
                       {activeAreas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </Form.Select>
                   </Form.Group>
-                </Col>
+                </Col> */}
 
-                {/* Energy Group (Optional) */}
-                <Col md={4}>
+                {/* <Col md={4}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Energy Group (Optional)</Form.Label>
                     <Form.Select
                       value={registerForm.energyGroupId || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, energyGroupId: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
                       <option value="">Select Energy Group</option>
@@ -548,10 +618,9 @@ const RegisterDeviceModal = ({
                       <option value="2">HVAC Chiller Loop</option>
                     </Form.Select>
                   </Form.Group>
-                </Col>
-
-                {/* Floor Number (Optional) */}
-                <Col md={4}>
+                </Col> */}
+{/* 
+                <Col md={6}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Floor Number (Optional)</Form.Label>
                     <Form.Control
@@ -559,13 +628,13 @@ const RegisterDeviceModal = ({
                       placeholder="e.g. 3"
                       value={registerForm.floorNo || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, floorNo: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-input"
                     />
                   </Form.Group>
-                </Col>
+                </Col> */}
 
-                {/* Room Number (Optional) */}
-                <Col md={4}>
+                {/* <Col md={6}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Room Number (Optional)</Form.Label>
                     <Form.Control
@@ -573,39 +642,11 @@ const RegisterDeviceModal = ({
                       placeholder="e.g. 302"
                       value={registerForm.roomNo || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, roomNo: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-input"
                     />
                   </Form.Group>
-                </Col>
-
-                {/* Serial Number (Optional) */}
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label className="wizard-label">Serial Number (Optional)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="e.g. SN-492019"
-                      value={registerForm.serialNumber || ''}
-                      onChange={(e) => setRegisterForm({ ...registerForm, serialNumber: e.target.value })}
-                      className="wizard-input"
-                    />
-                  </Form.Group>
-                </Col>
-
-                {/* Description / Location Notes */}
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label className="wizard-label">Description / Location Notes</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      placeholder="e.g. Ground floor plant room, serves block A &amp; B..."
-                      value={registerForm.description || ''}
-                      onChange={(e) => setRegisterForm({ ...registerForm, description: e.target.value })}
-                      className="wizard-input"
-                    />
-                  </Form.Group>
-                </Col>
+                </Col> */}
               </Row>
             </div>
           )}
@@ -813,6 +854,7 @@ const RegisterDeviceModal = ({
                 if (!registerForm.name || !registerForm.name.trim()) {
                   return showToast('warning', 'Device Name is required to proceed to Template Settings');
                 }
+                fetchAndStoreSochiotAccessToken();
                 setRegisterStep(2);
               }}
               className="wizard-btn-primary"
@@ -829,6 +871,7 @@ const RegisterDeviceModal = ({
                 }
                 if (typeof setLoading === 'function') setLoading(true);
                 try {
+                  await fetchAndStoreSochiotAccessToken();
                   const siteId = registerForm.siteId || (sites && sites.length ? sites[0].id : 7);
                   const generatedSochiotId = Math.floor(100000 + Math.random() * 899999);
                   const rawSochiotId = String(registerForm.sochiotDeviceIds || '');
@@ -878,6 +921,9 @@ const RegisterDeviceModal = ({
                     template_settings: templateSettings
                   };
 
+                  if (registerForm.assetId) {
+                    payload.assetId = String(registerForm.assetId);
+                  }
                   if (registerForm.areaId && activeAreas.some(a => String(a.id) === String(registerForm.areaId))) {
                     payload.areaId = parseInt(registerForm.areaId);
                   }
@@ -928,6 +974,7 @@ const RegisterDeviceModal = ({
                         serialNumber: payload.serialNumber,
                         templateName: registerForm.templateName,
                         template_settings: templateSettings,
+                        ...(registerForm.assetId ? { assetId: String(registerForm.assetId) } : {}),
                         ...(payload.areaId ? { areaId: payload.areaId } : {}),
                         ...(payload.buildingId ? { buildingId: payload.buildingId } : {}),
                         ...(payload.floorNo !== undefined ? { floorNo: payload.floorNo } : {}),

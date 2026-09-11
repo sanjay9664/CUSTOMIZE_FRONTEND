@@ -86,6 +86,18 @@ export const getRefreshToken = () => {
   );
 };
 
+export const getSochiotAccessToken = () => {
+  return safeStorageGet('Sochiot-accesstoken');
+};
+
+export const setSochiotAccessToken = (token) => {
+  if (token) {
+    safeStorageSet('Sochiot-accesstoken', token);
+  } else {
+    safeStorageRemove('Sochiot-accesstoken');
+  }
+};
+
 export const decodeJwtPayload = (token) => {
   if (!token || typeof token !== 'string') return null;
   try {

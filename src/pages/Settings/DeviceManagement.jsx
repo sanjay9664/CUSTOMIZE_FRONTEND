@@ -8,7 +8,7 @@ import {
   Snowflake, ShieldAlert, Sliders, Radio, ArrowUpRight
 } from 'lucide-react';
 import { useSiteStore } from '../../context/SiteContext';
-import bmsService from '../../services/bmsService';
+import bmsService, { fetchAndStoreSochiotAccessToken } from '../../services/bmsService';
 import { normalizePaginatedResponse, normalizeList } from '../../services/apiClient';
 import DeviceModal, { DEVICE_CATEGORIES } from './modals/DeviceModal';
 import DeviceInspectorDrawer from './modals/DeviceInspectorDrawer';
@@ -406,11 +406,13 @@ const DeviceManagement = ({ embedded = false }) => {
 
   // ── Modal & Drawer Handlers ───────────────────────────────────────────
   const handleOpenCreate = () => {
+    fetchAndStoreSochiotAccessToken();
     setEditingDevice(null);
     setShowModal(true);
   };
 
   const handleOpenEdit = (dev) => {
+    fetchAndStoreSochiotAccessToken();
     setEditingDevice(dev);
     setShowModal(true);
   };

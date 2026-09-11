@@ -83,6 +83,7 @@ export const login = createAsyncThunk('auth/login', async ({ identifier, passwor
 
 const initialState = {
   ...getSafeSession(),
+  'Sochiot-accesstoken': typeof localStorage !== 'undefined' ? localStorage.getItem('Sochiot-accesstoken') : null,
   isLoading: true,
   error: null
 };
@@ -103,9 +104,27 @@ const slice = createSlice({
       state.userRole = action.payload?.userRole || state.userRole || 'USER';
       state.error = null;
     },
+    setSochiotAccessToken: (state, action) => {
+      state['Sochiot-accesstoken'] = action.payload || null;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          if (action.payload) {
+            localStorage.setItem('Sochiot-accesstoken', action.payload);
+          } else {
+            localStorage.removeItem('Sochiot-accesstoken');
+          }
+        }
+      } catch (e) {}
+    },
     logout: (state) => {
       stopAutoTokenRefresh();
       clearAuthSession();
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('Sochiot-accesstoken');
+        }
+      } catch (e) {}
+      state['Sochiot-accesstoken'] = null;
       state.isAuthenticated = false;
       state.user = null;
       state.userRole = 'USER';
@@ -152,5 +171,6 @@ const slice = createSlice({
   }
 });
 
-export const { syncAuth, setSession, logout } = slice.actions;
+export const { syncAuth, setSession, logout, setSochiotAccessToken } = slice.actions;
+export const selectSochiotAccessToken = (state) => state.auth?.['Sochiot-accesstoken'] || (typeof localStorage !== 'undefined' ? localStorage.getItem('Sochiot-accesstoken') : null);
 export default slice.reducer;
