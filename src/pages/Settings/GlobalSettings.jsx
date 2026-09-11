@@ -8,23 +8,23 @@ import {
 
 const ALL_MODULES = [
   { key: 'Dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, subItems: [] },
+  { key: 'Transformer', label: 'Transformer', icon: <Zap size={18} />, subItems: ['Overview', 'Transformer-1', 'Transformer-2', 'Load / Temp', 'PDF Report'], configKey: 'showTransformers' },
+  { key: 'LT Panel', label: 'LT Panel', icon: <LayoutDashboard size={18} />, subItems: ['Overview', 'LT Room-1', 'LT Room-2', 'LT Room-3', 'Incoming / Outgoing', 'Breaker Status', 'PDF Report'], configKey: 'showLTPanel' },
+  { key: 'DG Set', label: 'DG Set', icon: <Database size={18} />, subItems: ['Overview', 'DG Set-1', 'DG Set-2', 'DG Set-3'], configKey: 'showDGSet' },
+  { key: 'Energy Metering', label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'Graphs', 'PDF Report'], configKey: 'showEnergyMetering' },
+  { key: 'HVAC', label: 'HVAC', icon: <Thermometer size={18} />, subItems: ['Chiller', 'AHU', 'Cooling Tower', 'PDF Report'], configKey: 'showHVAC' },
+  { key: 'VRV', label: 'VRV', icon: <Wind size={18} />, subItems: [] },
+  { key: 'AC', label: 'AC', icon: <Wind size={18} />, subItems: ['Overview', 'PDF Report'], configKey: 'showAC' },
+  { key: 'AQI Sensor', label: 'AQI Sensor', icon: <Wind size={18} />, subItems: ['Overview', 'Temp & Humidity', 'PDF Report'], configKey: 'showAQISensor' },
   { key: 'Water Management', label: 'Water Management', icon: <Droplets size={18} />, subItems: ['Overview', 'AG TANK', 'UG TANK'], configKey: 'showWaterManagement' },
   { key: 'Motors', label: 'Motors', icon: <Activity size={18} />, subItems: ['Overview', 'Pump Room 1', 'Pump Room 2', 'VFD / DOL Status', 'PDF Report'], configKey: 'showMotors' },
-  { key: 'DG Set', label: 'DG Set', icon: <Database size={18} />, subItems: ['Overview', 'DG Set-1', 'DG Set-2', 'DG Set-3'], configKey: 'showDGSet' },
-  { key: 'Setting Templates', label: 'Setting Templates', icon: <Settings size={18} />, subItems: [] },
-  { key: 'Alarm System', label: 'Alarm System', icon: <Bell size={18} />, subItems: ['Overview', 'Active Alarms', 'Inactive Alarms', 'ACK (Acknowledge)', 'Alarm History', 'PDF Report'], configKey: 'showAlarms' },
-  { key: 'LT Panel', label: 'LT Panel', icon: <LayoutDashboard size={18} />, subItems: ['Overview', 'LT Room-1', 'LT Room-2', 'LT Room-3', 'Incoming / Outgoing', 'Breaker Status', 'PDF Report'], configKey: 'showLTPanel' },
-  { key: 'Transformer', label: 'Transformer', icon: <Zap size={18} />, subItems: ['Overview', 'Transformer-1', 'Transformer-2', 'Load / Temp', 'PDF Report'], configKey: 'showTransformers' },
   { key: 'Fire', label: 'Fire', icon: <ShieldAlert size={18} />, subItems: ['Overview', 'Pump Status', 'Header Pressure', 'Jockey / Main', 'PDF Report'], configKey: 'showFirePumps' },
+  { key: 'Alarm System', label: 'Alarm System', icon: <Bell size={18} />, subItems: ['Overview', 'Active Alarms', 'Inactive Alarms', 'ACK (Acknowledge)', 'Alarm History', 'PDF Report'], configKey: 'showAlarms' },
   { key: 'Ticketing', label: 'Ticketing', icon: <ClipboardList size={18} />, subItems: [] },
   { key: 'Maintenance', label: 'Maintenance', icon: <PenTool size={18} />, subItems: ['Scheduled', 'Pending Tasks', 'PDF Report'], configKey: 'showMaintenance' },
   { key: 'Service History', label: 'Service History', icon: <History size={18} />, subItems: ['Equipment-wise', 'Service Records', 'PDF Report'], configKey: 'showServiceHistory' },
   { key: 'Daily DPR', label: 'Daily DPR', icon: <Gauge size={18} />, subItems: ['Data Aggregation', 'Daily Logs', 'PDF Report'], configKey: 'showDailyDPR' },
-  { key: 'Energy Metering', label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'Graphs', 'PDF Report'], configKey: 'showEnergyMetering' },
-  { key: 'VRV', label: 'VRV', icon: <Wind size={18} />, subItems: [] },
-  { key: 'AQI Sensor', label: 'AQI Sensor', icon: <Wind size={18} />, subItems: ['Overview', 'Temp & Humidity', 'PDF Report'], configKey: 'showAQISensor' },
-  { key: 'HVAC', label: 'HVAC', icon: <Thermometer size={18} />, subItems: ['Chiller', 'AHU', 'Cooling Tower', 'PDF Report'], configKey: 'showHVAC' },
-  { key: 'AC', label: 'AC', icon: <Wind size={18} />, subItems: ['Overview', 'PDF Report'], configKey: 'showAC' },
+  { key: 'Setting Templates', label: 'Setting Templates', icon: <Settings size={18} />, subItems: [] },
 ];
 
 const GlobalSettings = () => {
