@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Row, Col, Card, Badge, Form } from 'react-bootstrap';
 import {
   Droplets, Activity, Zap, LayoutDashboard, Cpu, ShieldAlert,
   Bell, Wind, Gauge, Thermometer, Sliders, Box, Clock,
-  Settings as SettingsIcon, FileText, ChevronRight, UserCheck, CreditCard,
+  Settings as SettingsIcon, FileText, ChevronRight, ChevronLeft, UserCheck, CreditCard,
   Filter, Radio, CheckCircle2, ShieldCheck, Flame, RadioReceiver, ArrowUpRight,
   Sun, BatteryCharging, AlertTriangle, Wrench, CheckCircle, TrendingUp, Leaf,
   Snowflake, Fan, BarChart3, RefreshCw, ThermometerSun, AlertCircle, Eye, Power
@@ -189,6 +189,150 @@ const Dashboard = () => {
     if (selectedOrgId === 'ALL') return hierarchyZones;
     return hierarchyZones.filter(z => z.orgId === selectedOrgId);
   }, [hierarchyZones, selectedOrgId]);
+
+  // ── HERO CAROUSEL DATA ──────────────────────────────────────────────────
+  const carouselSlides = [
+    {
+      image: '/cooling_tower.png',
+      title: 'Cooling Tower System',
+      subtitle: 'Real-time monitoring of cooling tower performance, fan speed & water temperature',
+      color: '#06b6d4',
+      icon: <Wind size={22} />,
+      route: '/hvac/cooling-tower',
+      stats: [
+        { label: 'Fan Speed', value: '48 Hz' },
+        { label: 'Return Temp', value: '28.0°C' },
+        { label: 'Water Flow', value: '450 LPM' }
+      ]
+    },
+    {
+      image: '/dg_set.png',
+      title: 'DG Power System',
+      subtitle: 'Diesel generator monitoring with real-time load, fuel level & auto-start control',
+      color: '#f59e0b',
+      icon: <Zap size={22} />,
+      route: '/dg-set/overview',
+      stats: [
+        { label: 'DG Status', value: 'ON (Auto)' },
+        { label: 'Load', value: '68%' },
+        { label: 'Fuel Level', value: '78%' }
+      ]
+    },
+    {
+      image: '/chiller.png',
+      title: 'Chiller Plant System',
+      subtitle: 'Central chiller plant with COP monitoring, chilled water supply & condenser control',
+      color: '#38bdf8',
+      icon: <Thermometer size={22} />,
+      route: '/hvac/chiller',
+      stats: [
+        { label: 'Chillers', value: '2/2 ON' },
+        { label: 'COP Rate', value: '5.8' },
+        { label: 'Total Load', value: '486 kW' }
+      ]
+    },
+    {
+      image: '/ahu_v3.png',
+      title: 'AHU System',
+      subtitle: 'Air handling unit control with supply air temp, filter status & VFD drive monitoring',
+      color: '#14b8a6',
+      icon: <Wind size={22} />,
+      route: '/hvac/ahu',
+      stats: [
+        { label: 'Supply Air', value: '16.0°C' },
+        { label: 'Return Air', value: '24.2°C' },
+        { label: 'Airflow', value: '12.5k CFM' }
+      ]
+    },
+    {
+      image: '/images/fire_pump_scada.png',
+      title: 'Fire Safety System',
+      subtitle: 'Fire pump status, header pressure monitoring & jockey pump auto control',
+      color: '#ef4444',
+      icon: <ShieldAlert size={22} />,
+      route: '/fire-pumps/overview',
+      stats: [
+        { label: 'Fire Pump', value: 'ON' },
+        { label: 'Jockey', value: 'ON' },
+        { label: 'Pressure', value: '8.5 bar' }
+      ]
+    },
+    {
+      image: '/images/transformer_scada.png',
+      title: 'Transformer Unit',
+      subtitle: 'High voltage transformer with oil temperature, load percentage & winding analysis',
+      color: '#a855f7',
+      icon: <Cpu size={22} />,
+      route: '/transformer/overview',
+      stats: [
+        { label: 'Primary', value: '11 kV' },
+        { label: 'Oil Temp', value: '42.5°C' },
+        { label: 'Load', value: '78%' }
+      ]
+    },
+    {
+      image: '/images/motor_pump_scada.png',
+      title: 'Motors & Pumps',
+      subtitle: 'Motor & pump control with VFD status, current draw & vibration analytics',
+      color: '#38bdf8',
+      icon: <Activity size={22} />,
+      route: '/motors/overview',
+      stats: [
+        { label: 'Total', value: '4' },
+        { label: 'Running', value: '3' },
+        { label: 'Fault', value: '0' }
+      ]
+    },
+    {
+      image: '/images/bms_water_management_ui_1789023000792.png',
+      title: 'Water Management',
+      subtitle: 'Tank level monitoring, pump control & water flow rate analytics',
+      color: '#06b6d4',
+      icon: <Droplets size={22} />,
+      route: '/water-management/overview',
+      stats: [
+        { label: 'UG Tank', value: '72%' },
+        { label: 'OHT Tank', value: '64%' },
+        { label: 'Flow Rate', value: '12.5 m³/h' }
+      ]
+    }
+  ];
+
+  // ── CAROUSEL STATE & HANDLERS ───────────────────────────────────────────
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
+  const [carouselTransitioning, setCarouselTransitioning] = useState(false);
+
+  const goToSlide = useCallback((idx) => {
+    setCarouselTransitioning(true);
+    setTimeout(() => {
+      setCarouselIndex(idx);
+      setTimeout(() => setCarouselTransitioning(false), 50);
+    }, 300);
+  }, []);
+
+  const nextSlide = useCallback(() => {
+    goToSlide((carouselIndex + 1) % carouselSlides.length);
+  }, [carouselIndex, carouselSlides.length, goToSlide]);
+
+  const prevSlide = useCallback(() => {
+    goToSlide(carouselIndex === 0 ? carouselSlides.length - 1 : carouselIndex - 1);
+  }, [carouselIndex, carouselSlides.length, goToSlide]);
+
+  // Auto-slide every 5s
+  useEffect(() => {
+    if (carouselPaused) return;
+    const autoSlide = setInterval(() => {
+      setCarouselTransitioning(true);
+      setTimeout(() => {
+        setCarouselIndex(prev => (prev + 1) % carouselSlides.length);
+        setTimeout(() => setCarouselTransitioning(false), 50);
+      }, 300);
+    }, 5000);
+    return () => clearInterval(autoSlide);
+  }, [carouselPaused, carouselSlides.length]);
+
+  const currentSlide = carouselSlides[carouselIndex];
 
   // ── TOP SUMMARY KPIS STRIP (MATCHING REFERENCE MOCKUP HEADER) ───────────
   const summaryKPIs = [
@@ -561,6 +705,236 @@ const Dashboard = () => {
           </Col>
         ))}
       </Row>
+
+      {/* ── HERO CAROUSEL BANNER ──────────────────────────────────────── */}
+      <div
+        className="hero-carousel-wrapper position-relative mb-3 rounded-4 overflow-hidden"
+        onMouseEnter={() => setCarouselPaused(true)}
+        onMouseLeave={() => setCarouselPaused(false)}
+        style={{
+          height: '320px',
+          border: `1px solid ${currentSlide.color}40`,
+          boxShadow: `0 8px 32px rgba(0,0,0,0.7), 0 0 24px ${currentSlide.color}20`,
+          transition: 'border-color 0.5s ease, box-shadow 0.5s ease'
+        }}
+      >
+        {/* Background Image with Crossfade */}
+        <div
+          className="position-absolute inset-0"
+          style={{
+            backgroundImage: `url(${currentSlide.image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transition: 'opacity 0.5s ease-in-out',
+            opacity: carouselTransitioning ? 0 : 1,
+            filter: 'brightness(0.55) saturate(1.2)'
+          }}
+        />
+
+        {/* Dark Gradient Overlay */}
+        <div
+          className="position-absolute inset-0"
+          style={{
+            background: `linear-gradient(135deg, rgba(2,6,18,0.88) 0%, rgba(2,6,18,0.45) 50%, rgba(2,6,18,0.65) 100%)`,
+            zIndex: 1
+          }}
+        />
+
+        {/* Accent Color Glow */}
+        <div
+          className="position-absolute"
+          style={{
+            top: '-50%',
+            right: '-10%',
+            width: '400px',
+            height: '400px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${currentSlide.color}18 0%, transparent 70%)`,
+            zIndex: 1,
+            transition: 'background 0.5s ease'
+          }}
+        />
+
+        {/* Top Accent Bar */}
+        <div
+          className="position-absolute top-0 start-0 w-100"
+          style={{
+            height: '3px',
+            background: `linear-gradient(90deg, transparent 0%, ${currentSlide.color} 30%, ${currentSlide.color} 70%, transparent 100%)`,
+            zIndex: 3,
+            transition: 'background 0.5s ease'
+          }}
+        />
+
+        {/* Progress Bar */}
+        <div className="position-absolute bottom-0 start-0 w-100" style={{ height: '3px', backgroundColor: 'rgba(255,255,255,0.08)', zIndex: 3 }}>
+          <div
+            style={{
+              height: '100%',
+              backgroundColor: currentSlide.color,
+              width: carouselPaused ? `${((carouselIndex + 1) / carouselSlides.length) * 100}%` : '0%',
+              animation: carouselPaused ? 'none' : 'carouselProgress 5s linear infinite',
+              boxShadow: `0 0 8px ${currentSlide.color}`,
+              transition: 'background-color 0.5s ease'
+            }}
+          />
+        </div>
+
+        {/* Content */}
+        <div
+          className="position-relative h-100 d-flex align-items-center px-4 px-md-5"
+          style={{
+            zIndex: 2,
+            opacity: carouselTransitioning ? 0 : 1,
+            transform: carouselTransitioning ? 'translateY(12px)' : 'translateY(0)',
+            transition: 'opacity 0.4s ease, transform 0.4s ease'
+          }}
+        >
+          <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between w-100 gap-3">
+            {/* Left: Text Content */}
+            <div className="flex-grow-1" style={{ maxWidth: '600px' }}>
+              {/* Badge */}
+              <div
+                className="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill mb-3"
+                style={{
+                  backgroundColor: `${currentSlide.color}18`,
+                  border: `1px solid ${currentSlide.color}50`
+                }}
+              >
+                <span style={{ color: currentSlide.color }}>{currentSlide.icon}</span>
+                <span className="fw-bold font-monospace text-uppercase" style={{ fontSize: '0.7rem', color: currentSlide.color, letterSpacing: '1px' }}>
+                  Live System
+                </span>
+                <span className="status-dot-pulse" style={{ backgroundColor: '#10b981', width: '6px', height: '6px' }}></span>
+              </div>
+
+              {/* Title */}
+              <h2 className="text-white fw-black mb-2" style={{ fontSize: '1.65rem', letterSpacing: '-0.5px', lineHeight: '1.2' }}>
+                {currentSlide.title}
+              </h2>
+
+              {/* Subtitle */}
+              <p className="text-slate-400 mb-3 fw-medium" style={{ fontSize: '0.82rem', lineHeight: '1.5', maxWidth: '480px' }}>
+                {currentSlide.subtitle}
+              </p>
+
+              {/* Stats Row */}
+              <div className="d-flex gap-2 flex-wrap">
+                {currentSlide.stats.map((stat, sIdx) => (
+                  <div
+                    key={sIdx}
+                    className="px-3 py-1.5 rounded-3 d-flex flex-column"
+                    style={{
+                      backgroundColor: 'rgba(10, 18, 38, 0.85)',
+                      border: `1px solid ${currentSlide.color}30`,
+                      minWidth: '100px'
+                    }}
+                  >
+                    <small className="text-slate-500 fw-bold text-uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.5px' }}>
+                      {stat.label}
+                    </small>
+                    <span className="text-white fw-black font-monospace" style={{ fontSize: '0.88rem' }}>
+                      {stat.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: View Button */}
+            <div className="d-flex flex-column align-items-end gap-3">
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate(currentSlide.route); }}
+                className="d-flex align-items-center gap-2 px-4 py-2.5 rounded-3 border-0 fw-bold"
+                style={{
+                  background: `linear-gradient(135deg, ${currentSlide.color} 0%, ${currentSlide.color}cc 100%)`,
+                  color: '#020612',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.25s ease',
+                  boxShadow: `0 4px 16px ${currentSlide.color}40`
+                }}
+              >
+                <Eye size={16} />
+                View System
+                <ArrowUpRight size={14} />
+              </button>
+
+              {/* Slide Counter */}
+              <span className="font-monospace text-slate-500 fw-bold" style={{ fontSize: '0.7rem' }}>
+                {String(carouselIndex + 1).padStart(2, '0')} / {String(carouselSlides.length).padStart(2, '0')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Arrows */}
+        <button
+          onClick={(e) => { e.stopPropagation(); prevSlide(); }}
+          className="carousel-nav-btn position-absolute d-flex align-items-center justify-content-center border-0"
+          style={{
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '38px',
+            height: '38px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(10, 18, 38, 0.85)',
+            color: '#e2e8f0',
+            zIndex: 10,
+            cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(8px)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); nextSlide(); }}
+          className="carousel-nav-btn position-absolute d-flex align-items-center justify-content-center border-0"
+          style={{
+            right: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '38px',
+            height: '38px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(10, 18, 38, 0.85)',
+            color: '#e2e8f0',
+            zIndex: 10,
+            cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(8px)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <ChevronRight size={18} />
+        </button>
+
+        {/* Dot Indicators */}
+        <div
+          className="position-absolute d-flex align-items-center gap-1.5"
+          style={{ bottom: '14px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}
+        >
+          {carouselSlides.map((_, dIdx) => (
+            <button
+              key={dIdx}
+              onClick={(e) => { e.stopPropagation(); goToSlide(dIdx); }}
+              className="border-0 p-0 d-block"
+              style={{
+                width: dIdx === carouselIndex ? '24px' : '8px',
+                height: '8px',
+                borderRadius: '4px',
+                backgroundColor: dIdx === carouselIndex ? currentSlide.color : 'rgba(255,255,255,0.25)',
+                cursor: 'pointer',
+                transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: dIdx === carouselIndex ? `0 0 8px ${currentSlide.color}80` : 'none'
+              }}
+            />
+          ))}
+        </div>
+      </div>
 
       {/* ── 3-COLUMN SCADA CARDS GRID (MATCHING REFERENCE MOCKUP EXACTLY) ───── */}
       <Row className="g-3">
@@ -999,6 +1373,40 @@ const Dashboard = () => {
           border-color: #38bdf8 !important;
           box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
           transform: translateY(-1.5px);
+        }
+
+        /* ── HERO CAROUSEL STYLES ── */
+        .inset-0 {
+          top: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          left: 0 !important;
+        }
+
+        @keyframes carouselProgress {
+          0% { width: 0%; }
+          100% { width: 100%; }
+        }
+
+        .hero-carousel-wrapper {
+          background: linear-gradient(145deg, rgba(8, 14, 32, 0.98) 0%, rgba(2, 6, 18, 0.99) 100%);
+        }
+
+        .carousel-nav-btn:hover {
+          background-color: rgba(56, 189, 248, 0.25) !important;
+          border-color: rgba(56, 189, 248, 0.6) !important;
+          color: #ffffff !important;
+          transform: translateY(-50%) scale(1.1) !important;
+        }
+
+        .hero-carousel-wrapper:hover .carousel-nav-btn {
+          opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+          .hero-carousel-wrapper {
+            height: 360px !important;
+          }
         }
       `}} />
     </div>
