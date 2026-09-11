@@ -130,6 +130,9 @@ const ManageOrganisationModals = ({ org }) => {
         registerForm={org.registerForm}
         setRegisterForm={org.setRegisterForm}
         sites={org.activeSites || []}
+        companies={org.activeCompanies || []}
+        tenants={org.activeTenants || []}
+        zones={org.activeZones || []}
         activeAssets={org.activeAssets || []}
         activeBuildings={org.activeBuildings || []}
         activeAreas={org.activeAreas || []}

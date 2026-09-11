@@ -403,11 +403,27 @@ const DeviceModalsGroup = ({
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="ENERGY_METER">ENERGY_METER</option>
-                <option value="DIESEL_GENERATOR">DIESEL_GENERATOR</option>
-                <option value="UPS">UPS</option>
-                <option value="HVAC">HVAC</option>
-                <option value="WATER_PUMP">WATER_PUMP</option>
-                <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR</option>
+                <option value="UG_TANK">UG_TANK</option>
+                <option value="AG_TANK">AG_TANK</option>
+                <option value="PUMP">PUMP</option>
+                <option value="VALVE">VALVE</option>
+                <option value="GENERATOR">GENERATOR</option>
+                <option value="LT_PANEL">LT_PANEL</option>
+                <option value="FIRE_PUMP">FIRE_PUMP</option>
+                <option value="HVAC_CHILLER">HVAC_CHILLER</option>
+                <option value="HVAC_AHU">HVAC_AHU</option>
+                <option value="HVAC_COOLING_TOWER">HVAC_COOLING_TOWER</option>
+                <option value="VRV">VRV</option>
+                <option value="AQI_SENSOR">AQI_SENSOR</option>
+                <option value="BREAKER">BREAKER</option>
+                <option value="STP">STP</option>
+                <option value="WTP">WTP</option>
+                <option value="LIFT">LIFT</option>
+                <option value="LIGHTING">LIGHTING</option>
+                <option value="FIRE_PANEL">FIRE_PANEL</option>
+                <option value="CONTROLLER">CONTROLLER</option>
+                <option value="SENSOR">SENSOR</option>
+                <option value="AC">AC</option>
                 <option value="OTHER">OTHER</option>
               </Form.Select>
             </Form.Group>

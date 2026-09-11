@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
 import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
 import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
+import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
 
 const RegisterDeviceModal = ({
   show,
@@ -16,6 +17,9 @@ const RegisterDeviceModal = ({
   editingDevice = null,
   activeAreas = [],
   activeBuildings = [],
+  companies = [],
+  tenants = [],
+  zones = [],
   dynamicTemplateFields = [],
   setDynamicTemplateFields = () => {},
   fetchDevices = () => {},
@@ -32,11 +36,31 @@ const RegisterDeviceModal = ({
   const { activeSites: storeActiveSites } = useSiteStore();
   const effectiveSites = (sites && sites.length > 0) ? sites : (storeActiveSites || []);
 
+  const [selectedHardwareDevice, setSelectedHardwareDevice] = useState(null);
+  const [availableHardwareDevices, setAvailableHardwareDevices] = useState([]);
+
   useEffect(() => {
     if (show) {
       fetchAndStoreSochiotAccessToken();
     }
   }, [show]);
+
+  const handleSelectHardwareDevice = (dev) => {
+    setSelectedHardwareDevice(dev);
+    if (dev) {
+      setAvailableHardwareDevices(prev => {
+        if (prev.some(d => String(d.id) === String(dev.id))) return prev;
+        return [...prev, dev];
+      });
+      if (dev.id) {
+        setDynamicTemplateFields(prev => prev.map(f => ({
+          ...f,
+          deviceId: f.deviceId === '101' ? String(dev.id) : f.deviceId
+        })));
+      }
+    }
+  };
+
   return (
     <Offcanvas
       show={show}
@@ -459,7 +483,7 @@ const RegisterDeviceModal = ({
           {registerStep === 1 && (
             <div>
               <Row className="g-4">
-                {/* 1. Initial Site Selector */}
+                {/* 1. Company / Site */}
                 <Col md={6}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Company / Site *</Form.Label>
@@ -470,7 +494,7 @@ const RegisterDeviceModal = ({
                       className="wizard-select"
                       style={editingDevice ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
                     >
-                      <option value="">Select Site</option>
+                      <option value="">Select Company / Site</option>
                       {effectiveSites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </Form.Select>
                   </Form.Group>
@@ -532,11 +556,27 @@ const RegisterDeviceModal = ({
                     >
                       <option value="">Select Profile</option>
                       <option value="ENERGY_METER">ENERGY_METER</option>
-                      <option value="DIESEL_GENERATOR">DIESEL_GENERATOR</option>
-                      <option value="UPS">UPS</option>
-                      <option value="HVAC">HVAC</option>
-                      <option value="WATER_PUMP">WATER_PUMP</option>
-                      <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR</option>
+                      <option value="UG_TANK">UG_TANK</option>
+                      <option value="AG_TANK">AG_TANK</option>
+                      <option value="PUMP">PUMP</option>
+                      <option value="VALVE">VALVE</option>
+                      <option value="GENERATOR">GENERATOR</option>
+                      <option value="LT_PANEL">LT_PANEL</option>
+                      <option value="FIRE_PUMP">FIRE_PUMP</option>
+                      <option value="HVAC_CHILLER">HVAC_CHILLER</option>
+                      <option value="HVAC_AHU">HVAC_AHU</option>
+                      <option value="HVAC_COOLING_TOWER">HVAC_COOLING_TOWER</option>
+                      <option value="VRV">VRV</option>
+                      <option value="AQI_SENSOR">AQI_SENSOR</option>
+                      <option value="BREAKER">BREAKER</option>
+                      <option value="STP">STP</option>
+                      <option value="WTP">WTP</option>
+                      <option value="LIFT">LIFT</option>
+                      <option value="LIGHTING">LIGHTING</option>
+                      <option value="FIRE_PANEL">FIRE_PANEL</option>
+                      <option value="CONTROLLER">CONTROLLER</option>
+                      <option value="SENSOR">SENSOR</option>
+                      <option value="AC">AC</option>
                       <option value="OTHER">OTHER</option>
                     </Form.Select>
                   </Form.Group>
@@ -654,6 +694,41 @@ const RegisterDeviceModal = ({
           {/* Step 2: Template Settings */}
           {registerStep === 2 && (
             <div className="d-flex flex-column gap-3">
+              {/* ismartaccess-frontend-v2 inspired Location & Hardware Device Search Filter */}
+              <div className="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-25">
+                <div className="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="fs-13 fw-semibold text-white">
+                      Search Location &amp; Gateway / Hardware Device
+                    </span>
+                    <span className="badge bg-secondary bg-opacity-30 text-info border border-info border-opacity-25 fs-11 fw-normal">
+                      Sochiot Cloud &amp; BMS
+                    </span>
+                  </div>
+                  {selectedHardwareDevice && (
+                    <Badge bg="info" className="text-dark font-monospace px-2.5 py-1 fs-12">
+                      Selected Device: #{selectedHardwareDevice.id} ({selectedHardwareDevice.name})
+                    </Badge>
+                  )}
+                </div>
+                <LocationDeviceFilter
+                  showTitle={false}
+                  companies={companies}
+                  tenants={tenants}
+                  zones={zones}
+                  areas={activeAreas}
+                  sites={effectiveSites}
+                  enableDeviceFilter={true}
+                  initialLocationValue={registerForm.siteId ? `LOCATION-${registerForm.siteId}` : null}
+                  onSelectLocation={(loc) => {
+                    if (loc?.id && (loc.type === 'LOCATION' || loc.type === 'SITE')) {
+                      setRegisterForm(prev => ({ ...prev, siteId: String(loc.id) }));
+                    }
+                  }}
+                  onSelectDevice={handleSelectHardwareDevice}
+                />
+              </div>
+
               <div className="d-flex justify-content-between align-items-center pb-2">
                 <div>
                   <h6 className="fw-semibold fs-14 mb-1 wizard-subheading">
@@ -695,8 +770,15 @@ const RegisterDeviceModal = ({
                             className="wizard-select"
                             style={{ height: 32, fontSize: 12 }}
                           >
-                            <option value="101">Select Device</option>
                             <option value="101">101 ({registerForm.name || 'Device'})</option>
+                            {availableHardwareDevices.map(d => (
+                              <option key={d.id} value={String(d.id)}>
+                                {d.id} ({d.name})
+                              </option>
+                            ))}
+                            {f.deviceId && f.deviceId !== '101' && !availableHardwareDevices.some(d => String(d.id) === String(f.deviceId)) && (
+                              <option value={f.deviceId}>{f.deviceId}</option>
+                            )}
                           </Form.Select>
                         </td>
                         <td>
@@ -802,10 +884,14 @@ const RegisterDeviceModal = ({
                   <button
                     type="button"
                     onClick={() => {
+                      const defDevId = (selectedHardwareDevice?.id ? String(selectedHardwareDevice.id) : null)
+                        || (availableHardwareDevices.length > 0 ? String(availableHardwareDevices[0].id) : null)
+                        || registerForm.sochiotDeviceIds
+                        || '101';
                       setDynamicTemplateFields([
                         ...dynamicTemplateFields,
                         {
-                          deviceId: registerForm.sochiotDeviceIds || '101',
+                          deviceId: defDevId,
                           moduleId: '4583',
                           sochiotFieldName: '',
                           displayName: '',

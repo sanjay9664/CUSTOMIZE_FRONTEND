@@ -336,6 +336,11 @@ const ManageOrganisation = () => {
             setShowResyncModal={org.setShowResyncModal}
             activeDevices={org.activeDevices}
             assets={org.assets}
+            sites={org.activeSites || []}
+            companies={org.activeCompanies || []}
+            tenants={org.activeTenants || []}
+            zones={org.activeZones || []}
+            areas={org.activeAreas || []}
             setShowReportModal={org.setShowReportModal}
             reportsList={org.reportsList}
             setShowAlarmModal={org.setShowAlarmModal}
