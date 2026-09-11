@@ -587,43 +587,43 @@ const Dashboard = () => {
                     <div className="position-absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#eab308 1px, transparent 1px)', backgroundSize: '14px 14px' }} />
 
                     {/* SOCHIOT APM Series Digital Twin Smart Meter Display */}
-                    <div className="mfm-polycarbonate-case shadow-2xl mx-auto" style={{ maxWidth: '310px', width: '100%', padding: '16px 14px', borderWidth: '8px', borderRadius: '24px' }}>
+                    <div className="mfm-polycarbonate-case shadow-2xl mx-auto" style={{ maxWidth: '280px', width: '100%', padding: '12px 10px', borderWidth: '6px', borderRadius: '20px' }}>
                       <div className="screw top-left"></div>
                       <div className="screw top-right"></div>
                       <div className="screw bottom-left"></div>
                       <div className="screw bottom-right"></div>
 
-                      <div className="mfm-metallic-bezel" style={{ padding: '14px 12px' }}>
-                        <div className="mfm-brand-header d-flex justify-content-between align-items-center mb-2 px-1">
-                          <span className="mfm-brand-logo" style={{ fontSize: '1.15rem', letterSpacing: '3px' }}>SOCHIOT</span>
-                          <span className="mfm-model-no" style={{ fontSize: '0.7rem' }}>APM Series</span>
+                      <div className="mfm-metallic-bezel" style={{ padding: '10px 8px' }}>
+                        <div className="mfm-brand-header d-flex justify-content-between align-items-center mb-1.5 px-1">
+                          <span className="mfm-brand-logo" style={{ fontSize: '1rem', letterSpacing: '2px' }}>SOCHIOT</span>
+                          <span className="mfm-model-no" style={{ fontSize: '0.65rem' }}>APM Series</span>
                         </div>
 
-                        <div className="mfm-lcd-window mb-2" style={{ padding: '8px', borderWidth: '4px' }}>
-                          <div className="mfm-lcd-glass" style={{ padding: '6px' }}>
-                            <div className="mfm-lcd-screen" style={{ height: '175px', padding: '10px' }}>
-                              <div className="mfm-lcd-top-bar d-flex justify-content-between px-1" style={{ fontSize: '0.75rem', marginBottom: '6px' }}>
-                                <span>{activeMfmPage.title}</span>
+                        <div className="mfm-lcd-window mb-1.5" style={{ padding: '5px', borderWidth: '3px' }}>
+                          <div className="mfm-lcd-glass" style={{ padding: '4px' }}>
+                            <div className="mfm-lcd-screen" style={{ height: '160px', padding: '6px 8px' }}>
+                              <div className="mfm-lcd-top-bar d-flex justify-content-between px-1" style={{ fontSize: '0.68rem', marginBottom: '4px' }}>
+                                <span className="text-truncate me-1">{activeMfmPage.title}</span>
                                 <span className="mfm-lcd-page-num">{activeMfmPage.pageNum}</span>
                               </div>
 
-                              <div className="mfm-lcd-grid d-flex flex-column gap-1.5">
+                              <div className="mfm-lcd-grid d-flex flex-column gap-1 flex-grow-1 justify-content-center">
                                 {activeMfmPage.lines.map((l, i) => (
                                   <div 
                                     key={i} 
-                                    className={`mfm-lcd-row d-flex align-items-center justify-content-between px-1 font-monospace ${l.isKw ? 'text-amber-400 pt-1 border-top border-emerald-900/40' : ''}`} 
-                                    style={{ fontSize: '0.92rem' }}
+                                    className={`mfm-lcd-row d-flex align-items-center justify-content-between px-1 font-monospace text-nowrap ${l.isKw ? 'text-amber-400 pt-1 border-top border-emerald-900/50' : ''}`} 
+                                    style={{ fontSize: '0.78rem', flexWrap: 'nowrap', lineHeight: '1.2' }}
                                   >
-                                    <span className={`mfm-lcd-label me-1 ${l.isKw ? 'text-amber-400' : 'text-emerald-400'}`}>{l.label}</span>
-                                    <div>
-                                      <span className={`mfm-lcd-value fw-black ${l.isKw ? 'text-amber-300' : 'text-emerald-300'}`}>{l.val}</span>
-                                      {l.unit && <span className={`mfm-lcd-unit ms-1 ${l.isKw ? 'text-amber-400' : 'text-emerald-400'}`} style={{ fontSize: '0.7rem' }}>{l.unit}</span>}
+                                    <span className={`mfm-lcd-label me-2 text-nowrap ${l.isKw ? 'text-amber-400' : 'text-emerald-400'}`} style={{ whiteSpace: 'nowrap' }}>{l.label}</span>
+                                    <div className="text-nowrap" style={{ whiteSpace: 'nowrap' }}>
+                                      <span className={`mfm-lcd-value fw-black ${l.isKw ? 'text-amber-300' : 'text-emerald-300'}`} style={{ fontSize: '0.82rem' }}>{l.val}</span>
+                                      {l.unit && <span className={`mfm-lcd-unit ms-1 ${l.isKw ? 'text-amber-400' : 'text-emerald-400'}`} style={{ fontSize: '0.62rem' }}>{l.unit}</span>}
                                     </div>
                                   </div>
                                 ))}
                               </div>
 
-                              <div className="mfm-lcd-bottom-bar d-flex justify-content-between px-1 font-monospace mt-2 text-emerald-400 opacity-75" style={{ fontSize: '0.6rem' }}>
+                              <div className="mfm-lcd-bottom-bar d-flex justify-content-between px-1 font-monospace mt-1 text-emerald-400 opacity-75" style={{ fontSize: '0.55rem' }}>
                                 <span>&lt;Up</span>
                                 <span>&gt;Down</span>
                                 <span>^Menu</span>
@@ -707,7 +707,7 @@ const Dashboard = () => {
                     top: '24.2%',
                     left: '50.2%',
                     transform: 'translate(-50%, -50%) rotateX(60deg)',
-                    width: '28.5%',
+                    width: '32.5%',
                     aspectRatio: '1/1',
                     zIndex: 5,
                     pointerEvents: 'none'
