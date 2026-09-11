@@ -257,6 +257,8 @@ const ManageOrganisation = () => {
             setRegisterStep={org.setRegisterStep}
             setRegisterForm={org.setRegisterForm}
             setShowRegisterDeviceModal={org.setShowRegisterDeviceModal}
+            handleOpenRegisterDevice={org.handleOpenRegisterDevice}
+            setEditingDeviceItem={org.setEditingDeviceItem}
             handleOpenEditDevice={org.handleOpenEditDevice}
             handleOpenLiveModal={org.handleOpenLiveModal}
             handleOpenSettingsModal={org.handleOpenSettingsModal}

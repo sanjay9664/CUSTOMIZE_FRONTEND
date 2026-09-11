@@ -30,6 +30,8 @@ const DevicesTab = ({
   setRegisterStep = () => {},
   setRegisterForm = () => {},
   setShowRegisterDeviceModal = () => {},
+  handleOpenRegisterDevice = null,
+  setEditingDeviceItem = () => {},
   handleOpenEditDevice = () => {},
   handleOpenLiveModal = () => {},
   handleOpenThresholdsModal = () => {},
@@ -358,27 +360,34 @@ const DevicesTab = ({
             variant="primary"
             size="sm"
             onClick={() => {
-              setRegisterStep(1);
-              setRegisterForm({
-                id: '',
-                siteId: '',
-                name: '',
-                sochiotDeviceIds: '',
-                category: '',
-                areaId: '',
-                buildingId: '',
-                floorNo: '',
-                roomNo: '',
-                energyGroupId: '',
-                description: '',
-                serialNumber: '',
-                profileId: '',
-                templateName: ''
-              });
-              if (typeof setDynamicTemplateFields === 'function') {
-                setDynamicTemplateFields([]);
+              if (typeof handleOpenRegisterDevice === 'function') {
+                handleOpenRegisterDevice();
+              } else {
+                if (typeof setEditingDeviceItem === 'function') {
+                  setEditingDeviceItem(null);
+                }
+                setRegisterStep(1);
+                setRegisterForm({
+                  id: '',
+                  siteId: '',
+                  name: '',
+                  sochiotDeviceIds: '',
+                  category: '',
+                  areaId: '',
+                  buildingId: '',
+                  floorNo: '',
+                  roomNo: '',
+                  energyGroupId: '',
+                  description: '',
+                  serialNumber: '',
+                  profileId: '',
+                  templateName: ''
+                });
+                if (typeof setDynamicTemplateFields === 'function') {
+                  setDynamicTemplateFields([]);
+                }
+                setShowRegisterDeviceModal(true);
               }
-              setShowRegisterDeviceModal(true);
             }}
             className="fw-bold fs-12 text-white px-3 border-0 btn-register-device-primary d-flex align-items-center gap-1.5"
           >

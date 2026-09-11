@@ -1018,6 +1018,31 @@ export const useManageOrganisation = () => {
     setShowRegisterDeviceModal(true);
   };
 
+  const handleOpenRegisterDevice = () => {
+    setEditingDeviceItem(null);
+    setRegisterStep(1);
+    setRegisterForm({
+      id: '',
+      siteId: activeSites && activeSites.length ? String(activeSites[0].id) : '',
+      name: '',
+      sochiotDeviceIds: '',
+      category: '',
+      areaId: '',
+      buildingId: '',
+      floorNo: '',
+      roomNo: '',
+      energyGroupId: '',
+      description: '',
+      serialNumber: '',
+      profileId: '',
+      templateName: ''
+    });
+    if (typeof setDynamicTemplateFields === 'function') {
+      setDynamicTemplateFields([]);
+    }
+    setShowRegisterDeviceModal(true);
+  };
+
   const handleSaveEditDevice = async (e) => {
     e.preventDefault();
     if (!editingDeviceItem) return;
@@ -1510,7 +1535,7 @@ export const useManageOrganisation = () => {
     showAuditLogModal, setShowAuditLogModal, selectedDeviceForAudit, setSelectedDeviceForAudit, auditLogList: auditLogs, handleOpenAuditLog,
     showRecentEventsModal, setShowRecentEventsModal, recentEventsList, handleOpenRecentEvents, handleGlobalResyncEventStats, showConfigDevicesModal, setShowConfigDevicesModal,
     showRulesModal, setShowRulesModal, selectedDeviceForRules, deviceRulesForm: ruleForm, setDeviceRulesForm: setRuleForm, handleOpenRulesModal, handleSaveRules,
-    showEditDeviceModal, setShowEditDeviceModal, editingDeviceItem, editDeviceForm, setEditDeviceForm, handleOpenEditDevice, handleSaveEditDevice, handleDeleteDevice,
+    showEditDeviceModal, setShowEditDeviceModal, editingDeviceItem, setEditingDeviceItem, editDeviceForm, setEditDeviceForm, handleOpenEditDevice, handleOpenRegisterDevice, handleSaveEditDevice, handleDeleteDevice,
     showCreateWidgetModal, setShowCreateWidgetModal, widgetFilterActiveOnly, setWidgetFilterActiveOnly, selectedDeviceForWidgets, setSelectedDeviceForWidgets, widgetsList, widgetForm, setWidgetForm, handleSyncWidgetsFromSochiot, handleReorderWidgets, handleDeleteAllWidgets, handleFetchWidgets, showEditWidgetModal, setShowEditWidgetModal, editingWidget, handleOpenEditWidgetModal, handleSaveWidget, handleDeleteWidget,
     selectedDeviceForRulesTab, setSelectedDeviceForRulesTab, rulesList, handleFetchRulesTab, handleSyncAllRulesFromSochiot, handleUpdateSingleRuleField, showRuleDetailsModal, setShowRuleDetailsModal, inspectingRule, handleOpenRuleDetails, showEditRuleModal, setShowEditRuleModal, editingRule, ruleForm, setRuleForm, handleOpenEditRuleModal, handleSaveRuleItem, handleSyncSpecificRuleToSochiot, handleSyncSpecificRuleByFields, handleDeleteRuleItem,
     selectedDeviceForCommandsTab, setSelectedDeviceForCommandsTab, commandsList, handleFetchCommandHistory, showSendCommandModal, setShowSendCommandModal, sendCommandFormData, setSendCommandFormData, handleExecuteSendCommand, showCommandDetailsModal, setShowCommandDetailsModal, inspectingCommand, handleOpenCommandDetails,

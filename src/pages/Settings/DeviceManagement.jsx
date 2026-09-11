@@ -1220,7 +1220,10 @@ const DeviceManagement = ({ embedded = false }) => {
       {/* Modals & Drawers */}
       <DeviceModal
         show={showModal}
-        onHide={() => setShowModal(false)}
+        onHide={() => {
+          setShowModal(false);
+          setEditingDevice(null);
+        }}
         editingDevice={editingDevice}
         sites={sites}
         onSaveSuccess={fetchDevicesData}

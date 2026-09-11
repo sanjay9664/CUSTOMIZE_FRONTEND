@@ -898,7 +898,7 @@ const RegisterDeviceModal = ({
                   }
 
                   const newDeviceObj = {
-                    id: Date.now(),
+                    id: editingDevice?.id || Date.now(),
                     name: registerForm.name.trim(),
                     category: registerForm.category || 'ENERGY_METER',
                     sochiotDeviceIds: payload.sochiotDeviceIds,
@@ -914,31 +914,54 @@ const RegisterDeviceModal = ({
                     siteId: siteId,
                     isActive: true,
                     status: 'ACTIVE',
-                    createdAt: new Date().toISOString()
+                    createdAt: editingDevice?.createdAt || new Date().toISOString()
                   };
 
                   try {
                     const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
-                    let res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
-                      method: 'POST',
-                      headers,
-                      body: JSON.stringify(payload)
-                    });
-
-                    if (res.status === 409) {
-                      const fallbackUniqueId = Math.floor(10000 + Math.random() * 90000);
-                      payload.sochiotDeviceIds = [fallbackUniqueId];
-                      payload.serialNumber = `SN-${Date.now()}`;
-                      newDeviceObj.sochiotDeviceIds = [fallbackUniqueId];
-                      newDeviceObj.serialNumber = payload.serialNumber;
+                    let res;
+                    if (editingDevice) {
+                      const patchPayload = {
+                        name: registerForm.name?.trim(),
+                        category: registerForm.category || 'ENERGY_METER',
+                        sochiotDeviceIds: parsedSochiotIds,
+                        serialNumber: payload.serialNumber,
+                        templateName: registerForm.templateName,
+                        template_settings: templateSettings,
+                        ...(payload.areaId ? { areaId: payload.areaId } : {}),
+                        ...(payload.buildingId ? { buildingId: payload.buildingId } : {}),
+                        ...(payload.floorNo !== undefined ? { floorNo: payload.floorNo } : {}),
+                        ...(payload.roomNo !== undefined ? { roomNo: payload.roomNo } : {}),
+                        ...(payload.description ? { description: payload.description } : {}),
+                        ...(payload.profileId ? { profileId: payload.profileId } : {})
+                      };
+                      res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDevice.id}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify(patchPayload)
+                      });
+                    } else {
                       res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
                         method: 'POST',
                         headers,
                         body: JSON.stringify(payload)
                       });
+
+                      if (res.status === 409) {
+                        const fallbackUniqueId = Math.floor(10000 + Math.random() * 90000);
+                        payload.sochiotDeviceIds = [fallbackUniqueId];
+                        payload.serialNumber = `SN-${Date.now()}`;
+                        newDeviceObj.sochiotDeviceIds = [fallbackUniqueId];
+                        newDeviceObj.serialNumber = payload.serialNumber;
+                        res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
+                          method: 'POST',
+                          headers,
+                          body: JSON.stringify(payload)
+                        });
+                      }
                     }
 
-                    if (res.ok) {
+                    if (res && res.ok) {
                       const json = await res.json().catch(() => ({}));
                       if (json && (json.id || json.data?.id)) {
                         newDeviceObj.id = json.id || json.data.id;
@@ -963,12 +986,12 @@ const RegisterDeviceModal = ({
                   if (typeof setSelectedAreaFilter === 'function') setSelectedAreaFilter('ALL');
 
                   if (typeof showToast === 'function') {
-                    showToast('success', `Device "${registerForm.name}" registered & added to list!`);
+                    showToast('success', editingDevice ? `Device "${registerForm.name}" updated successfully!` : `Device "${registerForm.name}" registered & added to list!`);
                   }
                   onHide();
                 } catch (err) {
                   if (typeof showToast === 'function') {
-                    showToast('danger', err.message || 'Error registering device');
+                    showToast('danger', err.message || 'Error saving device');
                   }
                 }
                 if (typeof setLoading === 'function') setLoading(false);
@@ -976,7 +999,7 @@ const RegisterDeviceModal = ({
               disabled={loading}
               className="wizard-btn-primary"
             >
-              {loading ? <Spinner animation="border" size="sm" /> : 'Register Device'}
+              {loading ? <Spinner animation="border" size="sm" /> : (editingDevice ? 'Update Device' : 'Register Device')}
             </button>
           )}
         </div>
