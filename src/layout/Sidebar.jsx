@@ -4,7 +4,7 @@ import {
   Droplets, Activity, Zap, Bell, ShieldAlert, Settings,
   ClipboardList, PenTool, History, LayoutDashboard,
   Gauge, Database, User, Wind, Leaf, Thermometer,
-  ChevronDown, X
+  ChevronDown, X, HelpCircle
 } from 'lucide-react';
 import logo from "../assets/logo.png";
 import { useTheme } from '../context/ThemeContext';
@@ -27,6 +27,7 @@ const THEMES = {
   "AQI Sensor":      { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
   "HVAC":            { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
   "AC":              { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
+  "Help":            { c: "#a855f7", bg: "rgba(168,85,247,0.10)", b: "rgba(168,85,247,0.28)" },
 };
 
 const SIDEBAR_W = 270;     // expanded width
@@ -61,20 +62,35 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
 
   const menuItems = useMemo(() => [
     { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", disabled: modulesConfig ? !modulesConfig["Dashboard"] : false },
+    // Electrical Systems
+    { title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Transformer"] : false,
+      subItems: [{ title: "Overview", path: "/transformer/overview" }, { title: "Transformer-1", path: "/transformer/t1" }, { title: "Transformer-2", path: "/transformer/t2" }, { title: "Load / Temp", path: "/transformer/load" }, { title: "PDF Report", path: "/transformer/report" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
+    { title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? !modulesConfig["LT Panel"] : false,
+      subItems: [{ title: "Overview", path: "/lt-panel/overview" }, { title: "LT Room-1", path: "/lt-panel/room1" }, { title: "LT Room-2", path: "/lt-panel/room2" }, { title: "LT Room-3", path: "/lt-panel/room3" }, { title: "Incoming / Outgoing", path: "/lt-panel/io" }, { title: "Breaker Status", path: "/lt-panel/breaker" }, { title: "PDF Report", path: "/lt-panel/report" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
+    { title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? !modulesConfig["DG Set"] : false,
+      subItems: [{ title: "Overview", path: "/dg-set/overview" }, { title: "DG Set-1", path: "/dg-set/dg1" }, { title: "DG Set-2", path: "/dg-set/dg2" }, { title: "DG Set-3", path: "/dg-set/dg3" }].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
+    { title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Energy Metering"] : false,
+      subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true) },
+    // HVAC & Environmental Systems
+    { title: "HVAC", icon: <Thermometer size={20} />, disabled: modulesConfig ? !modulesConfig["HVAC"] : false,
+      subItems: [{ title: "Chiller", path: "/hvac/chiller" }, { title: "AHU", path: "/hvac/ahu" }, { title: "Cooling Tower", path: "/hvac/cooling-tower" }, { title: "PDF Report", path: "/hvac/report" }].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true) },
+    { title: "VRV", icon: <Wind size={20} />, disabled: modulesConfig ? !modulesConfig["VRV"] : false,
+      subItems: [{ title: "Overview", path: "/VRV/overview" }, { title: "Control Panel", path: "/VRV/control" }, { title: "Schedule", path: "/VRV/schedule" }, { title: "Human Sensor", path: "/VRV/human-sensor" }].filter(s => submodulesConfig.showVRV?.[s.title] ?? true) },
+    { title: "AC", icon: <Wind size={20} />, disabled: modulesConfig ? !modulesConfig["AC"] : false,
+      subItems: [{ title: "Overview", path: "/ac/overview" }, { title: "PDF Report", path: "/ac/report" }].filter(s => submodulesConfig.showAC?.[s.title] ?? true) },
+    { title: "AQI Sensor", icon: <Leaf size={20} />, disabled: modulesConfig ? !modulesConfig["AQI Sensor"] : false,
+      subItems: [{ title: "Overview", path: "/aqi-sensor/overview" }, { title: "Temp & Humidity", path: "/aqi-sensor/temp-humidity" }].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? true) },
+    // Water & Utilities
     { title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? !modulesConfig["Water Management"] : false,
       subItems: [{ title: "Overview", path: "/water-management/overview" }, { title: "AG TANK", path: "/water-management/ag-pump" }, { title: "UG TANK", path: "/water-management/ug-pump" }].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
     { title: "Motors", icon: <Activity size={20} />, disabled: modulesConfig ? !modulesConfig["Motors"] : false,
       subItems: [{ title: "Overview", path: "/motors/overview" }, { title: "Pump Room 1", path: "/motors/room1" }, { title: "Pump Room 2", path: "/motors/room2" }, { title: "VFD / DOL Status", path: "/motors/status" }, { title: "PDF Report", path: "/motors/report" }].filter(s => submodulesConfig.showMotors?.[s.title] ?? true) },
-    { title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? !modulesConfig["DG Set"] : false,
-      subItems: [{ title: "Overview", path: "/dg-set/overview" }, { title: "DG Set-1", path: "/dg-set/dg1" }, { title: "DG Set-2", path: "/dg-set/dg2" }, { title: "DG Set-3", path: "/dg-set/dg3" }].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
-    { title: "Alarm System", icon: <Bell size={20} />, disabled: modulesConfig ? !modulesConfig["Alarm System"] : false,
-      subItems: [{ title: "Overview", path: "/alarm-system/overview" }, { title: "Alarm Config", path: "/alarm-system/config" }, { title: "Message Template Setting", path: "/alarm-system/message-templates" }, { title: "Active Alarms", path: "/alarm-system/active" }, { title: "Inactive Alarms", path: "/alarm-system/inactive" }, { title: "ACK (Acknowledge)", path: "/alarm-system/ack" }, { title: "Alarm History", path: "/alarm-system/history" }, { title: "PDF Report", path: "/alarm-system/report" }].filter(s => (submodulesConfig.showAlarms?.[s.title] ?? true) && !s.hidden) },
-    { title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? !modulesConfig["LT Panel"] : false,
-      subItems: [{ title: "Overview", path: "/lt-panel/overview" }, { title: "LT Room-1", path: "/lt-panel/room1" }, { title: "LT Room-2", path: "/lt-panel/room2" }, { title: "LT Room-3", path: "/lt-panel/room3" }, { title: "Incoming / Outgoing", path: "/lt-panel/io" }, { title: "Breaker Status", path: "/lt-panel/breaker" }, { title: "PDF Report", path: "/lt-panel/report" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
-    { title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Transformer"] : false,
-      subItems: [{ title: "Overview", path: "/transformer/overview" }, { title: "Transformer-1", path: "/transformer/t1" }, { title: "Transformer-2", path: "/transformer/t2" }, { title: "Load / Temp", path: "/transformer/load" }, { title: "PDF Report", path: "/transformer/report" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
+    // Safety & Alarms
     { title: "Fire", icon: <ShieldAlert size={20} />, disabled: modulesConfig ? !modulesConfig["Fire"] : false,
       subItems: [{ title: "Overview", path: "/fire-pumps/overview" }, { title: "Pump Status", path: "/fire-pumps/status" }, { title: "Header Pressure", path: "/fire-pumps/pressure" }, { title: "Jockey / Main", path: "/fire-pumps/jockey" }, { title: "PDF Report", path: "/fire-pumps/report" }].filter(s => submodulesConfig.showFirePumps?.[s.title] ?? true) },
+    { title: "Alarm System", icon: <Bell size={20} />, disabled: modulesConfig ? !modulesConfig["Alarm System"] : false,
+      subItems: [{ title: "Overview", path: "/alarm-system/overview" }, { title: "Alarm Config", path: "/alarm-system/config" }, { title: "Message Template Setting", path: "/alarm-system/message-templates" }, { title: "Active Alarms", path: "/alarm-system/active" }, { title: "Inactive Alarms", path: "/alarm-system/inactive" }, { title: "ACK (Acknowledge)", path: "/alarm-system/ack" }, { title: "Alarm History", path: "/alarm-system/history" }, { title: "PDF Report", path: "/alarm-system/report" }].filter(s => (submodulesConfig.showAlarms?.[s.title] ?? true) && !s.hidden) },
+    // Operations & Maintenance
     { title: "Ticketing", icon: <ClipboardList size={20} />, path: "/ticketing", disabled: modulesConfig ? !modulesConfig["Ticketing"] : false },
     { title: "Maintenance", icon: <PenTool size={20} />, disabled: modulesConfig ? !modulesConfig["Maintenance"] : false,
       subItems: [{ title: "Scheduled", path: "/maintenance/scheduled" }, { title: "Pending Tasks", path: "/maintenance/pending" }, { title: "PDF Report", path: "/maintenance/report" }].filter(s => submodulesConfig.showMaintenance?.[s.title] ?? true) },
@@ -82,22 +98,15 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       subItems: [{ title: "Equipment-wise", path: "/service/equipment" }, { title: "Service Records", path: "/service/records" }, { title: "PDF Report", path: "/service/report" }].filter(s => submodulesConfig.showServiceHistory?.[s.title] ?? true) },
     { title: "Daily DPR", icon: <Gauge size={20} />, disabled: modulesConfig ? !modulesConfig["Daily DPR"] : false,
       subItems: [{ title: "Data Aggregation", path: "/dpr/aggregation" }, { title: "Daily Logs", path: "/dpr/logs" }, { title: "PDF Report", path: "/dpr/report" }].filter(s => submodulesConfig.showDailyDPR?.[s.title] ?? true) },
-    { title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Energy Metering"] : false,
-      subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true) },
-    { title: "VRV", icon: <Wind size={20} />, disabled: modulesConfig ? !modulesConfig["VRV"] : false,
-      subItems: [{ title: "Overview", path: "/VRV/overview" }, { title: "Control Panel", path: "/VRV/control" }, { title: "Schedule", path: "/VRV/schedule" }, { title: "Human Sensor", path: "/VRV/human-sensor" }].filter(s => submodulesConfig.showVRV?.[s.title] ?? true) },
-    { title: "AQI Sensor", icon: <Leaf size={20} />, disabled: modulesConfig ? !modulesConfig["AQI Sensor"] : false,
-      subItems: [{ title: "Overview", path: "/aqi-sensor/overview" }, { title: "Temp & Humidity", path: "/aqi-sensor/temp-humidity" }].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? true) },
-    { title: "HVAC", icon: <Thermometer size={20} />, disabled: modulesConfig ? !modulesConfig["HVAC"] : false,
-      subItems: [{ title: "Chiller", path: "/hvac/chiller" }, { title: "AHU", path: "/hvac/ahu" }, { title: "Cooling Tower", path: "/hvac/cooling-tower" }, { title: "PDF Report", path: "/hvac/report" }].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true) },
-    { title: "AC", icon: <Wind size={20} />, disabled: modulesConfig ? !modulesConfig["AC"] : false,
-      subItems: [{ title: "Overview", path: "/ac/overview" }, { title: "PDF Report", path: "/ac/report" }].filter(s => submodulesConfig.showAC?.[s.title] ?? true) }
+    // Help & Support
+    { title: "Help", icon: <HelpCircle size={20} />, disabled: modulesConfig ? modulesConfig["Help"] === false : false,
+      subItems: [{ title: "Feedback", path: "/help/feedback" }, { title: "Policy & Condition", path: "/help/policy" }] }
   ], [modulesConfig, submodulesConfig]);
 
   const filteredItems = useMemo(() => {
     return menuItems.filter(item => {
       const byRole = !item.adminOnly || isAdmin || isSuperAdmin;
-      const byCfg = !modulesConfig || modulesConfig[item.title] === true;
+      const byCfg = !modulesConfig || modulesConfig[item.title] !== false;
       return byRole && byCfg;
     });
   }, [menuItems, isAdmin, isSuperAdmin, modulesConfig]);

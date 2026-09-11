@@ -47,6 +47,8 @@ const FireOverview = lazy(() => import('../pages/FirePumps/Overview'));
 const PumpStatus = lazy(() => import('../pages/FirePumps/PumpStatus'));
 const HeaderPressure = lazy(() => import('../pages/FirePumps/HeaderPressure'));
 const JockeyMain = lazy(() => import('../pages/FirePumps/JockeyMain'));
+const HelpFeedback = lazy(() => import('../pages/Help/Feedback'));
+const PolicyCondition = lazy(() => import('../pages/Help/PolicyCondition'));
 
 // Fallback for other routes until customized
 const PlaceholderPage = ({ title }) => (
@@ -210,12 +212,13 @@ const AppRoutes = () => {
       {/* Ticketing */}
       <Route path="/ticketing" element={<TicketingSystem />} />
 
-      {/* Energy Metering */}
+      {/* Energy Metering & Battery Backup (UPS) */}
       <Route path="/energy-metering/overview" element={<EnergyOverview />} />
       <Route path="/energy-metering/main" element={<EnergyMainMeter />} />
       <Route path="/energy-metering/sub" element={<EnergySubMeters />} />
       <Route path="/energy-metering/graphs" element={<EnergyGraphs />} />
       <Route path="/energy-metering/report" element={<EnergyPDFReport />} />
+      <Route path="/daily-dpr/overview" element={<EnergyOverview />} />
 
       {/* VRV*/}
       <Route path="/VRV/overview" element={<VRVOverview />} />
@@ -230,7 +233,9 @@ const AppRoutes = () => {
       {/* HVAC */}
       <Route path="/hvac/chiller" element={<Chiller />} />
       <Route path="/hvac/ahu" element={<AHU />} />
+      <Route path="/ahu" element={<AHU />} />
       <Route path="/hvac/cooling-tower" element={<CoolingTower />} />
+      <Route path="/cooling-tower" element={<CoolingTower />} />
       <Route path="/hvac/report" element={<PlaceholderPage title="HVAC PDF Reports" />} />
 
       {/* AC */}
@@ -244,6 +249,11 @@ const AppRoutes = () => {
       <Route path="/fire-pumps/pressure" element={<HeaderPressure />} />
       <Route path="/fire-pumps/jockey" element={<JockeyMain />} />
       <Route path="/fire-pumps/report" element={<PlaceholderPage title="Fire Pumps PDF Reports" />} />
+
+      {/* Help & Support */}
+      <Route path="/help" element={<Navigate to="/help/feedback" replace />} />
+      <Route path="/help/feedback" element={<HelpFeedback />} />
+      <Route path="/help/policy" element={<PolicyCondition />} />
 
       {/* Catch-all */}
       <Route path="*" element={<PlaceholderPage title="Module Under Calibration" />} />

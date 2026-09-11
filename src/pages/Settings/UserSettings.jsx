@@ -9,10 +9,13 @@ import {
 import PasswordInput from '../../components/PasswordInput';
 
 const ALL_SCADA_MODULES = [
-  'Dashboard', 'Water Management', 'Motors', 'DG Set', 'Alarm System',
-  'LT Panel', 'Transformer', 'Fire', 'Ticketing', 'Maintenance',
-  'Service History', 'Daily DPR', 'Energy Metering', 'VRV', 'AQI Sensor',
-  'HVAC', 'AC', 'Setting Templates'
+  'Dashboard',
+  'Transformer', 'LT Panel', 'DG Set', 'Energy Metering',
+  'HVAC', 'VRV', 'AC', 'AQI Sensor',
+  'Water Management', 'Motors',
+  'Fire', 'Alarm System',
+  'Ticketing', 'Maintenance', 'Service History', 'Daily DPR',
+  'Setting Templates'
 ];
 
 const DEFAULT_COMPANIES = [

@@ -257,14 +257,14 @@ const CoolingTower = () => {
                 pointerEvents: 'none'
               }}>
                 <svg id="cooling-tower-fan" viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
-                  <g stroke="#1e293b" strokeWidth="1">
+                  <g stroke="#090d16" strokeWidth="1">
                     {[0, 60, 120, 180, 240, 300].map(angle => (
                       <g key={angle} transform={`rotate(${angle} 50 50)`}>
-                        <path d="M 50 50 L 32 12 A 42 42 0 0 1 68 12 Z" fill="rgba(2, 6, 23, 0.92)" />
+                        <path d="M 50 50 L 32 12 A 42 42 0 0 1 68 12 Z" fill="rgba(8, 12, 20, 0.96)" stroke="#1f2937" strokeWidth="0.8" />
                       </g>
                     ))}
-                    <circle cx="50" cy="50" r="14" fill="#0f172a" />
-                    <circle cx="50" cy="50" r="6" fill="#334155" />
+                    <circle cx="50" cy="50" r="14" fill="#0f172a" stroke="#334155" strokeWidth="1" />
+                    <circle cx="50" cy="50" r="6" fill="#475569" />
                   </g>
                 </svg>
               </div>
