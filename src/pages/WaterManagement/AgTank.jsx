@@ -824,22 +824,22 @@ const AgTank = () => {
           { id: 'ALL', label: 'SYSTEM TOTAL', count: stats.total.all, icon: <LayoutGrid size={16} />, color: 'secondary' }
         ].map(mode => (
           <Col md={4} key={mode.id}>
-            <div className={`filter-tile ${sectorFilter === mode.id ? 'active ' + mode.id.toLowerCase() : ''}`}
+            <div className={`filter-tile p-2 px-3 ${sectorFilter === mode.id ? 'active ' + mode.id.toLowerCase() : ''}`}
               onClick={() => {
                 setSectorFilter(mode.id);
                 if (mode.id === 'ALL') setStatusFilter('ALL');
               }}
               style={{ cursor: 'pointer', transition: '0.3s' }}>
-              <div className="d-flex align-items-center justify-content-between p-2 px-3">
+              <div className="d-flex align-items-center justify-content-between">
                 <div className="d-flex align-items-center">
                   <div className={`tile-icon me-3 bg-${mode.color} bg-opacity-10 text-${mode.color} p-2 rounded`}>
                     {mode.icon}
                   </div>
-                  <h6 className="mb-0 fw-bold text-white uppercase">{mode.label}</h6>
+                  <h6 className="mb-0 fw-bold uppercase tile-title">{mode.label}</h6>
                 </div>
                 <div className="text-end">
-                  <span className="fs-5 fw-black text-white">{mode.count}</span>
-                  <small className="text-muted d-block fs-10 fw-bold">UNITS</small>
+                  <span className="fs-5 fw-black tile-count">{mode.count}</span>
+                  <small className="text-secondary d-block fs-10 fw-bold">UNITS</small>
                 </div>
               </div>
             </div>
@@ -860,7 +860,6 @@ const AgTank = () => {
                 <div className="tank-assembly-anchor mx-auto position-relative" style={{ width: isFullscreen ? '48px' : '44px' }}>
                   <div
                     className={`tank-vessel ${isFullscreen ? 'vessel-large' : ''}`}
-                    style={{ borderColor: '#475569' }}
                   >
                     <div className="tank-fill" style={{ height: `${tank.level}%`, backgroundColor: getTankColor(tank.type, tank.level, tank.status) }}>
                       <div className="tank-water-wave"></div>
@@ -988,6 +987,13 @@ const AgTank = () => {
             box-shadow: 
                 inset 0 0 10px rgba(0,0,0,0.5),
                 0 4px 6px -1px rgba(0,0,0,0.2); 
+        }
+
+        body.light-mode .tank-vessel,
+        [data-theme="light"] .tank-vessel {
+            background: linear-gradient(90deg, #cbd5e1 0%, #f8fafc 50%, #cbd5e1 100%) !important;
+            border-color: #64748b !important;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.08), 0 4px 6px -1px rgba(0,0,0,0.05) !important;
         }
         
         /* 3D Glossy Highlight Overlay */
@@ -1139,40 +1145,43 @@ const AgTank = () => {
 
       <Modal show={showValveModal} onHide={() => setShowValveModal(false)} centered size="lg" contentClassName="bg-transparent border-0 shadow-2xl custom-modal-wide">
         {selectedTank && (
-          <Modal.Body className="p-0 text-white overflow-hidden rounded-5" style={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <Modal.Body className="p-0 scada-control-modal-body overflow-hidden rounded-5">
 
             {/* Modal Header Bar */}
-            <div className="p-4 text-center border-bottom border-white border-opacity-10" style={{ background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.05) 0%, transparent 100%)' }}>
+            <div className="p-4 text-center border-bottom scada-modal-header">
               <Badge bg="info" className="bg-opacity-10 text-info px-3 py-1 mb-2 border border-info border-opacity-25 rounded-pill">
                 <div className="d-flex align-items-center gap-2 fs-12 fw-black tracking-widest uppercase">
                   <Activity size={10} className="pulse-icon" /> Operational Control
                 </div>
               </Badge>
-              <h3 className="fw-black text-white mb-0 size-3 tracking-tighter" style={{ textShadow: '0 0 20px rgba(56, 189, 248, 0.3)' }}>
+              <h3 className="fw-black scada-modal-title mb-0 size-3 tracking-tighter">
                 {selectedTank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-{selectedTank.localId} <span className="text-info-scada">COMMAND</span>
               </h3>
             </div>
             <div className="p-4 px-5">
               {/* Mode Control Section */}
-              <div className="d-flex justify-content-between align-items-center p-3 rounded-4 position-relative overflow-hidden mb-3"
-                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="d-flex justify-content-between align-items-center p-3 rounded-4 position-relative overflow-hidden mb-3 scada-mode-card">
                 <div className="position-absolute top-0 start-0 h-100 w-1 bg-info bg-opacity-50"></div>
                 <div>
                   <div className="fw-black fs-10 tracking-widest text-secondary uppercase">Control Strategy</div>
-                  <div className="text-white fw-bold fs-6">AUTO / MANUAL OVERRIDE</div>
+                  <div className="fw-bold fs-6 scada-mode-title">AUTO / MANUAL OVERRIDE</div>
                 </div>
-                <div className="d-flex align-items-center gap-1 bg-dark bg-opacity-80 p-1 rounded-pill border border-white border-opacity-10 shadow-inner">
-                  {['AUTO', 'MANUAL', 'BYPASS'].map(mode => (
+                <div className="d-flex align-items-center gap-1 p-1 rounded-pill scada-mode-pill-box shadow-inner">
+                  {[
+                    { id: 'AUTO', label: 'AUTO', activeClass: 'scada-pill-auto' },
+                    { id: 'MANUAL', label: 'MANUAL', activeClass: 'scada-pill-manual' },
+                    { id: 'BYPASS', label: 'BYPASS', activeClass: 'scada-pill-bypass' }
+                  ].map(modeObj => (
                     <div
-                      key={mode}
-                      onClick={() => updateTankValve(selectedTank.globalId, { valveMode: mode })}
-                      className={`px-4 py-2 rounded-pill fw-black tracking-widest transition-all cursor-pointer ${selectedTank.valveMode === mode
-                          ? 'bg-info text-white shadow-lg scale-105'
-                          : 'text-secondary opacity-40 hover-opacity-100 hover-white'
+                      key={modeObj.id}
+                      onClick={() => updateTankValve(selectedTank.globalId, { valveMode: modeObj.id })}
+                      className={`px-4 py-2 rounded-pill fw-black tracking-widest transition-all cursor-pointer ${selectedTank.valveMode === modeObj.id
+                          ? `${modeObj.activeClass} text-white shadow-lg scale-105`
+                          : 'scada-mode-pill-inactive'
                         }`}
                       style={{ fontSize: '11px', letterSpacing: '1px', cursor: 'pointer' }}
                     >
-                      {mode}
+                      {modeObj.label}
                     </div>
                   ))}
                 </div>
@@ -1182,36 +1191,36 @@ const AgTank = () => {
               {selectedTank.valveMode === 'AUTO' && (
                 <Row className="g-3 mb-3">
                   <Col md={6}>
-                    <div className="p-3 rounded-4 bg-black bg-opacity-40 border border-white border-opacity-5 hover-glow transition-all">
-                      <div className="d-flex align-items-center gap-2 mb-2">
+                    <div className="p-3 rounded-4 scada-limit-card transition-all text-center">
+                      <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
                         <div className="p-1 px-2 rounded bg-info bg-opacity-10 text-info border border-info border-opacity-20"><ArrowDown size={12} /></div>
                         <Form.Label className="fs-11 text-secondary fw-black tracking-widest mb-0 uppercase">Lower Limit</Form.Label>
                       </div>
-                      <div className="d-flex align-items-center gap-3 bg-dark border border-white border-opacity-10 rounded-3 p-1 px-3">
+                      <div className="d-flex align-items-center justify-content-center gap-2 scada-limit-input-wrap rounded-3 p-2 px-3">
                         <Form.Control
                           type="number"
                           value={selectedTank.minLevel}
                           onChange={(e) => updateTankValve(selectedTank.globalId, { minLevel: parseInt(e.target.value) })}
-                          className="bg-transparent border-0 text-white fw-black fs-4 p-0 shadow-none w-100"
+                          className="bg-transparent border-0 scada-limit-input text-center fw-black fs-3 p-0 shadow-none w-100"
                         />
-                        <span className="text-info fw-black fs-5">%</span>
+                        <span className="text-info fw-black fs-4">%</span>
                       </div>
                     </div>
                   </Col>
                   <Col md={6}>
-                    <div className="p-3 rounded-4 bg-black bg-opacity-40 border border-white border-opacity-5 hover-glow transition-all">
-                      <div className="d-flex align-items-center gap-2 mb-2">
+                    <div className="p-3 rounded-4 scada-limit-card transition-all text-center">
+                      <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
                         <div className="p-1 px-2 rounded bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20"><ArrowUp size={12} /></div>
                         <Form.Label className="fs-11 text-secondary fw-black tracking-widest mb-0 uppercase">Upper Limit</Form.Label>
                       </div>
-                      <div className="d-flex align-items-center gap-3 bg-dark border border-white border-opacity-10 rounded-3 p-1 px-3">
+                      <div className="d-flex align-items-center justify-content-center gap-2 scada-limit-input-wrap rounded-3 p-2 px-3">
                         <Form.Control
                           type="number"
                           value={selectedTank.maxLevel}
                           onChange={(e) => updateTankValve(selectedTank.globalId, { maxLevel: parseInt(e.target.value) })}
-                          className="bg-transparent border-0 text-white fw-black fs-4 p-0 shadow-none w-100"
+                          className="bg-transparent border-0 scada-limit-input text-center fw-black fs-3 p-0 shadow-none w-100"
                         />
-                        <span className="text-danger fw-black fs-5">%</span>
+                        <span className="text-danger fw-black fs-4">%</span>
                       </div>
                     </div>
                   </Col>
@@ -1225,8 +1234,8 @@ const AgTank = () => {
                     <Form.Label className="fs-11 text-secondary fw-black tracking-widest mb-3 uppercase">Automation Settings Control</Form.Label>
                     <Button
                       variant="info"
-                      className="w-100 py-3 rounded-4 fw-black tracking-widest d-flex align-items-center justify-content-center gap-3 shadow-lg border-0"
-                      style={{ background: 'linear-gradient(45deg, #0ea5e9, #2563eb)', transition: 'all 0.3s ease' }}
+                      className="w-100 py-3 rounded-4 fw-black tracking-widest d-flex align-items-center justify-content-center gap-3 shadow-lg border-0 text-white"
+                      style={{ background: 'linear-gradient(135deg, #0ea5e9, #2563eb)', transition: 'all 0.3s ease' }}
                       onClick={() => handleSendRuleToEngine('BOTH')}
                       disabled={isSendingRules}
                     >
@@ -1240,7 +1249,7 @@ const AgTank = () => {
                   </>
                 ) : selectedTank.valveMode === 'MANUAL' ? (
                   <>
-                    <Form.Label className="fs-11 text-secondary fw-black tracking-widest mb-2 uppercase">Supply OverrideWater Levels</Form.Label>
+                    <Form.Label className="fs-11 text-secondary fw-black tracking-widest mb-2 uppercase">Supply Override Water Control</Form.Label>
                     <Row className="g-3">
                       <Col xs={6}>
                         <button
@@ -1275,17 +1284,17 @@ const AgTank = () => {
                 ) : (
                   <div className="text-center p-3 rounded-4 position-relative overflow-hidden"
                     style={{
-                      background: 'rgba(251, 191, 36, 0.05)',
-                      border: '1px solid rgba(251, 191, 36, 0.2)'
+                      background: 'rgba(251, 191, 36, 0.08)',
+                      border: '1px solid rgba(251, 191, 36, 0.3)'
                     }}>
-                    <div className="position-absolute top-0 start-0 w-100 h-1 bg-warning opacity-30"></div>
+                    <div className="position-absolute top-0 start-0 w-100 h-1 bg-warning opacity-50"></div>
                     <div className="d-flex align-items-center justify-content-center gap-3">
-                      <ShieldCheck size={24} className="text-warning opacity-80" />
+                      <ShieldCheck size={24} className="text-warning opacity-90" />
                       <div className="text-start">
                         <h4 className="fw-black text-warning tracking-widest mb-0" style={{ textTransform: 'uppercase', fontSize: '13px' }}>
                           System Bypass Active
                         </h4>
-                        <div className="text-secondary fs-10 fw-bold opacity-60 uppercase tracking-tighter">
+                        <div className="text-secondary fs-10 fw-bold opacity-80 uppercase tracking-tighter">
                           Automation & Manual Controls Suspended
                         </div>
                       </div>
@@ -1295,14 +1304,15 @@ const AgTank = () => {
               </div>
             </div>
 
-            <div className="p-4 border-top border-white border-opacity-5 text-center bg-black bg-opacity-20 d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center gap-2 text-muted fs-12 fw-bold tracking-widest">
+            <div className="p-3 px-4 border-top scada-modal-footer d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-2 fs-12 fw-bold tracking-widest">
                 <ShieldCheck size={14} className="text-success" /> BMS VERIFIED LINK
               </div>
-              <Button variant="link" className="text-secondary fs-12 fw-black text-decoration-none hover-white transition-all uppercase tracking-widest" onClick={() => setShowValveModal(false)}>
+              <Button variant="link" className="scada-modal-footer-link fs-12 fw-black text-decoration-none transition-all uppercase tracking-widest" onClick={() => setShowValveModal(false)}>
                 Dismiss Panel
               </Button>
             </div>
+
 
             {actionFeedback && (
               <div className="action-success-overlay position-absolute top-50 start-50 translate-middle w-75 p-4 rounded-4 shadow-2xl text-center border-2 border-white d-flex flex-column align-items-center gap-2"

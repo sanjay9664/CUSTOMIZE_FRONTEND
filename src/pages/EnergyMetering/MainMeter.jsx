@@ -1009,7 +1009,7 @@ const MainMeter = () => {
         {/* LEFT COLUMN: INTERACTIVE DIGITAL TWIN OF THE SUN STAR METER */}
         {/* LEFT COLUMN: INTERACTIVE DIGITAL TWIN OF THE SUN STAR METER */}
         <Col lg={5} xl={5}>
-          <Card className="scada-glass-card position-relative border-0 text-white h-100 p-3 overflow-hidden d-flex flex-column align-items-center justify-content-center">
+          <Card className="scada-glass-card position-relative border h-100 p-3 overflow-hidden d-flex flex-column align-items-center justify-content-center">
             {/* Holographic grid and wave animation backdrops */}
             <div className="telemetry-wave-visualizer">
               <svg viewBox="0 0 400 100" className="hud-wave-svg" preserveAspectRatio="none">
@@ -1178,12 +1178,12 @@ const MainMeter = () => {
 
         {/* RIGHT COLUMN: TECHNICAL METRICS, WAVE DIAGRAMS, DIALS */}
         <Col lg={7} xl={7}>
-          <Card className="scada-glass-card border-0 text-white h-100 p-3">
+          <Card className="scada-glass-card border h-100 p-3">
             <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3" style={{ zIndex: 5 }}>
-              <h5 className="mb-0 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
+              <h5 className="mb-0 fw-black d-flex align-items-center gap-2 uppercase tracking-wide fs-11" style={{ color: 'var(--scada-text)' }}>
                 <Activity className="text-info animate-pulse" size={18} /> SCADA Control Panel
               </h5>
-              <div className="d-flex align-items-center gap-1 scada-tabs-container p-1 rounded-3" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="d-flex align-items-center gap-1 scada-tabs-container p-1 rounded-3" style={{ backgroundColor: 'var(--scada-accent-bg)', border: '1px solid var(--scada-border)' }}>
                 <Button
                   size="sm"
                   variant="link"
@@ -1497,9 +1497,6 @@ const MainMeter = () => {
 
                           let borderStyle = {
                             borderLeft: `4px solid ${accentColor}`,
-                            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-                            borderRight: '1px solid rgba(255, 255, 255, 0.05)',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                             transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                           };
                           let textClass = item.isImportant ? 'text-warning' : 'text-white';
@@ -1533,16 +1530,16 @@ const MainMeter = () => {
                           return (
                             <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
                               <div
-                                className={`parameter-glass-card p-2.5 rounded-3 h-100 d-flex flex-column justify-content-between text-start ${item.isImportant ? 'important-glow-card' : ''}`}
+                                className={`parameter-glass-card p-2.5 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center ${item.isImportant ? 'important-glow-card' : ''}`}
                                 style={borderStyle}
                               >
-                                <div className="d-flex justify-content-between align-items-center mb-2">
-                                  <small className="text-secondary fs-10 uppercase fw-bold tracking-wider">{label}</small>
+                                <div className="d-flex align-items-center justify-content-center gap-1.5 mb-1 w-100">
                                   {item.icon}
+                                  <small className="text-secondary uppercase fw-bold tracking-wider" style={{ fontSize: '0.68rem' }}>{label}</small>
                                 </div>
-                                <h5 className={`mb-0 fw-black font-monospace tracking-wide ${textClass}`} style={{ fontSize: '1.2rem' }}>{val}</h5>
+                                <h5 className={`mb-0 fw-bold font-monospace tracking-wide ${textClass}`} style={{ fontSize: '0.95rem' }}>{val}</h5>
                                 {item.limits && (parseLimit(item.limits.low) !== null || parseLimit(item.limits.high) !== null || parseLimit(item.limits.normalMin) !== null || parseLimit(item.limits.normalMax) !== null) && (
-                                  <div className="fs-10 text-secondary font-monospace mt-1" style={{ opacity: 0.6 }}>
+                                  <div className="fs-10 text-secondary font-monospace mt-1 text-center" style={{ opacity: 0.7, fontSize: '0.65rem' }}>
                                     {parseLimit(item.limits.low) !== null && `L: <${item.limits.low}`}
                                     {parseLimit(item.limits.high) !== null && ` H: >${item.limits.high}`}
                                     {parseLimit(item.limits.normalMin) !== null && parseLimit(item.limits.normalMax) !== null && ` [${item.limits.normalMin}-${item.limits.normalMax}]`}
@@ -1575,7 +1572,7 @@ const MainMeter = () => {
                           return (
                             <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
                               <div
-                                className="p-2.5 parameter-glass-card rounded-3 d-flex align-items-center justify-content-between h-100"
+                                className="p-2.5 parameter-glass-card rounded-3 d-flex flex-column align-items-center justify-content-center text-center h-100"
                                 style={{
                                   backgroundColor: isActive
                                     ? (item.isConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)')
@@ -1587,18 +1584,16 @@ const MainMeter = () => {
                                   borderStyle: 'solid'
                                 }}
                               >
-                                <div className="d-flex align-items-center gap-2 text-start">
-                                  <div className="p-1.5 bg-dark bg-opacity-40 rounded-3 border border-secondary border-opacity-10">
+                                <div className="d-flex align-items-center justify-content-center gap-2 mb-1 w-100">
+                                  <div className="p-1 bg-dark bg-opacity-40 rounded-3 border border-secondary border-opacity-10">
                                     {item.icon}
                                   </div>
-                                  <div>
-                                    <small className={`${isActive ? 'text-white' : 'text-secondary'} d-block fs-11 uppercase fw-bold`}>{item.label}</small>
-                                    <span className={`fw-black fs-13 ${isActive ? (item.isConnected ? 'text-success' : 'text-danger') : 'text-white text-opacity-40'}`}>
-                                      {item.isConnected ? (isActive ? 'CONN' : 'DISC') : (isActive ? 'ACT' : 'INACT')}
-                                    </span>
-                                  </div>
+                                  <span className={`pulse-dot-${isActive ? (item.isConnected ? 'green' : 'red') : 'grey'}`}></span>
                                 </div>
-                                <span className={`pulse-dot-${isActive ? (item.isConnected ? 'green' : 'red') : 'grey'}`}></span>
+                                <small className={`${isActive ? 'text-white' : 'text-secondary'} d-block uppercase fw-bold mb-0.5`} style={{ fontSize: '0.68rem' }}>{item.label}</small>
+                                <span className={`fw-bold ${isActive ? (item.isConnected ? 'text-success' : 'text-danger') : 'text-secondary'}`} style={{ fontSize: '0.85rem' }}>
+                                  {item.isConnected ? (isActive ? 'CONN' : 'DISC') : (isActive ? 'ACT' : 'INACT')}
+                                </span>
                               </div>
                             </Col>
                           );
@@ -1630,14 +1625,12 @@ const MainMeter = () => {
                           if (!isFieldVisible(item.key)) return null;
                           return (
                             <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
-                              <div className="p-2.5 parameter-glass-card rounded-3 h-100 d-flex align-items-center gap-2 text-start">
-                                <div className="p-1.5 bg-dark bg-opacity-40 rounded-3 border border-secondary border-opacity-10">
+                              <div className="p-2.5 parameter-glass-card rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                                <div className="p-1 bg-dark bg-opacity-40 rounded-3 border border-secondary border-opacity-10 mb-1">
                                   {item.icon}
                                 </div>
-                                <div>
-                                  <small className="text-secondary d-block fs-11 mb-1 uppercase fw-bold">{item.label}</small>
-                                  <h5 className="mb-0 fw-black text-white font-monospace" style={{ fontSize: '1.05rem' }}>{item.val}</h5>
-                                </div>
+                                <small className="text-secondary d-block uppercase fw-bold mb-0.5" style={{ fontSize: '0.68rem' }}>{item.label}</small>
+                                <h5 className="mb-0 fw-bold text-white font-monospace" style={{ fontSize: '0.92rem' }}>{item.val}</h5>
                               </div>
                             </Col>
                           );
@@ -1651,401 +1644,6 @@ const MainMeter = () => {
           </Card>
         </Col>
       </Row>
-
-      {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* PROFESSIONAL LIVE TELEMETRY GRAPH PANEL */}
-      {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {(() => {
-        // ── Inline SVG Sparkline Chart Component ──────────────────────────────
-        const LiveChart = ({ title, subtitle, unit, series, rangeLabel, rangeColor = '#06b6d4', height = 120, showRangeZone = null }) => {
-          const W = 800; const H = height;
-          const PAD = { top: 10, right: 16, bottom: 28, left: 46 };
-          const innerW = W - PAD.left - PAD.right;
-          const innerH = H - PAD.top - PAD.bottom;
-          const N_GRID_X = 6; // 6 vertical lines on x-axis as requested
-
-          // Gather all values across all series to find domain
-          const allVals = series.flatMap(s => s.data.map(d => d.v)).filter(v => v !== null && !isNaN(v));
-          if (allVals.length === 0) {
-            return (
-              <div style={{ height: H + 44, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', opacity: 0.3 }}>
-                <Activity size={18} className="text-info" />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 6 }}>Awaiting live data…</span>
-              </div>
-            );
-          }
-          const minVal = Math.min(...allVals);
-          const maxVal = Math.max(...allVals);
-          const domainMin = minVal === maxVal ? minVal - 1 : minVal;
-          const domainMax = minVal === maxVal ? maxVal + 1 : maxVal;
-          const range = domainMax - domainMin || 1;
-          const bufY = range * 0.12;
-          const yMin = domainMin - bufY;
-          const yMax = domainMax + bufY;
-          const yRange = yMax - yMin;
-
-          const toX = (idx, total) => PAD.left + (total <= 1 ? innerW / 2 : (idx / (total - 1)) * innerW);
-          const toY = (v) => PAD.top + innerH - ((v - yMin) / yRange) * innerH;
-
-          // Y-axis ticks
-          const N_Y = 4;
-          const yTicks = Array.from({ length: N_Y + 1 }, (_, i) => yMin + (yRange * i) / N_Y);
-
-          // X-axis ticks
-          const maxN = Math.max(...series.map(s => s.data.length));
-          const xTickIndices = Array.from({ length: N_GRID_X }, (_, i) => Math.round((i / (N_GRID_X - 1)) * (maxN - 1)));
-
-          // Build path for each series (use indexed entries to avoid indexOf bug)
-          const buildPath = (data) => {
-            const indexed = data.map((d, i) => ({ ...d, i })).filter(d => d.v !== null && !isNaN(d.v));
-            if (indexed.length < 2) return '';
-            return indexed.map((d, j) => `${j === 0 ? 'M' : 'L'} ${toX(d.i, data.length).toFixed(1)} ${toY(d.v).toFixed(1)}`).join(' ');
-          };
-
-          const buildAreaPath = (data) => {
-            const indexed = data.map((d, i) => ({ ...d, i })).filter(d => d.v !== null && !isNaN(d.v));
-            if (indexed.length < 2) return '';
-            const line = indexed.map((d, j) => `${j === 0 ? 'M' : 'L'} ${toX(d.i, data.length).toFixed(1)} ${toY(d.v).toFixed(1)}`).join(' ');
-            const firstX = toX(indexed[0].i, data.length).toFixed(1);
-            const lastX = toX(indexed[indexed.length - 1].i, data.length).toFixed(1);
-            const baseY = (PAD.top + innerH).toFixed(1);
-            return `${line} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
-          };
-
-          // Unique gradient id per series
-          const gradId = (i) => `lgrd_${title.replace(/\s/g, '')}_${i}`;
-          const glowId = (i) => `glow_${title.replace(/\s/g, '')}_${i}`;
-
-          // Last values for live readout
-          const lastReadouts = series.map(s => {
-            const last = [...s.data].reverse().find(d => d.v !== null && !isNaN(d.v));
-            return last ? last.v : null;
-          });
-
-          return (
-            <div style={{ position: 'relative' }}>
-              {/* Live value badges */}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
-                {series.map((s, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ display: 'inline-block', width: 28, height: 3, borderRadius: 2, background: s.color, boxShadow: `0 0 6px ${s.color}` }} />
-                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontFamily: 'monospace', letterSpacing: '0.5px' }}>{s.name}</span>
-                    {lastReadouts[i] !== null && (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: s.color, fontFamily: 'monospace' }}>
-                        {Number(lastReadouts[i]).toFixed(1)}<span style={{ fontSize: '0.6rem', opacity: 0.7, marginLeft: 2 }}>{unit}</span>
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* SVG Chart */}
-              <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ overflow: 'visible', display: 'block' }}>
-                <defs>
-                  {series.map((s, i) => (
-                    <React.Fragment key={i}>
-                      <linearGradient id={gradId(i)} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={s.color} stopOpacity="0.25" />
-                        <stop offset="100%" stopColor={s.color} stopOpacity="0.01" />
-                      </linearGradient>
-                      <filter id={glowId(i)} x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="2" result="blur" />
-                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                      </filter>
-                    </React.Fragment>
-                  ))}
-                </defs>
-
-                {/* Optional range zone (e.g. normal band) */}
-                {showRangeZone && (
-                  <rect
-                    x={PAD.left} y={toY(showRangeZone.max)}
-                    width={innerW} height={toY(showRangeZone.min) - toY(showRangeZone.max)}
-                    fill={showRangeZone.color} fillOpacity="0.08"
-                    rx="2"
-                  />
-                )}
-
-                {/* Horizontal Y-grid lines */}
-                {yTicks.map((tick, i) => (
-                  <g key={i}>
-                    <line
-                      x1={PAD.left} y1={toY(tick)}
-                      x2={PAD.left + innerW} y2={toY(tick)}
-                      stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4,4"
-                    />
-                    <text x={PAD.left - 4} y={toY(tick)} fill="#64748b" fontSize="9" textAnchor="end" dominantBaseline="middle" fontFamily="monospace">
-                      {tick.toFixed(tick >= 100 ? 0 : 1)}
-                    </text>
-                  </g>
-                ))}
-
-                {/* Vertical X-grid lines (6 lines) */}
-                {xTickIndices.map((idx, i) => {
-                  const x = toX(idx, maxN || 1);
-                  const label = series[0]?.data[idx]?.t || '';
-                  return (
-                    <g key={i}>
-                      <line
-                        x1={x} y1={PAD.top}
-                        x2={x} y2={PAD.top + innerH}
-                        stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="3,5"
-                      />
-                      <text x={x} y={PAD.top + innerH + 12} fill="#475569" fontSize="8.5" textAnchor="middle" fontFamily="monospace">
-                        {label}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Chart border/axis */}
-                <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + innerH} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
-                <line x1={PAD.left} y1={PAD.top + innerH} x2={PAD.left + innerW} y2={PAD.top + innerH} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
-
-                {/* Area fills (under each line) */}
-                {series.map((s, i) => {
-                  const aPath = buildAreaPath(s.data, s.color);
-                  return aPath ? <path key={i} d={aPath} fill={`url(#${gradId(i)})`} /> : null;
-                })}
-
-                {/* Line strokes */}
-                {series.map((s, i) => {
-                  const lPath = buildPath(s.data);
-                  return lPath ? (
-                    <path
-                      key={i} d={lPath}
-                      fill="none" stroke={s.color} strokeWidth="2"
-                      strokeLinecap="round" strokeLinejoin="round"
-                      filter={`url(#${glowId(i)})`}
-                      style={{ transition: 'd 0.3s ease' }}
-                    />
-                  ) : null;
-                })}
-
-                {/* Dot at last point of each series */}
-                {series.map((s, i) => {
-                  let lIdx = -1;
-                  for (let k = s.data.length - 1; k >= 0; k--) {
-                    if (s.data[k].v !== null && !isNaN(s.data[k].v)) { lIdx = k; break; }
-                  }
-                  if (lIdx < 0) return null;
-                  return (
-                    <circle
-                      key={i}
-                      cx={toX(lIdx, s.data.length)}
-                      cy={toY(s.data[lIdx].v)}
-                      r="3.5" fill={s.color}
-                      style={{ filter: `drop-shadow(0 0 4px ${s.color})` }}
-                    />
-                  );
-                })}
-              </svg>
-            </div>
-          );
-        };
-
-        // ── Build series data from historyLog ─────────────────────────────────
-        const fmt2 = (v) => (v !== null && v !== undefined && !isNaN(Number(v))) ? Number(v) : null;
-        const logData = historyLog.length > 0 ? historyLog : [];
-
-        const voltSeries = [
-          { name: 'VR-N', color: '#ef4444', data: logData.map(r => ({ t: r.time, v: fmt2(r.vR) })) },
-          { name: 'VY-N', color: '#f59e0b', data: logData.map(r => ({ t: r.time, v: fmt2(r.vY) })) },
-          { name: 'VB-N', color: '#3b82f6', data: logData.map(r => ({ t: r.time, v: fmt2(r.vB) })) },
-        ];
-        const currSeries = [
-          { name: 'I1 (R)', color: '#f87171', data: logData.map(r => ({ t: r.time, v: fmt2(r.iR) })) },
-          { name: 'I2 (Y)', color: '#fbbf24', data: logData.map(r => ({ t: r.time, v: fmt2(r.iY) })) },
-          { name: 'I3 (B)', color: '#60a5fa', data: logData.map(r => ({ t: r.time, v: fmt2(r.iB) })) },
-        ];
-        const appPwrSeries = [
-          { name: 'kVA', color: '#06b6d4', data: logData.map(r => ({ t: r.time, v: fmt2(r.totalKva) })) },
-        ];
-        const reactPwrSeries = [
-          { name: 'kVAR', color: '#a78bfa', data: logData.map(r => ({ t: r.time, v: fmt2(r.reactivePower) })) },
-        ];
-        const freqSeries = [
-          { name: 'Hz', color: '#34d399', data: logData.map(r => ({ t: r.time, v: fmt2(r.freq) })) },
-        ];
-        const actPwrConsSeries = [
-          { name: 'kWh (EB)', color: '#f97316', data: logData.map(r => ({ t: r.time, v: fmt2(r.ebKwh) })) },
-        ];
-        const appPwrConsSeries = [
-          { name: 'kVAh (EB)', color: '#10b981', data: logData.map(r => ({ t: r.time, v: fmt2(r.ebKvah) })) },
-        ];
-
-        const charts = [
-          {
-            key: 'voltage', title: 'Supply Voltage', subtitle: 'Phase-to-Neutral (V)', unit: 'V',
-            icon: '⚡', iconColor: '#ef4444',
-            series: voltSeries,
-            rangeLabel: 'Normal: 207–253 V (Single Phase)',
-            rangeColor: '#22c55e',
-            showRangeZone: { min: 207, max: 253, color: '#22c55e' },
-            defaultRanges: [
-              { label: 'Normal', color: '#22c55e', value: '207–253 V' },
-              { label: 'Warning', color: '#f59e0b', value: '190–207 V or 253–270 V' },
-              { label: 'Alarm', color: '#ef4444', value: '<190 V or >270 V' },
-            ]
-          },
-          {
-            key: 'current', title: 'Current', subtitle: 'Phase Currents (A)', unit: 'A',
-            icon: '〜', iconColor: '#f59e0b',
-            series: currSeries,
-            rangeLabel: 'Normal: 0–80% of IN',
-            rangeColor: '#22c55e',
-            defaultRanges: [
-              { label: 'Normal (0–80%)', color: '#22c55e', value: 'Safe operating' },
-              { label: 'Warning (80–90%)', color: '#f59e0b', value: 'High load' },
-              { label: 'Critical (90–100%)', color: '#f97316', value: 'Near limit' },
-              { label: 'Over (>100%)', color: '#ef4444', value: 'Trip risk' },
-            ]
-          },
-          {
-            key: 'apparent', title: 'Apparent Power', subtitle: 'Total kVA', unit: 'kVA',
-            icon: '◈', iconColor: '#06b6d4',
-            series: appPwrSeries,
-            rangeColor: '#06b6d4',
-            defaultRanges: [
-              { label: 'Normal', color: '#22c55e', value: '<80% of Rated kVA' },
-              { label: 'Warning', color: '#f59e0b', value: '80–95% of Rated kVA' },
-              { label: 'Alarm', color: '#ef4444', value: '>95% of Rated kVA' },
-            ]
-          },
-          {
-            key: 'reactive', title: 'Reactive Power', subtitle: 'Total kVAR', unit: 'kVAR',
-            icon: '⊛', iconColor: '#a78bfa',
-            series: reactPwrSeries,
-            rangeColor: '#a78bfa',
-            defaultRanges: [
-              { label: 'Normal', color: '#22c55e', value: 'PF > 0.90' },
-              { label: 'Warning', color: '#f59e0b', value: '0.80 < PF ≤ 0.90' },
-              { label: 'Alarm', color: '#ef4444', value: 'PF ≤ 0.80' },
-            ]
-          },
-          {
-            key: 'freq', title: 'Frequency', subtitle: 'Grid Frequency (Hz)', unit: 'Hz',
-            icon: '≈', iconColor: '#34d399',
-            series: freqSeries,
-            rangeColor: '#34d399',
-            showRangeZone: { min: 47.5, max: 51.5, color: '#22c55e' },
-            defaultRanges: [
-              { label: 'Normal', color: '#22c55e', value: '49.5–50.5 Hz' },
-              { label: 'Warning', color: '#f59e0b', value: '47.5–49.5 or 50.5–51.5 Hz' },
-              { label: 'Alarm', color: '#ef4444', value: '<47.5 or >51.5 Hz' },
-            ]
-          },
-          {
-            key: 'actcons', title: 'Power Consumption (Active)', subtitle: 'EB kWh Accumulation', unit: 'kWh',
-            icon: '⬧', iconColor: '#f97316',
-            series: actPwrConsSeries,
-            rangeColor: '#f97316',
-            defaultRanges: [
-              { label: 'Live Reading', color: '#f97316', value: 'Cumulative kWh' },
-              { label: 'EB Source', color: '#22c55e', value: 'Grid Supply' },
-            ]
-          },
-          {
-            key: 'appcons', title: 'Power Consumption (Apparent)', subtitle: 'EB kVAh Accumulation', unit: 'kVAh',
-            icon: '⬦', iconColor: '#10b981',
-            series: appPwrConsSeries,
-            rangeColor: '#10b981',
-            defaultRanges: [
-              { label: 'Live Reading', color: '#10b981', value: 'Cumulative kVAh' },
-              { label: 'Note', color: '#94a3b8', value: 'Includes reactive energy' },
-            ]
-          },
-        ];
-
-        return (
-          <div style={{ marginTop: 20, marginBottom: 4 }}>
-            {/* Section Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, borderRadius: 2, background: 'linear-gradient(180deg,#06b6d4,#6366f1)', flexShrink: 0 }} />
-              <div>
-                <h5 style={{ margin: 0, fontWeight: 900, color: '#f8fafc', fontSize: '0.9rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                  <Activity size={16} style={{ marginRight: 8, color: '#06b6d4', verticalAlign: 'text-top' }} />
-                  Live Parameter Graphs
-                </h5>
-                <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', marginTop: 1 }}>
-                  Real-time waveform monitoring — Updates every 2 seconds • Last {historyLog.length} readings
-                </p>
-              </div>
-              {/* Live badge */}
-              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', padding: '3px 10px', borderRadius: 20, fontFamily: 'monospace', letterSpacing: 1 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981', animation: 'pulseGlow 1.5s infinite' }} />
-                LIVE
-              </span>
-            </div>
-
-            {/* 7 Charts Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: 14 }}>
-              {charts.map((chart) => (
-                <div
-                  key={chart.key}
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(13,20,38,0.96) 0%, rgba(8,12,24,0.98) 100%)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 16,
-                    padding: '14px 16px 10px',
-                    boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-                    backdropFilter: 'blur(12px)',
-                    transition: 'border-color 0.3s',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = chart.rangeColor + '55'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
-                >
-                  {/* Subtle background glow */}
-                  <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: chart.rangeColor, opacity: 0.04, filter: 'blur(30px)', pointerEvents: 'none' }} />
-
-                  {/* Card Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <span style={{ fontSize: '1rem', filter: `drop-shadow(0 0 4px ${chart.iconColor})` }}>{chart.icon}</span>
-                        <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#e2e8f0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{chart.title}</span>
-                      </div>
-                      <div style={{ fontSize: '0.65rem', color: '#475569', marginTop: 2, marginLeft: 24, fontFamily: 'monospace' }}>{chart.subtitle}</div>
-                    </div>
-                    {/* Unit badge */}
-                    <span style={{ fontSize: '0.65rem', background: `${chart.rangeColor}18`, border: `1px solid ${chart.rangeColor}35`, color: chart.rangeColor, padding: '2px 8px', borderRadius: 8, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0.5 }}>{chart.unit}</span>
-                  </div>
-
-                  {/* Chart */}
-                  <LiveChart
-                    title={chart.title}
-                    subtitle={chart.subtitle}
-                    unit={chart.unit}
-                    series={chart.series}
-                    rangeColor={chart.rangeColor}
-                    showRangeZone={chart.showRangeZone || null}
-                    height={110}
-                  />
-
-                  {/* Range by Default legend */}
-                  <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                      <span style={{ fontSize: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Range by Default</span>
-                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }}>
-                      {chart.defaultRanges.map((r, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: r.color, display: 'inline-block', boxShadow: `0 0 5px ${r.color}80`, flexShrink: 0 }} />
-                          <span style={{ fontSize: '0.62rem', color: '#64748b', fontFamily: 'monospace' }}>{r.label}</span>
-                          <span style={{ fontSize: '0.62rem', color: '#94a3b8', fontFamily: 'monospace' }}>{r.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* HISTORICAL LOG TABLE */}
       <Card className="scada-glass-card border-0 text-white mt-3">

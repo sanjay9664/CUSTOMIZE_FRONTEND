@@ -965,31 +965,116 @@ const SiteManagement = ({ embedded = false }) => {
           background-color: rgba(56, 189, 248, 0.05);
         }
         body.light-mode .site-card-modern {
-          background: #ffffff;
-          border-color: #e2e8f0;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
         }
         body.light-mode .site-card-modern:hover {
-          border-color: #0284c7;
-          box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12);
+          border-color: #0284c7 !important;
+          box-shadow: 0 10px 24px rgba(2, 132, 199, 0.12) !important;
         }
         body.light-mode .site-card-modern.is-current-active {
-          background: #f0f9ff;
-          border-color: #0284c7;
+          background: #f0f9ff !important;
+          border-color: #0284c7 !important;
+        }
+        body.light-mode .site-title-text {
+          color: #0f172a !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .site-hierarchy-trail {
+          color: #0284c7 !important;
+        }
+        body.light-mode .site-hierarchy-crumb {
+          color: #0369a1 !important;
+          font-weight: 600 !important;
+        }
+        body.light-mode .stat-pill-action {
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .stat-pill-action.pill-devices {
+          background: #e0f2fe !important;
+          border-color: #bae6fd !important;
+          color: #0369a1 !important;
+        }
+        body.light-mode .stat-pill-action.pill-devices .tabular-nums,
+        body.light-mode .stat-pill-action.pill-devices span {
+          color: #0369a1 !important;
+        }
+        body.light-mode .stat-pill-action.pill-alarms-zero {
+          background: #dcfce7 !important;
+          border-color: #bbf7d0 !important;
+          color: #15803d !important;
+        }
+        body.light-mode .stat-pill-action.pill-alarms-zero .tabular-nums,
+        body.light-mode .stat-pill-action.pill-alarms-zero span {
+          color: #15803d !important;
+        }
+        body.light-mode .stat-pill-action.pill-alarms-active {
+          background: #fee2e2 !important;
+          border-color: #fecaca !important;
+          color: #b91c1c !important;
+        }
+        body.light-mode .stat-pill-action.pill-alarms-active .tabular-nums,
+        body.light-mode .stat-pill-action.pill-alarms-active span {
+          color: #b91c1c !important;
+        }
+        body.light-mode .stat-pill-action.pill-energy {
+          background: #fef3c7 !important;
+          border-color: #fde68a !important;
+          color: #b45309 !important;
+        }
+        body.light-mode .stat-pill-action.pill-energy .tabular-nums,
+        body.light-mode .stat-pill-action.pill-energy span {
+          color: #b45309 !important;
+        }
+        body.light-mode .site-inspect-btn {
+          background: #0284c7 !important;
+          border-color: #0284c7 !important;
+          color: #ffffff !important;
+          font-weight: 700 !important;
+          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25) !important;
+        }
+        body.light-mode .site-inspect-btn:hover {
+          background: #0369a1 !important;
+          border-color: #0369a1 !important;
+          color: #ffffff !important;
+        }
+        body.light-mode .touch-action-btn {
+          background: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #475569 !important;
+        }
+        body.light-mode .touch-action-btn:hover {
+          background: #e2e8f0 !important;
+          color: #0f172a !important;
+          border-color: #0284c7 !important;
         }
         body.light-mode .site-kpi-card-compact {
-          background: #ffffff;
-          border-color: #e2e8f0;
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+        }
+        body.light-mode .site-kpi-card-compact .text-muted {
+          color: #475569 !important;
+          font-weight: 600 !important;
+        }
+        body.light-mode .site-kpi-card-compact div[style*="fontSize"] {
+          color: #0f172a !important;
+          font-weight: 800 !important;
         }
         body.light-mode .site-toolbar {
-          background: #ffffff;
-          border-color: #e2e8f0;
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
         }
         body.light-mode .toolbar-select,
         body.light-mode .toolbar-input {
-          background-color: #f8fafc !important;
+          background-color: #ffffff !important;
           border-color: #cbd5e1 !important;
           color: #0f172a !important;
+        }
+        body.light-mode .toolbar-input::placeholder {
+          color: #94a3b8 !important;
         }
         body.light-mode .site-data-table th {
           background-color: #f8fafc;
@@ -1114,7 +1199,7 @@ const SiteManagement = ({ embedded = false }) => {
       )}
 
       {/* Compact Executive KPI Ribbon */}
-      <Row className="g-2 mb-3">
+      <Row className="g-2 mt-2 mt-lg-3 mb-3.5">
         <Col xs={6} md={4} xl>
           <div
             className={`site-kpi-card-compact kpi-total ${kpiFilter === 'ALL' ? 'active-kpi' : ''}`}
@@ -1507,7 +1592,7 @@ const SiteManagement = ({ embedded = false }) => {
                         }}
                       >
                         <Server size={14} className="text-info flex-shrink-0 me-1.5" />
-                        <span className="tabular-nums fw-bold text-white me-1">{devices}</span>
+                        <span className="tabular-nums fw-bold me-1">{devices}</span>
                         <span className="opacity-90">Devices</span>
                       </div>
 
@@ -1525,7 +1610,7 @@ const SiteManagement = ({ embedded = false }) => {
                         ) : (
                           <CheckCircle2 size={14} className="text-success flex-shrink-0 me-1.5" />
                         )}
-                        <span className={`tabular-nums fw-bold me-1 ${alarms > 0 ? 'text-danger' : 'text-white'}`}>{alarms}</span>
+                        <span className={`tabular-nums fw-bold me-1 ${alarms > 0 ? 'text-danger' : ''}`}>{alarms}</span>
                         <span className="opacity-90">Alarms</span>
                       </div>
 
@@ -1538,7 +1623,7 @@ const SiteManagement = ({ embedded = false }) => {
                         }}
                       >
                         <Zap size={14} className="text-warning flex-shrink-0 me-1.5" />
-                        <span className="tabular-nums fw-bold text-white me-1">{energy.toLocaleString()}</span>
+                        <span className="tabular-nums fw-bold me-1">{energy.toLocaleString()}</span>
                         <span className="opacity-90">kWh</span>
                       </div>
                     </div>

@@ -116,13 +116,13 @@ const Chiller = () => {
   return (
     <div className="chiller-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
       {/* Page Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-start bg-panel p-4 rounded-4 border border-white border-opacity-5" style={{ background: '#0f172a' }}>
+      <div className="mb-4 d-flex justify-content-between align-items-start scada-card p-4 rounded-4 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="pe-4">
-          <h2 className="fw-black tracking-wider mb-3 d-flex align-items-center gap-3" style={{ color: '#fff', textShadow: '0 0 15px rgba(255,255,255,0.2)' }}>
+          <h2 className="fw-black tracking-wider mb-3 d-flex align-items-center gap-3" style={{ color: 'var(--scada-text)', textShadow: '0 0 15px rgba(255,255,255,0.2)' }}>
             <Activity className="text-info" size={32} />
             Chiller Monitoring System
           </h2>
-          <p className="text-white opacity-75 fs-14 lh-lg max-w-3xl mb-4">
+          <p className="opacity-75 fs-14 lh-lg max-w-3xl mb-4" style={{ color: 'var(--scada-text)' }}>
             Monitor your <span className="text-info fw-bold">chiller plant performance</span> in real time by tracking critical energy and thermal parameters. Improve efficiency, reduce energy costs, and maintain optimal cooling performance through continuous system insights.
           </p>
           <div className="d-flex flex-wrap gap-4">
@@ -133,7 +133,7 @@ const Chiller = () => {
               "Cooling effect measurement",
               "Specific Energy Consumption (SEC)"
             ].map((item, i) => (
-              <div key={i} className="d-flex align-items-center gap-2 text-white opacity-75 fs-13 fw-bold">
+              <div key={i} className="d-flex align-items-center gap-2 opacity-75 fs-13 fw-bold" style={{ color: 'var(--scada-text)' }}>
                 <List size={16} className="text-info opacity-75" />
                 {item}
               </div>
@@ -154,7 +154,7 @@ const Chiller = () => {
       <Row className="g-4 mb-4" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
         {/* DIAGRAM SECTION */}
         <Col xl={8}>
-          <div className="chiller-diagram-container position-relative w-100 rounded-4 overflow-hidden border border-white border-opacity-5 shadow-lg" style={{ background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%)', height: '650px' }}>
+          <div className="chiller-diagram-container position-relative w-100 rounded-4 overflow-hidden border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', height: '650px' }}>
             
             {/* Top Row Tiles */}
             <div className="d-flex justify-content-between align-items-start position-absolute w-100 px-4 pt-4" style={{ top: 0, left: 0, zIndex: 11 }}>
@@ -209,22 +209,22 @@ const Chiller = () => {
 
             {/* Line Text Labels */}
             <div className="position-absolute" style={{ top: '28%', left: '12%', zIndex: 11, transform: 'translateX(-50%)' }}>
-              <div className="text-white fw-bold fs-11 tracking-widest text-center opacity-75">CHILLED WATER RETURN</div>
+              <div className="fw-bold fs-11 tracking-widest text-center opacity-75" style={{ color: 'var(--scada-text)' }}>CHILLED WATER RETURN</div>
               <div className="text-info fw-black fs-13 text-center">Flow: 42.5 kL/hr</div>
             </div>
 
             <div className="position-absolute" style={{ top: '28%', right: '12%', zIndex: 11, transform: 'translateX(50%)' }}>
-              <div className="text-white fw-bold fs-11 tracking-widest text-center opacity-75">CHILLED WATER SUPPLY</div>
+              <div className="fw-bold fs-11 tracking-widest text-center opacity-75" style={{ color: 'var(--scada-text)' }}>CHILLED WATER SUPPLY</div>
               <div className="text-info fw-black fs-13 text-center">Pressure: 3.2 bar</div>
             </div>
 
             <div className="position-absolute" style={{ top: '63%', left: '12%', zIndex: 11, transform: 'translateX(-50%)' }}>
-              <div className="text-white fw-bold fs-11 tracking-widest text-center opacity-75">CONDENSER WATER SUPPLY</div>
-              <div className="text-white fw-black fs-13 text-center" style={{ color: '#f97316' }}>Flow: 55.0 kL/hr</div>
+              <div className="fw-bold fs-11 tracking-widest text-center opacity-75" style={{ color: 'var(--scada-text)' }}>CONDENSER WATER SUPPLY</div>
+              <div className="fw-black fs-13 text-center" style={{ color: '#f97316' }}>Flow: 55.0 kL/hr</div>
             </div>
 
             <div className="position-absolute" style={{ top: '63%', right: '12%', zIndex: 11, transform: 'translateX(50%)' }}>
-              <div className="text-white fw-bold fs-11 tracking-widest text-center opacity-75">CONDENSER WATER RETURN</div>
+              <div className="fw-bold fs-11 tracking-widest text-center opacity-75" style={{ color: 'var(--scada-text)' }}>CONDENSER WATER RETURN</div>
               <div className="text-danger fw-black fs-13 text-center">Pressure: 2.8 bar</div>
             </div>
 
@@ -244,9 +244,9 @@ const Chiller = () => {
 
         {/* PERFORMANCE ANALYTICS SECTION */}
         <Col xl={4}>
-          <div className="h-100 rounded-4 p-4 border border-white border-opacity-5 d-flex flex-column" style={{ background: '#0f172a' }}>
+          <div className="scada-card h-100 rounded-4 p-4 border d-flex flex-column" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
             <div className="d-flex justify-content-center mb-5">
-              <Nav variant="pills" className="bg-dark bg-opacity-50 p-1 rounded-pill border border-white border-opacity-5">
+              <Nav variant="pills" className="p-1 rounded-pill border" style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                 <Nav.Item>
                   <Nav.Link 
                     className={`rounded-pill px-4 py-1 fs-12 fw-bold text-uppercase tracking-wider ${timeRange === 'DAY' ? 'bg-info text-dark' : 'text-muted'}`}
@@ -279,9 +279,9 @@ const Chiller = () => {
       {/* TREND CHART SECTION */}
       <Row className="mt-2">
         <Col xl={12}>
-          <Card className="bg-panel border-0 rounded-4 overflow-hidden border border-white border-opacity-5" style={{ background: '#0f172a' }}>
-            <div className="px-4 py-3 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
-              <h6 className="mb-0 text-white fw-black tracking-widest uppercase fs-14 text-nowrap">
+          <Card className="scada-card border rounded-4 overflow-hidden" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
+            <div className="px-4 py-3 border-bottom d-flex justify-content-between align-items-center" style={{ borderColor: 'var(--scada-border)' }}>
+              <h6 className="mb-0 fw-black tracking-widest uppercase fs-14 text-nowrap" style={{ color: 'var(--scada-text)' }}>
                 <TrendingUp size={16} className="me-2 text-info" /> Instantaneous Trend
               </h6>
               

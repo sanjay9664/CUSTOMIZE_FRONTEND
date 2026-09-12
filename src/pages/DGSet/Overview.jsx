@@ -390,31 +390,31 @@ const SiemensStyleDG = () => {
     }
   };
 
-  const DataBox = ({ label, value, unit, labelBg = SCADA_COLORS.info, valueColor = '#38bdf8' }) => (
+  const DataBox = ({ label, value, unit, labelBg = '#0f172a', valueColor = '#0284c7' }) => (
     <div className="d-flex align-items-center mb-1 gap-1 flex-wrap flex-sm-nowrap w-100">
-        <div className="data-box-label px-1 py-1 fw-black fs-12 text-center rounded-1 border border-white border-opacity-5 flex-grow-1 flex-sm-grow-0" style={{ width: '75px', minHeight: '26px', fontSize: '0.58rem', backgroundColor: labelBg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1.1' }}>
+        <div className="data-box-label px-1 py-1 fw-black fs-12 text-center rounded-1 flex-grow-1 flex-sm-grow-0" style={{ width: '75px', minHeight: '26px', fontSize: '0.58rem', backgroundColor: labelBg, color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1.1' }}>
             {label}
         </div>
-        <div className="data-box-value bg-black border border-white border-opacity-10 px-2 py-1 fw-black fs-10 text-center rounded-1 flex-grow-1 font-monospace shadow-value" style={{ minWidth: '55px', minHeight: '26px', color: valueColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="data-box-value border px-2 py-1 fw-black fs-10 text-center rounded-1 flex-grow-1 font-monospace shadow-sm" style={{ minWidth: '55px', minHeight: '26px', color: valueColor, backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {typeof value === 'number' ? value.toFixed(1) : (value !== null && value !== undefined ? value : '-')}
         </div>
-        <div className="text-secondary fw-black fs-13 ms-1" style={{ width: '20px', fontSize: '0.65rem' }}>{unit}</div>
+        <div className="text-muted fw-black fs-13 ms-1" style={{ width: '20px', fontSize: '0.65rem' }}>{unit}</div>
     </div>
   );
 
-  const SectionHeader = ({ title, icon, color = SCADA_COLORS.cyan }) => (
-    <div className="text-center py-2 fw-black fs-11 border-bottom border-white border-opacity-5 mb-3 uppercase letter-spacing-1 d-flex align-items-center justify-content-center gap-2" 
-         style={{ backgroundColor: 'rgba(255,255,255,0.02)', color: color, letterSpacing: '2px' }}>
+  const SectionHeader = ({ title, icon, color = '#0284c7' }) => (
+    <div className="text-center py-2 fw-black fs-11 border mb-3 uppercase letter-spacing-1 d-flex align-items-center justify-content-center gap-2 rounded-2" 
+         style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)', color: color, letterSpacing: '1.5px' }}>
         {icon} {title}
     </div>
   );
 
   return (
-    <div id="pdf-content" className="fade-in p-2 min-vh-100" style={{ backgroundColor: SCADA_COLORS.bg, color: SCADA_COLORS.textMain }}>
+    <div id="pdf-content" className="fade-in p-2 min-vh-100" style={{ backgroundColor: 'var(--scada-bg)', color: 'var(--scada-text)' }}>
       {/* PREMIUM HIGH-GLOW NAV BAR */}
-      <div className="d-flex flex-column flex-lg-row align-items-center bg-black border border-white border-opacity-10 p-3 mb-3 shadow-2xl justify-content-between rounded-4 gap-3">
+      <div className="d-flex flex-column flex-lg-row align-items-center p-3 mb-3 shadow-sm justify-content-between rounded-4 gap-3 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start gap-3 w-100 w-lg-auto">
-            <div className="text-info px-4 py-1.5 fw-black fs-9 rounded-2 border border-info border-opacity-20 shadow-info">HMI CONTROL CENTER</div>
+            <div className="text-info px-4 py-1.5 fw-black fs-9 rounded-2 border border-info border-opacity-20">HMI CONTROL CENTER</div>
             <div className="d-flex align-items-center gap-2">
                 <div className="rounded-circle status-pulse" style={{width: 10, height: 10, backgroundColor: isAdmin ? '#22c55e' : '#f59e0b'}}></div>
                 <small className={`${isAdmin ? 'text-success' : 'text-warning'} fw-black fs-12 uppercase tracking-tight`}>
@@ -423,10 +423,10 @@ const SiemensStyleDG = () => {
             </div>
         </div>
         <div className="d-flex flex-wrap gap-2 justify-content-center w-100 w-lg-auto">
-            <button onClick={() => navigate('/dashboard')} className="btn btn-sm fw-black border border-white border-opacity-10 rounded-2 px-4 py-1.5 bg-dark text-secondary hover-info fs-12">
+            <button onClick={() => navigate('/dashboard')} className="btn btn-sm fw-black border rounded-2 px-4 py-1.5 btn-outline-secondary fs-12">
                 <Home size={14} className="me-2" /> DASHBOARD
             </button>
-            <div className="d-flex align-items-center bg-white bg-opacity-5 px-3 py-1 rounded-2 border border-white border-opacity-5" style={{ minHeight: '32px' }}>
+            <div className="d-flex align-items-center px-3 py-1 rounded-2 border" style={{ minHeight: '32px', backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                 <span className="text-info fw-black fs-12 uppercase tracking-wider" style={{ letterSpacing: '1px' }}>
                     {activeDG === 'DG3' ? 'DG Set-3' : activeDG === 'DG2' ? 'DG Set-2' : 'DG Set-1'}
                 </span>
@@ -434,12 +434,12 @@ const SiemensStyleDG = () => {
             <button 
               onClick={handlePdfDownload} 
               disabled={!isAdmin}
-              className={`btn btn-sm fw-black border border-white border-opacity-10 rounded-2 px-4 py-1.5 fs-12 ${isAdmin ? 'bg-primary text-white' : 'bg-secondary bg-opacity-20 text-muted opacity-50 cursor-not-allowed'}`}
+              className={`btn btn-sm fw-black border rounded-2 px-4 py-1.5 fs-12 ${isAdmin ? 'btn-primary text-white' : 'btn-secondary opacity-50 cursor-not-allowed'}`}
             >
                 <FileDown size={14} className="me-2" /> {isAdmin ? 'REPORTS' : 'REPORTS LOCKED'}
             </button>
         </div>
-        <div className="text-secondary fs-13 font-monospace px-4 fw-black text-center w-100 w-lg-auto">
+        <div className="text-muted fs-13 font-monospace px-4 fw-black text-center w-100 w-lg-auto">
             {new Date().toLocaleTimeString()}
         </div>
       </div>
@@ -491,11 +491,11 @@ const SiemensStyleDG = () => {
                 
                 {/* HIGH-POP DG IMAGE */}
                 <div className="px-3 mb-4">
-                    <div className="border border-info border-opacity-20 p-1 bg-black rounded-4 overflow-hidden shadow-2xl position-relative asset-box">
+                    <div className="border border-info border-opacity-20 p-1 rounded-4 overflow-hidden shadow-2xl position-relative asset-box" style={{ backgroundColor: 'var(--scada-card)' }}>
                         <img src="/dg_set.png" alt="DG" className="img-fluid" style={{ width: '100%', height: '240px', objectFit: 'cover' }} />
                         <div className="position-absolute bottom-0 start-0 w-100 p-2 bg-gradient-scada border-top border-white border-opacity-10">
                              <div className="d-flex justify-content-around text-center py-1">
-                                <div><small className="text-muted d-block fs-13 uppercase fw-black">SPEED</small><span className="text-white fw-black fs-10 digital-font">{data.engine.speed !== null ? data.engine.speed.toFixed(0) : '-'}</span></div>
+                                <div><small className="text-muted d-block fs-13 uppercase fw-black">SPEED</small><span className="fw-black fs-10 digital-font" style={{ color: 'var(--scada-text)' }}>{data.engine.speed !== null ? data.engine.speed.toFixed(0) : '-'}</span></div>
                                 <div className="border-start border-white border-opacity-10 px-4"><small className="text-muted d-block fs-13 uppercase fw-black">TOTAL WATTS</small><span className="text-info fw-black fs-10 digital-font">{data.power.kw !== null ? data.power.kw.toFixed(1) : '-'} <small className="fs-13">KW</small></span></div>
                                 <div className="border-start border-white border-opacity-10 ps-4"><small className="text-muted d-block fs-13 uppercase fw-black">L1-L2 VOLTS</small><span className="text-warning fw-black fs-10 digital-font">{data.voltage.ry !== null ? data.voltage.ry.toFixed(0) : '-'} <small className="fs-13">V</small></span></div>
                              </div>
@@ -505,7 +505,7 @@ const SiemensStyleDG = () => {
 
                 <div className="px-3">
                     <SectionHeader title="Operating Ledger" icon={<History size={16} />} color="#94a3b8" />
-                    <div className="p-4 bg-black bg-opacity-40 border border-white border-opacity-10 rounded-4 shadow-inner">
+                    <div className="p-4 border rounded-4 shadow-inner" style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                          <div className="d-flex justify-content-between align-items-center mb-1">
                             <small className="text-secondary fw-black fs-12 uppercase">Accumulated Run Time</small>
                             <span className="text-info fw-black fs-8">{data.engine.runtime !== null ? data.engine.runtime : '-'} <small className="fs-13 text-secondary">HRS</small></span>
@@ -522,38 +522,38 @@ const SiemensStyleDG = () => {
 
         {/* CENTER: ELECTRICALS */}
         <Col xl={4}>
-            <div className="bg-panel border border-white border-opacity-5 p-1 h-100 rounded-4 shadow-sm backdrop-blur">
+            <div className="scada-card border p-1 h-100 rounded-4 shadow-sm backdrop-blur" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
                 <Row className="g-1">
                     <Col xs={6}>
                         <SectionHeader title="HV Line Bus" icon={<Zap size={16} />} color="#f59e0b" />
                         <div className="p-2 pt-0">
-                            <DataBox label="L1-L2 VOLTS" value={data.voltage.ry} unit="V" labelBg={SCADA_COLORS.red} valueColor={SCADA_COLORS.textMain} />
-                            <DataBox label="L2-L3 VOLTS" value={data.voltage.yb} unit="V" labelBg={SCADA_COLORS.yellow} valueColor={SCADA_COLORS.textMain} />
-                            <DataBox label="L3-L1 VOLTS" value={data.voltage.br} unit="V" labelBg={SCADA_COLORS.blue} valueColor={SCADA_COLORS.textMain} />
+                            <DataBox label="L1-L2 VOLTS" value={data.voltage.ry} unit="V" labelBg={SCADA_COLORS.red} valueColor="var(--scada-text)" />
+                            <DataBox label="L2-L3 VOLTS" value={data.voltage.yb} unit="V" labelBg={SCADA_COLORS.yellow} valueColor="var(--scada-text)" />
+                            <DataBox label="L3-L1 VOLTS" value={data.voltage.br} unit="V" labelBg={SCADA_COLORS.blue} valueColor="var(--scada-text)" />
                         </div>
                     </Col>
                     <Col xs={6}>
                         <SectionHeader title="LV Phase Bus" icon={<Zap size={16} />} color="#f59e0b" />
                         <div className="p-2 pt-0">
-                            <DataBox label="L1-N VOLTS" value={data.voltage.rn} unit="V" labelBg={SCADA_COLORS.red} valueColor={SCADA_COLORS.textMain} />
-                            <DataBox label="L2-N VOLTS" value={data.voltage.yn} unit="V" labelBg={SCADA_COLORS.yellow} valueColor={SCADA_COLORS.textMain} />
-                            <DataBox label="L3-N VOLTS" value={data.voltage.bn} unit="V" labelBg={SCADA_COLORS.blue} valueColor={SCADA_COLORS.textMain} />
+                            <DataBox label="L1-N VOLTS" value={data.voltage.rn} unit="V" labelBg={SCADA_COLORS.red} valueColor="var(--scada-text)" />
+                            <DataBox label="L2-N VOLTS" value={data.voltage.yn} unit="V" labelBg={SCADA_COLORS.yellow} valueColor="var(--scada-text)" />
+                            <DataBox label="L3-N VOLTS" value={data.voltage.bn} unit="V" labelBg={SCADA_COLORS.blue} valueColor="var(--scada-text)" />
                         </div>
                     </Col>
                     <Col xs={6}>
                         <SectionHeader title="Amperage" icon={<Activity size={16} />} color="#06b6d4" />
                         <div className="p-2 pt-0">
-                            <DataBox label="L1 CURRENT" value={data.current.r} unit="A" labelBg={SCADA_COLORS.red} valueColor={SCADA_COLORS.textMain} />
-                            <DataBox label="L2 CURRENT" value={data.current.y} unit="A" labelBg={SCADA_COLORS.yellow} valueColor={SCADA_COLORS.textMain} />
-                            <DataBox label="L3 CURRENT" value={data.current.b} unit="A" labelBg={SCADA_COLORS.blue} valueColor={SCADA_COLORS.textMain} />
+                            <DataBox label="L1 CURRENT" value={data.current.r} unit="A" labelBg={SCADA_COLORS.red} valueColor="var(--scada-text)" />
+                            <DataBox label="L2 CURRENT" value={data.current.y} unit="A" labelBg={SCADA_COLORS.yellow} valueColor="var(--scada-text)" />
+                            <DataBox label="L3 CURRENT" value={data.current.b} unit="A" labelBg={SCADA_COLORS.blue} valueColor="var(--scada-text)" />
                         </div>
                     </Col>
                     <Col xs={6}>
                         <SectionHeader title="Power Matrix" icon={<TrendingDown size={16} />} color="#10b981" />
                         <div className="p-2 pt-0">
-                            <DataBox label="TOTAL WATTS" value={data.power.kw} unit="KW" labelBg={SCADA_COLORS.cyan} valueColor="#fff" />
-                            <DataBox label="TOTAL VA" value={data.power.kva} unit="KVA" labelBg="#334155" valueColor="#fff" />
-                            <DataBox label="POWER FACTOR" value={data.power.pf} unit="PF" labelBg={SCADA_COLORS.green} valueColor="#fff" />
+                            <DataBox label="TOTAL WATTS" value={data.power.kw} unit="KW" labelBg={SCADA_COLORS.cyan} valueColor="var(--scada-text)" />
+                            <DataBox label="TOTAL VA" value={data.power.kva} unit="KVA" labelBg="var(--scada-accent-bg)" valueColor="var(--scada-text)" />
+                            <DataBox label="POWER FACTOR" value={data.power.pf} unit="PF" labelBg={SCADA_COLORS.green} valueColor="var(--scada-text)" />
                         </div>
                     </Col>
                     <Col xs={12}>
@@ -561,25 +561,25 @@ const SiemensStyleDG = () => {
                         <div className="p-3 pt-1">
                             <Row className="g-2">
                                 <Col xs={6}>
-                                    <div className="health-card text-center p-2 rounded-3 border border-white border-opacity-5">
+                                    <div className="health-card text-center p-2 rounded-3 border">
                                         <small className="text-muted d-block fs-13 mb-1 fw-black uppercase">Coolant Temp</small>
                                         <span className="text-warning fw-black fs-9">{data.engine.coolant !== null ? `${data.engine.coolant.toFixed(1)}°C` : '-'}</span>
                                     </div>
                                 </Col>
                                 <Col xs={6}>
-                                    <div className="health-card text-center p-2 rounded-3 border border-white border-opacity-5">
+                                    <div className="health-card text-center p-2 rounded-3 border">
                                         <small className="text-muted d-block fs-13 mb-1 fw-black uppercase">Oil Pressure</small>
-                                        <span className="text-white fw-black fs-9">{data.engine.oilPressure !== null ? data.engine.oilPressure.toFixed(1) : '-'} <small className="fs-13 text-muted">BAR</small></span>
+                                        <span className="fw-black fs-9" style={{ color: 'var(--scada-text)' }}>{data.engine.oilPressure !== null ? data.engine.oilPressure.toFixed(1) : '-'} <small className="fs-13 text-muted">BAR</small></span>
                                     </div>
                                 </Col>
                                 <Col xs={6}>
-                                    <div className="health-card text-center p-2 rounded-3 border border-white border-opacity-5">
+                                    <div className="health-card text-center p-2 rounded-3 border">
                                         <small className="text-muted d-block fs-13 mb-1 fw-black uppercase">Frequency</small>
                                         <span className="text-success fw-black fs-9">{data.engine.freq !== null ? data.engine.freq.toFixed(1) : '-'} <small className="fs-13 text-muted">HZ</small></span>
                                     </div>
                                 </Col>
                                 <Col xs={6}>
-                                    <div className="health-card text-center p-2 rounded-3 border border-white border-opacity-5">
+                                    <div className="health-card text-center p-2 rounded-3 border">
                                         <small className="text-muted d-block fs-13 mb-1 fw-black uppercase">Battery V</small>
                                         <span className="text-info fw-black fs-9">{data.engine.battery !== null ? data.engine.battery.toFixed(1) : '-'} <small className="fs-13 text-muted">V</small></span>
                                     </div>
@@ -591,7 +591,7 @@ const SiemensStyleDG = () => {
 
                 <SectionHeader title="Production Stats" icon={<Database size={16} />} color="#06b6d4" />
                 <div className="px-4 pb-4">
-                    <Table borderless variant="dark" className="bg-transparent mb-0">
+                    <Table borderless className="bg-transparent mb-0">
                         <tbody>
                             <tr className="border-bottom border-white border-opacity-5">
                                 <td className="py-2 text-muted fw-black fs-12 uppercase">KWH Total</td>
@@ -609,18 +609,18 @@ const SiemensStyleDG = () => {
 
         {/* RIGHT: DIESEL STATUS */}
         <Col xl={4}>
-             <div className="bg-panel border border-white border-opacity-5 p-1 h-100 rounded-4 shadow-sm backdrop-blur">
+             <div className="scada-card border p-1 h-100 rounded-4 shadow-sm backdrop-blur" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
                 <SectionHeader title="Fuel Management" icon={<Fuel size={16} />} color="#f59e0b" />
                 <div className="px-4 py-3">
                     <div className="text-center mb-4 mt-2">
-                        <div className="position-relative d-inline-block p-1 bg-black rounded-4 border border-white border-opacity-5 shadow-2xl">
+                        <div className="position-relative d-inline-block p-1 rounded-4 border shadow-2xl" style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                              <div className="tank-visual-modern-scada">
                                 <div className="liquid-fill" style={{ height: `${data.diesel.level !== null ? data.diesel.level : 0}%`, background: 'linear-gradient(to top, #d97706, #f59e0b)' }}>
                                      <div className="wave-scada"></div>
                                 </div>
                              </div>
                              <div className="position-absolute top-50 start-50 translate-middle text-center w-100">
-                                <h2 className="text-white fw-black mb-1 fs-7 digital-font" style={{textShadow: '0 0 15px rgba(245, 158, 11, 0.5)'}}>{data.diesel.level !== null ? `${data.diesel.level.toFixed(1)}%` : '-'}</h2>
+                                <h2 className="fw-black mb-1 fs-7 digital-font" style={{ color: 'var(--scada-text)', textShadow: '0 0 15px rgba(245, 158, 11, 0.5)' }}>{data.diesel.level !== null ? `${data.diesel.level.toFixed(1)}%` : '-'}</h2>
                                 <small className="text-warning fw-black uppercase fs-12 tracking-widest">Level</small>
                              </div>
                         </div>
@@ -628,13 +628,13 @@ const SiemensStyleDG = () => {
                     
                     <Row className="g-2 mb-4">
                         <Col xs={6}>
-                            <div className="p-3 rounded-4 bg-black border border-white border-opacity-10 text-center shadow-inner">
+                            <div className="p-3 rounded-4 border text-center shadow-inner" style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                                 <small className="text-muted d-block fw-black fs-12 mb-1 uppercase">Today Used</small>
                                 <span className="text-danger fw-black fs-9">{data.diesel.spentToday !== null ? data.diesel.spentToday.toFixed(1) : '-'} <small className="fs-12 text-muted">L</small></span>
                             </div>
                         </Col>
                         <Col xs={6}>
-                             <div className="p-3 rounded-4 bg-black border border-white border-opacity-10 text-center shadow-inner">
+                             <div className="p-3 rounded-4 border text-center shadow-inner" style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                                 <small className="text-muted d-block fw-black fs-12 mb-1 uppercase">Refill Date</small>
                                 <span className="text-info fw-black fs-12">{data.diesel.lastFill}</span>
                             </div>
@@ -642,8 +642,8 @@ const SiemensStyleDG = () => {
                     </Row>
 
                     <div className="d-flex flex-column gap-2 mb-4">
-                         <DataBox label="Current Ltrs" value={data.diesel.remaining} unit="L" labelBg="#1e293b" valueColor="#fff" />
-                         <DataBox label="Efficiency" value={data.diesel.efficiency} unit="L/KWh" labelBg="#1e293b" valueColor="#fff" />
+                         <DataBox label="Current Ltrs" value={data.diesel.remaining} unit="L" labelBg="var(--scada-accent-bg)" valueColor="var(--scada-text)" />
+                         <DataBox label="Efficiency" value={data.diesel.efficiency} unit="L/KWh" labelBg="var(--scada-accent-bg)" valueColor="var(--scada-text)" />
                     </div>
                 </div>
 
@@ -657,7 +657,7 @@ const SiemensStyleDG = () => {
                             {l: 'OIL COOLER', s: 'ONLINE', c: 'success'},
                         ].map((aux, i) => (
                             <Col xs={6} key={i}>
-                                <div className="p-2 border border-white border-opacity-5 bg-black rounded-3 d-flex justify-content-between align-items-center shadow-inner px-3">
+                                <div className="p-2 border rounded-3 d-flex justify-content-between align-items-center shadow-inner px-3" style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                                     <small className="fw-black fs-13 text-muted uppercase">{aux.l}</small>
                                     <div className={`status-dot bg-${aux.c}`}></div>
                                 </div>
