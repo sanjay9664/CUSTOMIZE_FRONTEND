@@ -40,8 +40,8 @@ const ManageOrganisationHeader = ({ org = {} }) => {
     <>
       {/* Sub-Header Tabs Row */}
       <div className="px-3 py-2.5 my-3 rounded-3 border shadow-sm sub-header-nav-bar" style={{ margin: '12px 0 1.35rem 0', backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
-        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
-          <Nav variant="pills" activeKey={org.activeTab} className="flex-wrap gap-1.5 align-items-center">
+        <div className="d-flex align-items-center justify-content-between flex-nowrap gap-2 w-100 overflow-x-auto">
+          <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center flex-shrink-0">
             <Nav.Item>
               <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className={`sub-nav-pill-btn ${org.activeTab === 'hub' ? 'active-pill' : 'inactive-pill'}`}>
                 <Sparkles size={15} className={org.activeTab === 'hub' ? 'text-dark' : 'text-info'} /> Settings
@@ -58,7 +58,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
               </Nav.Link>
             </Nav.Item>
 
-            <div className="vr bg-secondary opacity-30 mx-1" style={{ height: '24px' }} />
+            <div className="vr bg-secondary opacity-30 mx-1 flex-shrink-0" style={{ height: '24px' }} />
 
             {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
             <Nav.Item>
@@ -138,9 +138,9 @@ const ManageOrganisationHeader = ({ org = {} }) => {
           </Nav>
 
           {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
-          <div className="d-flex align-items-center gap-2 ms-auto flex-wrap">
+          <div className="d-flex align-items-center gap-2 ms-auto flex-nowrap flex-shrink-0">
             {showExtraTabs && (
-              <Nav variant="pills" activeKey={org.activeTab} className="flex-wrap gap-1.5 align-items-center extra-tabs-animated-wrapper">
+              <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center extra-tabs-animated-wrapper flex-shrink-0">
                 <Nav.Item>
                   <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('widgets')} className={`sub-nav-pill-btn ${org.isWidgetGroup ? 'active-pill' : 'inactive-pill'}`}>
                     <Grid size={15} /> Widgets
@@ -164,7 +164,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
               </Nav>
             )}
 
-            <div className="extra-tabs-toggle-container ms-2">
+            <div className="extra-tabs-toggle-container ms-2 flex-shrink-0">
               <Form.Check
                 type="switch"
                 id="extra-modules-toggle"
