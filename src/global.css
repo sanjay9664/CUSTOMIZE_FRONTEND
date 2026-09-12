@@ -2847,13 +2847,20 @@ body.light-mode .offcanvas-body {
 }
 
 .sub-header-nav-bar {
-  padding: 10px 16px !important;
+  padding: 8px 14px !important;
   margin-top: 10px !important;
   margin-bottom: 1.25rem !important;
   display: flex !important;
   align-items: center !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
+  white-space: nowrap !important;
   transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.sub-header-nav-bar::-webkit-scrollbar {
+  display: none !important;
 }
 
 body.light-mode .sub-header-nav-bar {
@@ -2863,29 +2870,30 @@ body.light-mode .sub-header-nav-bar {
 }
 
 .sub-header-nav-bar .nav {
-  gap: 6px !important;
+  gap: 4px !important;
   display: flex !important;
   align-items: center !important;
-  flex-wrap: wrap !important;
+  flex-wrap: nowrap !important;
 }
 
 .sub-nav-pill-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 0.4rem !important;
-  font-size: 0.81rem !important;
+  gap: 0.35rem !important;
+  font-size: 0.78rem !important;
   font-weight: 600 !important;
-  padding: 0 0.75rem !important;
-  height: 36px !important;
-  min-height: 36px !important;
-  margin: 2px 2px !important;
+  padding: 0 0.65rem !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  margin: 1px 1px !important;
   border-radius: 8px !important;
   transition: all 0.15s cubic-bezier(0, 0, 0.2, 1) !important;
   white-space: nowrap !important;
   text-decoration: none !important;
   line-height: 1 !important;
   box-sizing: border-box !important;
+  flex-shrink: 0 !important;
 }
 
 .sub-nav-pill-btn:hover {

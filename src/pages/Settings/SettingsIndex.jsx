@@ -442,8 +442,8 @@ const SettingsIndex = () => {
 
       {/* Sub-Header Tabs Row - Unified Executive Glass Segmented Bar */}
       <div className="px-3 py-2.5 my-3 rounded-3 border shadow-sm sub-header-nav-bar" style={{ margin: '12px 0 1.5rem 0', backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
-        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
-          <Nav variant="pills" activeKey={activeTab} className="flex-wrap gap-1.5 align-items-center">
+        <div className="d-flex align-items-center justify-content-between flex-nowrap gap-2 w-100 overflow-x-auto">
+          <Nav variant="pills" activeKey={activeTab} className="flex-nowrap gap-1.5 align-items-center flex-shrink-0">
             <Nav.Item>
               <Nav.Link
                 onClick={() => { setActiveTab('hub'); navigate('/settings'); }}
@@ -469,7 +469,7 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <div className="vr bg-secondary opacity-30 mx-1" style={{ height: '24px' }} />
+            <div className="vr bg-secondary opacity-30 mx-1 flex-shrink-0" style={{ height: '24px' }} />
 
             {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
             <Nav.Item>
@@ -481,7 +481,7 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
             <Nav.Item>
               <Nav.Link
@@ -492,7 +492,7 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
             <Nav.Item>
               <Nav.Link
@@ -503,7 +503,7 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
             <Nav.Item>
               <Nav.Link
@@ -514,7 +514,7 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
             <Nav.Item>
               <Nav.Link
@@ -525,7 +525,7 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
             <Nav.Item>
               <Nav.Link
@@ -536,7 +536,7 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
             <Nav.Item>
               <Nav.Link
@@ -549,9 +549,9 @@ const SettingsIndex = () => {
           </Nav>
 
           {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
-          <div className="d-flex align-items-center gap-2 ms-auto flex-wrap">
+          <div className="d-flex align-items-center gap-2 ms-auto flex-nowrap flex-shrink-0">
             {showExtraTabsIndex && (
-              <Nav variant="pills" activeKey={activeTab} className="flex-wrap gap-1.5 align-items-center extra-tabs-animated-wrapper">
+              <Nav variant="pills" activeKey={activeTab} className="flex-nowrap gap-1.5 align-items-center extra-tabs-animated-wrapper flex-shrink-0">
                 <Nav.Item>
                   <Nav.Link onClick={() => navigate('/manage-organisation?tab=widgets')} className={`sub-nav-pill-btn ${activeTab === 'widgets' ? 'active-pill' : 'inactive-pill'}`}>
                     <Grid size={15} /> Widgets
@@ -572,16 +572,10 @@ const SettingsIndex = () => {
                     <FileText size={15} /> Report
                   </Nav.Link>
                 </Nav.Item>
-                {/* Building Tab commented out: building is now managed as an asset */}
-                {/* <Nav.Item>
-                  <Nav.Link onClick={() => navigate('/manage-organisation?tab=building')} className={`d-flex align-items-center gap-1.5 fw-bold px-3 py-2 rounded-2 transition-all ${activeTab === 'building' || activeTab === 'buildings' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white'}`} style={{ fontSize: '0.83rem' }}>
-                    <Building2 size={15} /> Building
-                  </Nav.Link>
-                </Nav.Item> */}
               </Nav>
             )}
 
-            <div className="extra-tabs-toggle-container ms-2">
+            <div className="extra-tabs-toggle-container ms-2 flex-shrink-0">
               <Form.Check
                 type="switch"
                 id="extra-modules-toggle-index"
