@@ -44,17 +44,22 @@ export const generateTreeFromSochiot = (userZoneLocationVO) => {
     return items.map((node) => {
       let children = [];
       if (node.consumers && node.consumers.length) {
-        children = buildSubTree(node.consumers, 'CLIENT');
-      } else if (node.clientList && node.clientList.length) {
-        children = buildSubTree(node.clientList, 'CLIENT');
-      } else if (node.zoneVOS && node.zoneVOS.length) {
-        children = buildSubTree(node.zoneVOS, 'ZONE');
-      } else if (node.subZones && node.subZones.length) {
-        children = buildSubTree(node.subZones, 'ZONE');
-      } else if (node.locations && node.locations.length) {
-        children = buildSubTree(node.locations, 'LOCATION');
-      } else if (node.locationList && node.locationList.length) {
-        children = buildSubTree(node.locationList, 'LOCATION');
+        children.push(...buildSubTree(node.consumers, 'CLIENT'));
+      }
+      if (node.clientList && node.clientList.length) {
+        children.push(...buildSubTree(node.clientList, 'CLIENT'));
+      }
+      if (node.zoneVOS && node.zoneVOS.length) {
+        children.push(...buildSubTree(node.zoneVOS, 'ZONE'));
+      }
+      if (node.subZones && node.subZones.length) {
+        children.push(...buildSubTree(node.subZones, 'ZONE'));
+      }
+      if (node.locations && node.locations.length) {
+        children.push(...buildSubTree(node.locations, 'LOCATION'));
+      }
+      if (node.locationList && node.locationList.length) {
+        children.push(...buildSubTree(node.locationList, 'LOCATION'));
       }
 
       const nodeVal = `${zoneNodeType}-${node.id}`;

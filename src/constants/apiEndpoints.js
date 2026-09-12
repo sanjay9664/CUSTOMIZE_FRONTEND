@@ -1,8 +1,3 @@
-/**
- * Centralized API Endpoints Dictionary
- * Inspired by ismartaccess-frontend-v2 (src/constants/api.js)
- * Consolidates all Sochiot Cloud microservices and BMS backend routes in one single contract.
- */
 
 // 1. Authentication & Token Management
 export const AUTH_ENDPOINTS = {

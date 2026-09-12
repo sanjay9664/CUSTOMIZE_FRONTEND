@@ -21,16 +21,19 @@ const LocationCascaderSelector = ({
   changeOnSelect = true,
   displayOnlyChild = false,
   placeholder = 'Select Location',
+  searchPlaceholder = 'Search location...',
+  fallbackLabel = '',
   disabled = false,
   allowClear = true,
   className = '',
-  variant = 'input', // 'input' | 'pill'
+  variant = 'input', // 'input' | 'pill' | 'compact'
   triggerIcon = null
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activePath, setActivePath] = useState([]); // array of nodes currently hovered/selected per column
   const [selectedNodes, setSelectedNodes] = useState([]); // confirmed selection
   const [searchQuery, setSearchQuery] = useState('');
+  const [openUpwards, setOpenUpwards] = useState(false);
   const containerRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -59,6 +62,19 @@ const LocationCascaderSelector = ({
       }
     }
   }, [value, options]);
+
+  // Viewport position check to open upwards if near screen bottom
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 300 && rect.top > 300) {
+        setOpenUpwards(true);
+      } else {
+        setOpenUpwards(false);
+      }
+    }
+  }, [isOpen]);
 
   // Click outside listener
   useEffect(() => {
@@ -113,7 +129,7 @@ const LocationCascaderSelector = ({
     const traverse = (nodes, currentBreadcrumbs) => {
       nodes.forEach((n) => {
         const nextBreadcrumbs = [...currentBreadcrumbs, n];
-        if (n.label.toLowerCase().includes(query)) {
+        if (n.label && n.label.toLowerCase().includes(query)) {
           results.push({
             node: n,
             path: nextBreadcrumbs,
@@ -179,17 +195,24 @@ const LocationCascaderSelector = ({
 
   // Compute trigger label
   const displayText = useMemo(() => {
-    if (!selectedNodes || selectedNodes.length === 0) return '';
-    if (displayOnlyChild) {
-      return selectedNodes[selectedNodes.length - 1]?.label || '';
+    if (selectedNodes && selectedNodes.length > 0) {
+      if (displayOnlyChild) {
+        return selectedNodes[selectedNodes.length - 1]?.label || '';
+      }
+      return selectedNodes.map((n) => n.label).join(' > ');
     }
-    return selectedNodes.map((n) => n.label).join(' > ');
-  }, [selectedNodes, displayOnlyChild]);
+    if (fallbackLabel) return fallbackLabel;
+    if (value && typeof value === 'string' && !value.includes('@') && !value.includes('-')) {
+      return `Device #${value}`;
+    }
+    return '';
+  }, [selectedNodes, displayOnlyChild, fallbackLabel, value]);
 
   return (
     <div
       ref={containerRef}
       className={`location-cascader-wrapper position-relative ${className} ${disabled ? 'opacity-70 pointer-events-none' : ''}`}
+      style={{ zIndex: isOpen ? 1050 : 'auto' }}
     >
       <style>{`
         .location-cascader-wrapper {
@@ -253,20 +276,51 @@ const LocationCascaderSelector = ({
           border-color: #cbd5e1;
         }
 
+        /* Compact Trigger Variant (Table / Field style, 32px height) */
+        .cascader-trigger-compact {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: rgba(15, 23, 42, 0.7);
+          color: #f8fafc;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 6px;
+          padding: 4px 8px;
+          font-size: 12px;
+          cursor: pointer;
+          width: 100%;
+          min-height: 32px;
+          height: 32px;
+          box-sizing: border-box;
+          transition: all 0.15s ease;
+        }
+        .cascader-trigger-compact:hover {
+          border-color: #38bdf8;
+          background: rgba(30, 41, 59, 0.9);
+        }
+        body.light-mode .cascader-trigger-compact {
+          background: #ffffff;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        body.light-mode .cascader-trigger-compact:hover {
+          border-color: #0284c7;
+          background: #f8fafc;
+        }
+
         /* Dropdown Popover */
         .cascader-popover {
           position: absolute;
-          top: calc(100% + 6px);
           left: 0;
           z-index: 1060;
           background: #0f172a;
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
           border-radius: 10px;
           overflow: hidden;
           min-width: 320px;
           max-width: 95vw;
-          animation: cascaderFadeIn 0.18s ease-out;
+          animation: cascaderFadeIn 0.15s ease-out;
         }
         body.light-mode .cascader-popover {
           background: #ffffff;
@@ -369,6 +423,30 @@ const LocationCascaderSelector = ({
             <ChevronRight size={16} className={`transition-all ${isOpen ? 'rotate-90' : ''}`} />
           </div>
         </div>
+      ) : variant === 'compact' ? (
+        <div
+          className="cascader-trigger-compact"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          title={displayText || placeholder}
+        >
+          <div className="d-flex align-items-center gap-1.5 overflow-hidden text-truncate pe-1">
+            {triggerIcon}
+            <span className="text-truncate">
+              {displayText || <span className="opacity-50">{placeholder}</span>}
+            </span>
+          </div>
+          <div className="d-flex align-items-center gap-1 flex-shrink-0">
+            {allowClear && displayText && !disabled && (
+              <X
+                size={13}
+                className="opacity-60 hover:opacity-100 cursor-pointer text-danger"
+                onClick={handleClear}
+                title="Clear selection"
+              />
+            )}
+            <ChevronDown size={13} className={`transition-all opacity-60 ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
       ) : (
         <div
           className="cascader-trigger-input"
@@ -396,14 +474,17 @@ const LocationCascaderSelector = ({
 
       {/* DROPDOWN POPOVER */}
       {isOpen && (
-        <div className="cascader-popover">
+        <div 
+          className="cascader-popover"
+          style={openUpwards ? { top: 'auto', bottom: 'calc(100% + 4px)' } : { top: 'calc(100% + 4px)', bottom: 'auto' }}
+        >
           {/* Search Header */}
           <div className="cascader-search-box d-flex align-items-center gap-2">
             <Search size={14} className="text-slate-400 flex-shrink-0" />
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Search location..."
+              placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-transparent border-0 text-inherit w-100 p-0 focus:outline-none"
@@ -418,11 +499,17 @@ const LocationCascaderSelector = ({
             )}
           </div>
 
-          {/* Search results mode */}
-          {searchQuery.trim() ? (
+          {/* If no options available */}
+          {options.length === 0 ? (
+            <div className="p-3 text-center text-muted fs-12">
+              No items available.<br />
+              <span className="fs-11 opacity-75">Please select a location above first.</span>
+            </div>
+          ) : searchQuery.trim() ? (
+            /* Search results mode */
             <div style={{ maxHeight: 250, overflowY: 'auto' }} className="p-1">
               {flatSearchResults.length === 0 ? (
-                <div className="p-3 text-center text-muted fs-12">No locations match "{searchQuery}"</div>
+                <div className="p-3 text-center text-muted fs-12">No items match "{searchQuery}"</div>
               ) : (
                 flatSearchResults.map((res, idx) => (
                   <div

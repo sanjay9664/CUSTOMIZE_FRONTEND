@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Row, Col, Spinner } from 'react-bootstrap';
 import { MapPin, Cpu, RotateCcw } from 'lucide-react';
 import LocationCascaderSelector from './LocationCascaderSelector';
@@ -32,6 +32,7 @@ const LocationDeviceFilter = ({
   // Callbacks
   onSelectLocation = () => {},
   onSelectDevice = () => {},
+  onDeviceTreeLoaded = null,
   
   // Configuration
   showTitle = true,
@@ -61,7 +62,55 @@ const LocationDeviceFilter = ({
   const [deviceTree, setDeviceTree] = useState([]);
   const [selectedDeviceVal, setSelectedDeviceVal] = useState(null);
 
-  // 1. Initial Load: Retrieve token and user location hierarchy from Sochiot API
+  // Stable references to prevent infinite loop re-renders
+  const onDeviceTreeLoadedRef = useRef(onDeviceTreeLoaded);
+  useEffect(() => {
+    onDeviceTreeLoadedRef.current = onDeviceTreeLoaded;
+  }, [onDeviceTreeLoaded]);
+
+  const lastLoadedEntityRef = useRef(null);
+  const prevInitialValRef = useRef(null);
+
+  // 1. When location changes, query /config-engine/entity/{NODE_TYPE}/{NODE_ID}
+  const loadEntityHierarchy = useCallback(async (nodeType, nodeId) => {
+    if (!nodeType || !nodeId) return;
+    const cleanNodeType = (!nodeType || nodeType === 'UNKNOWN') ? 'LOCATION' : nodeType;
+    const cleanNodeId = String(nodeId);
+    const entityKey = `${cleanNodeType}-${cleanNodeId}`;
+
+    // Prevent redundant requests if already loaded or currently active
+    if (lastLoadedEntityRef.current === entityKey) {
+      return;
+    }
+    lastLoadedEntityRef.current = entityKey;
+
+    setLoading(true);
+    try {
+      const entityResult = await fetchEntityHierarchy(cleanNodeType, cleanNodeId);
+      if (entityResult?.locationVOS) {
+        const transformed = transformGatewayDeviceHierarchy(entityResult.locationVOS);
+        setDeviceTree(transformed);
+        if (typeof onDeviceTreeLoadedRef.current === 'function') {
+          onDeviceTreeLoadedRef.current(transformed);
+        }
+      } else {
+        setDeviceTree([]);
+        if (typeof onDeviceTreeLoadedRef.current === 'function') {
+          onDeviceTreeLoadedRef.current([]);
+        }
+      }
+    } catch (err) {
+      console.warn('[LocationDeviceFilter] loadEntityHierarchy error:', err);
+      setDeviceTree([]);
+      if (typeof onDeviceTreeLoadedRef.current === 'function') {
+        onDeviceTreeLoadedRef.current([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 2. Initial Load: Retrieve token and user location hierarchy from Sochiot API
   useEffect(() => {
     let isMounted = true;
 
@@ -84,9 +133,10 @@ const LocationDeviceFilter = ({
           const tree = generateTreeFromSochiot(hierarchyData.userZoneLocationVO);
           if (tree.length > 0) {
             setLocationTree(tree);
-            if (hierarchyData.preferredZoneNodeId && hierarchyData.preferredZoneNodeType && !selectedLocationVal) {
+            if (hierarchyData.preferredZoneNodeId && hierarchyData.preferredZoneNodeType && !initialLocationValue) {
               const defaultVal = `${hierarchyData.preferredZoneNodeType}-${hierarchyData.preferredZoneNodeId}`;
               setSelectedLocationVal(defaultVal);
+              loadEntityHierarchy(hierarchyData.preferredZoneNodeType, hierarchyData.preferredZoneNodeId);
             }
           }
         }
@@ -100,52 +150,35 @@ const LocationDeviceFilter = ({
 
     initLocationData();
     return () => { isMounted = false; };
-  }, [globalSochiotLocation, loadSochiotHierarchy, selectedLocationVal]);
+  }, [globalSochiotLocation, loadSochiotHierarchy, initialLocationValue, loadEntityHierarchy]);
 
-  // 2. Fallback: If Sochiot tree is empty, build tree from local BMS entities
+  // 3. Fallback: If Sochiot tree is empty, build tree from local BMS entities
   useEffect(() => {
     if (!sochiotUserLocation && !globalSochiotLocation) {
       const bmsTree = generateTreeFromBmsEntities({ companies, tenants, zones, areas, sites });
       if (bmsTree.length > 0) {
         setLocationTree(bmsTree);
         // Default to first site if none selected
-        if (!selectedLocationVal && sites.length > 0) {
+        if (!initialLocationValue && sites.length > 0) {
           setSelectedLocationVal(`LOCATION-${sites[0].id}`);
+          loadEntityHierarchy('LOCATION', sites[0].id);
         }
       }
     }
-  }, [sochiotUserLocation, companies, tenants, zones, areas, sites, selectedLocationVal]);
-
-  // 3. When location changes, query /config-engine/entity/{NODE_TYPE}/{NODE_ID}
-  const loadEntityHierarchy = useCallback(async (nodeType, nodeId) => {
-    if (!nodeType || !nodeId) return;
-    setLoading(true);
-    try {
-      const entityResult = await fetchEntityHierarchy(nodeType, nodeId);
-      if (entityResult?.locationVOS) {
-        const transformed = transformGatewayDeviceHierarchy(entityResult.locationVOS);
-        setDeviceTree(transformed);
-      } else {
-        setDeviceTree([]);
-      }
-    } catch (err) {
-      console.warn('[LocationDeviceFilter] loadEntityHierarchy error:', err);
-      setDeviceTree([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  }, [sochiotUserLocation, globalSochiotLocation, companies, tenants, zones, areas, sites, initialLocationValue, loadEntityHierarchy]);
 
   // Synchronize when initialLocationValue changes from parent
   useEffect(() => {
-    if (initialLocationValue) {
+    if (initialLocationValue && initialLocationValue !== prevInitialValRef.current) {
+      prevInitialValRef.current = initialLocationValue;
       setSelectedLocationVal(initialLocationValue);
       const parsed = parseLocationValue(initialLocationValue);
-      if (enableDeviceFilter && parsed) {
-        loadEntityHierarchy(parsed.type, parsed.id);
+      if (parsed) {
+        const type = (!parsed.type || parsed.type === 'UNKNOWN') ? 'LOCATION' : parsed.type;
+        loadEntityHierarchy(type, parsed.id);
       }
     }
-  }, [initialLocationValue, enableDeviceFilter, loadEntityHierarchy]);
+  }, [initialLocationValue, loadEntityHierarchy]);
 
   // Handle Location Selection
   const handleLocationChange = (valArray, pathNodes, leafNode) => {
@@ -169,15 +202,20 @@ const LocationDeviceFilter = ({
       }
       onSelectLocation(locObj);
 
-      if (enableDeviceFilter && parsed) {
-        loadEntityHierarchy(parsed.type, parsed.id);
+      if (parsed) {
+        const type = (!parsed.type || parsed.type === 'UNKNOWN') ? 'LOCATION' : parsed.type;
+        loadEntityHierarchy(type, parsed.id);
       }
     } else {
+      lastLoadedEntityRef.current = null;
       if (typeof setCurrentLocationScope === 'function') {
         setCurrentLocationScope(null);
       }
       onSelectLocation(null);
       setDeviceTree([]);
+      if (typeof onDeviceTreeLoadedRef.current === 'function') {
+        onDeviceTreeLoadedRef.current([]);
+      }
     }
   };
 

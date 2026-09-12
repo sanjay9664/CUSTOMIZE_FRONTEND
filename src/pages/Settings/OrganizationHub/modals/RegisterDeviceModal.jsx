@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
-import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus } from 'lucide-react';
+import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
 import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
 import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
+import LocationCascaderSelector from '../../../../components/common/LocationCascaderSelector';
+import { parseLocationValue } from '../../../../utils/locationTreeUtils';
 
 const RegisterDeviceModal = ({
   show,
@@ -38,6 +40,11 @@ const RegisterDeviceModal = ({
 
   const [selectedHardwareDevice, setSelectedHardwareDevice] = useState(null);
   const [availableHardwareDevices, setAvailableHardwareDevices] = useState([]);
+  const [hardwareDeviceTree, setHardwareDeviceTree] = useState([]);
+
+  const handleDeviceTreeLoaded = React.useCallback((tree) => {
+    setHardwareDeviceTree(tree || []);
+  }, []);
 
   useEffect(() => {
     if (show) {
@@ -167,7 +174,7 @@ const RegisterDeviceModal = ({
         .register-wizard-drawer .wizard-content-scroll {
           flex: 1;
           overflow-y: auto;
-          padding: 24px 48px;
+          padding: 24px 48px 120px 48px;
         }
 
         /* ── Form Labels & Inputs (Dark Default) ── */
@@ -217,7 +224,7 @@ const RegisterDeviceModal = ({
           border-spacing: 0;
           border: 1px solid #334155;
           border-radius: 8px;
-          overflow: hidden;
+          overflow: visible;
         }
         .register-wizard-drawer .table-wizard-custom th {
           background-color: #1e293b;
@@ -694,22 +701,17 @@ const RegisterDeviceModal = ({
           {/* Step 2: Template Settings */}
           {registerStep === 2 && (
             <div className="d-flex flex-column gap-3">
-              {/* ismartaccess-frontend-v2 inspired Location & Hardware Device Search Filter */}
+              {/* Sochiot Location Search Filter (Single Location Selector) */}
               <div className="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-25">
                 <div className="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                   <div className="d-flex align-items-center gap-2">
                     <span className="fs-13 fw-semibold text-white">
-                      Search Location &amp; Gateway / Hardware Device
+                      Search Location
                     </span>
                     <span className="badge bg-secondary bg-opacity-30 text-info border border-info border-opacity-25 fs-11 fw-normal">
                       Sochiot Cloud &amp; BMS
                     </span>
                   </div>
-                  {selectedHardwareDevice && (
-                    <Badge bg="info" className="text-dark font-monospace px-2.5 py-1 fs-12">
-                      Selected Device: #{selectedHardwareDevice.id} ({selectedHardwareDevice.name})
-                    </Badge>
-                  )}
                 </div>
                 <LocationDeviceFilter
                   showTitle={false}
@@ -718,14 +720,14 @@ const RegisterDeviceModal = ({
                   zones={zones}
                   areas={activeAreas}
                   sites={effectiveSites}
-                  enableDeviceFilter={true}
+                  enableDeviceFilter={false}
                   initialLocationValue={registerForm.siteId ? `LOCATION-${registerForm.siteId}` : null}
                   onSelectLocation={(loc) => {
-                    if (loc?.id && (loc.type === 'LOCATION' || loc.type === 'SITE')) {
-                      setRegisterForm(prev => ({ ...prev, siteId: String(loc.id) }));
+                    if (loc?.id) {
+                      setRegisterForm(prev => ({ ...prev, siteId: String(loc.id), siteName: loc.name || '' }));
                     }
                   }}
-                  onSelectDevice={handleSelectHardwareDevice}
+                  onDeviceTreeLoaded={handleDeviceTreeLoaded}
                 />
               </div>
 
@@ -743,43 +745,59 @@ const RegisterDeviceModal = ({
                 </span>
               </div>
 
-              <div className="table-responsive">
-                <table className="table-wizard-custom">
+              <div className="table-responsive" style={{ overflow: 'visible' }}>
+                <table className="table-wizard-custom" style={{ overflow: 'visible' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '20%' }}>Device ID</th>
-                      <th style={{ width: '22%' }}>Module ID</th>
-                      <th style={{ width: '22%' }}>Event Field</th>
-                      <th style={{ width: '22%' }}>Display Name</th>
-                      <th style={{ width: '14%' }}>Thresholds</th>
-                      <th style={{ width: '50px' }} className="text-center"></th>
+                      <th style={{ width: '25%' }}>Gateway &amp; Device</th>
+                      <th style={{ width: '18%' }}>Module ID</th>
+                      <th style={{ width: '20%' }}>Event Field</th>
+                      <th style={{ width: '21%' }}>Display Name</th>
+                      <th style={{ width: '16%' }}>Thresholds</th>
+                      <th style={{ width: '40px' }} className="text-center"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dynamicTemplateFields.map((f, idx) => (
+                    {dynamicTemplateFields.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-4 text-slate-400 fs-13">
+                          <div className="d-flex flex-column align-items-center justify-content-center gap-1">
+                            <span className="fw-medium text-slate-300">No telemetry fields added yet.</span>
+                            <span className="fs-12 text-slate-500">Click <strong>+ Add Field</strong> below to add and configure device telemetry fields.</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      dynamicTemplateFields.map((f, idx) => (
                       <tr key={idx}>
                         <td>
-                          <Form.Select
-                            size="sm"
-                            value={f.deviceId}
-                            onChange={(e) => {
+                          <LocationCascaderSelector
+                            options={hardwareDeviceTree}
+                            value={f.deviceVal || f.deviceId}
+                            fallbackLabel={f.deviceName || (f.deviceId && f.deviceId !== '101' ? `Device #${f.deviceId}` : (f.deviceId === '101' ? `101 (${registerForm.name || 'Default'})` : ''))}
+                            onChange={(valArray, pathNodes, leafNode) => {
                               const copy = [...dynamicTemplateFields];
-                              copy[idx].deviceId = e.target.value;
+                              if (leafNode) {
+                                const parsed = parseLocationValue(leafNode.value);
+                                const selectedId = String(parsed?.id || leafNode.id);
+                                copy[idx].deviceId = selectedId;
+                                copy[idx].deviceName = leafNode.label;
+                                copy[idx].deviceVal = valArray;
+                              } else {
+                                copy[idx].deviceId = '';
+                                copy[idx].deviceName = '';
+                                copy[idx].deviceVal = null;
+                              }
                               setDynamicTemplateFields(copy);
                             }}
-                            className="wizard-select"
-                            style={{ height: 32, fontSize: 12 }}
-                          >
-                            <option value="101">101 ({registerForm.name || 'Device'})</option>
-                            {availableHardwareDevices.map(d => (
-                              <option key={d.id} value={String(d.id)}>
-                                {d.id} ({d.name})
-                              </option>
-                            ))}
-                            {f.deviceId && f.deviceId !== '101' && !availableHardwareDevices.some(d => String(d.id) === String(f.deviceId)) && (
-                              <option value={f.deviceId}>{f.deviceId}</option>
-                            )}
-                          </Form.Select>
+                            changeOnSelect={true}
+                            displayOnlyChild={true}
+                            placeholder="Select Device"
+                            searchPlaceholder="Search gateway / device..."
+                            variant="compact"
+                            allowClear={true}
+                            triggerIcon={<Cpu size={13} className="text-info flex-shrink-0" />}
+                          />
                         </td>
                         <td>
                           <Form.Select
@@ -875,7 +893,7 @@ const RegisterDeviceModal = ({
                           </Button>
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
 
@@ -884,14 +902,20 @@ const RegisterDeviceModal = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const defDevId = (selectedHardwareDevice?.id ? String(selectedHardwareDevice.id) : null)
-                        || (availableHardwareDevices.length > 0 ? String(availableHardwareDevices[0].id) : null)
-                        || registerForm.sochiotDeviceIds
+                      const lastField = dynamicTemplateFields[dynamicTemplateFields.length - 1];
+                      const defaultDev = lastField?.deviceId
+                        || (hardwareDeviceTree?.[0]?.children?.[0]?.id || hardwareDeviceTree?.[0]?.id)
                         || '101';
+                      const defaultDevName = lastField?.deviceName
+                        || (hardwareDeviceTree?.[0]?.children?.[0]?.label || hardwareDeviceTree?.[0]?.label)
+                        || '';
+
                       setDynamicTemplateFields([
                         ...dynamicTemplateFields,
                         {
-                          deviceId: defDevId,
+                          deviceId: defaultDev,
+                          deviceName: defaultDevName,
+                          deviceVal: lastField?.deviceVal || null,
                           moduleId: '4583',
                           sochiotFieldName: '',
                           displayName: '',
@@ -940,6 +964,13 @@ const RegisterDeviceModal = ({
                 if (!registerForm.name || !registerForm.name.trim()) {
                   return showToast('warning', 'Device Name is required to proceed to Template Settings');
                 }
+                if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
+                  if (typeof setDynamicTemplateFields === 'function') {
+                    setDynamicTemplateFields([
+                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '1', key: '', label: '', warningHigh: '', criticalHigh: '' }
+                    ]);
+                  }
+                }
                 fetchAndStoreSochiotAccessToken();
                 setRegisterStep(2);
               }}
@@ -967,7 +998,14 @@ const RegisterDeviceModal = ({
                     .filter(n => !isNaN(n) && n > 0);
 
                   if (parsedSochiotIds.length === 0) {
-                    parsedSochiotIds = [generatedSochiotId];
+                    const fieldDeviceIds = (dynamicTemplateFields || [])
+                      .map(f => parseInt(f.deviceId))
+                      .filter(n => !isNaN(n) && n > 0);
+                    if (fieldDeviceIds.length > 0) {
+                      parsedSochiotIds = Array.from(new Set(fieldDeviceIds));
+                    } else {
+                      parsedSochiotIds = [generatedSochiotId];
+                    }
                   }
 
                   const templateSettings = (dynamicTemplateFields && dynamicTemplateFields.length > 0 ? dynamicTemplateFields : [
@@ -985,6 +1023,8 @@ const RegisterDeviceModal = ({
                       graphable: true
                     }
                   ]).map(f => ({
+                    deviceId: f.deviceId ? (parseInt(f.deviceId) || f.deviceId) : undefined,
+                    deviceName: f.deviceName || undefined,
                     moduleId: parseInt(f.moduleId) || 4583,
                     sochiotFieldName: f.sochiotFieldName || '3,100F',
                     displayName: f.displayName || 'Voltage R-N',

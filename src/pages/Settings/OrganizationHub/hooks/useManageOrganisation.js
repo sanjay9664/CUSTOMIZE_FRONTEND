@@ -1041,7 +1041,9 @@ export const useManageOrganisation = () => {
       templateName: ''
     });
     if (typeof setDynamicTemplateFields === 'function') {
-      setDynamicTemplateFields([]);
+      setDynamicTemplateFields([
+        { deviceId: '', deviceName: '', deviceVal: null, moduleId: '1', key: '', label: '', warningHigh: '', criticalHigh: '' }
+      ]);
     }
     setShowRegisterDeviceModal(true);
   };

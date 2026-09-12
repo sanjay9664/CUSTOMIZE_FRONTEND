@@ -20,6 +20,8 @@ let inMemoryToken = null;
 let cachedUserHierarchy = null;
 let pendingTokenPromise = null;
 let pendingHierarchyPromise = null;
+const entityHierarchyCache = new Map();
+const pendingEntityPromises = new Map();
 
 /**
  * Retrieves the stored Sochiot access token from memory or localStorage.
@@ -44,6 +46,8 @@ export const clearSochiotCache = () => {
   cachedUserHierarchy = null;
   pendingTokenPromise = null;
   pendingHierarchyPromise = null;
+  entityHierarchyCache.clear();
+  pendingEntityPromises.clear();
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(SOCHIOT_TOKEN_KEY);
   }
@@ -161,26 +165,44 @@ export const fetchUserLocationHierarchy = async (forceRefresh = false) => {
  * e.g. /config-engine/entity/ZONE/30 or /config-engine/entity/ROOT/0
  * Returns: { locationVOS: [ { id, name, gatewayVOList: [...], orphanDeviceVOList: [...] } ] }
  */
-export const fetchEntityHierarchy = async (nodeType = 'ROOT', nodeId = 0) => {
-  try {
-    const headers = await getSochiotHeaders();
-    const cleanNodeType = !nodeId || nodeId === 0 || nodeId === '0' ? 'ROOT' : (nodeType || 'ROOT').toUpperCase();
-    const cleanNodeId = !nodeId ? 0 : nodeId;
+export const fetchEntityHierarchy = async (nodeType = 'ROOT', nodeId = 0, forceRefresh = false) => {
+  const cleanNodeType = !nodeId || nodeId === 0 || nodeId === '0' ? 'ROOT' : (nodeType || 'ROOT').toUpperCase();
+  const cleanNodeId = !nodeId ? 0 : nodeId;
+  const cacheKey = `${cleanNodeType}_${cleanNodeId}`;
 
-    const base = EXTERNAL_URLS.configEngine ? EXTERNAL_URLS.configEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/config-engine';
-    const endpoint = CONFIG_ENDPOINTS.ENTITY_HIERARCHY(cleanNodeType, cleanNodeId);
-    const url = `${base}${endpoint.replace('/config-engine', '')}`;
-
-    const res = await fetch(url, { headers });
-    if (res.ok) {
-      const data = await res.json();
-      return data?.data || data;
-    }
-  } catch (err) {
-    const parsed = parseApiError(err, `Failed to fetch entity hierarchy for ${nodeType}/${nodeId}`);
-    console.warn('[SochiotLocationService] fetchEntityHierarchy notice:', parsed.message);
+  if (!forceRefresh && entityHierarchyCache.has(cacheKey)) {
+    return entityHierarchyCache.get(cacheKey);
   }
-  return null;
+
+  if (pendingEntityPromises.has(cacheKey)) {
+    return pendingEntityPromises.get(cacheKey);
+  }
+
+  const promise = (async () => {
+    try {
+      const headers = await getSochiotHeaders();
+      const base = EXTERNAL_URLS.configEngine ? EXTERNAL_URLS.configEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/config-engine';
+      const endpoint = CONFIG_ENDPOINTS.ENTITY_HIERARCHY(cleanNodeType, cleanNodeId);
+      const url = `${base}${endpoint.replace('/config-engine', '')}`;
+
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        const payload = data?.data || data;
+        entityHierarchyCache.set(cacheKey, payload);
+        return payload;
+      }
+    } catch (err) {
+      const parsed = parseApiError(err, `Failed to fetch entity hierarchy for ${nodeType}/${nodeId}`);
+      console.warn('[SochiotLocationService] fetchEntityHierarchy notice:', parsed.message);
+    } finally {
+      pendingEntityPromises.delete(cacheKey);
+    }
+    return entityHierarchyCache.get(cacheKey) || null;
+  })();
+
+  pendingEntityPromises.set(cacheKey, promise);
+  return promise;
 };
 
 export default {
