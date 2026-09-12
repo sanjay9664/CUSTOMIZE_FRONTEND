@@ -22,6 +22,8 @@ let pendingTokenPromise = null;
 let pendingHierarchyPromise = null;
 const entityHierarchyCache = new Map();
 const pendingEntityPromises = new Map();
+const deviceDetailsCache = new Map();
+const pendingDevicePromises = new Map();
 
 /**
  * Retrieves the stored Sochiot access token from memory or localStorage.
@@ -48,6 +50,8 @@ export const clearSochiotCache = () => {
   pendingHierarchyPromise = null;
   entityHierarchyCache.clear();
   pendingEntityPromises.clear();
+  deviceDetailsCache.clear();
+  pendingDevicePromises.clear();
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(SOCHIOT_TOKEN_KEY);
   }
@@ -205,10 +209,150 @@ export const fetchEntityHierarchy = async (nodeType = 'ROOT', nodeId = 0, forceR
   return promise;
 };
 
+/**
+ * Calls GET /config-engine/device/{deviceId}
+ * Returns the full device configuration payload including modules, eventFieldVOS, and moduleFieldMappingVOS.
+ */
+export const fetchDeviceDetails = async (deviceId, forceRefresh = false) => {
+  if (!deviceId) return null;
+  const cleanDeviceId = String(deviceId).trim();
+  const cacheKey = `DEV_${cleanDeviceId}`;
+
+  if (!forceRefresh && deviceDetailsCache.has(cacheKey)) {
+    return deviceDetailsCache.get(cacheKey);
+  }
+
+  if (pendingDevicePromises.has(cacheKey)) {
+    return pendingDevicePromises.get(cacheKey);
+  }
+
+  const promise = (async () => {
+    try {
+      const headers = await getSochiotHeaders();
+      const base = EXTERNAL_URLS.configEngine ? EXTERNAL_URLS.configEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/config-engine';
+      const endpoint = CONFIG_ENDPOINTS.DEVICE_DETAILS ? CONFIG_ENDPOINTS.DEVICE_DETAILS(cleanDeviceId) : `/config-engine/device/${cleanDeviceId}`;
+      const url = `${base}${endpoint.replace('/config-engine', '')}`;
+
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        const payload = data?.data || data;
+        deviceDetailsCache.set(cacheKey, payload);
+        return payload;
+      }
+    } catch (err) {
+      const parsed = parseApiError(err, `Failed to fetch device details for device ID ${deviceId}`);
+      console.warn('[SochiotLocationService] fetchDeviceDetails notice:', parsed.message);
+    } finally {
+      pendingDevicePromises.delete(cacheKey);
+    }
+    return deviceDetailsCache.get(cacheKey) || null;
+  })();
+
+  pendingDevicePromises.set(cacheKey, promise);
+  return promise;
+};
+
+/**
+ * Normalizes device configuration response from /config-engine/device/{deviceId}
+ * Extracts all modules, event fields (eventFieldVOS), and setting fields (moduleFieldMappingVOS)
+ * into a clean structure ready for module and event selection UI.
+ */
+export const extractDeviceModulesAndFields = (raw) => {
+  if (!raw) return { device: null, modules: [] };
+  const deviceData = raw?.data || raw;
+
+  const device = {
+    id: deviceData.id,
+    uuid: deviceData.uuid,
+    name: deviceData.name,
+    hardwareId: deviceData.hardwareId,
+    locationId: deviceData.locationId,
+    locationName: deviceData.locationName,
+    status: deviceData.mode?.name || 'UNKNOWN',
+    icon: deviceData.icon,
+    version: deviceData.version,
+    organizationId: deviceData.organizationId,
+    parent: deviceData.parent ? {
+      id: deviceData.parent.id,
+      name: deviceData.parent.name,
+      hardwareId: deviceData.parent.hardwareId,
+      gatewayUuid: deviceData.parent.gatewayUuid,
+      type: deviceData.parent.gatewayType?.name
+    } : null,
+    template: deviceData.deviceTemplateVO ? {
+      id: deviceData.deviceTemplateVO.id,
+      name: deviceData.deviceTemplateVO.name
+    } : null
+  };
+
+  const rawModules = Array.isArray(deviceData.modules) ? deviceData.modules : [];
+  const modules = rawModules.map((m) => {
+    const mTemplate = m.moduleTemplateVO || {};
+    const mType = mTemplate.moduleTypeVO || {};
+    const rawType = mType.displayName || mType.name || mTemplate.moduleSubType || '';
+    const cleanType = rawType?.trim();
+    const isGeneralOrOther = cleanType && ['general', 'other'].includes(cleanType.toLowerCase());
+    const typeLabel = isGeneralOrOther ? '' : cleanType;
+
+    // Extract Event Fields (from instance eventFieldVOS or template eventFieldVOs)
+    const rawEvents = m.eventFieldVOS || mTemplate.eventFieldVOs || [];
+    const eventFields = rawEvents.map((e) => ({
+      id: e.id,
+      fieldName: e.fieldName,
+      displayName: e.displayName || e.fieldName,
+      dataType: e.dataType?.name || e.dataType || 'INTEGER',
+      unit: e.unit || null,
+      multiplier: e.multiplier ?? 1.0,
+      required: !!e.required,
+      fieldType: 'EVENT'
+    }));
+
+    // Extract Setting Fields (from moduleFieldMappingVOS)
+    const rawMappings = Array.isArray(m.moduleFieldMappingVOS) ? m.moduleFieldMappingVOS : [];
+    const settingFields = rawMappings.map((s) => {
+      const sf = s.settingFieldVO || {};
+      return {
+        mappingId: s.moduleFieldMappingId,
+        id: sf.id,
+        fieldName: sf.fieldName,
+        displayName: sf.displayName || sf.fieldName,
+        currentValue: s.currentValue ?? sf.defaultValue ?? '',
+        defaultValue: sf.defaultValue ?? '',
+        dataType: sf.dataType?.name || sf.dataType || 'TEXT_SHORT',
+        unit: sf.unit || null,
+        multiplier: sf.multiplier ?? 1.0,
+        supportedValues: Array.isArray(sf.supportedValues) ? sf.supportedValues : [],
+        command: !!sf.command,
+        fieldType: 'SETTING'
+      };
+    });
+
+    const allFields = [...eventFields, ...settingFields];
+    const rawModuleName = m.name || String(m.moduleNumber || m.id);
+    const cleanModuleName = rawModuleName.replace(/\s*\((general|other)\)/gi, '').replace(/\b(general|other)\b/gi, '').trim() || rawModuleName;
+
+    return {
+      id: m.id,
+      name: cleanModuleName,
+      moduleNumber: m.moduleNumber,
+      typeName: typeLabel,
+      label: typeLabel ? `${cleanModuleName} (${typeLabel})` : cleanModuleName,
+      eventFields,
+      settingFields,
+      allFields
+    };
+  });
+
+  return { device, modules };
+};
+
 export default {
   fetchSochiotAccessToken,
   getStoredSochiotToken,
   fetchUserLocationHierarchy,
   fetchEntityHierarchy,
+  fetchDeviceDetails,
+  extractDeviceModulesAndFields,
   clearSochiotCache
 };

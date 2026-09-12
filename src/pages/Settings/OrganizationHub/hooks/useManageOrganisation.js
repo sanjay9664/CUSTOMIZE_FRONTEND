@@ -1042,7 +1042,7 @@ export const useManageOrganisation = () => {
     });
     if (typeof setDynamicTemplateFields === 'function') {
       setDynamicTemplateFields([
-        { deviceId: '', deviceName: '', deviceVal: null, moduleId: '1', key: '', label: '', warningHigh: '', criticalHigh: '' }
+        { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: 250, criticalHigh: 270 }
       ]);
     }
     setShowRegisterDeviceModal(true);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
 import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
@@ -6,6 +6,7 @@ import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService
 import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
 import LocationCascaderSelector from '../../../../components/common/LocationCascaderSelector';
 import { parseLocationValue } from '../../../../utils/locationTreeUtils';
+import { fetchDeviceDetails, extractDeviceModulesAndFields } from '../../../../services/sochiotLocationService';
 
 const RegisterDeviceModal = ({
   show,
@@ -42,9 +43,54 @@ const RegisterDeviceModal = ({
   const [availableHardwareDevices, setAvailableHardwareDevices] = useState([]);
   const [hardwareDeviceTree, setHardwareDeviceTree] = useState([]);
 
+  // Device configuration cache: { [deviceId]: { device, modules } }
+  const [deviceConfigs, setDeviceConfigs] = useState({});
+  const [loadingDeviceIds, setLoadingDeviceIds] = useState({});
+
   const handleDeviceTreeLoaded = React.useCallback((tree) => {
     setHardwareDeviceTree(tree || []);
   }, []);
+
+  const loadDeviceConfig = useCallback(async (deviceId, rowIdx = null) => {
+    if (!deviceId || deviceId === '101') return;
+    const cleanId = String(deviceId).trim();
+    if (deviceConfigs[cleanId] || loadingDeviceIds[cleanId]) return;
+
+    setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: true }));
+    try {
+      const raw = await fetchDeviceDetails(cleanId);
+      if (raw) {
+        const parsed = extractDeviceModulesAndFields(raw);
+        setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed }));
+
+        // Auto-select first module if row has no moduleId yet
+        if (rowIdx !== null && parsed?.modules?.length > 0) {
+          setDynamicTemplateFields(prev => {
+            const copy = [...prev];
+            if (copy[rowIdx] && (!copy[rowIdx].moduleId || copy[rowIdx].moduleId === '4583')) {
+              copy[rowIdx].moduleId = String(parsed.modules[0].id);
+            }
+            return copy;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[RegisterDeviceModal] loadDeviceConfig error:', err);
+    } finally {
+      setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: false }));
+    }
+  }, [deviceConfigs, loadingDeviceIds, setDynamicTemplateFields]);
+
+  // Preload device configurations for any rows that already have a deviceId
+  useEffect(() => {
+    if (registerStep === 2 && Array.isArray(dynamicTemplateFields)) {
+      dynamicTemplateFields.forEach((f, idx) => {
+        if (f.deviceId && f.deviceId !== '101' && !deviceConfigs[f.deviceId] && !loadingDeviceIds[f.deviceId]) {
+          loadDeviceConfig(f.deviceId, idx);
+        }
+      });
+    }
+  }, [registerStep, dynamicTemplateFields, deviceConfigs, loadingDeviceIds, loadDeviceConfig]);
 
   useEffect(() => {
     if (show) {
@@ -783,12 +829,22 @@ const RegisterDeviceModal = ({
                                 copy[idx].deviceId = selectedId;
                                 copy[idx].deviceName = leafNode.label;
                                 copy[idx].deviceVal = valArray;
+                                copy[idx].moduleId = '';
+                                copy[idx].sochiotFieldName = '';
+                                copy[idx].displayName = '';
+                                copy[idx].isManualEntry = false;
+                                setDynamicTemplateFields(copy);
+                                loadDeviceConfig(selectedId, idx);
                               } else {
                                 copy[idx].deviceId = '';
                                 copy[idx].deviceName = '';
                                 copy[idx].deviceVal = null;
+                                copy[idx].moduleId = '';
+                                copy[idx].sochiotFieldName = '';
+                                copy[idx].displayName = '';
+                                copy[idx].isManualEntry = false;
+                                setDynamicTemplateFields(copy);
                               }
-                              setDynamicTemplateFields(copy);
                             }}
                             changeOnSelect={true}
                             displayOnlyChild={true}
@@ -800,43 +856,167 @@ const RegisterDeviceModal = ({
                           />
                         </td>
                         <td>
-                          <Form.Select
-                            size="sm"
-                            value={f.moduleId}
-                            onChange={(e) => {
-                              const copy = [...dynamicTemplateFields];
-                              copy[idx].moduleId = e.target.value;
-                              setDynamicTemplateFields(copy);
-                            }}
-                            className="wizard-select"
-                            style={{ height: 32, fontSize: 12 }}
-                          >
-                            <option value="4583">Select Module</option>
-                            <option value="4583">4583 - Main Incomer</option>
-                            <option value="4584">4584 - Chiller Unit</option>
-                          </Form.Select>
+                          {(() => {
+                            const devConfig = deviceConfigs[f.deviceId];
+                            const isLoadingModules = loadingDeviceIds[f.deviceId];
+                            const modules = devConfig?.modules || [];
+
+                            return (
+                              <Form.Select
+                                size="sm"
+                                value={f.moduleId || ''}
+                                disabled={!f.deviceId || isLoadingModules}
+                                onChange={(e) => {
+                                  const newModuleId = e.target.value;
+                                  const copy = [...dynamicTemplateFields];
+                                  copy[idx].moduleId = newModuleId;
+                                  copy[idx].sochiotFieldName = '';
+                                  copy[idx].displayName = '';
+                                  copy[idx].isManualEntry = false;
+                                  setDynamicTemplateFields(copy);
+                                }}
+                                className="wizard-select"
+                                style={{ height: 32, fontSize: 12 }}
+                              >
+                                {!f.deviceId ? (
+                                  <option value="">Select Device First</option>
+                                ) : isLoadingModules ? (
+                                  <option value="">Loading modules...</option>
+                                ) : modules.length === 0 ? (
+                                  <option value="">No modules found</option>
+                                ) : (
+                                  <>
+                                    <option value="">Select Module</option>
+                                    {modules.map(m => {
+                                      const cleanLabel = (m.label || m.name || '').replace(/\s*\((general|other)\)/gi, '').replace(/\b(general|other)\b/gi, '').trim() || m.name;
+                                      return (
+                                        <option key={m.id} value={String(m.id)}>
+                                          {cleanLabel}
+                                        </option>
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </Form.Select>
+                            );
+                          })()}
+                        </td>
+                        <td>
+                          {(() => {
+                            const devConfig = deviceConfigs[f.deviceId];
+                            const modules = devConfig?.modules || [];
+                            const selectedModule = modules.find(m => String(m.id) === String(f.moduleId));
+                            const eventFields = selectedModule?.eventFields || [];
+                            const settingFields = selectedModule?.settingFields || [];
+                            const hasFields = eventFields.length > 0 || settingFields.length > 0;
+
+                            return (
+                              <div className="d-flex align-items-center gap-1 w-100">
+                                {hasFields && !f.isManualEntry ? (
+                                  <Form.Select
+                                    size="sm"
+                                    value={f.sochiotFieldName || ''}
+                                    disabled={!f.moduleId}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val === '__custom__') {
+                                        const copy = [...dynamicTemplateFields];
+                                        copy[idx].isManualEntry = true;
+                                        copy[idx].sochiotFieldName = '';
+                                        setDynamicTemplateFields(copy);
+                                        return;
+                                      }
+                                      const copy = [...dynamicTemplateFields];
+                                      copy[idx].sochiotFieldName = val;
+                                      // Auto populate display name from selected field definition
+                                      const matched = selectedModule?.allFields?.find(af => af.fieldName === val);
+                                      if (matched) {
+                                        copy[idx].displayName = matched.displayName || matched.fieldName;
+                                        if (matched.unit) copy[idx].unit = matched.unit;
+                                        if (matched.dataType) copy[idx].dataType = matched.dataType;
+                                      }
+                                      setDynamicTemplateFields(copy);
+                                    }}
+                                    className="wizard-select font-monospace"
+                                    style={{ height: 32, fontSize: 12 }}
+                                  >
+                                    <option value="">Select Event / Setting Field</option>
+                                    {eventFields.length > 0 && (
+                                      <optgroup label="Events Fields">
+                                        {eventFields.map(ef => {
+                                          const displayLabel = ef.displayName || ef.fieldName;
+                                          const unitText = ef.unit ? ` (${ef.unit})` : '';
+                                          return (
+                                            <option key={ef.id} value={ef.fieldName}>
+                                              {displayLabel}{unitText}
+                                            </option>
+                                          );
+                                        })}
+                                      </optgroup>
+                                    )}
+                                    {settingFields.length > 0 && (
+                                      <optgroup label="Setting Fields">
+                                        {settingFields.map(sf => {
+                                          const displayLabel = sf.displayName || sf.fieldName;
+                                          const unitText = sf.unit ? ` (${sf.unit})` : '';
+                                          return (
+                                            <option key={sf.mappingId || sf.id} value={sf.fieldName}>
+                                              {displayLabel}{unitText}
+                                            </option>
+                                          );
+                                        })}
+                                      </optgroup>
+                                    )}
+                                    {f.sochiotFieldName && !selectedModule?.allFields?.some(af => af.fieldName === f.sochiotFieldName) && (
+                                      <option value={f.sochiotFieldName}>
+                                        {f.displayName || f.sochiotFieldName}
+                                      </option>
+                                    )}
+                                    <option value="__custom__">+ Enter Custom Field...</option>
+                                  </Form.Select>
+                                ) : (
+                                  <div className="d-flex align-items-center w-100 gap-1">
+                                    <Form.Control
+                                      size="sm"
+                                      type="text"
+                                      placeholder={f.moduleId ? "e.g. OFF_TIME or 3,100F" : (!f.deviceId ? "Select device first" : "Select module first")}
+                                      value={f.sochiotFieldName || ''}
+                                      disabled={!f.moduleId}
+                                      onChange={(e) => {
+                                        const copy = [...dynamicTemplateFields];
+                                        copy[idx].sochiotFieldName = e.target.value;
+                                        setDynamicTemplateFields(copy);
+                                      }}
+                                      className="wizard-input font-monospace"
+                                      style={{ height: 32, fontSize: 12 }}
+                                    />
+                                    {hasFields && (
+                                      <button
+                                        type="button"
+                                        title="Select from module fields list"
+                                        onClick={() => {
+                                          const copy = [...dynamicTemplateFields];
+                                          copy[idx].isManualEntry = false;
+                                          setDynamicTemplateFields(copy);
+                                        }}
+                                        className="btn btn-sm btn-outline-info p-0 px-1.5 flex-shrink-0"
+                                        style={{ height: 32, fontSize: 11 }}
+                                      >
+                                        List
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td>
                           <Form.Control
                             size="sm"
                             type="text"
-                            placeholder="e.g. 3,100F"
-                            value={f.sochiotFieldName}
-                            onChange={(e) => {
-                              const copy = [...dynamicTemplateFields];
-                              copy[idx].sochiotFieldName = e.target.value;
-                              setDynamicTemplateFields(copy);
-                            }}
-                            className="wizard-input font-monospace"
-                            style={{ height: 32, fontSize: 12 }}
-                          />
-                        </td>
-                        <td>
-                          <Form.Control
-                            size="sm"
-                            type="text"
-                            placeholder="e.g. Voltage R"
-                            value={f.displayName}
+                            placeholder="e.g. Incomer Voltage R"
+                            value={f.displayName || ''}
                             onChange={(e) => {
                               const copy = [...dynamicTemplateFields];
                               copy[idx].displayName = e.target.value;
@@ -903,25 +1083,25 @@ const RegisterDeviceModal = ({
                     type="button"
                     onClick={() => {
                       const lastField = dynamicTemplateFields[dynamicTemplateFields.length - 1];
-                      const defaultDev = lastField?.deviceId
-                        || (hardwareDeviceTree?.[0]?.children?.[0]?.id || hardwareDeviceTree?.[0]?.id)
-                        || '101';
-                      const defaultDevName = lastField?.deviceName
-                        || (hardwareDeviceTree?.[0]?.children?.[0]?.label || hardwareDeviceTree?.[0]?.label)
-                        || '';
+                      const defaultDev = lastField?.deviceId || '';
+                      const defaultDevName = lastField?.deviceName || '';
+                      const defaultDevVal = lastField?.deviceVal || null;
+                      const defaultModuleId = lastField?.moduleId || '';
 
                       setDynamicTemplateFields([
                         ...dynamicTemplateFields,
                         {
                           deviceId: defaultDev,
                           deviceName: defaultDevName,
-                          deviceVal: lastField?.deviceVal || null,
-                          moduleId: '4583',
+                          deviceVal: defaultDevVal,
+                          moduleId: defaultModuleId,
                           sochiotFieldName: '',
                           displayName: '',
                           thresholdValue: '240',
+                          warningHigh: 250,
+                          criticalHigh: 270,
                           dataType: 'INTEGER',
-                          unit: 'V',
+                          unit: '',
                           isCommand: false,
                           graphable: true
                         }
@@ -967,7 +1147,7 @@ const RegisterDeviceModal = ({
                 if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
                   if (typeof setDynamicTemplateFields === 'function') {
                     setDynamicTemplateFields([
-                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '1', key: '', label: '', warningHigh: '', criticalHigh: '' }
+                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: 250, criticalHigh: 270 }
                     ]);
                   }
                 }
