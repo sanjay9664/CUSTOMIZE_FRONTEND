@@ -61,6 +61,10 @@ const DeviceModalsGroup = ({
 }) => {
   const safeEvents = Array.isArray(recentEventsList) ? recentEventsList : [];
   const safeAuditLogs = Array.isArray(auditLogList) ? auditLogList : [];
+  const safeThresholdsForm = thresholdsForm || {};
+  const safeDeviceSettingsForm = deviceSettingsForm || {};
+  const safeDeviceRulesForm = deviceRulesForm || {};
+  const safeEditDeviceForm = editDeviceForm || {};
 
   return (
     <>
@@ -87,8 +91,8 @@ const DeviceModalsGroup = ({
               </p>
             </div>
 
-            {Object.keys(thresholdsForm).map((fieldKey, idx) => {
-              const item = thresholdsForm[fieldKey];
+            {Object.keys(safeThresholdsForm).map((fieldKey, idx) => {
+              const item = safeThresholdsForm[fieldKey] || {};
               return (
                 <Card key={idx} className="bg-dark border-secondary border-opacity-25 p-3">
                   <div className="d-flex justify-content-between align-items-center mb-3">
@@ -261,8 +265,8 @@ const DeviceModalsGroup = ({
                   <Form.Label className="fs-13 fw-semibold text-slate-300">Modbus Slave ID</Form.Label>
                   <Form.Control
                     type="number"
-                    value={deviceSettingsForm.slaveId}
-                    onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, slaveId: parseInt(e.target.value) || 1 })}
+                    value={safeDeviceSettingsForm.slaveId || 1}
+                    onChange={(e) => setDeviceSettingsForm({ ...safeDeviceSettingsForm, slaveId: parseInt(e.target.value) || 1 })}
                     className="bg-dark text-white border-secondary border-opacity-25"
                   />
                 </Form.Group>
@@ -271,8 +275,8 @@ const DeviceModalsGroup = ({
                 <Form.Group>
                   <Form.Label className="fs-13 fw-semibold text-slate-300">Baud Rate</Form.Label>
                   <Form.Select
-                    value={deviceSettingsForm.baudRate}
-                    onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, baudRate: parseInt(e.target.value) || 9600 })}
+                    value={safeDeviceSettingsForm.baudRate || 9600}
+                    onChange={(e) => setDeviceSettingsForm({ ...safeDeviceSettingsForm, baudRate: parseInt(e.target.value) || 9600 })}
                     className="bg-dark text-white border-secondary border-opacity-25"
                   >
                     <option value={4800}>4800</option>
@@ -288,8 +292,8 @@ const DeviceModalsGroup = ({
               <Form.Label className="fs-13 fw-semibold text-slate-300">Telemetry Sampling Interval (Seconds)</Form.Label>
               <Form.Control
                 type="number"
-                value={deviceSettingsForm.pollInterval}
-                onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, pollInterval: parseInt(e.target.value) || 5 })}
+                value={safeDeviceSettingsForm.pollInterval || 5}
+                onChange={(e) => setDeviceSettingsForm({ ...safeDeviceSettingsForm, pollInterval: parseInt(e.target.value) || 5 })}
                 className="bg-dark text-white border-secondary border-opacity-25"
               />
             </Form.Group>
@@ -299,8 +303,8 @@ const DeviceModalsGroup = ({
                 type="switch"
                 id="enable-telemetry-streaming"
                 label="Enable Real-Time Sochiot MQTT Telemetry Streaming"
-                checked={deviceSettingsForm.enableTelemetry}
-                onChange={(e) => setDeviceSettingsForm({ ...deviceSettingsForm, enableTelemetry: e.target.checked })}
+                checked={Boolean(safeDeviceSettingsForm.enableTelemetry)}
+                onChange={(e) => setDeviceSettingsForm({ ...safeDeviceSettingsForm, enableTelemetry: e.target.checked })}
                 className="fw-semibold text-info fs-14"
               />
             </Form.Group>
@@ -328,16 +332,16 @@ const DeviceModalsGroup = ({
               <Form.Control
                 type="text"
                 placeholder="e.g. Overvoltage Protection Rule"
-                value={deviceRulesForm.ruleName}
-                onChange={(e) => setDeviceRulesForm({ ...deviceRulesForm, ruleName: e.target.value })}
+                value={safeDeviceRulesForm.ruleName || ''}
+                onChange={(e) => setDeviceRulesForm({ ...safeDeviceRulesForm, ruleName: e.target.value })}
                 className="bg-dark text-white border-secondary border-opacity-25"
               />
             </Form.Group>
             <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Trigger Metric Parameter</Form.Label>
               <Form.Select
-                value={deviceRulesForm.conditionParam}
-                onChange={(e) => setDeviceRulesForm({ ...deviceRulesForm, conditionParam: e.target.value })}
+                value={safeDeviceRulesForm.conditionParam || 'voltage'}
+                onChange={(e) => setDeviceRulesForm({ ...safeDeviceRulesForm, conditionParam: e.target.value })}
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="voltage">voltage (Volts)</option>
@@ -351,8 +355,8 @@ const DeviceModalsGroup = ({
               <Form.Label className="fs-13 fw-semibold text-slate-300">Threshold Cutoff Limit</Form.Label>
               <Form.Control
                 type="number"
-                value={deviceRulesForm.thresholdValue}
-                onChange={(e) => setDeviceRulesForm({ ...deviceRulesForm, thresholdValue: parseFloat(e.target.value) || 250 })}
+                value={safeDeviceRulesForm.thresholdValue ?? 250}
+                onChange={(e) => setDeviceRulesForm({ ...safeDeviceRulesForm, thresholdValue: parseFloat(e.target.value) || 250 })}
                 className="bg-dark text-white border-secondary border-opacity-25 font-monospace"
               />
             </Form.Group>
@@ -361,8 +365,8 @@ const DeviceModalsGroup = ({
                 type="switch"
                 id="enable-rule-trigger"
                 label="Rule Active (Trigger Alarm & Send SCADA Signal on Threshold Exceeded)"
-                checked={deviceRulesForm.enableRule}
-                onChange={(e) => setDeviceRulesForm({ ...deviceRulesForm, enableRule: e.target.checked })}
+                checked={Boolean(safeDeviceRulesForm.enableRule)}
+                onChange={(e) => setDeviceRulesForm({ ...safeDeviceRulesForm, enableRule: e.target.checked })}
                 className="fw-semibold text-info fs-14"
               />
             </Form.Group>
@@ -390,16 +394,16 @@ const DeviceModalsGroup = ({
               <Form.Control
                 type="text"
                 required
-                value={editDeviceForm.name}
-                onChange={(e) => setEditDeviceForm({ ...editDeviceForm, name: e.target.value })}
+                value={safeEditDeviceForm.name || ''}
+                onChange={(e) => setEditDeviceForm({ ...safeEditDeviceForm, name: e.target.value })}
                 className="bg-dark text-white border-secondary border-opacity-25"
               />
             </Form.Group>
             <Form.Group>
               <Form.Label className="fs-13 fw-semibold text-slate-300">Device Category</Form.Label>
               <Form.Select
-                value={editDeviceForm.category}
-                onChange={(e) => setEditDeviceForm({ ...editDeviceForm, category: e.target.value })}
+                value={safeEditDeviceForm.category || 'ENERGY_METER'}
+                onChange={(e) => setEditDeviceForm({ ...safeEditDeviceForm, category: e.target.value })}
                 className="bg-dark text-white border-secondary border-opacity-25"
               >
                 <option value="ENERGY_METER">ENERGY_METER</option>
@@ -416,7 +420,7 @@ const DeviceModalsGroup = ({
               <Form.Control
                 type="text"
                 disabled
-                value={editDeviceForm.serialNumber}
+                value={safeEditDeviceForm.serialNumber || ''}
                 className="bg-dark text-white border-secondary border-opacity-25 font-monospace"
                 style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'rgba(15, 23, 42, 0.6)' }}
               />

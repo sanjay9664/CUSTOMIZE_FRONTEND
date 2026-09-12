@@ -68,7 +68,7 @@ const MainLayout = ({ children }) => {
         className={`scada-main-content w-100`}
         style={{
           marginLeft: sidebarWidth,
-          paddingTop: isImpersonating ? '114px' : '74px',
+          paddingTop: isImpersonating ? '104px' : '64px',
           transition: 'margin-left 0.28s cubic-bezier(0.25, 0.1, 0.25, 1)'
         }}
       >
@@ -99,7 +99,7 @@ const MainLayout = ({ children }) => {
             </button>
           </div>
         )}
-        <main className="px-3 px-md-4 pb-5">
+        <main className="px-2 px-md-3 pb-4">
           {children}
         </main>
       </div>

@@ -1,6 +1,9 @@
 import React from 'react';
 import { Button, Badge } from 'react-bootstrap';
-import { Building, Building2, Layers, Edit3, Trash2, Award, Sliders, Zap } from 'lucide-react';
+import {
+  Building, Building2, Layers, Edit3, Trash2, Mail, Phone,
+  MapPin, Activity, Calendar, Settings, ShieldCheck, Zap
+} from 'lucide-react';
 
 const OrganizationSection = ({
   activeTab,
@@ -21,77 +24,154 @@ const OrganizationSection = ({
   const safeTenants = Array.isArray(filteredTenants) ? filteredTenants : [];
 
   return (
-    <div>
+    <div className="p-3 p-md-4">
       {/* TAB 1: COMPANY MANAGEMENT */}
       {activeTab === 'company' && (
-        <div className="table-responsive">
-          <table className="table table-custom mb-0">
+        <div className="table-responsive rounded-3">
+          <table className="table table-custom mb-0 align-middle">
             <thead>
               <tr>
-                <th>Company Name</th>
-                <th>Email Contact</th>
-                <th>Phone</th>
-                <th>Address</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th className="text-end">Actions</th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Building size={16} />
+                    </div>
+                    <span>COMPANY NAME</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Mail size={16} />
+                    </div>
+                    <span>EMAIL CONTACT</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Phone size={16} />
+                    </div>
+                    <span>PHONE</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <MapPin size={16} />
+                    </div>
+                    <span>ADDRESS</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Activity size={16} />
+                    </div>
+                    <span>STATUS</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Calendar size={16} />
+                    </div>
+                    <span>CREATED</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-end">
+                  <div className="d-flex align-items-center justify-content-end gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Settings size={16} />
+                    </div>
+                    <span>ACTIONS</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
               {safeCompanies.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 empty-text fw-semibold">No companies found</td>
+                  <td colSpan={7} className="text-center py-5 empty-text fw-semibold">No companies found</td>
                 </tr>
-              ) : safeCompanies.map(cmp => (
-                <tr key={cmp.id}>
-                  <td className="fw-bold text-white">
-                    <div className="d-flex align-items-center gap-2">
-                      <Building className="text-info" size={18} />
-                      {cmp.name}
-                    </div>
-                  </td>
-                  <td className="text-slate-300">{cmp.email || 'N/A'}</td>
-                  <td className="text-slate-300">{cmp.phone || 'N/A'}</td>
-                  <td className="text-slate-400 fs-13">{cmp.address || 'N/A'}</td>
-                  <td>
-                    <Badge bg={cmp.status === 'INACTIVE' || cmp.deletedAt ? 'secondary' : 'success'} className="px-2 py-1">
-                      {cmp.status === 'INACTIVE' || cmp.deletedAt ? 'INACTIVE' : 'ACTIVE'}
-                    </Badge>
-                  </td>
-                  <td className="text-slate-400 fs-12">{formatDate(cmp.createdAt)}</td>
-                  <td className="text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline-info"
-                        onClick={() => handleViewCompanyTenants(cmp)}
-                        title="View Associated Organizations"
-                        className="p-1 border-0"
-                      >
-                        <Layers size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline-secondary"
-                        onClick={() => handleOpenEditCompany(cmp)}
-                        title="Edit Company Details"
-                        className="p-1 border-0"
-                      >
-                        <Edit3 size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline-danger"
-                        onClick={() => handleDeleteCompany(cmp.id, cmp.name)}
-                        title="Delete Company"
-                        className="p-1 border-0"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              ) : safeCompanies.map(cmp => {
+                const isInactive = cmp.status === 'INACTIVE' || cmp.deletedAt;
+                return (
+                  <tr key={cmp.id} className="row-hover-effect">
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center me-2">
+                        <div className="cell-icon-badge bg-primary-subtle text-primary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0, marginRight: 12 }}>
+                          <Building size={16} />
+                        </div>
+                        <span className="fw-bold fs-14 text-heading">{cmp.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center">
+                        <div className="cell-icon-badge bg-primary-subtle text-primary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0, marginRight: 10 }}>
+                          <Mail size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{cmp.email || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center">
+                        <div className="cell-icon-badge bg-success-subtle text-success rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0, marginRight: 10 }}>
+                          <Phone size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{cmp.phone || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center">
+                        <div className="cell-icon-badge bg-danger-subtle text-danger rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0, marginRight: 10 }}>
+                          <MapPin size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary text-truncate" style={{ maxWidth: 260 }}>{cmp.address || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className={`status-pill d-inline-flex align-items-center gap-1.5 px-3 py-1 rounded-pill fw-bold fs-12 ${isInactive ? 'bg-secondary-subtle text-secondary' : 'bg-success-subtle text-success'}`}>
+                        <span className={`rounded-circle ${isInactive ? 'bg-secondary' : 'bg-success'}`} style={{ width: 7, height: 7 }} />
+                        {isInactive ? 'INACTIVE' : 'ACTIVE'}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="cell-icon-badge rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0, backgroundColor: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6' }}>
+                          <Calendar size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{formatDate(cmp.createdAt)}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-end">
+                      <div className="d-flex align-items-center justify-content-end gap-2">
+                        <button
+                          onClick={() => handleViewCompanyTenants(cmp)}
+                          title="View Associated Organizations"
+                          className="btn-action-round btn-action-view d-flex align-items-center justify-content-center border-0"
+                        >
+                          <Layers size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditCompany(cmp)}
+                          title="Edit Company Details"
+                          className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCompany(cmp.id, cmp.name)}
+                          title="Delete Company"
+                          className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -99,102 +179,136 @@ const OrganizationSection = ({
 
       {/* TAB 2: TENANT / ORGANIZATIONS MANAGEMENT */}
       {activeTab === 'tenant' && (
-        <div className="table-responsive">
-          <table className="table table-custom mb-0">
+        <div className="table-responsive rounded-3">
+          <table className="table table-custom mb-0 align-middle">
             <thead>
               <tr>
-                <th>Organization Name</th>
-                <th>Parent Company</th>
-                <th>Subscription Tier</th>
-                <th>Status</th>
-                <th>Server Host URL</th>
-                <th className="text-end">Actions</th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Building2 size={16} />
+                    </div>
+                    <span>ORGANIZATION NAME</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Building size={16} />
+                    </div>
+                    <span>PARENT COMPANY</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Zap size={16} />
+                    </div>
+                    <span>SUBSCRIPTION TIER</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Activity size={16} />
+                    </div>
+                    <span>STATUS</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <ShieldCheck size={16} />
+                    </div>
+                    <span>SERVER HOST URL</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-end">
+                  <div className="d-flex align-items-center justify-content-end gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Settings size={16} />
+                    </div>
+                    <span>ACTIONS</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
               {safeTenants.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No organizations found</td>
+                  <td colSpan={6} className="text-center py-5 empty-text fw-semibold">No organizations found</td>
                 </tr>
               ) : safeTenants.map(tn => {
                 const parentCompany = (companies || []).find(c => c.id === tn.companyId);
                 const isInactive = tn.status === 'INACTIVE' || tn.deletedAt;
-                const subBadge = tn.subscription === 'ENTERPRISE' ? 'warning' : tn.subscription === 'PRO' ? 'info' : 'secondary';
 
                 return (
-                  <tr key={tn.id}>
-                    <td className="fw-bold text-white">
-                      <div className="d-flex align-items-center gap-2">
-                        <Building2 className="text-primary" size={18} />
+                  <tr key={tn.id} className="row-hover-effect">
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2.5">
+                        <div className="cell-icon-badge bg-primary-subtle text-primary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                          <Building2 size={16} />
+                        </div>
                         <div>
-                          <div>{tn.name}</div>
+                          <div className="fw-bold fs-14 text-heading">{tn.name}</div>
                           {tn.description && <small className="text-muted fs-12">{tn.description}</small>}
                         </div>
                       </div>
                     </td>
-                    <td className="text-slate-300">
-                      {parentCompany ? parentCompany.name : (tn.companyId ? `Company #${tn.companyId}` : 'Independent')}
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="cell-icon-badge bg-secondary-subtle text-secondary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0 }}>
+                          <Building size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{parentCompany ? parentCompany.name : (tn.companyId ? `Company #${tn.companyId}` : 'Independent')}</span>
+                      </div>
                     </td>
-                    <td>
-                      <Badge bg={subBadge} className="px-2 py-1 text-dark fw-bold">
+                    <td className="py-3 px-3">
+                      <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-1.5 fw-bold fs-12">
                         {tn.subscription || 'BASIC'}
-                      </Badge>
+                      </span>
                     </td>
-                    <td>
-                      <Badge bg={isInactive ? 'secondary' : 'success'} className="px-2 py-1">
+                    <td className="py-3 px-3">
+                      <div className={`status-pill d-inline-flex align-items-center gap-1.5 px-3 py-1 rounded-pill fw-bold fs-12 ${isInactive ? 'bg-secondary-subtle text-secondary' : 'bg-success-subtle text-success'}`}>
+                        <span className={`rounded-circle ${isInactive ? 'bg-secondary' : 'bg-success'}`} style={{ width: 7, height: 7 }} />
                         {isInactive ? 'INACTIVE' : 'ACTIVE'}
-                      </Badge>
+                      </div>
                     </td>
-                    <td className="text-slate-400 fs-12 font-monospace">{tn.serverUrl || 'Default Gateway'}</td>
-                    <td className="text-end">
+                    <td className="py-3 px-3">
+                      <span className="fs-13 text-body-secondary font-monospace">{tn.serverUrl || 'Default Gateway'}</span>
+                    </td>
+                    <td className="py-3 px-3 text-end">
                       <div className="d-flex align-items-center justify-content-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline-info"
+                        <button
                           onClick={() => handleOpenFeaturesModal(tn)}
                           title="Configure Features & Modules"
-                          className="p-1 border-0"
+                          className="btn-action-round btn-action-view d-flex align-items-center justify-content-center border-0"
                         >
-                          <Sliders size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-warning"
-                          onClick={() => handleOpenSubModal(tn)}
-                          title="Manage License & Subscription"
-                          className="p-1 border-0"
-                        >
-                          <Award size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-secondary"
+                          <Zap size={15} />
+                        </button>
+                        <button
                           onClick={() => handleOpenEditTenant(tn)}
                           title="Edit Organization Details"
-                          className="p-1 border-0"
+                          className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
                         >
-                          <Edit3 size={16} />
-                        </Button>
+                          <Edit3 size={15} />
+                        </button>
                         {isInactive ? (
-                          <Button
-                            size="sm"
-                            variant="outline-success"
-                            onClick={() => handleReactivateTenant(tn)}
+                          <button
+                            onClick={() => handleReactivateTenant(tn.id, tn.name)}
                             title="Reactivate Organization"
-                            className="p-1 border-0"
+                            className="btn-action-round btn-action-view d-flex align-items-center justify-content-center border-0 text-success"
                           >
-                            <Zap size={16} />
-                          </Button>
+                            <ShieldCheck size={15} />
+                          </button>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline-danger"
+                          <button
                             onClick={() => handleDeleteTenant(tn.id, tn.name)}
-                            title="Deactivate Organization"
-                            className="p-1 border-0"
+                            title="Delete Organization"
+                            className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
                           >
-                            <Trash2 size={16} />
-                          </Button>
+                            <Trash2 size={15} />
+                          </button>
                         )}
                       </div>
                     </td>

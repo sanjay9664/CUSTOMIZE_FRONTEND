@@ -20,12 +20,12 @@ const ManageOrganisation = () => {
   const org = useManageOrganisation();
 
   return (
-    <div className="manage-organisation-page p-0 m-0 w-100">
+    <div className="manage-organisation-page px-1 px-md-2 py-1 w-100">
       <style>{`
         .manage-organisation-page {
           min-height: auto;
           margin: 0 !important;
-          padding: 0 !important;
+          padding: 0.35rem 0.25rem !important;
           transition: background-color 0.3s ease, color 0.3s ease;
         }
 
@@ -65,27 +65,93 @@ const ManageOrganisation = () => {
           color: #38bdf8 !important;
         }
 
+        /* ── TABLE & CARD UI CUSTOMIZATION (REFERENCE MATCH) ─────── */
+        .header-icon-box {
+          flex-shrink: 0 !important;
+          margin-right: 10px !important;
+        }
+        .cell-icon-badge {
+          flex-shrink: 0 !important;
+          margin-right: 12px !important;
+        }
+        .btn-action-round {
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 8px !important;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          cursor: pointer !important;
+        }
+        .btn-action-round:hover {
+          transform: translateY(-2px) scale(1.05) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        body.light-mode .btn-action-view {
+          background-color: #eff6ff !important;
+          color: #2563eb !important;
+        }
+        body.light-mode .btn-action-edit {
+          background-color: #f1f5f9 !important;
+          color: #475569 !important;
+        }
+        body.light-mode .btn-action-delete {
+          background-color: #fef2f2 !important;
+          color: #ef4444 !important;
+        }
+
+        body:not(.light-mode) .btn-action-view {
+          background-color: rgba(37, 99, 235, 0.2) !important;
+          color: #60a5fa !important;
+        }
+        body:not(.light-mode) .btn-action-edit {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+          color: #94a3b8 !important;
+        }
+        body:not(.light-mode) .btn-action-delete {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+          color: #f87171 !important;
+        }
+
         body.light-mode .manage-organisation-page {
           background-color: var(--scada-bg, #f1f5f9) !important;
           color: #0f172a !important;
         }
         body.light-mode .manage-organisation-page .bg-dark-card {
           background: #ffffff !important;
-          border: 1px solid #cbd5e1 !important;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: rgba(0, 0, 0, 0.08) 0px 12px 45px !important;
           color: #0f172a !important;
+          border-radius: 18px !important;
         }
         body.light-mode .manage-organisation-page .org-nav-tabs {
           background: #e2e8f0 !important;
           border-radius: 12px;
         }
+
+        body.light-mode .manage-organisation-page .table-custom thead tr {
+          background-color: #f1f5f9 !important;
+        }
         body.light-mode .manage-organisation-page .table-custom th {
           background-color: #f1f5f9 !important;
-          color: #0369a1 !important;
+          color: #0284c7 !important;
+          padding: 0.8rem 1rem !important;
+          font-size: 0.7rem !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.5px !important;
+          text-transform: uppercase !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+          vertical-align: middle !important;
         }
         body.light-mode .manage-organisation-page .table-custom td {
           background-color: #ffffff !important;
           color: #0f172a !important;
+          padding: 0.85rem 1rem !important;
+          font-size: 0.82rem !important;
+          border-bottom: 1px solid #f1f5f9 !important;
+          vertical-align: middle !important;
+        }
+        body.light-mode .manage-organisation-page .table-custom tbody tr:hover td {
+          background-color: #f8fafc !important;
         }
 
         body:not(.light-mode) .manage-organisation-page {
@@ -95,16 +161,38 @@ const ManageOrganisation = () => {
         body:not(.light-mode) .manage-organisation-page .bg-dark-card {
           background: rgba(15, 23, 42, 0.95) !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          box-shadow: rgba(0, 0, 0, 0.45) 0px 10px 50px, 0 0 24px rgba(56, 189, 248, 0.08) !important;
           color: #f8fafc !important;
+          border-radius: 18px !important;
+        }
+        body:not(.light-mode) .manage-organisation-page .table-custom thead tr {
+          background-color: #1e293b !important;
         }
         body:not(.light-mode) .manage-organisation-page .table-custom th {
           background-color: #1e293b !important;
           color: #38bdf8 !important;
+          padding: 0.8rem 1rem !important;
+          font-size: 0.7rem !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.5px !important;
+          text-transform: uppercase !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          vertical-align: middle !important;
         }
         body:not(.light-mode) .manage-organisation-page .table-custom td {
           background-color: #0f172a !important;
           color: #f8fafc !important;
+          padding: 0.85rem 1rem !important;
+          font-size: 0.82rem !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+          vertical-align: middle !important;
         }
+        body:not(.light-mode) .manage-organisation-page .table-custom tbody tr:hover td {
+          background-color: #1a2436 !important;
+        }
+
+        body.light-mode .text-heading { color: #0f172a !important; }
+        body:not(.light-mode) .text-heading { color: #f8fafc !important; }
 
         .config-option-card {
           background: rgba(15, 23, 42, 0.6) !important;
@@ -242,7 +330,7 @@ const ManageOrganisation = () => {
             setSelectedAreaFilter={org.setSelectedAreaFilter}
             activeBuildings={org.activeBuildings}
             activeAreas={org.activeAreas}
-            filteredDevices={org.filteredDevices}
+            filteredDevices={org.filteredDevices || org.activeDevices || org.devices || []}
             handleOpenRecentEvents={org.handleOpenRecentEvents}
             handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}
             showConfigDevicesModal={org.showConfigDevicesModal}
@@ -252,12 +340,13 @@ const ManageOrganisation = () => {
             setRegisterStep={org.setRegisterStep}
             setRegisterForm={org.setRegisterForm}
             setShowRegisterDeviceModal={org.setShowRegisterDeviceModal}
+            setDynamicTemplateFields={org.setDynamicTemplateFields}
             handleOpenEditDevice={org.handleOpenEditDevice}
             handleOpenLiveModal={org.handleOpenLiveModal}
             handleOpenSettingsModal={org.handleOpenSettingsModal}
             handleOpenThresholdsModal={org.handleOpenThresholdsModal}
             handleOpenRulesModal={org.handleOpenRulesModal}
-            handleOpenAuditLogModal={org.handleOpenAuditLogModal}
+            handleOpenAuditLog={org.handleOpenAuditLogModal || org.handleOpenAuditLog}
             handleDeleteDevice={org.handleDeleteDevice}
           />
         )}
