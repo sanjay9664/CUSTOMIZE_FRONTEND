@@ -39,7 +39,7 @@ const LTOverview = () => {
   }, []);
 
   return (
-    <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: '#0f172a', minHeight: '100vh' }}>
+    <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
       {/* HEADER SECTION */}
       <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom border-secondary border-opacity-25">
         <div>
@@ -48,11 +48,11 @@ const LTOverview = () => {
               <div className="rounded-circle" style={{ width: '8px', height: '8px', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
               <span className="text-success fw-bold fs-9 uppercase tracking-widest">LIVE SYNC</span>
             </div>
-            <div className="text-secondary fw-bold fs-9 uppercase px-3 py-1 rounded-pill" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <div className="text-secondary fw-bold fs-9 uppercase px-3 py-1 rounded-pill" style={{ background: 'var(--scada-accent-bg)' }}>
               {time.toLocaleTimeString()}
             </div>
           </div>
-          <h2 className="text-white fw-bold mb-1 d-flex align-items-center text-uppercase tracking-wide">
+          <h2 className="fw-bold mb-1 d-flex align-items-center text-uppercase tracking-wide" style={{ color: 'var(--scada-text)' }}>
             <Activity className="me-2 text-primary" size={28} style={{ filter: 'drop-shadow(0 0 8px rgba(59,130,246,0.8))' }} />
             LT Panel Overview
           </h2>

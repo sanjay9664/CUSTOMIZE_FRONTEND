@@ -127,16 +127,16 @@ const CoolingTower = () => {
   return (
     <div className="cooling-tower-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
       {/* Page Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-start bg-panel p-4 rounded-4 border border-white border-opacity-5" style={{ background: '#0f172a' }}>
+      <div className="mb-4 d-flex justify-content-between align-items-start scada-card p-4 rounded-4 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="pe-4">
           <div className="d-flex align-items-center gap-3 mb-2">
             <div className="p-2 bg-info bg-opacity-10 rounded-3">
               <Activity className="text-info" size={24} />
             </div>
-            <h4 className="mb-0 text-white fw-black tracking-tight">Cooling Tower Monitoring System</h4>
+            <h4 className="mb-0 fw-black tracking-tight" style={{ color: 'var(--scada-text)' }}>Cooling Tower Monitoring System</h4>
           </div>
           <p className="text-muted fs-14 mb-0 mt-3" style={{ maxWidth: '900px', lineHeight: '1.6' }}>
-            The <strong className="text-white">Cooling Tower Monitoring System</strong> provides real-time visibility into thermal performance, water circulation efficiency, and energy consumption of cooling tower operations. It helps optimize heat rejection, reduce energy waste, and ensure stable HVAC system performance through continuous monitoring and analytics.
+            The <strong style={{ color: 'var(--scada-text)' }}>Cooling Tower Monitoring System</strong> provides real-time visibility into thermal performance, water circulation efficiency, and energy consumption of cooling tower operations. It helps optimize heat rejection, reduce energy waste, and ensure stable HVAC system performance through continuous monitoring and analytics.
           </p>
         </div>
         <div className="d-flex flex-column gap-2 text-end align-items-end">
@@ -319,9 +319,9 @@ const CoolingTower = () => {
       {/* TREND CHART SECTION */}
       <Row className="mb-4">
         <Col xl={12}>
-          <Card className="bg-panel border-0 rounded-4 overflow-hidden border border-white border-opacity-5" style={{ background: '#0f172a' }}>
-            <div className="px-4 py-3 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
-              <h6 className="mb-0 text-white fw-black tracking-widest uppercase fs-14 text-nowrap">
+          <Card className="scada-card border rounded-4 overflow-hidden" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
+            <div className="px-4 py-3 border-bottom d-flex justify-content-between align-items-center" style={{ borderColor: 'var(--scada-border)' }}>
+              <h6 className="mb-0 fw-black tracking-widest uppercase fs-14 text-nowrap" style={{ color: 'var(--scada-text)' }}>
                 <TrendingUp size={16} className="me-2 text-info" /> Instantaneous
               </h6>
 

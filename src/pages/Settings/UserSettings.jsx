@@ -412,7 +412,7 @@ const UserSettings = () => {
       </div>
 
       {/* ── ACTIVE STEP TABLE PANEL ────────────────────────────────────────── */}
-      <Card className="scada-card border-0 shadow-lg mb-4" style={{ background: '#0f172a', borderRadius: '16px' }}>
+      <Card className="scada-card border shadow-lg mb-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', borderRadius: '16px' }}>
         <Card.Body className="p-4">
           
           {/* STEP 1: SUPERADMIN CREATES COMPANIES */}
@@ -867,7 +867,7 @@ const UserSettings = () => {
       </Card>
 
       {/* ── ELEGANT VISUAL TREE EXPLORER ────────────────────────────────────── */}
-      <Card className="scada-card border-0 shadow-lg" style={{ background: '#0f172a', borderRadius: '16px' }}>
+      <Card className="scada-card border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', borderRadius: '16px' }}>
         <Card.Body className="p-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <div>

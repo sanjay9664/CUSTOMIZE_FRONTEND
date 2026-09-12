@@ -121,7 +121,7 @@ const GlobalSettings = () => {
   };
 
   return (
-    <Container fluid className="global-settings-wrapper py-4 px-lg-4" style={{ backgroundColor: '#070605', minHeight: '100vh', color: '#fff' }}>
+    <Container fluid className="global-settings-wrapper py-4 px-lg-4" style={{ backgroundColor: 'var(--scada-bg)', minHeight: '100vh', color: 'var(--scada-text)' }}>
       <style>{`
         body.light-mode .global-settings-wrapper {
           background-color: var(--scada-bg, #e2e8f0) !important;
@@ -161,20 +161,19 @@ const GlobalSettings = () => {
 
       {/* Main Outer Dark Container matching Sidebar Theme */}
       <div 
-        className="p-4 rounded-4 position-relative global-settings-card"
+        className="p-4 rounded-4 position-relative global-settings-card border shadow-sm"
         style={{
-          backgroundColor: '#070a0f',
-          border: '1px solid #00bfff',
-          boxShadow: '0 0 25px rgba(0, 191, 255, 0.2)'
+          backgroundColor: 'var(--scada-card)',
+          borderColor: 'var(--scada-border)'
         }}
       >
         {/* Outer Header */}
-        <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary border-opacity-25">
+        <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom" style={{ borderColor: 'var(--scada-border)' }}>
           <div className="d-flex align-items-center gap-2">
-            <ShieldCheck size={22} style={{ color: '#00bfff' }} />
+            <ShieldCheck size={22} className="text-info" />
             <h5 
               className="mb-0 fw-bold uppercase tracking-wider" 
-              style={{ color: '#00bfff', letterSpacing: '1px', fontSize: '1.1rem' }}
+              style={{ color: 'var(--scada-text)', letterSpacing: '1px', fontSize: '1.1rem' }}
             >
               Application Module Control
             </h5>
@@ -182,8 +181,8 @@ const GlobalSettings = () => {
 
           <Button 
             onClick={handleSave} 
-            className="d-flex align-items-center gap-2 rounded-pill px-4 py-2 fw-bold border-0 btn-save-global"
-            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#fff', fontSize: '0.85rem', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.4)' }}
+            className="d-flex align-items-center gap-2 rounded-pill px-4 py-2 fw-bold border-0 btn-save-global btn-primary shadow-sm"
+            style={{ fontSize: '0.85rem' }}
           >
             <Save size={16} /> SAVE GLOBAL CONFIG
           </Button>
@@ -198,11 +197,12 @@ const GlobalSettings = () => {
             return (
               <Col key={mod.key} xl={3} lg={4} md={6} sm={12}>
                 <div
-                  className="p-3 rounded-4 h-100 transition-all d-flex flex-column justify-content-between module-card-box"
+                  className="p-3 rounded-4 h-100 transition-all d-flex flex-column justify-content-between module-card-box border"
                   style={{
-                    backgroundColor: isEnabled ? '#090d16' : '#11141d',
-                    border: isEnabled ? '1.5px solid #1e293b' : '1px solid #161e2e',
-                    boxShadow: isEnabled ? '0 4px 12px rgba(0,0,0,0.4)' : 'none'
+                    backgroundColor: 'var(--scada-card)',
+                    borderColor: isEnabled ? 'var(--scada-accent)' : 'var(--scada-border)',
+                    boxShadow: 'var(--scada-shadow)',
+                    opacity: isEnabled ? 1 : 0.65
                   }}
                 >
                   {/* Card Header Row */}
@@ -210,12 +210,12 @@ const GlobalSettings = () => {
                     <div className="d-flex align-items-center gap-3">
                       {/* Icon Circle */}
                       <div
-                        className="rounded-circle d-flex align-items-center justify-content-center"
+                        className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                         style={{
                           width: 38,
                           height: 38,
-                          backgroundColor: isEnabled ? '#0284c7' : '#27272a',
-                          color: isEnabled ? '#ffffff' : '#71717a'
+                          backgroundColor: isEnabled ? 'var(--scada-accent)' : 'var(--scada-border)',
+                          color: isEnabled ? '#ffffff' : 'var(--scada-text-muted)'
                         }}
                       >
                         {mod.icon}
@@ -225,7 +225,7 @@ const GlobalSettings = () => {
                       <span 
                         className="fw-bold module-card-title"
                         style={{
-                          color: isEnabled ? '#ffffff' : '#a1a1aa',
+                          color: 'var(--scada-text)',
                           fontSize: '0.92rem'
                         }}
                       >
@@ -240,12 +240,12 @@ const GlobalSettings = () => {
                         width: 48,
                         height: 26,
                         borderRadius: 13,
-                        backgroundColor: isEnabled ? '#00bfff' : '#3f3f46',
+                        backgroundColor: isEnabled ? '#0284c7' : '#94a3b8',
                         padding: 3,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease-in-out'
                       }}
-                      className="d-flex align-items-center"
+                      className="d-flex align-items-center flex-shrink-0"
                     >
                       <div
                         style={{
@@ -255,7 +255,7 @@ const GlobalSettings = () => {
                           backgroundColor: '#ffffff',
                           transform: isEnabled ? 'translateX(22px)' : 'translateX(0px)',
                           transition: 'transform 0.2s ease-in-out',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                         }}
                       />
                     </div>

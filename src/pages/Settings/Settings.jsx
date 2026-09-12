@@ -346,7 +346,7 @@ const Settings = () => {
           <Tab.Pane eventKey="subscription">
             <Row className="g-4">
               <Col lg={7}>
-                <Card className="scada-card border-0 shadow-lg h-100" style={{ background: '#0f172a' }}>
+                <Card className="scada-card border shadow-lg h-100" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
                   <Card.Body className="p-4">
                     <h6 className="mb-4 d-flex align-items-center text-info fw-black uppercase tracking-widest fs-12">
                       <CreditCard size={18} className="me-2" /> Tenant Subscription Configuration
@@ -431,7 +431,7 @@ const Settings = () => {
               </Col>
 
               <Col lg={5}>
-                <Card className="scada-card border-0 shadow-lg h-100" style={{ background: '#09101d' }}>
+                <Card className="scada-card border shadow-lg h-100" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
                   <Card.Body className="p-4 d-flex flex-column justify-content-between">
                     <div>
                       <div className="d-flex align-items-center justify-content-between mb-3">
@@ -467,7 +467,7 @@ const Settings = () => {
 
           {/* ── TAB 2: BUILDINGS & SITES ───────────────────────────────────── */}
           <Tab.Pane eventKey="buildings">
-            <Card className="scada-card border-0 shadow-lg" style={{ background: '#0f172a' }}>
+            <Card className="scada-card border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
               <Card.Body className="p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div>
@@ -524,7 +524,7 @@ const Settings = () => {
 
           {/* ── TAB 3: ZONES & ROOMS ──────────────────────────────────────── */}
           <Tab.Pane eventKey="zones">
-            <Card className="scada-card border-0 shadow-lg" style={{ background: '#0f172a' }}>
+            <Card className="scada-card border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
               <Card.Body className="p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div>
@@ -582,7 +582,7 @@ const Settings = () => {
 
           {/* ── TAB 4: ASSETS & EQUIPMENT ─────────────────────────────────── */}
           <Tab.Pane eventKey="assets">
-            <Card className="scada-card border-0 shadow-lg" style={{ background: '#0f172a' }}>
+            <Card className="scada-card border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
               <Card.Body className="p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div>
@@ -642,7 +642,7 @@ const Settings = () => {
 
           {/* ── TAB 5: IOT DEVICES & TELEMETRY ────────────────────────────── */}
           <Tab.Pane eventKey="devices">
-            <Card className="scada-card border-0 shadow-lg" style={{ background: '#0f172a' }}>
+            <Card className="scada-card border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
               <Card.Body className="p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div>
@@ -710,7 +710,7 @@ const Settings = () => {
 
           {/* ── TAB 6: APPLICATION MODULES ───────────────────────────────── */}
           <Tab.Pane eventKey="modules">
-            <Card className="scada-card border-0 shadow-lg" style={{ background: '#0f172a' }}>
+            <Card className="scada-card border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
               <Card.Body className="p-4">
                 <h6 className="mb-4 d-flex align-items-center text-info fw-black uppercase tracking-widest fs-12">
                   <Shield size={18} className="me-2" /> Application Module Enable/Disable Controls

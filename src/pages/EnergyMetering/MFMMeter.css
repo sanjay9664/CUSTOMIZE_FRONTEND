@@ -314,3 +314,28 @@
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
         }
+
+        /* LIGHT MODE OVERRIDES FOR MFM DIGITAL TWIN & PANELS */
+        body.light-mode .mfm-polycarbonate-case {
+          background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+          border: 10px solid #cbd5e1 !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        body.light-mode .mfm-metallic-bezel {
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
+          border: 2px solid #e2e8f0 !important;
+          box-shadow: inset 0 0 15px rgba(0,0,0,0.03) !important;
+        }
+
+        body.light-mode .mfm-brand-logo {
+          color: #0f172a !important;
+          text-shadow: none !important;
+        }
+
+        body.light-mode .scada-gauge-card {
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          color: #0f172a !important;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        }
