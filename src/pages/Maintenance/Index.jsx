@@ -147,10 +147,13 @@ const MaintenancePage = () => {
   }, [records]);
 
   const glassCard = {
-    background: 'linear-gradient(135deg, rgba(13,20,38,0.95) 0%, rgba(8,12,24,0.98) 100%)',
-    border: '1px solid rgba(255,255,255,0.07)',
+    backgroundColor: 'var(--scada-card)',
+    borderColor: 'var(--scada-border)',
+    borderStyle: 'solid',
+    borderWidth: 1,
     borderRadius: 16,
-    boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.05)',
+    color: 'var(--scada-text)'
   };
 
   const tab = (key, label, Icon) => (
@@ -158,8 +161,8 @@ const MaintenancePage = () => {
       onClick={() => setActiveTab(key)}
       style={{
         background: activeTab === key ? 'rgba(6,182,212,0.15)' : 'transparent',
-        border: activeTab === key ? '1px solid rgba(6,182,212,0.35)' : '1px solid transparent',
-        color: activeTab === key ? '#06b6d4' : '#64748b',
+        border: activeTab === key ? '1px solid rgba(6,182,212,0.35)' : '1px solid var(--scada-border)',
+        color: activeTab === key ? '#06b6d4' : 'var(--scada-text-muted)',
         borderRadius: 10, padding: '8px 18px', fontSize: '0.78rem',
         fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
         transition: 'all 0.2s', letterSpacing: 0.5, textTransform: 'uppercase'
@@ -180,10 +183,10 @@ const MaintenancePage = () => {
               <Wrench size={22} color="#fff" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontWeight: 900, color: '#f8fafc', fontSize: '1.25rem', letterSpacing: '0.5px' }}>
+              <h3 style={{ margin: 0, fontWeight: 900, color: 'var(--scada-text)', fontSize: '1.25rem', letterSpacing: '0.5px' }}>
                 Maintenance & Service History
               </h3>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '0.75rem', marginTop: 2 }}>
+              <p style={{ margin: 0, color: 'var(--scada-text-muted)', fontSize: '0.75rem', marginTop: 2 }}>
                 Asset-wise maintenance tracking • {ASSET_REGISTRY.length} assets registered • All systems
               </p>
             </div>
@@ -195,7 +198,7 @@ const MaintenancePage = () => {
             >
               <Plus size={15} /> Add Record
             </button>
-            <button style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: 10, padding: '8px 14px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button style={{ background: 'var(--scada-accent-bg)', border: '1px solid var(--scada-border)', color: 'var(--scada-text-muted)', borderRadius: 10, padding: '8px 14px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={14} /> Export
             </button>
           </div>
@@ -273,8 +276,8 @@ const MaintenancePage = () => {
                         {asset.icon}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#e2e8f0' }}>{asset.name}</div>
-                        <div style={{ fontSize: '0.62rem', color: '#475569', fontFamily: 'monospace' }}>{asset.id} • {asset.location}</div>
+                        <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--scada-text)' }}>{asset.name}</div>
+                        <div style={{ fontSize: '0.62rem', color: 'var(--scada-text-muted)', fontFamily: 'monospace' }}>{asset.id} • {asset.location}</div>
                       </div>
                     </div>
                     <StatusBadge status={asset.health} />
@@ -288,20 +291,20 @@ const MaintenancePage = () => {
                   {/* Info rows */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                      <span style={{ color: '#475569' }}>Last Serviced</span>
-                      <span style={{ color: asset.lastDone ? '#10b981' : '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>
+                      <span style={{ color: 'var(--scada-text-muted)' }}>Last Serviced</span>
+                      <span style={{ color: asset.lastDone ? '#10b981' : 'var(--scada-text-muted)', fontFamily: 'monospace', fontWeight: 600 }}>
                         {asset.lastDone ? asset.lastDone.date : '—'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                      <span style={{ color: '#475569' }}>Next Due</span>
-                      <span style={{ color: asset.upcoming ? '#06b6d4' : '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>
+                      <span style={{ color: 'var(--scada-text-muted)' }}>Next Due</span>
+                      <span style={{ color: asset.upcoming ? '#06b6d4' : 'var(--scada-text-muted)', fontFamily: 'monospace', fontWeight: 600 }}>
                         {asset.upcoming ? asset.upcoming.date : '—'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                      <span style={{ color: '#475569' }}>Total Records</span>
-                      <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontWeight: 600 }}>{asset.assetRecords.length}</span>
+                      <span style={{ color: 'var(--scada-text-muted)' }}>Total Records</span>
+                      <span style={{ color: 'var(--scada-text-muted)', fontFamily: 'monospace', fontWeight: 600 }}>{asset.assetRecords.length}</span>
                     </div>
                   </div>
 

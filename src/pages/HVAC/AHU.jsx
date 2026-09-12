@@ -59,13 +59,13 @@ const AHU = () => {
     ]
   };
 
-  const LabelCard = ({ title, data, top, left, right, bottom, bgColor = 'rgba(15, 23, 42, 0.85)', labelColor = 'text-info' }) => (
-    <div className="position-absolute p-3 rounded-4 shadow-lg" style={{ top, left, right, bottom, background: bgColor, border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)', minWidth: '160px', zIndex: 10 }}>
-      <div className={`fs-11 fw-bold text-white text-opacity-75 text-uppercase mb-2 border-bottom border-white border-opacity-25 pb-1 tracking-wider`}>{title}</div>
+  const LabelCard = ({ title, data, top, left, right, bottom, labelColor = 'text-info' }) => (
+    <div className="position-absolute p-3 rounded-4 shadow-lg ahu-telemetry-label-card" style={{ top, left, right, bottom, backgroundColor: 'var(--scada-card)', border: '1px solid var(--scada-border)', backdropFilter: 'blur(4px)', minWidth: '160px', zIndex: 10 }}>
+      <div className={`fs-11 fw-bold text-uppercase mb-2 border-bottom border-white border-opacity-25 pb-1 tracking-wider`} style={{ color: 'var(--scada-text)' }}>{title}</div>
       {data.map((item, i) => (
-        <div key={i} className="fs-13 text-white mb-1 d-flex justify-content-between gap-3 align-items-center">
+        <div key={i} className="fs-13 mb-1 d-flex justify-content-between gap-3 align-items-center" style={{ color: 'var(--scada-text)' }}>
           <span className={labelColor}>{item.label}</span> 
-          <span className="fw-black fs-5">{item.value}</span>
+          <span className="fw-black fs-5" style={{ color: 'var(--scada-text)' }}>{item.value}</span>
         </div>
       ))}
     </div>
@@ -74,16 +74,16 @@ const AHU = () => {
   return (
     <div className="ahu-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
       {/* Page Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-start bg-panel p-4 rounded-4 border border-white border-opacity-5" style={{ background: '#0f172a' }}>
+      <div className="mb-4 d-flex justify-content-between align-items-start scada-card p-4 rounded-4 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="pe-4">
           <div className="d-flex align-items-center gap-3 mb-2">
             <div className="p-2 bg-info bg-opacity-10 rounded-3">
               <Wind className="text-info" size={24} />
             </div>
-            <h4 className="mb-0 text-white fw-black tracking-tight">Air Handling Unit (AHU)</h4>
+            <h4 className="mb-0 fw-black tracking-tight" style={{ color: 'var(--scada-text)' }}>Air Handling Unit (AHU)</h4>
           </div>
           <p className="text-muted fs-14 mb-0 mt-3" style={{ maxWidth: '900px', lineHeight: '1.6' }}>
-            The <strong className="text-white">AHU Control System</strong> monitors and regulates air circulation, filtration, cooling, and heating across the facility. Real-time telemetry ensures optimal indoor air quality (IAQ), temperature compliance, and energy efficiency.
+            The <strong style={{ color: 'var(--scada-text)' }}>AHU Control System</strong> monitors and regulates air circulation, filtration, cooling, and heating across the facility. Real-time telemetry ensures optimal indoor air quality (IAQ), temperature compliance, and energy efficiency.
           </p>
         </div>
         <div className="d-flex flex-column gap-2 text-end">
@@ -221,30 +221,30 @@ const AHU = () => {
             <LabelCard title="Motor Diag." data={[{label: 'Vibration', value: '0.8 mm/s'}, {label: 'Current', value: '12.4 A'}]} top="82%" right="2%" />
 
             {/* Last Sync Overlay */}
-            <div className="position-absolute p-3 rounded-4 shadow-lg" style={{ top: '3%', right: '2%', background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.05)', zIndex: 10 }}>
+            <div className="position-absolute p-3 rounded-4 shadow-lg" style={{ top: '3%', right: '2%', backgroundColor: 'var(--scada-card)', backdropFilter: 'blur(4px)', border: '1px solid var(--scada-border)', zIndex: 10 }}>
               <div className="d-flex align-items-center gap-2">
                 <RefreshCw size={14} className="text-info" />
-                <div className="text-white text-opacity-75 fs-12 fw-bold tracking-wider">LAST SYNC: 07-APR-2026 14:52</div>
+                <div className="fs-12 fw-bold tracking-wider" style={{ color: 'var(--scada-text)' }}>LAST SYNC: 07-APR-2026 14:52</div>
               </div>
             </div>
 
             {/* KPI Bottom Overlay */}
-            <div className="position-absolute start-50 translate-middle-x p-4 rounded-4 shadow-lg d-flex gap-5 align-items-center justify-content-center" style={{ bottom: '4%', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)', zIndex: 10, minWidth: '500px' }}>
+            <div className="position-absolute start-50 translate-middle-x p-4 rounded-4 shadow-lg d-flex gap-5 align-items-center justify-content-center" style={{ bottom: '4%', backgroundColor: 'var(--scada-card)', border: '1px solid var(--scada-border)', backdropFilter: 'blur(8px)', zIndex: 10, minWidth: '500px' }}>
               <div className="pe-4 border-end border-secondary border-opacity-25">
-                <div className="text-white text-opacity-75 fs-12 fw-bold text-uppercase mb-1 tracking-wider">Key Performance Index</div>
-                <div className="text-info fs-10 text-opacity-75 text-uppercase">AHU Efficiency</div>
+                <div className="fs-12 fw-bold text-uppercase mb-1 tracking-wider" style={{ color: 'var(--scada-text)' }}>Key Performance Index</div>
+                <div className="text-info fs-10 text-uppercase">AHU Efficiency</div>
               </div>
               <div className="text-center">
                 <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Total Airflow</div>
-                <div className="fs-3 fw-black text-white">12,500 <span className="fs-6 text-muted">CFM</span></div>
+                <div className="fs-3 fw-black" style={{ color: 'var(--scada-text)' }}>12,500 <span className="fs-6 text-muted">CFM</span></div>
               </div>
               <div className="text-center">
                 <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Cooling Load</div>
-                <div className="fs-3 fw-black text-white">85 <span className="fs-6 text-muted">kW</span></div>
+                <div className="fs-3 fw-black" style={{ color: 'var(--scada-text)' }}>85 <span className="fs-6 text-muted">kW</span></div>
               </div>
               <div className="text-center">
                 <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Power Draw</div>
-                <div className="fs-3 fw-black text-white">14.2 <span className="fs-6 text-muted">kW</span></div>
+                <div className="fs-3 fw-black" style={{ color: 'var(--scada-text)' }}>14.2 <span className="fs-6 text-muted">kW</span></div>
               </div>
             </div>
 
@@ -255,9 +255,9 @@ const AHU = () => {
       {/* TREND CHART SECTION */}
       <Row className="mb-4">
         <Col xl={12}>
-          <Card className="bg-panel border-0 rounded-4 overflow-hidden border border-white border-opacity-5" style={{ background: '#0f172a' }}>
-            <div className="px-4 py-3 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
-              <h6 className="mb-0 text-white fw-black tracking-widest uppercase fs-14 text-nowrap">
+          <Card className="scada-card border rounded-4 overflow-hidden" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
+            <div className="px-4 py-3 border-bottom d-flex justify-content-between align-items-center" style={{ borderColor: 'var(--scada-border)' }}>
+              <h6 className="mb-0 fw-black tracking-widest uppercase fs-14 text-nowrap" style={{ color: 'var(--scada-text)' }}>
                 <TrendingUp size={16} className="me-2 text-info" /> Temperature Tracking
               </h6>
               

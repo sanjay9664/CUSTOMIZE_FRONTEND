@@ -39,139 +39,132 @@ const ManageOrganisationHeader = ({ org = {} }) => {
   return (
     <>
       {/* Sub-Header Tabs Row */}
-      <div className="px-3 py-2 mb-3.5 rounded-3 border border-secondary border-opacity-25 shadow-lg overflow-auto" style={{ margin: '0 0 1.35rem 0', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))' }}>
+      <div className="px-3 py-2.5 my-3 rounded-3 border shadow-sm sub-header-nav-bar" style={{ margin: '12px 0 1.35rem 0', backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
-          <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-2.5 align-items-center">
-            <Nav.Item style={{ marginRight: '8px' }}>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-secondary border-opacity-25 hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
-                <Sparkles size={15} className="text-info me-1.5 flex-shrink-0" /> Settings
+          <Nav variant="pills" activeKey={org.activeTab} className="flex-wrap gap-1.5 align-items-center">
+            <Nav.Item>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className={`sub-nav-pill-btn ${org.activeTab === 'hub' ? 'active-pill' : 'inactive-pill'}`}>
+                <Sparkles size={15} className={org.activeTab === 'hub' ? 'text-dark' : 'text-info'} /> Settings
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item style={{ marginRight: '8px' }}>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings')} className="d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-secondary border-opacity-25 hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
-                <Settings size={15} className="text-slate-400 me-1.5 flex-shrink-0" /> Global
+            <Nav.Item>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings?tab=global')} className={`sub-nav-pill-btn ${org.activeTab === 'global' ? 'active-pill' : 'inactive-pill'}`}>
+                <Settings size={15} className={org.activeTab === 'global' ? 'text-dark' : 'text-slate-400'} /> Global
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item style={{ marginRight: '8px' }}>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings/users')} className="d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-2 text-slate-300 border border-secondary border-opacity-25 hover:border-info hover:border-opacity-30" style={{ fontSize: '0.83rem' }}>
-                <Users size={15} className="text-slate-400 me-1.5 flex-shrink-0" /> Users
+            <Nav.Item>
+              <Nav.Link onClick={() => org.navigate && org.navigate('/settings/users')} className={`sub-nav-pill-btn ${org.activeTab === 'users' ? 'active-pill' : 'inactive-pill'}`}>
+                <Users size={15} className={org.activeTab === 'users' ? 'text-dark' : 'text-slate-400'} /> Users
               </Nav.Link>
             </Nav.Item>
 
-            <div className="vr bg-secondary opacity-30 mx-2" style={{ height: '24px' }} />
+            <div className="vr bg-secondary opacity-30 mx-1" style={{ height: '24px' }} />
 
             {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
-            <Nav.Item style={{ marginRight: '6px' }}>
+            <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('company')}
-                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'company' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
-                style={{ fontSize: '0.83rem' }}
+                className={`sub-nav-pill-btn ${org.activeTab === 'company' ? 'active-pill' : 'inactive-pill'}`}
               >
-                <Building size={15} className="me-1.5 flex-shrink-0" /> Company
+                <Building size={15} /> Company
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
-            <Nav.Item style={{ marginRight: '6px' }}>
+            <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('tenant')}
-                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'tenant' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
-                style={{ fontSize: '0.83rem' }}
+                className={`sub-nav-pill-btn ${org.activeTab === 'tenant' ? 'active-pill' : 'inactive-pill'}`}
               >
-                <Building2 size={15} className="me-1.5 flex-shrink-0" /> Organization
+                <Building2 size={15} /> Organization
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
-            <Nav.Item style={{ marginRight: '6px' }}>
+            <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('zone')}
-                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'zone' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
-                style={{ fontSize: '0.83rem' }}
+                className={`sub-nav-pill-btn ${org.activeTab === 'zone' ? 'active-pill' : 'inactive-pill'}`}
               >
-                <Globe size={15} className="me-1.5 flex-shrink-0" /> Zone
+                <Globe size={15} /> Zone
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
-            <Nav.Item style={{ marginRight: '6px' }}>
+            <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('area')}
-                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'area' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
-                style={{ fontSize: '0.83rem' }}
+                className={`sub-nav-pill-btn ${org.activeTab === 'area' ? 'active-pill' : 'inactive-pill'}`}
               >
-                <Layers size={15} className="me-1.5 flex-shrink-0" /> Area
+                <Layers size={15} /> Area
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
-            <Nav.Item style={{ marginRight: '6px' }}>
+            <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('site')}
-                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'site' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
-                style={{ fontSize: '0.83rem' }}
+                className={`sub-nav-pill-btn ${org.activeTab === 'site' ? 'active-pill' : 'inactive-pill'}`}
               >
-                <MapPin size={15} className="me-1.5 flex-shrink-0" /> Site
+                <MapPin size={15} /> Site
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
-            <Nav.Item style={{ marginRight: '6px' }}>
+            <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('asset')}
-                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'asset' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
-                style={{ fontSize: '0.83rem' }}
+                className={`sub-nav-pill-btn ${org.activeTab === 'asset' ? 'active-pill' : 'inactive-pill'}`}
               >
-                <Sliders size={15} className="me-1.5 flex-shrink-0" /> Asset
+                <Sliders size={15} /> Asset
               </Nav.Link>
             </Nav.Item>
 
-            <ChevronRight size={13} className="text-info opacity-40 mx-1.5 flex-shrink-0" />
+            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
 
-            <Nav.Item style={{ marginRight: '6px' }}>
+            <Nav.Item>
               <Nav.Link
                 onClick={() => org.handleTabSelect && org.handleTabSelect('device')}
-                className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.activeTab === 'device' ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`}
-                style={{ fontSize: '0.83rem' }}
+                className={`sub-nav-pill-btn ${org.activeTab === 'device' ? 'active-pill' : 'inactive-pill'}`}
               >
-                <Cpu size={15} className="me-1.5 flex-shrink-0" /> Device
+                <Cpu size={15} /> Device
               </Nav.Link>
             </Nav.Item>
           </Nav>
 
           {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
-          <div className="d-flex align-items-center gap-2 ms-auto">
+          <div className="d-flex align-items-center gap-2 ms-auto flex-wrap">
             {showExtraTabs && (
-              <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-2 align-items-center">
-                <Nav.Item style={{ marginRight: '6px' }}>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('widgets')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isWidgetGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
-                    <Grid size={15} className="me-1.5 flex-shrink-0" /> Widgets
+              <Nav variant="pills" activeKey={org.activeTab} className="flex-wrap gap-1.5 align-items-center extra-tabs-animated-wrapper">
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('widgets')} className={`sub-nav-pill-btn ${org.isWidgetGroup ? 'active-pill' : 'inactive-pill'}`}>
+                    <Grid size={15} /> Widgets
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item style={{ marginRight: '6px' }}>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('rules')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isRuleGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
-                    <Shield size={15} className="me-1.5 flex-shrink-0" /> Rules
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('rules')} className={`sub-nav-pill-btn ${org.isRuleGroup ? 'active-pill' : 'inactive-pill'}`}>
+                    <Shield size={15} /> Rules
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item style={{ marginRight: '6px' }}>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('commands')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isCommandGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
-                    <Zap size={15} className="me-1.5 flex-shrink-0" /> Commands
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect('commands')} className={`sub-nav-pill-btn ${org.isCommandGroup ? 'active-pill' : 'inactive-pill'}`}>
+                    <Zap size={15} /> Commands
                   </Nav.Link>
                 </Nav.Item>
-                <Nav.Item style={{ marginRight: '6px' }}>
-                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isReportGroup ? org.activeTab : 'telemetry')} className={`d-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-2 transition-all ${org.isReportGroup ? 'bg-info text-dark shadow-sm' : 'text-slate-300 hover:text-white border border-secondary border-opacity-25'}`} style={{ fontSize: '0.83rem' }}>
-                    <FileText size={15} className="me-1.5 flex-shrink-0" /> Report
+                <Nav.Item>
+                  <Nav.Link onClick={() => org.handleTabSelect && org.handleTabSelect(org.isReportGroup ? org.activeTab : 'telemetry')} className={`sub-nav-pill-btn ${org.isReportGroup ? 'active-pill' : 'inactive-pill'}`}>
+                    <FileText size={15} /> Report
                   </Nav.Link>
                 </Nav.Item>
               </Nav>
             )}
 
-            <div className="d-flex align-items-center gap-2 px-2.5 py-1.5 rounded-2 bg-dark bg-opacity-60 border border-info border-opacity-30 shadow-sm ms-2">
+            <div className="extra-tabs-toggle-container ms-2">
               <Form.Check
                 type="switch"
                 id="extra-modules-toggle"
@@ -180,7 +173,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                 className="m-0 cursor-pointer"
                 style={{ cursor: 'pointer' }}
               />
-              <label htmlFor="extra-modules-toggle" className="form-check-label fw-semibold text-info mb-0 text-nowrap cursor-pointer" style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
+              <label htmlFor="extra-modules-toggle" className="form-check-label fw-semibold mb-0 ms-2 text-nowrap cursor-pointer">
                 Extra Tabs
               </label>
             </div>

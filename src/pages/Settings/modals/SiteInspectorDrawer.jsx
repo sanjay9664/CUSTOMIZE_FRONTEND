@@ -89,6 +89,54 @@ const SiteInspectorDrawer = ({
           background: linear-gradient(165deg, #0d162a 0%, #080d19 100%) !important;
         }
 
+        body.light-mode .site-inspector-offcanvas.offcanvas {
+          background: #ffffff !important;
+          color: #0f172a !important;
+          box-shadow: -10px 0 40px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .offcanvas-header {
+          background: #f8fafc !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+          color: #0f172a !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .inspector-toolbar-panel {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 4px 12px rgba(15,23,42,0.06) !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .inspector-metric-card {
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 2px 8px rgba(15,23,42,0.06) !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .inspector-section-card {
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 2px 8px rgba(15,23,42,0.06) !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .text-white {
+          color: #0f172a !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .text-slate-200 {
+          color: #334155 !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .border-bottom {
+          border-color: #e2e8f0 !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .address-box {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+          color: #0f172a !important;
+        }
+
         .offcanvas-backdrop.show {
           background: rgba(4, 8, 16, 0.7) !important;
           backdrop-filter: blur(6px) !important;
@@ -570,7 +618,7 @@ const SiteInspectorDrawer = ({
           <div className="mb-3">
             <div className="text-muted mb-1.5" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Base Address:</div>
             <div
-              className="p-3 rounded-2"
+              className="p-3 rounded-2 address-box"
               style={{
                 background: 'rgba(0, 0, 0, 0.25)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -582,7 +630,7 @@ const SiteInspectorDrawer = ({
               {site.address || 'No street address specified.'}
             </div>
           </div>
-          <div className="p-3 rounded-2" style={{ background: 'rgba(0, 0, 0, 0.18)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          <div className="p-3 rounded-2 address-box" style={{ background: 'rgba(0, 0, 0, 0.18)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Row className="g-3" style={{ fontSize: '0.84rem' }}>
               <Col xs={4}>
                 <span className="text-muted d-block mb-1" style={{ fontSize: '0.74rem' }}>City</span>
@@ -667,9 +715,9 @@ const SiteInspectorDrawer = ({
             {assignedTemplates.length > 0 ? (
               <div className="d-flex flex-wrap gap-1.5">
                 {assignedTemplates.map(t => (
-                  <Badge key={t} bg="dark" className="border border-info text-info px-2.5 py-1.5 font-monospace" style={{ fontSize: '0.74rem' }}>
+                  <span key={t} className="active-feature-badge font-monospace" style={{ fontSize: '0.74rem' }}>
                     {t}
-                  </Badge>
+                  </span>
                 ))}
               </div>
             ) : (
@@ -682,9 +730,9 @@ const SiteInspectorDrawer = ({
             {activeFeatures.length > 0 ? (
               <div className="d-flex flex-wrap gap-1.5">
                 {activeFeatures.map(f => (
-                  <Badge key={f} bg="dark" className="border border-success text-success px-2.5 py-1.5 font-monospace" style={{ fontSize: '0.74rem' }}>
+                  <span key={f} className="active-feature-badge font-monospace" style={{ fontSize: '0.74rem' }}>
                     {f}
-                  </Badge>
+                  </span>
                 ))}
               </div>
             ) : (

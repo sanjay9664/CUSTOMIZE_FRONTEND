@@ -187,8 +187,8 @@ const MotorsOverview = () => {
       </Row>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .motors-page { background: #020617; min-height: 100vh; font-family: 'Inter', sans-serif; }
-        .bg-panel { background-color: #0f172a; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+        .motors-page { background: var(--scada-bg); min-height: 100vh; font-family: 'Inter', sans-serif; color: var(--scada-text); }
+        .bg-panel { background-color: var(--scada-card) !important; color: var(--scada-text) !important; border: 1px solid var(--scada-border) !important; box-shadow: 0 10px 40px rgba(0,0,0,0.05); }
         .text-info-scada { color: #0ea5e9; }
         .fw-black { font-weight: 900 !important; }
         .size-2 { font-size: 2.5rem; letter-spacing: -2px; }

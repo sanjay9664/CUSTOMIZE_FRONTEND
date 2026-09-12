@@ -37,28 +37,33 @@ body.light-mode,
   --scada-sidebar: #ffffff;
   --scada-card: #ffffff;
   --scada-card-hover: #f1f5f9;
-  --scada-header: rgba(255, 255, 255, 0.92);
-  --scada-border: rgba(226, 232, 240, 0.9);
+  --scada-header: #ffffff;
+  --scada-border: #e2e8f0;
   --scada-border-strong: #cbd5e1;
   --scada-text: #0f172a;
   --scada-text-muted: #64748b;
   --scada-text-subtle: #475569;
   --scada-accent: #0284c7;
   --scada-accent-bg: rgba(2, 132, 199, 0.08);
-  --scada-input-bg: #f1f5f9;
+  --scada-input-bg: #f8fafc;
   --scada-input-border: #cbd5e1;
   --scada-table-head-bg: #f1f5f9;
-  --scada-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
-  --scada-glass-bg: rgba(255, 255, 255, 0.88);
+  --scada-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --scada-glass-bg: rgba(255, 255, 255, 0.95);
 
-  --status-running: #15803d;
+  --status-running: #16a34a;
   --status-running-bg: #dcfce7;
-  --status-fault: #b91c1c;
+  --status-fault: #dc2626;
   --status-fault-bg: #fee2e2;
-  --status-warning: #b45309;
+  --status-warning: #d97706;
   --status-warning-bg: #fef3c7;
-  --status-stopped: #475569;
+  --status-stopped: #64748b;
   --status-stopped-bg: #f1f5f9;
+}
+
+*, *::before, *::after,
+body, button, input, select, textarea, table, th, td, h1, h2, h3, h4, h5, h6, .font-monospace, .sub-text, .form-label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
 /* Master Layout & Base Styles */
@@ -67,7 +72,7 @@ body {
   padding: 0;
   background-color: var(--scada-bg) !important;
   color: var(--scada-text) !important;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -424,6 +429,395 @@ select, .form-select, select.form-control, input.form-control {
 
 select option, option {
   background-color: #1e293b !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+/* Light Mode Dropdowns */
+body.light-mode .dropdown-menu {
+  background-color: #ffffff !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+body.light-mode .dropdown-item {
+  color: #0f172a !important;
+}
+body.light-mode .dropdown-item:hover {
+  background-color: rgba(2, 132, 199, 0.08) !important;
+  color: #0284c7 !important;
+}
+
+
+.scada-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.scada-main-content {
+  flex-grow: 1;
+  padding: 1.5rem;
+  margin-top: 60px;
+  transition: margin-left 0.3s ease;
+}
+
+/* Sidebar Styles */
+.scada-sidebar {
+  width: 280px;
+  background-color: var(--scada-sidebar);
+  border-right: 1px solid var(--scada-border);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scada-border) transparent;
+}
+
+.scada-sidebar.collapsed {
+  width: 80px;
+}
+
+/* Header Styles */
+.scada-header {
+  height: 60px;
+  background-color: var(--scada-header);
+  border-bottom: 1px solid var(--scada-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 280px;
+  z-index: 999;
+  transition: left 0.3s ease;
+  backdrop-filter: blur(8px);
+  background-color: rgba(15, 23, 42, 0.8);
+}
+
+.scada-header.collapsed {
+  left: 80px;
+}
+
+/* Page Header */
+.page-header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Card Styling */
+.scada-card {
+  background-color: var(--scada-card);
+  border: 1px solid var(--scada-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scada-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--scada-accent);
+}
+
+/* Status Indicators */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.status-running { background-color: rgba(34, 197, 94, 0.1); color: var(--status-running); border: 1px solid rgba(34, 197, 94, 0.2); }
+.status-fault { background-color: rgba(239, 68, 68, 0.1); color: var(--status-fault); border: 1px solid rgba(239, 68, 68, 0.2); }
+.status-warning { background-color: rgba(245, 158, 11, 0.1); color: var(--status-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+.status-stopped { background-color: rgba(148, 163, 184, 0.1); color: var(--status-stopped); border: 1px solid rgba(148, 163, 184, 0.2); }
+.status-not-mapped { background-color: rgba(100, 116, 139, 0.08); color: #475569; border: 1px solid rgba(100, 116, 139, 0.15); font-style: italic; opacity: 0.7; }
+
+/* Table Styles */
+.scada-table {
+  color: var(--scada-text) !important;
+  border-color: var(--scada-border) !important;
+  background-color: transparent !important;
+  --bs-table-bg: transparent !important;
+}
+
+.scada-table thead th {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: var(--scada-text-muted) !important;
+  border-bottom: 2px solid var(--scada-border) !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 12px 16px !important;
+}
+
+.scada-table tbody tr {
+  background-color: transparent !important;
+  transition: all 0.2s ease;
+}
+
+.scada-table tbody tr:hover td {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: white !important;
+}
+
+.scada-table tbody td {
+  background-color: transparent !important;
+  color: var(--scada-text) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  vertical-align: middle;
+  padding: 14px 16px !important;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Utility */
+.text-muted { color: var(--scada-text-muted) !important; }
+.text-white { color: var(--scada-text) !important; }
+.accent-glow { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+
+/* Bootstrap Override */
+.accordion-button:not(.collapsed) {
+  background-color: rgba(56, 189, 248, 0.1) !important;
+  color: var(--scada-accent) !important;
+}
+
+.accordion-button::after {
+  filter: invert(1);
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: white !important;
+  border-color: var(--scada-accent) !important;
+  box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25) !important;
+}
+
+/* Global Native Dropdown Styles for consistent Dark Theme */
+select, .form-select, select.form-control, input.form-control {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid var(--scada-border) !important;
+}
+
+select option, option {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  padding: 10px !important;
+}
+
+/* Fix browser autocomplete / datalist list options */
+body.light-mode .dropdown-menu {
+  background-color: #ffffff !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+body.light-mode .dropdown-item {
+  color: #0f172a !important;
+}
+body.light-mode .dropdown-item:hover {
+  background-color: rgba(2, 132, 199, 0.08) !important;
+  color: #0284c7 !important;
+}
+
+
+.scada-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.scada-main-content {
+  flex-grow: 1;
+  padding: 1.5rem;
+  margin-top: 60px;
+  transition: margin-left 0.3s ease;
+}
+
+/* Sidebar Styles */
+.scada-sidebar {
+  width: 280px;
+  background-color: var(--scada-sidebar);
+  border-right: 1px solid var(--scada-border);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scada-border) transparent;
+}
+
+.scada-sidebar.collapsed {
+  width: 80px;
+}
+
+/* Header Styles */
+.scada-header {
+  height: 60px;
+  background-color: var(--scada-header);
+  border-bottom: 1px solid var(--scada-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 280px;
+  z-index: 999;
+  transition: left 0.3s ease;
+  backdrop-filter: blur(8px);
+  background-color: rgba(15, 23, 42, 0.8);
+}
+
+.scada-header.collapsed {
+  left: 80px;
+}
+
+/* Page Header */
+.page-header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Card Styling */
+.scada-card {
+  background-color: var(--scada-card);
+  border: 1px solid var(--scada-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scada-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--scada-accent);
+}
+
+/* Status Indicators */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.status-running { background-color: rgba(34, 197, 94, 0.1); color: var(--status-running); border: 1px solid rgba(34, 197, 94, 0.2); }
+.status-fault { background-color: rgba(239, 68, 68, 0.1); color: var(--status-fault); border: 1px solid rgba(239, 68, 68, 0.2); }
+.status-warning { background-color: rgba(245, 158, 11, 0.1); color: var(--status-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+.status-stopped { background-color: rgba(148, 163, 184, 0.1); color: var(--status-stopped); border: 1px solid rgba(148, 163, 184, 0.2); }
+.status-not-mapped { background-color: rgba(100, 116, 139, 0.08); color: #475569; border: 1px solid rgba(100, 116, 139, 0.15); font-style: italic; opacity: 0.7; }
+
+/* Table Styles */
+.scada-table {
+  color: var(--scada-text) !important;
+  border-color: var(--scada-border) !important;
+  background-color: transparent !important;
+  --bs-table-bg: transparent !important;
+}
+
+.scada-table thead th {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: var(--scada-text-muted) !important;
+  border-bottom: 2px solid var(--scada-border) !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 12px 16px !important;
+}
+
+.scada-table tbody tr {
+  background-color: transparent !important;
+  transition: all 0.2s ease;
+}
+
+.scada-table tbody tr:hover td {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: white !important;
+}
+
+.scada-table tbody td {
+  background-color: transparent !important;
+  color: var(--scada-text) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  vertical-align: middle;
+  padding: 14px 16px !important;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Utility */
+.text-muted { color: var(--scada-text-muted) !important; }
+.text-white { color: var(--scada-text) !important; }
+.accent-glow { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+
+/* Bootstrap Override */
+.accordion-button:not(.collapsed) {
+  background-color: rgba(56, 189, 248, 0.1) !important;
+  color: var(--scada-accent) !important;
+}
+
+.accordion-button::after {
+  filter: invert(1);
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: white !important;
+  border-color: var(--scada-accent) !important;
+  box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25) !important;
+}
+
+/* Global Native Dropdown Styles for consistent Dark Theme */
+select, .form-select, select.form-control, input.form-control {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid var(--scada-border) !important;
+}
+
+select option, option {
+  background-color: #1e293b !important;
   color: #f8fafc !important;
   padding: 10px !important;
 }
@@ -434,107 +828,71 @@ datalist, select:focus, .form-select:focus {
   color: #f8fafc !important;
 }
 
-body.light-mode {
-  color-scheme: light;
-  --scada-bg: #d2d3db;
-  --scada-sidebar: #e2e8f0;
-  --scada-card: #f8fafc;
-  --scada-header: #d2d3db;
-  --scada-border: rgba(0, 0, 0, 0.08);
-  --scada-text: #1e293b;
-  --scada-text-muted: #475569;
-  --scada-accent: #0284c7;
-
-  --status-running: #047857;
-  --status-fault: #b91c1c;
-  --status-warning: #b45309;
-  --status-stopped: #475569;
-}
-
 body.light-mode .scada-header {
-  background-color: rgba(210, 211, 219, 0.9);
+  background-color: var(--scada-header) !important;
+  border-bottom: 1px solid var(--scada-border) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
 body.light-mode .scada-table thead th {
-  background-color: rgba(0, 0, 0, 0.04) !important;
+  background-color: var(--scada-table-head-bg) !important;
   color: var(--scada-text-muted) !important;
   border-bottom: 2px solid var(--scada-border) !important;
 }
 
 body.light-mode .scada-table tbody tr:hover td {
-  background-color: rgba(0, 0, 0, 0.03) !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
   color: var(--scada-text) !important;
 }
 
 body.light-mode .scada-table tbody td {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  border-bottom: 1px solid var(--scada-border) !important;
 }
 
 body.light-mode select, 
 body.light-mode .form-select, 
 body.light-mode select.form-control, 
 body.light-mode input.form-control {
-  background-color: #f1f5f9 !important;
-  color: #1e293b !important;
+  background-color: var(--scada-input-bg) !important;
+  color: var(--scada-text) !important;
+  border-color: var(--scada-input-border) !important;
 }
 
 body.light-mode select option, 
 body.light-mode option {
-  background-color: #f1f5f9 !important;
-  color: #1e293b !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 body.light-mode datalist, 
 body.light-mode select:focus, 
 body.light-mode .form-select:focus {
-  background-color: #f1f5f9 !important;
-  color: #1e293b !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
-/* Update Header dropdown text color for light mode */
+/* Header dropdown text color for light mode */
 body.light-mode .dropdown-menu {
-  background-color: #f8fafc !important;
+  background-color: #ffffff !important;
+  border: 1px solid var(--scada-border) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08) !important;
 }
 body.light-mode .dropdown-menu .dropdown-item {
-  color: #1e293b !important;
+  color: #0f172a !important;
 }
 body.light-mode .dropdown-menu .dropdown-item:hover {
-  background-color: rgba(0,0,0,0.05) !important;
-}
-/*
-trigger
-rebuild
-*/
-
-
-/* GLOBAL LIGHT MODE OVERRIDES FOR BOOTSTRAP AND INLINE STYLES */
-body.light-mode .text-white,
-body.light-mode .text-light,
-body.light-mode [class*="text-white"] {
-  color: var(--scada-text) !important;
+  background-color: rgba(2, 132, 199, 0.08) !important;
+  color: #0284c7 !important;
 }
 
-body.light-mode .bg-dark,
-body.light-mode [class*="bg-dark"] {
-  background-color: var(--scada-sidebar) !important;
-}
-
+/* GLOBAL LIGHT MODE OVERRIDES FOR BOOTSTRAP AND INLINE DARK CONTAINERS */
 body.light-mode .text-secondary,
 body.light-mode .text-muted {
   color: var(--scada-text-muted) !important;
 }
 
-body.light-mode .border-secondary,
-body.light-mode .border-white,
-body.light-mode [class*="border-white"] {
+body.light-mode .border-secondary {
   border-color: var(--scada-border) !important;
-}
-
-body.light-mode [style*="rgba(15, 23, 42"],
-body.light-mode [style*="rgba(30, 41, 59"],
-body.light-mode [style*="rgba(0, 0, 0, 0.4)"] {
-  background-color: var(--scada-card) !important;
-  background-image: none !important;
 }
 
 body.light-mode .modal-content,
@@ -553,91 +911,162 @@ body.light-mode .VRV-room-card {
 }
 
 body.light-mode .bg-info.bg-opacity-10 {
-  background-color: rgba(2, 132, 199, 0.15) !important;
+  background-color: rgba(2, 132, 199, 0.12) !important;
 }
 
-body.light-mode .scada-card {
-  background: var(--scada-card) !important;
-  background-color: var(--scada-card) !important;
+body.light-mode .scada-card,
+body.light-mode .reference-scada-card,
+body.light-mode .scada-glass-card,
+body.light-mode .card,
+body.light-mode .module-card-box,
+body.light-mode .global-settings-card {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06) !important;
 }
 
-body.light-mode [style*="color: #f8fafc"],
-body.light-mode [style*="color: '#f8fafc'"],
-body.light-mode [style*="color: #fff"],
-body.light-mode [style*="color: '#fff'"] {
-  color: var(--scada-text) !important;
+body.light-mode .bg-dark,
+body.light-mode .bg-black,
+body.light-mode .bg-panel,
+body.light-mode [class*="bg-dark"],
+body.light-mode [class*="bg-black"],
+body.light-mode [class*="bg-slate-950"],
+body.light-mode [class*="bg-emerald-950"] {
+  background-color: #f8fafc !important;
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
 }
 
-body.light-mode .room-title {
-  color: var(--scada-text) !important;
+/* Dashboard Card Sub-menus and Stat Pills Override for Light Mode */
+body.light-mode .submenu-chip-btn,
+body.light-mode [class*="submenu-chip-btn"] {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+  font-size: 0.67rem !important;
+  padding: 3px 8px !important;
+  font-weight: 600 !important;
+  margin: 2px 2px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.light-mode .submenu-chip-btn:hover {
+  background-color: #0284c7 !important;
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+body.light-mode .metric-box-glass,
+body.light-mode [class*="metric-box-glass"] {
+  background-color: #f8fafc !important;
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+body.light-mode .metric-box-glass span,
+body.light-mode .metric-box-glass small {
+  color: #0f172a !important;
+}
+
+body.light-mode .hud-metric-horizontal {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .top-kpi-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06) !important;
+}
+
+body.light-mode .top-kpi-card span {
+  color: #0f172a !important;
+}
+
+body.light-mode .tank-visual-modern-scada {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .health-card {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .health-card span,
+body.light-mode .health-card small {
+  color: #0f172a !important;
+}
+
+body.light-mode .data-box-value {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0284c7 !important;
+}
+
+body.light-mode .data-box-label {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 body.light-mode .text-info {
-    color: #0284c7 !important;
+  color: #0284c7 !important;
 }
 
-body.light-mode .bg-opacity-50 {
-    background-color: rgba(248, 250, 252, 0.5) !important;
+/* HERO CAROUSEL LIGHT MODE STYLING */
+.hero-gradient-overlay {
+  background: linear-gradient(135deg, rgba(2,6,18,0.88) 0%, rgba(2,6,18,0.45) 50%, rgba(2,6,18,0.65) 100%);
 }
 
-
-
-/* ADDITIONAL GLOBAL LIGHT MODE OVERRIDES */
-body.light-mode [style*="background: #0f172a"],
-body.light-mode [style*="background: '#0f172a'"],
-body.light-mode [style*="backgroundColor: '#0f172a'"],
-body.light-mode [style*="backgroundColor: #0f172a"],
-body.light-mode [style*="background: #1e293b"],
-body.light-mode [style*="background: '#1e293b'"] {
-  background-color: var(--scada-card) !important;
-  background-image: none !important;
+body.light-mode .hero-gradient-overlay {
+  background: linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.15) 75%, transparent 100%) !important;
 }
 
-body.light-mode [style*="color: #0f172a"],
-body.light-mode [style*="color: '#0f172a'"] {
-  color: var(--scada-text) !important;
+body.light-mode .hero-carousel-wrapper {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
 }
 
-/* Linear gradients often hardcoded with dark colors */
-body.light-mode [style*="linear-gradient"] {
-  background: var(--scada-card) !important;
+body.light-mode .hero-carousel-wrapper .text-white,
+body.light-mode .hero-carousel-wrapper h2 {
+  color: #0f172a !important;
 }
 
+body.light-mode .hero-carousel-wrapper .text-slate-400,
+body.light-mode .hero-carousel-wrapper .text-slate-500,
+body.light-mode .hero-carousel-wrapper p {
+  color: #475569 !important;
+}
 
-/* MEGA GLOBAL LIGHT MODE OVERRIDES FOR CUSTOM CLASSES */
+body.light-mode .hero-carousel-wrapper .hero-stat-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
 
-/* Cards, Panels, and Containers */
-body.light-mode .premium-figma-card,
-body.light-mode .scada-data-box,
-body.light-mode .card-action-bar-premium,
-body.light-mode .selected-premium-card,
-body.light-mode .configuration-form-wrapper,
-body.light-mode .bg-panel,
-body.light-mode .bg-gradient-scada,
-body.light-mode .scada-glass-card,
-body.light-mode .scada-tabs-container,
-body.light-mode .scada-section-box,
-body.light-mode .parameter-glass-card,
-body.light-mode .scada-gauge-card,
-body.light-mode .scada-glass-section,
-body.light-mode .telemetry-card-glow,
-body.light-mode .grouping-panel,
-body.light-mode .glass-card,
-body.light-mode .glass-tabs,
-body.light-mode .glass-panel,
-body.light-mode .admin-header-card,
-body.light-mode .submodule-grid,
-body.light-mode .hs-card-glow,
-body.light-mode .control-box,
-body.light-mode .filter-tile,
-body.light-mode .status-filter-card,
-body.light-mode .mgmt-header,
-body.light-mode .mini-sidebar-preview,
-body.light-mode .preview-item {
-  background: var(--scada-card) !important;
-  background-color: var(--scada-card) !important;
-  border-color: var(--scada-border) !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+body.light-mode .hero-carousel-wrapper .hero-stat-card span {
+  color: #0f172a !important;
+}
+
+body.light-mode .hero-carousel-wrapper .hero-stat-card small {
+  color: #64748b !important;
+}
+
+body.light-mode .hero-carousel-wrapper .carousel-nav-btn {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
 }
 
 body.light-mode .selected-premium-card {
@@ -2253,81 +2682,6 @@ body.light-mode .offcanvas-body {
   gap: 6px;
   padding: 6px 12px;
   border-radius: 10px;
-  font-size: 0.76rem;
-  font-weight: 500;
-  color: #cbd5e1;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex: 1 1 auto;
-  justify-content: center;
-}
-
-.stat-pill-action:hover {
-  transform: translateY(-1.5px);
-  background: rgba(30, 41, 59, 0.85);
-  border-color: rgba(56, 189, 248, 0.35);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-.stat-pill-action.pill-devices {
-  border-color: rgba(56, 189, 248, 0.18);
-  background: rgba(56, 189, 248, 0.06);
-}
-.stat-pill-action.pill-devices:hover {
-  border-color: rgba(56, 189, 248, 0.45);
-  background: rgba(56, 189, 248, 0.14);
-}
-
-.stat-pill-action.pill-alarms-zero {
-  border-color: rgba(16, 185, 129, 0.18);
-  background: rgba(16, 185, 129, 0.06);
-}
-.stat-pill-action.pill-alarms-zero:hover {
-  border-color: rgba(16, 185, 129, 0.45);
-  background: rgba(16, 185, 129, 0.14);
-}
-
-.stat-pill-action.pill-alarms-active {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.15);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.15);
-}
-.stat-pill-action.pill-alarms-active:hover {
-  border-color: rgba(239, 68, 68, 0.75);
-  background: rgba(239, 68, 68, 0.25);
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
-}
-
-.stat-pill-action.pill-energy {
-.site-data-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.site-data-table th {
-  background: rgba(15, 23, 42, 0.85);
-  color: #94a3b8;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.site-data-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  color: #f8fafc;
-  font-size: 0.85rem;
-  vertical-align: middle;
-}
-
-.site-data-table tr:hover td {
   background: rgba(56, 189, 248, 0.04);
 }
 
@@ -2390,6 +2744,945 @@ body.light-mode .touch-action-btn {
   color: #475569;
 }
 
+/* ==========================================================================
+   GLOBAL LIGHT MODE UNIFIED DESIGN TOKENS & OVERRIDES
+   ========================================================================== */
+body.light-mode {
+  --scada-bg: #F1F5F9 !important;
+  --scada-card: #FFFFFF !important;
+  --scada-accent-bg: #F8FAFC !important;
+  --scada-text: #0F172A !important;
+  --scada-text-muted: #64748B !important;
+  --scada-border: #E2E8F0 !important;
+}
 
+body.light-mode .scada-glass-card,
+body.light-mode .scada-card,
+body.light-mode .reference-scada-card,
+body.light-mode .scada-tile,
+body.light-mode .quick-stat-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
 
+body.light-mode .scada-glass-card .text-white,
+body.light-mode .scada-card .text-white,
+body.light-mode .reference-scada-card .text-white,
+body.light-mode .quick-stat-card .text-white {
+  color: #0f172a !important;
+}
 
+body.light-mode .hud-metric-horizontal {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .hud-metric-horizontal .hud-label {
+  color: #64748b !important;
+}
+
+body.light-mode .scada-tabs-container {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .scada-tab-btn:not(.active-tab) {
+  color: #64748b !important;
+}
+
+body.light-mode .ahu-telemetry-label-card {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+}
+
+body.light-mode .offcanvas {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .offcanvas-header {
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .offcanvas-body {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* UNIFIED SUB-HEADER NAVIGATION BAR & PILL BUTTON STYLES                     */
+/* ────────────────────────────────────────────────────────────────────────── */
+.sub-header-nav-bar {
+  padding: 10px 16px !important;
+  min-height: 54px !important;
+  align-items: center !important;
+  background-color: var(--scada-card) !important;
+  border: 1px solid var(--scada-border) !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* UNIFIED SUB-HEADER NAVIGATION BAR & BUTTON SPACING                         */
+/* ────────────────────────────────────────────────────────────────────────── */
+@keyframes extraTabsSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.extra-tabs-animated-wrapper {
+  animation: extraTabsSlideIn 0.18s cubic-bezier(0, 0, 0.2, 1) forwards !important;
+  will-change: opacity, transform;
+}
+
+.sub-header-nav-bar {
+  padding: 10px 16px !important;
+  margin-top: 10px !important;
+  margin-bottom: 1.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  overflow: visible !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+body.light-mode .sub-header-nav-bar {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+.sub-header-nav-bar .nav {
+  gap: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+.sub-nav-pill-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem !important;
+  font-size: 0.81rem !important;
+  font-weight: 600 !important;
+  padding: 0 0.75rem !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  margin: 2px 2px !important;
+  border-radius: 8px !important;
+  transition: all 0.15s cubic-bezier(0, 0, 0.2, 1) !important;
+  white-space: nowrap !important;
+  text-decoration: none !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+
+.sub-nav-pill-btn:hover {
+  transform: translateY(-1.5px) !important;
+}
+
+.sub-nav-pill-btn:active {
+  transform: translateY(0px) scale(0.98) !important;
+}
+
+body.light-mode .sub-nav-pill-btn.active-pill {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border: 1px solid #0284c7 !important;
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.3) !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .sub-nav-pill-btn.inactive-pill {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .sub-nav-pill-btn.inactive-pill:hover {
+  background-color: #f1f5f9 !important;
+  color: #0284c7 !important;
+  border-color: #0ea5e9 !important;
+}
+
+body:not(.light-mode) .sub-nav-pill-btn.active-pill {
+  background-color: #00d2ff !important;
+  color: #090d16 !important;
+  border: 1px solid #00d2ff !important;
+  box-shadow: 0 2px 8px rgba(0, 210, 255, 0.25) !important;
+  font-weight: 700 !important;
+}
+
+body:not(.light-mode) .sub-nav-pill-btn.inactive-pill {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+body:not(.light-mode) .sub-nav-pill-btn.inactive-pill:hover {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+  color: #ffffff !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* EXTRA TABS TOGGLE CONTAINER & SWITCH                                       */
+/* ────────────────────────────────────────────────────────────────────────── */
+.extra-tabs-toggle-container {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+  border-radius: 8px !important;
+  padding: 0 12px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  margin: 2px 2px !important;
+  box-sizing: border-box !important;
+}
+
+body.light-mode .extra-tabs-toggle-container {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.extra-tabs-toggle-container .form-check {
+  margin: 0 !important;
+  padding-left: 2.3em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: auto !important;
+}
+
+.extra-tabs-toggle-container .form-check-input[type="switch"] {
+  width: 2.3em !important;
+  height: 1.25em !important;
+  cursor: pointer !important;
+  margin-left: -2.3em !important;
+  margin-top: 0 !important;
+  vertical-align: middle !important;
+  transition: all 0.25s ease-in-out !important;
+  background-color: #cbd5e1 !important;
+  border-color: #94a3b8 !important;
+}
+
+body.light-mode .extra-tabs-toggle-container .form-check-input[type="switch"]:checked {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3) !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e") !important;
+}
+
+body.light-mode .extra-tabs-toggle-container label {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  font-size: 0.82rem !important;
+  margin-bottom: 0 !important;
+  margin-left: 8px !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* ACTION BUTTON SPACING & GAPS ([Inspect] [Edit] [⋮])                        */
+/* ────────────────────────────────────────────────────────────────────────── */
+.btn-scada-inspect,
+.btn-scada-edit,
+.btn-scada-more {
+  margin-right: 6px !important;
+  margin-left: 2px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-scada-inspect:last-child,
+.btn-scada-edit:last-child,
+.btn-scada-more:last-child {
+  margin-right: 0 !important;
+}
+
+body.light-mode .btn-scada-inspect {
+  border: 1px solid #0284c7 !important;
+  color: #0284c7 !important;
+  background: #f0f9ff !important;
+}
+
+body.light-mode .btn-scada-inspect:hover {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+body.light-mode .btn-scada-edit {
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  background: #ffffff !important;
+}
+
+body.light-mode .btn-scada-edit:hover {
+  background: #f1f5f9 !important;
+  color: #0284c7 !important;
+  border-color: #0284c7 !important;
+}
+
+body.light-mode .btn-scada-more {
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  background: #ffffff !important;
+}
+
+body.light-mode .btn-scada-more:hover {
+  background: #f1f5f9 !important;
+  color: #0284c7 !important;
+  border-color: #0284c7 !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* ACTIVE FEATURE BADGES IN DRAWERS & CARDS                                   */
+/* ────────────────────────────────────────────────────────────────────────── */
+.active-feature-badge {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  color: #10b981 !important;
+  font-size: 0.74rem !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+body.light-mode .active-feature-badge {
+  background-color: #dcfce7 !important;
+  border: 1px solid #86efac !important;
+  color: #15803d !important;
+  font-weight: 700 !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* CHECKBOX CHECKMARK VISIBILITY IN LIGHT/DARK MODE                           */
+/* ────────────────────────────────────────────────────────────────────────── */
+.form-check-input[type="checkbox"]:checked {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e") !important;
+}
+
+body.light-mode .form-check-input[type="checkbox"] {
+  background-color: #ffffff !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+body.light-mode .form-check-input[type="checkbox"]:checked {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3) !important;
+}
+
+body.light-mode .form-check-input[type="switch"]:checked {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* PARAMETER GLASS CARDS & SCADA BOXES LIGHT/DARK THEMING                      */
+/* ────────────────────────────────────────────────────────────────────────── */
+.parameter-glass-card {
+  background: var(--scada-card, rgba(15, 23, 42, 0.75));
+  border: 1px solid var(--scada-border, rgba(255, 255, 255, 0.08));
+  color: var(--scada-text);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: all 0.25s ease-in-out;
+}
+
+body.light-mode .parameter-glass-card {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .parameter-glass-card .text-white,
+body.light-mode .parameter-glass-card h5.text-white,
+body.light-mode .parameter-glass-card small.text-white {
+  color: #0f172a !important;
+}
+
+body.light-mode .parameter-glass-card small.text-secondary {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .scada-section-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .scada-section-box .bg-dark {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-mode .scada-section-box .text-white {
+  color: #0f172a !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* WATER TANK & SCADA PAGE LIGHT MODE THEMING                                 */
+/* ────────────────────────────────────────────────────────────────────────── */
+.filter-tile {
+  background: var(--scada-card, rgba(15, 23, 42, 0.75));
+  border: 1px solid var(--scada-border, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  transition: all 0.25s ease-in-out;
+}
+
+.filter-tile .tile-title,
+.filter-tile .tile-count {
+  color: var(--scada-text);
+}
+
+body.light-mode .filter-tile {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .filter-tile .tile-title,
+body.light-mode .filter-tile .tile-count {
+  color: #0f172a !important;
+}
+
+body.light-mode .filter-tile.active {
+  border-color: #0284c7 !important;
+  background: #f0f9ff !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15) !important;
+}
+
+.tank-unit-wrapper {
+  background: var(--scada-card, rgba(15, 23, 42, 0.65));
+  border: 1px solid var(--scada-border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 12px 8px !important;
+  transition: all 0.25s ease-in-out;
+}
+
+body.light-mode .tank-unit-wrapper {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .tank-unit-wrapper:hover {
+  border-color: #0284c7 !important;
+  box-shadow: 0 8px 22px rgba(2, 132, 199, 0.18) !important;
+  transform: translateY(-2px);
+}
+
+.tank-vessel {
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 2px solid #475569;
+  border-radius: 8px 8px 12px 12px;
+  position: relative;
+  overflow: hidden;
+  height: 54px;
+}
+
+body.light-mode .tank-vessel,
+[data-theme="light"] .tank-vessel {
+  background-color: #e2e8f0 !important;
+  background: #e2e8f0 !important;
+  border-color: #475569 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light-mode .valve-connector-pipe,
+[data-theme="light"] .valve-connector-pipe {
+  background-color: #94a3b8 !important;
+}
+
+body.light-mode .industrial-valve-node,
+[data-theme="light"] .industrial-valve-node {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+body.light-mode .valve-mode-pill,
+[data-theme="light"] .valve-mode-pill {
+  background-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+.status-filter-card {
+  background: var(--scada-card, rgba(15, 23, 42, 0.75)) !important;
+  border: 1px solid var(--scada-border, rgba(255, 255, 255, 0.08));
+  transition: all 0.2s ease;
+}
+
+body.light-mode .status-filter-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .status-filter-card.active {
+  background: #f8fafc !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light-mode .page-header {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .page-header h2 {
+  color: #0f172a !important;
+}
+
+body.light-mode .hud-stat-container {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-mode .hud-stat-container .hud-label {
+  color: #64748b !important;
+}
+
+body.light-mode .hud-stat-container .hud-value {
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-schematic-bg,
+[data-theme="light"] .scada-schematic-bg {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .scada-schematic-bg text,
+[data-theme="light"] .scada-schematic-bg text {
+  fill: #0f172a !important;
+}
+
+/* Modal & Operational Control Styling (Dark & Light Modes) */
+.scada-control-modal-body {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.scada-modal-header {
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.05) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scada-modal-title {
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+}
+
+.scada-mode-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.scada-mode-title {
+  color: #ffffff;
+}
+
+.scada-mode-pill-box {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px;
+}
+
+.scada-mode-pill-inactive {
+  color: #94a3b8;
+  opacity: 0.7;
+}
+
+.scada-mode-pill-inactive:hover {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.scada-pill-auto {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4) !important;
+}
+
+.scada-pill-manual {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4) !important;
+}
+
+.scada-pill-bypass {
+  background: linear-gradient(135deg, #f43f5e, #e11d48) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.4) !important;
+}
+
+.scada-limit-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.scada-limit-input-wrap {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scada-limit-input {
+  color: #ffffff !important;
+  text-align: center !important;
+  font-weight: 900 !important;
+  font-size: 1.5rem !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.scada-limit-input::-webkit-outer-spin-button,
+.scada-limit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+.scada-limit-input[type=number] {
+  -moz-appearance: textfield !important;
+}
+
+.scada-modal-footer {
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.scada-modal-footer-link {
+  color: #94a3b8;
+}
+
+.scada-modal-footer-link:hover {
+  color: #ffffff;
+}
+
+/* Light Mode Overrides for SCADA Modals */
+body.light-mode .scada-control-modal-body,
+[data-theme="light"] .scada-control-modal-body {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+body.light-mode .scada-modal-header,
+[data-theme="light"] .scada-modal-header {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.08) 0%, transparent 100%) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+body.light-mode .scada-modal-title,
+[data-theme="light"] .scada-modal-title {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+body.light-mode .scada-mode-card,
+[data-theme="light"] .scada-mode-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .scada-mode-title,
+[data-theme="light"] .scada-mode-title {
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-mode-pill-box,
+[data-theme="light"] .scada-mode-pill-box {
+  background: #e2e8f0 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .scada-mode-pill-inactive,
+[data-theme="light"] .scada-mode-pill-inactive {
+  color: #475569 !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .scada-mode-pill-inactive:hover,
+[data-theme="light"] .scada-mode-pill-inactive:hover {
+  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+body.light-mode .scada-limit-card,
+[data-theme="light"] .scada-limit-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .scada-limit-input-wrap,
+[data-theme="light"] .scada-limit-input-wrap {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .scada-limit-input,
+[data-theme="light"] .scada-limit-input {
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-modal-footer,
+[data-theme="light"] .scada-modal-footer {
+  background: #f1f5f9 !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .scada-modal-footer-link,
+[data-theme="light"] .scada-modal-footer-link {
+  color: #64748b !important;
+}
+
+body.light-mode .scada-tank-rect,
+[data-theme="light"] .scada-tank-rect {
+  fill: #e2e8f0 !important;
+  stroke: #94a3b8 !important;
+}
+
+/* Help & Policy Center Styling (Dark & Light Modes) */
+.scada-help-page {
+  background: linear-gradient(135deg, #070d19 0%, #0f172a 100%);
+  color: #ffffff;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.scada-page-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.scada-page-title {
+  color: #ffffff;
+}
+
+.scada-page-subtitle {
+  color: #94a3b8;
+}
+
+.scada-card-box {
+  background-color: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.scada-card-heading {
+  color: #ffffff;
+}
+
+.scada-body-text {
+  color: #cbd5e1;
+}
+
+.scada-form-label {
+  color: #cbd5e1;
+}
+
+.scada-form-input {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.scada-form-input:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.25) !important;
+}
+
+.scada-file-upload-btn {
+  background-color: #0f172a;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.scada-support-card {
+  background-color: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.scada-tab-bar {
+  background-color: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scada-tab-btn-inactive {
+  color: #94a3b8 !important;
+  background-color: transparent !important;
+}
+
+.scada-history-item {
+  background-color: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.scada-history-title {
+  color: #ffffff;
+}
+
+.scada-policy-footer {
+  background-color: #0f172a;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Light Mode Overrides for Help & Policy Pages */
+body.light-mode .scada-help-page,
+[data-theme="light"] .scada-help-page {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-page-header,
+[data-theme="light"] .scada-page-header {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .scada-page-title,
+[data-theme="light"] .scada-page-title {
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-page-subtitle,
+[data-theme="light"] .scada-page-subtitle {
+  color: #64748b !important;
+}
+
+body.light-mode .scada-card-box,
+[data-theme="light"] .scada-card-box {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .scada-card-heading,
+[data-theme="light"] .scada-card-heading {
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-body-text,
+[data-theme="light"] .scada-body-text {
+  color: #334155 !important;
+}
+
+body.light-mode .scada-form-label,
+[data-theme="light"] .scada-form-label {
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .scada-form-input,
+[data-theme="light"] .scada-form-input {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-mode .scada-form-input:focus,
+[data-theme="light"] .scada-form-input:focus {
+  background-color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+body.light-mode .scada-file-upload-btn,
+[data-theme="light"] .scada-file-upload-btn {
+  background-color: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-mode .scada-support-card,
+[data-theme="light"] .scada-support-card {
+  background-color: #f0f9ff !important;
+  border: 1px solid #bae6fd !important;
+  color: #0369a1 !important;
+}
+
+body.light-mode .scada-support-card p,
+body.light-mode .scada-support-card div,
+[data-theme="light"] .scada-support-card p,
+[data-theme="light"] .scada-support-card div {
+  color: #0c4a6e !important;
+}
+
+body.light-mode .scada-tab-bar,
+[data-theme="light"] .scada-tab-bar {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .scada-tab-btn-inactive,
+[data-theme="light"] .scada-tab-btn-inactive {
+  color: #475569 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .scada-tab-btn-inactive:hover,
+[data-theme="light"] .scada-tab-btn-inactive:hover {
+  color: #0f172a !important;
+  background-color: #e2e8f0 !important;
+}
+
+body.light-mode .scada-history-item,
+[data-theme="light"] .scada-history-item {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-history-title,
+[data-theme="light"] .scada-history-title {
+  color: #0f172a !important;
+}
+
+body.light-mode .scada-policy-footer,
+[data-theme="light"] .scada-policy-footer {
+  background-color: #f1f5f9 !important;
+  border-top: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+body.light-mode .scada-policy-footer span,
+[data-theme="light"] .scada-policy-footer span {
+  color: #0f172a !important;
+}

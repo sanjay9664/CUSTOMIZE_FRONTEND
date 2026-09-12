@@ -18,7 +18,7 @@ const CommandsSection = ({
   return (
     <div className="p-3">
       {/* Ultra-Premium Cyber-Industrial SCADA Header Station */}
-      <div className="p-4 rounded-3 border border-info border-opacity-30 shadow-lg mb-4 position-relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.9))', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(56, 189, 248, 0.05)' }}>
+      <div className="p-4 rounded-3 border border-info border-opacity-30 shadow-lg mb-4 position-relative overflow-hidden" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="position-absolute top-0 start-0 w-100" style={{ height: 3, background: 'linear-gradient(90deg, #38bdf8, #10b981, #f59e0b, #38bdf8)' }} />
         
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">

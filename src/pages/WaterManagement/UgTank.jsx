@@ -900,7 +900,7 @@ const UgTank = () => {
                     const yPos = 40 + (idx * 160);
                     return (
                       <g key={tank.id} transform={`translate(60, ${yPos})`}>
-                        <rect width="180" height="130" rx="10" fill="#0c121e" stroke={!tank.isOnline ? "#334155" : "#1e293b"} strokeWidth={isFullscreen ? 4 : 3} />
+                        <rect width="180" height="130" rx="10" className="scada-tank-rect" fill="#0c121e" stroke={!tank.isOnline ? "#334155" : "#1e293b"} strokeWidth={isFullscreen ? 4 : 3} />
                         
                         {/* Floating Status Badge for Tank — show OFFLINE badge only, ONLINE badge removed */}
                         {tank.isMapped && !tank.isOnline && (
@@ -1190,28 +1190,27 @@ const UgTank = () => {
 
       <Modal show={showPumpModal} onHide={() => setShowPumpModal(false)} centered size="lg" contentClassName="bg-transparent border-0 shadow-2xl custom-modal-wide">
         {selectedPump && (
-          <Modal.Body className="p-0 text-white overflow-hidden rounded-5" style={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <Modal.Body className="p-0 scada-control-modal-body overflow-hidden rounded-5">
 
             {/* Modal Header Bar */}
-            <div className="p-4 text-center border-bottom border-white border-opacity-10" style={{ background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.05) 0%, transparent 100%)' }}>
+            <div className="p-4 text-center border-bottom scada-modal-header">
               <Badge bg="info" className="bg-opacity-10 text-info px-3 py-1 mb-2 border border-info border-opacity-25 rounded-pill">
                 <div className="d-flex align-items-center gap-2 fs-12 fw-black tracking-widest uppercase">
                   <Activity size={10} className="pulse-icon" /> Station Controller
                 </div>
               </Badge>
-              <h3 className="fw-black text-white mb-0 size-3 tracking-tighter" style={{ textShadow: '0 0 20px rgba(56, 189, 248, 0.3)' }}>
+              <h3 className="fw-black scada-modal-title mb-0 size-3 tracking-tighter">
                 PUMP STATION <span className="text-info-scada">P{selectedPump.id}</span>
               </h3>
             </div>
 
             <div className="p-4 px-5">
               {/* Mode Control Section */}
-              <div className="d-flex justify-content-between align-items-center p-3 rounded-4 position-relative overflow-hidden mb-3"
-                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="d-flex justify-content-between align-items-center p-3 rounded-4 position-relative overflow-hidden mb-3 scada-mode-card">
                 <div className="position-absolute top-0 start-0 h-100 w-1 bg-info bg-opacity-50"></div>
                 <div>
                   <div className="fw-black fs-10 tracking-widest text-secondary uppercase">System Mode</div>
-                  <div className="text-white fw-bold fs-6">AUTO / MANUAL OVERRIDE</div>
+                  <div className="fw-bold fs-6 scada-mode-title">AUTO / MANUAL OVERRIDE</div>
                 </div>
                 <div className="d-flex align-items-center gap-3">
                   <span className={`fs-11 fw-black tracking-widest ${selectedPump.mode === 'MANUAL' ? 'text-warning text-glow' : 'text-muted opacity-50'}`}>MANUAL</span>
@@ -1224,7 +1223,7 @@ const UgTank = () => {
 
               {/* Action Section */}
               <div className="mb-4">
-                <Form.Label className="fs-11 text-secondary fw-black tracking-widest mb-2 uppercase text-center w-100">Pump CommutationWater Levels</Form.Label>
+                <Form.Label className="fs-11 text-secondary fw-black tracking-widest mb-2 uppercase text-center w-100">Pump Commutation Water Control</Form.Label>
                 <Row className="g-3">
                   <Col xs={6}>
                     <button
@@ -1272,11 +1271,11 @@ const UgTank = () => {
               )}
             </div>
 
-            <div className="p-3 border-top border-white border-opacity-5 text-center bg-black bg-opacity-20 d-flex justify-content-between align-items-center">
+            <div className="p-3 border-top scada-modal-footer d-flex justify-content-between align-items-center">
               <div className="d-flex align-items-center gap-2 text-muted fs-12 fw-bold tracking-widest">
                 <ShieldCheck size={14} className="text-success" /> SECURE STATION LINK
               </div>
-              <Button variant="link" className="text-secondary fs-12 fw-black text-decoration-none hover-white transition-all uppercase tracking-widest" onClick={() => setShowPumpModal(false)}>
+              <Button variant="link" className="scada-modal-footer-link fs-12 fw-black text-decoration-none transition-all uppercase tracking-widest" onClick={() => setShowPumpModal(false)}>
                 Dismiss Panel
               </Button>
             </div>
@@ -1284,12 +1283,12 @@ const UgTank = () => {
         )}
       </Modal>
 
-      <Modal show={showLimitModal} onHide={() => setShowLimitModal(false)} centered contentClassName="bg-dark border-secondary shadow-lg rounded-4 overflow-hidden">
+      <Modal show={showLimitModal} onHide={() => setShowLimitModal(false)} centered contentClassName="bg-transparent border-0 shadow-2xl">
         {selectedPump && (
-          <Modal.Body className="p-4 text-white position-relative">
+          <Modal.Body className="p-4 scada-control-modal-body rounded-4 position-relative">
             <Button
               variant="link"
-              className="position-absolute top-0 end-0 m-2 text-secondary hover-text-white transition-all p-2"
+              className="position-absolute top-0 end-0 m-2 scada-modal-footer-link transition-all p-2"
               onClick={() => setShowLimitModal(false)}
             >
               <X size={20} />
@@ -1297,26 +1296,27 @@ const UgTank = () => {
             <div className="text-center mb-4 mt-2">
               <h5 className="fw-black text-info tracking-tighter uppercase fs-9">PUMP P{selectedPump.id} THRESHOLD SETUP</h5>
             </div>
-            <div className="bg-black bg-opacity-30 p-3 p-sm-4 rounded-4 mb-4 border border-secondary border-opacity-10">
+            <div className="scada-limit-card p-3 p-sm-4 rounded-4 mb-4">
               <Form.Group className="mb-4">
                 <Form.Label className="fs-9 text-muted uppercase fw-bold mb-2">AUTO-START THRESHOLD (kg/cm²)</Form.Label>
-                <Form.Control type="number" step="0.1" value={limitForm.start} onChange={(e) => setLimitForm({ ...limitForm, start: e.target.value })} className="bg-dark border-secondary text-white fw-bold fs-4" />
-                <small className="text-secondary opacity-50 fs-10 mt-1 d-block">PUMP WILL IGNITE BELOW THIS PRESSURE</small>
+                <div className="scada-limit-input-wrap rounded-3 p-2">
+                  <Form.Control type="number" step="0.1" value={limitForm.start} onChange={(e) => setLimitForm({ ...limitForm, start: e.target.value })} className="bg-transparent border-0 scada-limit-input fw-bold fs-4 p-0 shadow-none" />
+                </div>
+                <small className="text-secondary opacity-70 fs-10 mt-1 d-block">PUMP WILL IGNITE BELOW THIS PRESSURE</small>
               </Form.Group>
               <Form.Group>
                 <Form.Label className="fs-9 text-muted uppercase fw-bold mb-2">AUTO-STOP THRESHOLD (kg/cm²)</Form.Label>
-                <Form.Control type="number" step="0.1" value={limitForm.stop} onChange={(e) => setLimitForm({ ...limitForm, stop: e.target.value })} className="bg-dark border-secondary text-white fw-bold fs-4" />
-                <small className="text-secondary opacity-50 fs-10 mt-1 d-block">PUMP WILL TERMINATE ABOVE THIS PRESSURE</small>
+                <div className="scada-limit-input-wrap rounded-3 p-2">
+                  <Form.Control type="number" step="0.1" value={limitForm.stop} onChange={(e) => setLimitForm({ ...limitForm, stop: e.target.value })} className="bg-transparent border-0 scada-limit-input fw-bold fs-4 p-0 shadow-none" />
+                </div>
+                <small className="text-secondary opacity-70 fs-10 mt-1 d-block">PUMP WILL TERMINATE ABOVE THIS PRESSURE</small>
               </Form.Group>
             </div>
             <div className="d-flex flex-column gap-2 mt-4">
-              <div className="d-flex gap-3">
-
-              </div>
               <Button
                 variant="primary"
-                className="w-100 py-3 fw-black tracking-widest d-flex align-items-center justify-content-center gap-2 shadow-glow-blue border-0"
-                style={{ background: 'linear-gradient(45deg, #2563eb, #3b82f6)' }}
+                className="w-100 py-3 fw-black tracking-widest d-flex align-items-center justify-content-center gap-2 shadow-glow-blue border-0 text-white"
+                style={{ background: 'linear-gradient(135deg, #2563eb, #3b82f6)' }}
                 disabled={isSendingRules}
                 onClick={() => handleSendRuleToEngine('BOTH')}
               >
@@ -1338,6 +1338,7 @@ const UgTank = () => {
                 <h4 className="text-white fw-black mb-0 letter-spacing-2">{actionFeedback}</h4>
               </div>
             )}
+
           </Modal.Body>
         )}
       </Modal>

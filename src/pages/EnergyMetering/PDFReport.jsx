@@ -52,7 +52,7 @@ const EnergyPDFReport = () => {
       </div>
 
       {/* FILTER CONTROL CARD */}
-      <Card className="scada-card border-0 text-white mb-4" style={{ background: '#0f172a' }}>
+      <Card className="scada-card border mb-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', color: 'var(--scada-text)' }}>
         <Card.Body className="p-4">
           <h5 className="mb-4 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
             <Calendar className="text-info" size={18} /> Report Configuration
@@ -108,7 +108,7 @@ const EnergyPDFReport = () => {
       </Card>
 
       {/* GENERATED REPORT DATA TABLE */}
-      <Card className="scada-card border-0 text-white mt-4" style={{ background: '#0f172a' }}>
+      <Card className="scada-card border mt-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', color: 'var(--scada-text)' }}>
         <Card.Body className="p-4">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h5 className="fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11 mb-0">

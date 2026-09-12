@@ -285,7 +285,7 @@ const EnvDashboard = () => {
   };
 
   return (
-    <div className="fade-in p-3 VRV-full-panel h-100 d-flex flex-column" style={{ background: '#0f172a' }}>
+    <div className="fade-in p-3 VRV-full-panel h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)' }}>
       {/* Header */}
       <div className="page-header d-flex justify-content-between align-items-center mb-4">
         <div>
