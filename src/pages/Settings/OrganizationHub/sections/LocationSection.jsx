@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Badge } from 'react-bootstrap';
-import { Globe, Layers, Edit3, Trash2 } from 'lucide-react';
+import { Globe, Layers, Edit3, Trash2, Building2, MapPin, Activity, FileText, Settings } from 'lucide-react';
 
 const LocationSection = ({
   activeTab,
@@ -22,67 +22,115 @@ const LocationSection = ({
   const safeSites = Array.isArray(sites) ? sites : [];
 
   return (
-    <div>
+    <div className="p-3 p-md-4">
       {/* TAB 3: ZONES MANAGEMENT */}
       {activeTab === 'zone' && (
-        <div className="table-responsive">
-          <table className="table table-custom mb-0">
+        <div className="table-responsive rounded-3">
+          <table className="table table-custom mb-0 align-middle">
             <thead>
               <tr>
-                <th>Zone Name</th>
-                <th>Assigned Organization</th>
-                <th>Assigned Site</th>
-                <th>Status</th>
-                <th className="text-end">Actions</th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Globe size={16} />
+                    </div>
+                    <span>ZONE NAME</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Building2 size={16} />
+                    </div>
+                    <span>ASSIGNED ORGANIZATION</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <MapPin size={16} />
+                    </div>
+                    <span>ASSIGNED SITE</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Activity size={16} />
+                    </div>
+                    <span>STATUS</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-end">
+                  <div className="d-flex align-items-center justify-content-end gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Settings size={16} />
+                    </div>
+                    <span>ACTIONS</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
               {safeZones.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 empty-text fw-semibold">No zones found</td>
+                  <td colSpan={5} className="text-center py-5 empty-text fw-semibold">No zones found</td>
                 </tr>
               ) : safeZones.map(z => {
                 const assignedTenant = safeTenants.find(t => String(t.id) === String(z.tenantId));
                 const assignedSite = safeSites.find(s => String(s.id) === String(z.siteId));
                 const isInactive = z.status === 'INACTIVE' || z.deletedAt;
                 return (
-                  <tr key={z.id}>
-                    <td className="fw-bold text-white">
-                      <div className="d-flex align-items-center gap-2">
-                        <Globe className="text-amber-400" size={18} />
+                  <tr key={z.id} className="row-hover-effect">
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2.5">
+                        <div className="cell-icon-badge bg-primary-subtle text-primary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                          <Globe size={16} />
+                        </div>
                         <div>
-                          <div>{z.name}</div>
+                          <div className="fw-bold fs-14 text-heading">{z.name}</div>
                           {z.description && <small className="text-muted fs-12">{z.description}</small>}
                         </div>
                       </div>
                     </td>
-                    <td className="text-slate-300">{assignedTenant ? assignedTenant.name : 'N/A'}</td>
-                    <td className="text-slate-300 fs-13">{assignedSite ? assignedSite.name : 'N/A'}</td>
-                    <td>
-                      <Badge bg={isInactive ? 'secondary' : 'success'} className="px-2 py-1">
-                        {isInactive ? 'INACTIVE' : 'ACTIVE'}
-                      </Badge>
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="cell-icon-badge bg-secondary-subtle text-secondary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0 }}>
+                          <Building2 size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{assignedTenant ? assignedTenant.name : 'N/A'}</span>
+                      </div>
                     </td>
-                    <td className="text-end">
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="cell-icon-badge bg-danger-subtle text-danger rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0 }}>
+                          <MapPin size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{assignedSite ? assignedSite.name : 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className={`status-pill d-inline-flex align-items-center gap-1.5 px-3 py-1 rounded-pill fw-bold fs-12 ${isInactive ? 'bg-secondary-subtle text-secondary' : 'bg-success-subtle text-success'}`}>
+                        <span className={`rounded-circle ${isInactive ? 'bg-secondary' : 'bg-success'}`} style={{ width: 7, height: 7 }} />
+                        {isInactive ? 'INACTIVE' : 'ACTIVE'}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-end">
                       <div className="d-flex align-items-center justify-content-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline-secondary"
+                        <button
                           onClick={() => handleOpenEditZone(z)}
                           title="Edit Zone Details"
-                          className="p-1 border-0"
+                          className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
                         >
-                          <Edit3 size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
+                          <Edit3 size={15} />
+                        </button>
+                        <button
                           onClick={() => handleDeleteZone(z.id, z.name)}
-                          title="Deactivate Zone"
-                          className="p-1 border-0"
+                          title="Delete Zone"
+                          className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
                         >
-                          <Trash2 size={16} />
-                        </Button>
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -95,57 +143,106 @@ const LocationSection = ({
 
       {/* TAB 4: AREAS MANAGEMENT */}
       {activeTab === 'area' && (
-        <div className="table-responsive">
-          <table className="table table-custom mb-0">
+        <div className="table-responsive rounded-3">
+          <table className="table table-custom mb-0 align-middle">
             <thead>
               <tr>
-                <th>Area Name</th>
-                <th>Assigned Zone</th>
-                <th>Assigned Organization</th>
-                <th>Description</th>
-                <th className="text-end">Actions</th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Layers size={16} />
+                    </div>
+                    <span>AREA NAME</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Globe size={16} />
+                    </div>
+                    <span>ASSIGNED ZONE</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Building2 size={16} />
+                    </div>
+                    <span>ASSIGNED ORGANIZATION</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <FileText size={16} />
+                    </div>
+                    <span>DESCRIPTION</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-end">
+                  <div className="d-flex align-items-center justify-content-end gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Settings size={16} />
+                    </div>
+                    <span>ACTIONS</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
               {safeAreas.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-4 empty-text fw-semibold">No operational areas found</td>
+                  <td colSpan={5} className="text-center py-5 empty-text fw-semibold">No operational areas found</td>
                 </tr>
               ) : safeAreas.map(a => {
                 const parentZone = safeAllZones.find(z => String(z.id) === String(a.zoneId));
                 const parentTenant = safeTenants.find(t => String(t.id) === String(a.tenantId));
 
                 return (
-                  <tr key={a.id}>
-                    <td className="fw-bold text-white">
-                      <div className="d-flex align-items-center gap-2">
-                        <Layers className="text-cyan-400" size={18} />
-                        {a.name}
+                  <tr key={a.id} className="row-hover-effect">
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2.5">
+                        <div className="cell-icon-badge bg-primary-subtle text-primary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                          <Layers size={16} />
+                        </div>
+                        <span className="fw-bold fs-14 text-heading">{a.name}</span>
                       </div>
                     </td>
-                    <td className="text-slate-300">{parentZone ? parentZone.name : 'N/A'}</td>
-                    <td className="text-slate-300">{parentTenant ? parentTenant.name : 'N/A'}</td>
-                    <td className="text-slate-400 fs-13">{a.description || 'N/A'}</td>
-                    <td className="text-end">
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="cell-icon-badge bg-secondary-subtle text-secondary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0 }}>
+                          <Globe size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{parentZone ? parentZone.name : 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="cell-icon-badge bg-secondary-subtle text-secondary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0 }}>
+                          <Building2 size={14} />
+                        </div>
+                        <span className="fs-13 text-body-secondary">{parentTenant ? parentTenant.name : 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="fs-13 text-body-secondary text-truncate" style={{ maxWidth: 260 }}>{a.description || 'N/A'}</span>
+                    </td>
+                    <td className="py-3 px-3 text-end">
                       <div className="d-flex align-items-center justify-content-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline-secondary"
+                        <button
                           onClick={() => handleOpenEditArea(a)}
                           title="Edit Area Details"
-                          className="p-1 border-0"
+                          className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
                         >
-                          <Edit3 size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
+                          <Edit3 size={15} />
+                        </button>
+                        <button
                           onClick={() => handleDeleteArea(a.id, a.name)}
-                          title="Deactivate Area"
-                          className="p-1 border-0"
+                          title="Delete Area"
+                          className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
                         >
-                          <Trash2 size={16} />
-                        </Button>
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>

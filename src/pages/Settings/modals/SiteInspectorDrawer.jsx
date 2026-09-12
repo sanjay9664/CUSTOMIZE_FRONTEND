@@ -3,7 +3,7 @@ import { Offcanvas, Badge, Button, Row, Col } from 'react-bootstrap';
 import {
   Building2, MapPin, Server, AlertTriangle, Zap, ExternalLink,
   Edit3, CheckCircle2, Phone, Mail, Clock, Globe, Layers,
-  Navigation, Power, Radio, ChevronRight
+  Navigation, Power, Radio, ChevronRight, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -70,35 +70,134 @@ const SiteInspectorDrawer = ({
       show={show}
       onHide={onHide}
       placement="end"
-      className="site-inspector-offcanvas"
+      className="site-inspector-offcanvas unified-register-drawer"
       style={{
         width: 'min(92vw, 680px)',
-        backgroundColor: '#0c1427',
+        backgroundColor: '#0f172a',
         color: '#f8fafc',
-        borderLeft: '1px solid rgba(56, 189, 248, 0.18)',
+        borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '-15px 0 45px rgba(0, 0, 0, 0.5)',
         zIndex: 1055
       }}
     >
       <style>{`
-        /* High Performance Hardware-Accelerated Drawer Transitions */
-        .site-inspector-offcanvas.offcanvas {
-          transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s ease !important;
+        /* Fast & Ultra-Smooth Hardware-Accelerated Opening & Closing */
+        .site-inspector-offcanvas.offcanvas,
+        .site-inspector-offcanvas.offcanvas.showing,
+        .site-inspector-offcanvas.offcanvas.show {
+          transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease !important;
           will-change: transform;
-          transform: translateZ(0);
-          box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6) !important;
-          background: linear-gradient(165deg, #0d162a 0%, #080d19 100%) !important;
+          transform: translate3d(0, 0, 0) !important;
+          backface-visibility: hidden;
+          background: #0f172a !important;
+        }
+
+        .site-inspector-offcanvas.offcanvas.hiding {
+          transition: transform 0.14s cubic-bezier(0.4, 0, 1, 1), opacity 0.14s ease-out !important;
+          will-change: transform, opacity;
+        }
+
+        .offcanvas-backdrop,
+        .offcanvas-backdrop.fade,
+        .offcanvas-backdrop.show {
+          transition: opacity 0.12s linear !important;
+          background: rgba(8, 14, 26, 0.65) !important;
+        }
+
+        .site-inspector-offcanvas .offcanvas-body {
+          padding: 0 !important;
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          overflow: hidden;
+        }
+
+        /* Unified Header Format */
+        .site-inspector-offcanvas .drawer-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          flex-shrink: 0;
+          background: #0f172a;
+        }
+
+        .site-inspector-offcanvas .drawer-header-icon {
+          width: 42px !important;
+          height: 42px !important;
+          border-radius: 11px !important;
+          background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex-shrink: 0 !important;
+          box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+        }
+
+        .site-inspector-offcanvas .drawer-close-btn {
+          background: transparent !important;
+          border: none !important;
+          color: #94a3b8 !important;
+          border-radius: 8px !important;
+          padding: 6px 8px !important;
+          cursor: pointer !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          transition: all 0.15s ease !important;
+        }
+        .site-inspector-offcanvas .drawer-close-btn:hover {
+          color: #ffffff !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .site-inspector-offcanvas .drawer-scroll-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 24px 28px;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(56, 189, 248, 0.2) transparent;
+        }
+        .site-inspector-offcanvas .drawer-scroll-content::-webkit-scrollbar { width: 5px; }
+        .site-inspector-offcanvas .drawer-scroll-content::-webkit-scrollbar-thumb {
+          background: rgba(56, 189, 248, 0.25);
+          border-radius: 4px;
+        }
+
+        .site-inspector-offcanvas .drawer-footer {
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 14px 28px;
+          background: #0f172a;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 12px;
         }
 
         body.light-mode .site-inspector-offcanvas.offcanvas {
           background: #ffffff !important;
           color: #0f172a !important;
-          box-shadow: -10px 0 40px rgba(0, 0, 0, 0.1) !important;
+          box-shadow: -10px 0 32px rgba(0, 0, 0, 0.12) !important;
         }
 
-        body.light-mode .site-inspector-offcanvas .offcanvas-header {
+        body.light-mode .site-inspector-offcanvas .drawer-header {
           background: #f8fafc !important;
           border-bottom: 1px solid #e2e8f0 !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .drawer-footer {
+          background: #f8fafc !important;
+          border-top: 1px solid #e2e8f0 !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .drawer-close-btn {
+          color: #64748b !important;
+        }
+        body.light-mode .site-inspector-offcanvas .drawer-close-btn:hover {
           color: #0f172a !important;
+          background: rgba(0, 0, 0, 0.06) !important;
         }
 
         body.light-mode .site-inspector-offcanvas .inspector-toolbar-panel {
@@ -138,27 +237,8 @@ const SiteInspectorDrawer = ({
         }
 
         .offcanvas-backdrop.show {
-          background: rgba(4, 8, 16, 0.7) !important;
-          backdrop-filter: blur(6px) !important;
-        }
-
-        .site-inspector-offcanvas .offcanvas-header {
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          padding: 20px 24px;
-          background: rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(12px);
-        }
-
-        .site-inspector-offcanvas .offcanvas-body {
-          padding: 24px;
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(56, 189, 248, 0.2) transparent;
-        }
-        .site-inspector-offcanvas .offcanvas-body::-webkit-scrollbar { width: 5px; }
-        .site-inspector-offcanvas .offcanvas-body::-webkit-scrollbar-thumb {
-          background: rgba(56, 189, 248, 0.25);
-          border-radius: 4px;
+          background: rgba(8, 14, 26, 0.65) !important;
+          opacity: 1 !important;
         }
 
         /* Pulsing Status Dot */
@@ -202,8 +282,7 @@ const SiteInspectorDrawer = ({
 
         /* Action Toolbar Panel */
         .inspector-toolbar-panel {
-          background: linear-gradient(145deg, rgba(22, 32, 52, 0.85) 0%, rgba(10, 16, 30, 0.92) 100%);
-          backdrop-filter: blur(12px);
+          background: linear-gradient(145deg, rgba(22, 32, 52, 0.95) 0%, rgba(10, 16, 30, 0.98) 100%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
           padding: 14px 18px;
@@ -298,8 +377,7 @@ const SiteInspectorDrawer = ({
 
         /* Metric Cards with Accent Tops & Floating Badges */
         .inspector-metric-card {
-          background: linear-gradient(145deg, rgba(24, 34, 54, 0.8) 0%, rgba(12, 18, 32, 0.9) 100%);
-          backdrop-filter: blur(12px);
+          background: linear-gradient(145deg, rgba(24, 34, 54, 0.95) 0%, rgba(12, 18, 32, 0.98) 100%);
           border: 1px solid rgba(255, 255, 255, 0.09);
           border-radius: 14px;
           padding: 18px;
@@ -368,7 +446,7 @@ const SiteInspectorDrawer = ({
 
         /* Section Containers */
         .inspector-section-card {
-          background: linear-gradient(145deg, rgba(22, 32, 52, 0.6) 0%, rgba(10, 16, 30, 0.7) 100%);
+          background: linear-gradient(145deg, rgba(22, 32, 52, 0.8) 0%, rgba(10, 16, 30, 0.85) 100%);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 14px;
           padding: 20px;
@@ -391,354 +469,344 @@ const SiteInspectorDrawer = ({
         .tabular-numbers { font-variant-numeric: tabular-nums; }
       `}</style>
 
-      {/* Drawer Header */}
-      <Offcanvas.Header>
-        <div className="d-flex align-items-center gap-3">
-          <div
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 13,
-              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(2, 132, 199, 0.35) 100%)',
-              border: '1px solid rgba(56, 189, 248, 0.45)',
-              color: '#38bdf8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 16px rgba(56, 189, 248, 0.25)',
-              flexShrink: 0
-            }}
-          >
-            <Building2 size={22} />
-          </div>
-          <div>
-            <div className="d-flex align-items-center gap-2.5 flex-wrap">
-              <h5 className="mb-0 fw-bold text-white fs-18">{site.name}</h5>
-              <span className={`inspector-status-pill ${isEnabled ? 'active' : 'inactive'}`}>
-                <span className={`inspector-dot ${isEnabled ? 'online' : 'offline'}`} />
-                {isEnabled ? 'ACTIVE' : 'INACTIVE'}
-              </span>
-            </div>
-            <small className="text-muted d-flex align-items-center gap-1.5 mt-1" style={{ fontSize: '0.78rem' }}>
-              <Clock size={12} className="text-info opacity-75" />
-              <span>Created {formatDate(site.createdAt)} &bull; {site.city || 'Physical Campus'}{site.state ? `, ${site.state}` : ''}</span>
-            </small>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="btn-close btn-close-white"
-          aria-label="Close Site Inspector"
-          onClick={onHide}
-          style={{ opacity: 0.8 }}
-        />
-      </Offcanvas.Header>
-
-      {/* Drawer Body */}
+      {/* Drawer Body Container */}
       <Offcanvas.Body>
-        {/* Quick Actions Bar Panel */}
-        <div className="inspector-toolbar-panel d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div className="d-flex align-items-center flex-wrap" style={{ gap: '12px' }}>
-            <button
-              type="button"
-              className={isActiveDashboardSite ? 'btn-action-active' : 'btn-action-primary'}
-              onClick={() => onSetActiveSite(site)}
-              style={{ marginRight: '10px' }}
-            >
-              <CheckCircle2 size={16} className="me-2" />
-              <span>{isActiveDashboardSite ? 'Active Dashboard Site' : 'Set as Active Site'}</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-action-glass"
-              onClick={() => {
-                onHide();
-                onEditSite(site);
-              }}
-              style={{ marginRight: '10px' }}
-            >
-              <Edit3 size={15} className="me-2" />
-              <span>Edit Site</span>
-            </button>
-
-            {mapsUrl && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-action-glass text-decoration-none"
-                style={{ marginRight: '10px' }}
-              >
-                <Navigation size={15} className="me-2" />
-                <span className="me-1.5">Maps</span>
-                <ExternalLink size={12} className="opacity-75" />
-              </a>
-            )}
+        {/* Enterprise Drawer Header */}
+        <div className="drawer-header">
+          <div className="d-flex align-items-center gap-3">
+            <div className="drawer-header-icon">
+              <Building2 size={20} className="text-white" />
+            </div>
+            <div>
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <h5 className="mb-0 fw-bold text-white fs-16" style={{ letterSpacing: '-0.01em' }}>{site.name}</h5>
+                <span className={`inspector-status-pill ${isEnabled ? 'active' : 'inactive'}`}>
+                  <span className={`inspector-dot ${isEnabled ? 'online' : 'offline'}`} />
+                  {isEnabled ? 'ACTIVE' : 'INACTIVE'}
+                </span>
+              </div>
+              <small className="text-muted d-flex align-items-center gap-1.5 mt-0.5" style={{ fontSize: '0.78rem' }}>
+                <Clock size={12} className="text-info opacity-75" />
+                <span>Created {formatDate(site.createdAt)} &bull; {site.city || 'Physical Campus'}{site.state ? `, ${site.state}` : ''}</span>
+              </small>
+            </div>
           </div>
-
           <button
             type="button"
-            className={isEnabled ? 'btn-action-danger' : 'btn-action-primary'}
-            onClick={(e) => onToggleStatus(site, e)}
+            onClick={onHide}
+            className="drawer-close-btn"
+            title="Close Inspector"
+            aria-label="Close Inspector"
           >
-            <Power size={15} className="me-2" />
-            <span>{isEnabled ? 'Disable Site' : 'Enable Site'}</span>
+            <X size={20} />
           </button>
         </div>
 
-        {/* Telemetry & KPIs */}
-        <div className="mb-4">
-          <div className="d-flex align-items-center justify-content-between mb-2.5">
-            <span className="text-uppercase fw-bold tracking-wider text-info" style={{ fontSize: '0.74rem' }}>
-              LIVE TELEMETRY & METRICS
-            </span>
-            <small className="text-muted" style={{ fontSize: '0.74rem' }}>Real-time backend aggregates</small>
-          </div>
-          <Row className="g-3">
-            <Col xs={12} sm={4}>
-              <div
-                className="inspector-metric-card card-devices"
-                title="View site devices"
+        {/* Scrollable Content */}
+        <div className="drawer-scroll-content">
+          {/* Quick Actions Bar Panel */}
+          <div className="inspector-toolbar-panel d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div className="d-flex align-items-center flex-wrap" style={{ gap: '12px' }}>
+              <button
+                type="button"
+                className={isActiveDashboardSite ? 'btn-action-active' : 'btn-action-primary'}
+                onClick={() => onSetActiveSite(site)}
+                style={{ marginRight: '10px' }}
+              >
+                <CheckCircle2 size={16} className="me-2" />
+                <span>{isActiveDashboardSite ? 'Active Dashboard Site' : 'Set as Active Site'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-action-glass"
                 onClick={() => {
                   onHide();
-                  navigate(`/manage-organisation?tab=device&siteId=${site.id}`);
+                  onEditSite(site);
                 }}
+                style={{ marginRight: '10px' }}
               >
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="text-muted fw-semibold" style={{ fontSize: '0.78rem' }}>Devices</span>
-                  <div className="metric-icon-badge badge-devices">
-                    <Server size={18} />
-                  </div>
-                </div>
-                <div className="h2 mb-1 fw-bold tabular-numbers text-white">{devicesCount}</div>
-                <div className="text-info d-inline-flex align-items-center gap-1 mt-1" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                  <span>Manage</span>
-                  <ChevronRight size={13} className="metric-link-arrow" />
-                </div>
-              </div>
-            </Col>
+                <Edit3 size={15} className="me-2" />
+                <span>Edit Site</span>
+              </button>
 
-            <Col xs={12} sm={4}>
-              <div
-                className={`inspector-metric-card ${alarmsCount > 0 ? 'card-alarms-alert' : 'card-alarms-zero'}`}
-                title="View site active alarms"
-                onClick={() => {
-                  onHide();
-                  navigate(`/alarm-system/active?siteId=${site.id}`);
-                }}
-              >
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="text-muted fw-semibold" style={{ fontSize: '0.78rem' }}>Active Alarms</span>
-                  <div className={`metric-icon-badge ${alarmsCount > 0 ? 'badge-alarms-alert' : 'badge-alarms-zero'}`}>
-                    <AlertTriangle size={18} />
-                  </div>
-                </div>
-                <div className={`h2 mb-1 fw-bold tabular-numbers ${alarmsCount > 0 ? 'text-danger' : 'text-success'}`}>
-                  {alarmsCount}
-                </div>
-                <div className="text-info d-inline-flex align-items-center gap-1 mt-1" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                  <span>Inspect</span>
-                  <ChevronRight size={13} className="metric-link-arrow" />
-                </div>
-              </div>
-            </Col>
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-action-glass text-decoration-none"
+                  style={{ marginRight: '10px' }}
+                >
+                  <Navigation size={15} className="me-2" />
+                  <span className="me-1.5">Maps</span>
+                  <ExternalLink size={12} className="opacity-75" />
+                </a>
+              )}
+            </div>
 
-            <Col xs={12} sm={4}>
-              <div
-                className="inspector-metric-card card-energy"
-                title="View energy metering"
-                onClick={() => {
-                  onHide();
-                  navigate('/energy-metering/overview');
-                }}
-              >
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="text-muted fw-semibold" style={{ fontSize: '0.78rem' }}>Energy Total</span>
-                  <div className="metric-icon-badge badge-energy">
-                    <Zap size={18} />
-                  </div>
-                </div>
-                <div className="h2 mb-1 fw-bold tabular-numbers text-warning">
-                  {Number(energyKwh).toLocaleString()}
-                </div>
-                <small className="text-muted d-block mt-1" style={{ fontSize: '0.72rem' }}>kWh Cumulative</small>
-              </div>
-            </Col>
-          </Row>
-        </div>
-
-        {/* Hierarchy Placement Section */}
-        <div className="inspector-section-card">
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <Globe size={17} className="text-info" />
-            <h6 className="mb-0 fw-bold text-white fs-15">Hierarchy & Organization Placement</h6>
-          </div>
-          <div className="d-flex flex-column gap-2" style={{ fontSize: '0.86rem' }}>
-            <div className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <span className="text-muted">Organization / Tenant</span>
-              <span className="badge bg-dark border border-info border-opacity-40 text-info px-3 py-1.5 fs-12 fw-semibold rounded-pill">
-                {tenantName}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <span className="text-muted">Geographic Zone</span>
-              <span className="fw-semibold text-slate-200">{zoneName}</span>
-            </div>
-            <div className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-              <span className="text-muted">Sub-Zone / Area</span>
-              <span className="fw-semibold text-slate-200">{areaName}</span>
-            </div>
-            <div className="d-flex justify-content-between align-items-center py-2">
-              <span className="text-muted">Timezone</span>
-              <span className="font-monospace text-info fs-12 fw-bold">{site.timezone || 'Asia/Kolkata'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Physical Address & Geolocation Section */}
-        <div className="inspector-section-card">
-          <div className="d-flex align-items-center justify-content-between mb-3">
-            <div className="d-flex align-items-center gap-2">
-              <MapPin size={17} className="text-danger" />
-              <h6 className="mb-0 fw-bold text-white fs-15">Physical Address & Geolocation</h6>
-            </div>
-            {mapsUrl && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-info text-decoration-none d-flex align-items-center gap-1.5 fw-semibold"
-                style={{ fontSize: '0.8rem' }}
-              >
-                <span>View Map</span> <ExternalLink size={13} />
-              </a>
-            )}
-          </div>
-          <div className="mb-3">
-            <div className="text-muted mb-1.5" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Base Address:</div>
-            <div
-              className="p-3 rounded-2 address-box"
-              style={{
-                background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                color: '#e2e8f0',
-                fontSize: '0.86rem',
-                lineHeight: 1.5
-              }}
+            <button
+              type="button"
+              className={isEnabled ? 'btn-action-danger' : 'btn-action-primary'}
+              onClick={(e) => onToggleStatus(site, e)}
             >
-              {site.address || 'No street address specified.'}
-            </div>
+              <Power size={15} className="me-2" />
+              <span>{isEnabled ? 'Disable Site' : 'Enable Site'}</span>
+            </button>
           </div>
-          <div className="p-3 rounded-2 address-box" style={{ background: 'rgba(0, 0, 0, 0.18)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <Row className="g-3" style={{ fontSize: '0.84rem' }}>
-              <Col xs={4}>
-                <span className="text-muted d-block mb-1" style={{ fontSize: '0.74rem' }}>City</span>
-                <span className="fw-bold text-white">{site.city || '—'}</span>
+
+          {/* Telemetry & KPIs */}
+          <div className="mb-4">
+            <div className="d-flex align-items-center justify-content-between mb-2.5">
+              <span className="text-uppercase fw-bold tracking-wider text-info" style={{ fontSize: '0.74rem' }}>
+                LIVE TELEMETRY & METRICS
+              </span>
+              <small className="text-muted" style={{ fontSize: '0.74rem' }}>Real-time backend aggregates</small>
+            </div>
+            <Row className="g-3">
+              <Col xs={12} sm={4}>
+                <div
+                  className="inspector-metric-card card-devices"
+                  title="View site devices"
+                  onClick={() => {
+                    onHide();
+                    navigate(`/manage-organisation?tab=device&siteId=${site.id}`);
+                  }}
+                >
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <span className="text-muted fw-semibold" style={{ fontSize: '0.78rem' }}>Devices</span>
+                    <div className="metric-icon-badge badge-devices">
+                      <Server size={18} />
+                    </div>
+                  </div>
+                  <div className="h2 mb-1 fw-bold tabular-numbers text-white">{devicesCount}</div>
+                  <div className="text-info d-inline-flex align-items-center gap-1 mt-1" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                    <span>Manage</span>
+                    <ChevronRight size={13} className="metric-link-arrow" />
+                  </div>
+                </div>
               </Col>
-              <Col xs={4}>
-                <span className="text-muted d-block mb-1" style={{ fontSize: '0.74rem' }}>State</span>
-                <span className="fw-bold text-white">{site.state || '—'}</span>
+
+              <Col xs={12} sm={4}>
+                <div
+                  className={`inspector-metric-card ${alarmsCount > 0 ? 'card-alarms-alert' : 'card-alarms-zero'}`}
+                  title="View site active alarms"
+                  onClick={() => {
+                    onHide();
+                    navigate(`/alarm-system/active?siteId=${site.id}`);
+                  }}
+                >
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <span className="text-muted fw-semibold" style={{ fontSize: '0.78rem' }}>Active Alarms</span>
+                    <div className={`metric-icon-badge ${alarmsCount > 0 ? 'badge-alarms-alert' : 'badge-alarms-zero'}`}>
+                      <AlertTriangle size={18} />
+                    </div>
+                  </div>
+                  <div className={`h2 mb-1 fw-bold tabular-numbers ${alarmsCount > 0 ? 'text-danger' : 'text-success'}`}>
+                    {alarmsCount}
+                  </div>
+                  <div className="text-info d-inline-flex align-items-center gap-1 mt-1" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                    <span>Inspect</span>
+                    <ChevronRight size={13} className="metric-link-arrow" />
+                  </div>
+                </div>
               </Col>
-              <Col xs={4}>
-                <span className="text-muted d-block mb-1" style={{ fontSize: '0.74rem' }}>Pincode</span>
-                <span className="fw-bold font-monospace text-white">{site.pincode || '—'}</span>
-              </Col>
-              <Col xs={6} className="pt-2.5 border-top" style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}>
-                <span className="text-muted d-block mb-1" style={{ fontSize: '0.74rem' }}>GPS Latitude</span>
-                <span className="fw-bold font-monospace tabular-numbers text-info">
-                  {site.latitude != null && site.latitude !== '' ? site.latitude : '—'}
-                </span>
-              </Col>
-              <Col xs={6} className="pt-2.5 border-top" style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}>
-                <span className="text-muted d-block mb-1" style={{ fontSize: '0.74rem' }}>GPS Longitude</span>
-                <span className="fw-bold font-monospace tabular-numbers text-info">
-                  {site.longitude != null && site.longitude !== '' ? site.longitude : '—'}
-                </span>
+
+              <Col xs={12} sm={4}>
+                <div
+                  className="inspector-metric-card card-energy"
+                  title="View energy metering"
+                  onClick={() => {
+                    onHide();
+                    navigate('/energy-metering/overview');
+                  }}
+                >
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <span className="text-muted fw-semibold" style={{ fontSize: '0.78rem' }}>Energy Total</span>
+                    <div className="metric-icon-badge badge-energy">
+                      <Zap size={18} />
+                    </div>
+                  </div>
+                  <div className="h2 mb-1 fw-bold tabular-numbers text-warning">
+                    {Number(energyKwh).toLocaleString()}
+                  </div>
+                  <small className="text-muted d-block mt-1" style={{ fontSize: '0.72rem' }}>kWh Cumulative</small>
+                </div>
               </Col>
             </Row>
           </div>
-        </div>
 
-        {/* Site Contacts */}
-        <div className="inspector-section-card">
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <Phone size={17} className="text-success" />
-            <h6 className="mb-0 fw-bold text-white fs-15">Contact Persons</h6>
+          {/* Hierarchy Placement Section */}
+          <div className="inspector-section-card">
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <Globe size={17} className="text-info" />
+              <h6 className="mb-0 fw-bold text-white fs-15">Hierarchy & Organization Placement</h6>
+            </div>
+            <div className="d-flex flex-column gap-2" style={{ fontSize: '0.86rem' }}>
+              <div className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <span className="text-muted">Organization / Tenant</span>
+                <span className="badge bg-dark border border-info border-opacity-40 text-info px-3 py-1.5 fs-12 fw-semibold rounded-pill">
+                  {tenantName}
+                </span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <span className="text-muted">Geographic Zone</span>
+                <span className="fw-semibold text-slate-200">{zoneName}</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <span className="text-muted">Sub-Zone / Area</span>
+                <span className="fw-semibold text-slate-200">{areaName}</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center py-2">
+                <span className="text-muted">Timezone</span>
+                <span className="font-monospace text-info fs-12 fw-bold">{site.timezone || 'Asia/Kolkata'}</span>
+              </div>
+            </div>
           </div>
-          {Array.isArray(site.contacts) && site.contacts.length > 0 ? (
-            <div className="d-flex flex-column gap-2.5">
-              {site.contacts.map((contact, idx) => (
-                <div key={idx} className="inspector-contact-chip d-flex align-items-center justify-content-between">
-                  <div>
-                    <div className="fw-bold text-white" style={{ fontSize: '0.88rem' }}>{contact.name || `Contact #${idx + 1}`}</div>
-                    <div className="d-flex flex-wrap align-items-center gap-3 mt-1.5" style={{ fontSize: '0.8rem' }}>
-                      {contact.phone && (
-                        <a href={`tel:${contact.phone}`} className="text-success text-decoration-none d-flex align-items-center gap-1.5 fw-semibold">
-                          <Phone size={13} /> {contact.phone}
-                        </a>
-                      )}
-                      {contact.email && (
-                        <a href={`mailto:${contact.email}`} className="text-info text-decoration-none d-flex align-items-center gap-1.5 fw-semibold">
-                          <Mail size={13} /> {contact.email}
-                        </a>
+
+          {/* Physical Address & Geolocation Section */}
+          <div className="inspector-section-card">
+            <div className="d-flex align-items-center justify-content-between mb-3">
+              <div className="d-flex align-items-center gap-2">
+                <MapPin size={17} className="text-danger" />
+                <h6 className="mb-0 fw-bold text-white fs-15">Physical Address & Geolocation</h6>
+              </div>
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-info text-decoration-none fs-12 fw-semibold d-inline-flex align-items-center gap-1"
+                >
+                  <span>View Map</span>
+                  <ExternalLink size={12} />
+                </a>
+              )}
+            </div>
+
+            <div className="address-box p-3 rounded-3 mb-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.86rem' }}>
+              <small className="text-muted d-block mb-1 fs-11 text-uppercase fw-bold">Base Address:</small>
+              <div className="text-slate-200 fw-medium">
+                {site.address || 'No street address specified.'}
+              </div>
+            </div>
+
+            <Row className="g-3" style={{ fontSize: '0.84rem' }}>
+              <Col xs={4}>
+                <span className="text-muted d-block fs-11">City</span>
+                <span className="fw-semibold text-white">{site.city || '—'}</span>
+              </Col>
+              <Col xs={4}>
+                <span className="text-muted d-block fs-11">State</span>
+                <span className="fw-semibold text-white">{site.state || '—'}</span>
+              </Col>
+              <Col xs={4}>
+                <span className="text-muted d-block fs-11">Pincode</span>
+                <span className="fw-semibold text-white">{site.pincode || '—'}</span>
+              </Col>
+            </Row>
+
+            {(site.latitude || site.longitude) && (
+              <div className="mt-3 pt-3 border-top d-flex align-items-center justify-content-between" style={{ borderColor: 'rgba(255,255,255,0.06)', fontSize: '0.82rem' }}>
+                <span className="text-muted">GPS Coordinates</span>
+                <span className="font-monospace text-slate-200 fs-12 fw-bold">
+                  {site.latitude || 0}, {site.longitude || 0}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Contact Details Section */}
+          <div className="inspector-section-card">
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <Phone size={17} className="text-success" />
+              <h6 className="mb-0 fw-bold text-white fs-15">Primary Contacts & Operational Managers</h6>
+            </div>
+
+            {Array.isArray(site.contacts) && site.contacts.length > 0 ? (
+              <div className="d-flex flex-column gap-2.5">
+                {site.contacts.map((c, idx) => (
+                  <div key={idx} className="inspector-contact-chip d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                      <div className="fw-bold text-white fs-13">{c.name || `Contact #${idx + 1}`}</div>
+                      {c.email && (
+                        <div className="text-muted fs-12 d-flex align-items-center gap-1 mt-0.5">
+                          <Mail size={11} className="text-info opacity-75" />
+                          <span>{c.email}</span>
+                        </div>
                       )}
                     </div>
+                    {c.phone && (
+                      <span className="badge bg-dark border border-success border-opacity-40 text-success px-2.5 py-1 fs-12 font-monospace">
+                        <Phone size={10} className="me-1" />
+                        {c.phone}
+                      </span>
+                    )}
                   </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted mb-0 fs-13">
+                No site contact person registered.
+              </p>
+            )}
+          </div>
+
+          {/* BMS Modules & Features */}
+          <div className="inspector-section-card mb-0">
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <Layers size={17} className="text-warning" />
+              <h6 className="mb-0 fw-bold text-white fs-15">BMS Templates & Active Modules</h6>
+            </div>
+
+            <div className="mb-3">
+              <span className="text-muted d-block mb-1.5" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Assigned Templates:</span>
+              {assignedTemplates.length > 0 ? (
+                <div className="d-flex flex-wrap gap-1.5">
+                  {assignedTemplates.map(t => (
+                    <span key={t} className="active-feature-badge font-monospace" style={{ fontSize: '0.74rem' }}>
+                      {t}
+                    </span>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <small className="text-muted">Standard telemetry template</small>
+              )}
             </div>
-          ) : Array.isArray(site.contactEmails) && site.contactEmails.length > 0 ? (
-            <div className="d-flex flex-wrap gap-2">
-              {site.contactEmails.map((email, idx) => (
-                <a key={idx} href={`mailto:${email}`} className="badge bg-dark border border-info text-info text-decoration-none p-2 fs-12 fw-semibold">
-                  <Mail size={13} className="me-1.5" /> {email}
-                </a>
-              ))}
+
+            <div>
+              <span className="text-muted d-block mb-1.5" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Active Features:</span>
+              {activeFeatures.length > 0 ? (
+                <div className="d-flex flex-wrap gap-1.5">
+                  {activeFeatures.map(f => (
+                    <span key={f} className="active-feature-badge font-monospace" style={{ fontSize: '0.74rem' }}>
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <small className="text-muted">All standard features enabled</small>
+              )}
             </div>
-          ) : (
-            <p className="text-muted mb-0" style={{ fontSize: '0.84rem' }}>
-              No emergency or site contacts configured yet.
-            </p>
-          )}
+          </div>
         </div>
 
-        {/* BMS Modules & Features */}
-        <div className="inspector-section-card mb-0">
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <Layers size={17} className="text-warning" />
-            <h6 className="mb-0 fw-bold text-white fs-15">BMS Templates & Active Modules</h6>
-          </div>
-
-          <div className="mb-3">
-            <span className="text-muted d-block mb-1.5" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Assigned Templates:</span>
-            {assignedTemplates.length > 0 ? (
-              <div className="d-flex flex-wrap gap-1.5">
-                {assignedTemplates.map(t => (
-                  <span key={t} className="active-feature-badge font-monospace" style={{ fontSize: '0.74rem' }}>
-                    {t}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <small className="text-muted">Standard telemetry template</small>
-            )}
-          </div>
-
-          <div>
-            <span className="text-muted d-block mb-1.5" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Active Features:</span>
-            {activeFeatures.length > 0 ? (
-              <div className="d-flex flex-wrap gap-1.5">
-                {activeFeatures.map(f => (
-                  <span key={f} className="active-feature-badge font-monospace" style={{ fontSize: '0.74rem' }}>
-                    {f}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <small className="text-muted">All standard features enabled</small>
-            )}
-          </div>
+        {/* Sticky Drawer Footer */}
+        <div className="drawer-footer">
+          <Button
+            variant="outline-secondary"
+            onClick={onHide}
+            className="drawer-cancel-btn text-slate-200"
+            style={{
+              borderRadius: '8px',
+              fontWeight: 500,
+              fontSize: '0.85rem',
+              padding: '8px 22px',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            Close Inspector
+          </Button>
         </div>
       </Offcanvas.Body>
     </Offcanvas>

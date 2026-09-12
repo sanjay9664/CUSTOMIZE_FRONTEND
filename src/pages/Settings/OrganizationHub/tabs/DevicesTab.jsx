@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form, Button, Badge } from 'react-bootstrap';
-import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText } from 'lucide-react';
+import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText, Layers, MapPin } from 'lucide-react';
 import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
 
 const DevicesTab = ({
@@ -24,6 +24,7 @@ const DevicesTab = ({
   setRegisterStep = () => {},
   setRegisterForm = () => {},
   setShowRegisterDeviceModal = () => {},
+  setDynamicTemplateFields = () => {},
   handleOpenEditDevice = () => {},
   handleOpenLiveModal = () => {},
   handleOpenThresholdsModal = () => {},
@@ -291,14 +292,63 @@ const DevicesTab = ({
       <div className="table-responsive rounded-3 overflow-hidden table-custom-container">
         <table className="table table-custom align-middle mb-0 fs-13">
           <thead>
-            <tr className="text-uppercase fs-11 tracking-wider">
-              <th className="py-3 px-3">DEVICE DETAILS</th>
-              <th className="py-3 px-3">CATEGORY</th>
-              <th className="py-3 px-3">SERIAL NUMBER</th>
-              <th className="py-3 px-3">SOCHIOT ID(S)</th>
-              <th className="py-3 px-3">LOCATION</th>
-              <th className="py-3 px-3">STATUS</th>
-              <th className="py-3 px-3 text-end">ACTIONS</th>
+            <tr>
+              <th className="py-3 px-3">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                    <Cpu size={16} />
+                  </div>
+                  <span>DEVICE DETAILS</span>
+                </div>
+              </th>
+              <th className="py-3 px-3">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                    <Layers size={16} />
+                  </div>
+                  <span>CATEGORY</span>
+                </div>
+              </th>
+              <th className="py-3 px-3">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                    <Shield size={16} />
+                  </div>
+                  <span>SERIAL NUMBER</span>
+                </div>
+              </th>
+              <th className="py-3 px-3">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                    <Zap size={16} />
+                  </div>
+                  <span>SOCHIOT ID(S)</span>
+                </div>
+              </th>
+              <th className="py-3 px-3">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                    <MapPin size={16} />
+                  </div>
+                  <span>LOCATION</span>
+                </div>
+              </th>
+              <th className="py-3 px-3">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                    <Activity size={16} />
+                  </div>
+                  <span>STATUS</span>
+                </div>
+              </th>
+              <th className="py-3 px-3 text-end">
+                <div className="d-flex align-items-center justify-content-end gap-2">
+                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                    <Sliders size={16} />
+                  </div>
+                  <span>ACTIONS</span>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -339,12 +389,20 @@ const DevicesTab = ({
 
               const rawIds = d.sochiotDeviceIds || d.sochiot_device_ids;
               const displayIds = Array.isArray(rawIds) ? rawIds.join(', ') : String(rawIds || '101');
+              const isDevActive = d.isActive !== false;
 
               return (
-                <tr key={d.id}>
+                <tr key={d.id} className="row-hover-effect">
                   <td className="py-3 px-3">
-                    <div className="fw-bold device-title-text fs-14">{d.name}</div>
-                    <div className="device-sub-text fs-11 font-monospace fw-medium">BMS ID: {d.bmsDeviceId || `BMS-${d.id}`}</div>
+                    <div className="d-flex align-items-center gap-2.5">
+                      <div className="cell-icon-badge bg-primary-subtle text-primary rounded-2 d-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
+                        <Cpu size={16} />
+                      </div>
+                      <div>
+                        <div className="fw-bold text-heading fs-13">{d.name}</div>
+                        <div className="device-sub-text fs-11 font-monospace fw-medium">BMS ID: {d.bmsDeviceId || `BMS-${d.id}`}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="py-3 px-3">
                     <span 
@@ -360,31 +418,39 @@ const DevicesTab = ({
                       {catUpper}
                     </span>
                   </td>
-                  <td className="py-3 px-3 font-monospace device-sn-text fw-medium">
+                  <td className="py-3 px-3 font-monospace device-sn-text fw-medium fs-13">
                     {d.serialNumber || `SN-${d.id}`}
                   </td>
-                  <td className="py-3 px-3 font-monospace device-sochiot-id fw-semibold">
+                  <td className="py-3 px-3 font-monospace device-sochiot-id fw-semibold fs-13">
                     {displayIds}
                   </td>
                   <td className="py-3 px-3 fs-12">
-                    <div className="fw-medium device-title-text">{d.buildingName || 'store-1'}</div>
-                    <div className="device-sub-text fs-10">{d.areaName || 'Main Area'}</div>
+                    <div className="d-flex align-items-center gap-2">
+                      <div className="cell-icon-badge bg-danger-subtle text-danger rounded-2 d-flex align-items-center justify-content-center" style={{ width: 26, height: 26, flexShrink: 0 }}>
+                        <MapPin size={14} />
+                      </div>
+                      <div>
+                        <div className="fw-medium text-heading fs-13">{d.buildingName || 'store-1'}</div>
+                        <div className="device-sub-text fs-11">{d.areaName || 'Main Area'}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="py-3 px-3">
-                    <Badge bg={d.isActive !== false ? 'success' : 'secondary'} className="px-2 py-1 fs-11 fw-semibold">
-                      {d.isActive !== false ? '● ACTIVE' : '○ INACTIVE'}
-                    </Badge>
+                    <div className={`status-pill d-inline-flex align-items-center gap-1.5 px-3 py-1 rounded-pill fw-bold fs-12 ${!isDevActive ? 'bg-secondary-subtle text-secondary' : 'bg-success-subtle text-success'}`}>
+                      <span className={`rounded-circle ${!isDevActive ? 'bg-secondary' : 'bg-success'}`} style={{ width: 7, height: 7 }} />
+                      {!isDevActive ? 'INACTIVE' : 'ACTIVE'}
+                    </div>
                   </td>
                   <td className="py-3 px-3 text-end">
                     <div className="d-flex align-items-center justify-content-end gap-1">
                       {[
-                        { icon: <Zap size={14} />,       color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Live Telemetry',    onClick: () => handleOpenLiveModal(d) },
-                        { icon: <Sliders size={14} />,   color: '#f59e0b', hoverBg: 'rgba(245,158,11,0.12)',  label: 'Threshold Limits',  onClick: () => handleOpenThresholdsModal(d) },
-                        { icon: <RefreshCw size={14} />, color: '#94a3b8', hoverBg: 'rgba(148,163,184,0.12)', label: 'Modbus Settings',   onClick: () => handleOpenSettingsModal(d) },
-                        { icon: <Shield size={14} />,    color: '#818cf8', hoverBg: 'rgba(129,140,248,0.12)', label: 'Automation Rules',  onClick: () => handleOpenRulesModal(d) },
-                        { icon: <Zap size={14} />,       color: '#34d399', hoverBg: 'rgba(52,211,153,0.12)',  label: 'Send Command',      onClick: () => { setSelectedDeviceForCommandsTab(d.id); setShowSendCommandModal(true); } },
-                        { icon: <FileText size={14} />,  color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Audit Logs',        onClick: () => { setSelectedDeviceForAudit(d); handleOpenAuditLog(d); } },
-                        { icon: <Edit3 size={14} />,     color: '#22d3ee', hoverBg: 'rgba(34,211,238,0.12)',  label: 'Edit Device',       onClick: () => handleOpenEditDevice(d) },
+                        { icon: <Zap size={14} />,       color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Live Telemetry',    onClick: () => typeof handleOpenLiveModal === 'function' && handleOpenLiveModal(d) },
+                        { icon: <Sliders size={14} />,   color: '#f59e0b', hoverBg: 'rgba(245,158,11,0.12)',  label: 'Threshold Limits',  onClick: () => typeof handleOpenThresholdsModal === 'function' && handleOpenThresholdsModal(d) },
+                        { icon: <RefreshCw size={14} />, color: '#94a3b8', hoverBg: 'rgba(148,163,184,0.12)', label: 'Modbus Settings',   onClick: () => typeof handleOpenSettingsModal === 'function' && handleOpenSettingsModal(d) },
+                        { icon: <Shield size={14} />,    color: '#818cf8', hoverBg: 'rgba(129,140,248,0.12)', label: 'Automation Rules',  onClick: () => typeof handleOpenRulesModal === 'function' && handleOpenRulesModal(d) },
+                        { icon: <Zap size={14} />,       color: '#34d399', hoverBg: 'rgba(52,211,153,0.12)',  label: 'Send Command',      onClick: () => { if (typeof setSelectedDeviceForCommandsTab === 'function') setSelectedDeviceForCommandsTab(d.id); if (typeof setShowSendCommandModal === 'function') setShowSendCommandModal(true); } },
+                        { icon: <FileText size={14} />,  color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Audit Logs',        onClick: () => { if (typeof setSelectedDeviceForAudit === 'function') setSelectedDeviceForAudit(d); if (typeof handleOpenAuditLog === 'function') handleOpenAuditLog(d); } },
+                        { icon: <Edit3 size={14} />,     color: '#22d3ee', hoverBg: 'rgba(34,211,238,0.12)',  label: 'Edit Device',       onClick: () => typeof handleOpenEditDevice === 'function' && handleOpenEditDevice(d) },
                       ].map((action, idx) => (
                         <button
                           key={idx}
