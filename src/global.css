@@ -1029,7 +1029,7 @@ body.light-mode .text-info {
 }
 
 body.light-mode .hero-gradient-overlay {
-  background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(241,245,249,0.85) 50%, rgba(255,255,255,0.95) 100%) !important;
+  background: linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.15) 75%, transparent 100%) !important;
 }
 
 body.light-mode .hero-carousel-wrapper {

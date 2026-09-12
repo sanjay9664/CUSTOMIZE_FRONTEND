@@ -679,40 +679,13 @@ const Dashboard = () => {
 
   return (
     <div className="reference-scada-dashboard p-3">
-      {/* ── TOP STATS SUMMARY STRIP ─────────────── */}
-      <Row className="g-2.5 mb-3">
-        {summaryKPIs.map((kpi, idx) => (
-          <Col key={idx} xl={2} lg={4} md={4} sm={6}>
-            <div
-              className="p-2.5 rounded-3 border d-flex align-items-center gap-3 top-kpi-card"
-              style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', boxShadow: 'var(--scada-shadow)' }}
-            >
-              <div
-                className="top-kpi-icon flex-shrink-0"
-                style={{ color: kpi.color, backgroundColor: kpi.bg, borderColor: `${kpi.color}40` }}
-              >
-                {kpi.icon}
-              </div>
-              <div className="min-w-0">
-                <span className="fw-black font-monospace fs-16 d-block lh-1 text-truncate" style={{ color: 'var(--scada-text)' }}>
-                  {kpi.val}
-                </span>
-                <small className="text-muted fw-semibold text-truncate d-block mt-0.5" style={{ fontSize: '0.68rem' }}>
-                  {kpi.label}
-                </small>
-              </div>
-            </div>
-          </Col>
-        ))}
-      </Row>
-
       {/* ── HERO CAROUSEL BANNER ──────────────────────────────────────── */}
       <div
         className="hero-carousel-wrapper position-relative mb-3 rounded-4 overflow-hidden"
         onMouseEnter={() => setCarouselPaused(true)}
         onMouseLeave={() => setCarouselPaused(false)}
         style={{
-          height: '320px',
+          height: '390px',
           border: `1px solid ${currentSlide.color}40`,
           boxShadow: `0 8px 32px rgba(0,0,0,0.7), 0 0 24px ${currentSlide.color}20`,
           transition: 'border-color 0.5s ease, box-shadow 0.5s ease'
@@ -720,14 +693,13 @@ const Dashboard = () => {
       >
         {/* Background Image with Crossfade */}
         <div
-          className="position-absolute inset-0"
+          className="position-absolute inset-0 hero-carousel-bg"
           style={{
             backgroundImage: `url(${currentSlide.image})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             transition: 'opacity 0.5s ease-in-out',
-            opacity: carouselTransitioning ? 0 : 1,
-            filter: 'brightness(0.55) saturate(1.2)'
+            opacity: carouselTransitioning ? 0 : 1
           }}
         />
 
@@ -1594,8 +1566,12 @@ const Dashboard = () => {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
         }
 
+        .hero-carousel-bg {
+          filter: brightness(0.88) contrast(1.08) saturate(1.15);
+        }
+
         .hero-gradient-overlay {
-          background: linear-gradient(90deg, rgba(2, 8, 22, 0.88) 0%, rgba(2, 8, 22, 0.45) 50%, rgba(2, 8, 22, 0.10) 80%, transparent 100%);
+          background: linear-gradient(90deg, rgba(2, 8, 22, 0.94) 0%, rgba(2, 8, 22, 0.65) 45%, rgba(2, 8, 22, 0.15) 75%, transparent 100%);
         }
 
         .hero-carousel-title {
@@ -1628,12 +1604,16 @@ const Dashboard = () => {
           box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08) !important;
         }
 
+        body.light-mode .hero-carousel-bg {
+          filter: brightness(0.96) contrast(1.06) saturate(1.1) !important;
+        }
+
         body.light-mode .hero-carousel-wrapper > div:first-child {
-          filter: brightness(0.98) contrast(1.02) saturate(1.05) !important;
+          filter: brightness(0.96) contrast(1.06) saturate(1.1) !important;
         }
 
         body.light-mode .hero-gradient-overlay {
-          background: linear-gradient(90deg, rgba(255, 255, 255, 0.93) 0%, rgba(255, 255, 255, 0.75) 35%, rgba(255, 255, 255, 0.20) 65%, transparent 100%) !important;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.72) 45%, rgba(255, 255, 255, 0.15) 75%, transparent 100%) !important;
         }
 
         body.light-mode .hero-carousel-title {
