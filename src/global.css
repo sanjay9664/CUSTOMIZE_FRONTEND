@@ -3500,13 +3500,6 @@ body:not(.light-mode) .table th {
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-body:not(.light-mode) .table-custom th span,
-body:not(.light-mode) .table-custom th div,
-body:not(.light-mode) .table th span,
-body:not(.light-mode) .table th div {
-  color: #38bdf8 !important;
-}
-
 body:not(.light-mode) .table-custom td,
 body:not(.light-mode) .table td {
   background-color: #0f172a !important;
@@ -3514,26 +3507,20 @@ body:not(.light-mode) .table td {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-body:not(.light-mode) .table-custom td span,
-body:not(.light-mode) .table-custom td div,
-body:not(.light-mode) .table-custom td p,
-body:not(.light-mode) .table-custom td a,
-body:not(.light-mode) .table td span,
-body:not(.light-mode) .table td div,
-body:not(.light-mode) .table td p,
-body:not(.light-mode) .table td a {
-  color: #f8fafc !important;
+body:not(.light-mode) .table-custom td .text-body-secondary,
+body:not(.light-mode) .table td .text-body-secondary,
+body:not(.light-mode) .text-body-secondary {
+  color: #cbd5e1 !important;
 }
 
-body:not(.light-mode) .table-custom td .text-body-secondary,
 body:not(.light-mode) .table-custom td .text-muted,
-body:not(.light-mode) .table-custom td .text-secondary,
-body:not(.light-mode) .table td .text-body-secondary,
-body:not(.light-mode) .table td .text-muted,
-body:not(.light-mode) .table td .text-secondary,
-body:not(.light-mode) .text-body-secondary,
-body:not(.light-mode) .text-secondary {
-  color: #cbd5e1 !important;
+body:not(.light-mode) .table td .text-muted {
+  color: #94a3b8 !important;
+}
+
+body:not(.light-mode) .table-custom td .text-heading,
+body:not(.light-mode) .table td .text-heading {
+  color: #f8fafc !important;
 }
 
 /* Global Custom Table in Light Mode */
@@ -3549,13 +3536,6 @@ body.light-mode .table th {
   border-color: #cbd5e1 !important;
 }
 
-body.light-mode .table-custom th span,
-body.light-mode .table-custom th div,
-body.light-mode .table th span,
-body.light-mode .table th div {
-  color: #0284c7 !important;
-}
-
 body.light-mode .table-custom td,
 body.light-mode .table td {
   background-color: #ffffff !important;
@@ -3563,27 +3543,140 @@ body.light-mode .table td {
   border-color: #e2e8f0 !important;
 }
 
-body.light-mode .table-custom td span,
-body.light-mode .table-custom td div,
-body.light-mode .table-custom td p,
-body.light-mode .table-custom td a,
-body.light-mode .table td span,
-body.light-mode .table td div,
-body.light-mode .table td p,
-body.light-mode .table td a {
+body.light-mode .table-custom td .text-body-secondary,
+body.light-mode .table td .text-body-secondary,
+body.light-mode .text-body-secondary {
+  color: #334155 !important;
+}
+
+body.light-mode .table-custom td .text-muted,
+body.light-mode .table td .text-muted {
+  color: #475569 !important;
+}
+
+body.light-mode .table-custom td .text-heading,
+body.light-mode .table td .text-heading {
   color: #0f172a !important;
 }
 
-body.light-mode .table-custom td .text-body-secondary,
-body.light-mode .table-custom td .text-muted,
-body.light-mode .table-custom td .text-secondary,
-body.light-mode .table td .text-body-secondary,
-body.light-mode .table td .text-muted,
+/* ========================================================
+   DARK MODE: Bootstrap Contextual Color Overrides
+   Fixes bg-*-subtle & text-* colors inside tables & globally
+   ======================================================== */
+
+/* --- Subtle Backgrounds (Dark Mode) --- */
+body:not(.light-mode) .bg-primary-subtle   { background-color: rgba(59, 130, 246, 0.15) !important; }
+body:not(.light-mode) .bg-success-subtle   { background-color: rgba(34, 197, 94, 0.15) !important; }
+body:not(.light-mode) .bg-danger-subtle    { background-color: rgba(239, 68, 68, 0.15) !important; }
+body:not(.light-mode) .bg-warning-subtle   { background-color: rgba(245, 158, 11, 0.15) !important; }
+body:not(.light-mode) .bg-secondary-subtle { background-color: rgba(148, 163, 184, 0.15) !important; }
+body:not(.light-mode) .bg-info-subtle      { background-color: rgba(56, 189, 248, 0.15) !important; }
+
+/* --- Contextual Text Colors (Dark Mode - High Specificity) --- */
+body:not(.light-mode) .text-primary   { color: #60a5fa !important; }
+body:not(.light-mode) .text-success   { color: #4ade80 !important; }
+body:not(.light-mode) .text-danger    { color: #f87171 !important; }
+body:not(.light-mode) .text-warning   { color: #fbbf24 !important; }
+body:not(.light-mode) .text-secondary { color: #94a3b8 !important; }
+body:not(.light-mode) .text-info      { color: #38bdf8 !important; }
+body:not(.light-mode) .text-warning-emphasis { color: #fbbf24 !important; }
+
+/* --- Inside table td specifically (even higher specificity) --- */
+body:not(.light-mode) .table td .text-primary,
+body:not(.light-mode) .table-custom td .text-primary   { color: #60a5fa !important; }
+body:not(.light-mode) .table td .text-success,
+body:not(.light-mode) .table-custom td .text-success   { color: #4ade80 !important; }
+body:not(.light-mode) .table td .text-danger,
+body:not(.light-mode) .table-custom td .text-danger    { color: #f87171 !important; }
+body:not(.light-mode) .table td .text-warning,
+body:not(.light-mode) .table-custom td .text-warning   { color: #fbbf24 !important; }
+body:not(.light-mode) .table td .text-secondary,
+body:not(.light-mode) .table-custom td .text-secondary { color: #94a3b8 !important; }
+body:not(.light-mode) .table td .text-info,
+body:not(.light-mode) .table-custom td .text-info      { color: #38bdf8 !important; }
+body:not(.light-mode) .table td .text-warning-emphasis,
+body:not(.light-mode) .table-custom td .text-warning-emphasis { color: #fbbf24 !important; }
+
+/* --- Inside table th specifically (header icons) --- */
+body:not(.light-mode) .table th .text-primary,
+body:not(.light-mode) .table-custom th .text-primary   { color: #60a5fa !important; }
+
+/* --- LIGHT MODE: Contextual colors in tables --- */
+body.light-mode .table td .text-primary,
+body.light-mode .table-custom td .text-primary   { color: #2563eb !important; }
+body.light-mode .table td .text-success,
+body.light-mode .table-custom td .text-success   { color: #16a34a !important; }
+body.light-mode .table td .text-danger,
+body.light-mode .table-custom td .text-danger    { color: #dc2626 !important; }
+body.light-mode .table td .text-warning,
+body.light-mode .table-custom td .text-warning   { color: #d97706 !important; }
 body.light-mode .table td .text-secondary,
-body.light-mode .text-body-secondary,
-body.light-mode .text-secondary {
-  color: #334155 !important;
+body.light-mode .table-custom td .text-secondary { color: #64748b !important; }
+body.light-mode .table td .text-info,
+body.light-mode .table-custom td .text-info      { color: #0284c7 !important; }
+body.light-mode .table td .text-warning-emphasis,
+body.light-mode .table-custom td .text-warning-emphasis { color: #92400e !important; }
+
+body.light-mode .table th .text-primary,
+body.light-mode .table-custom th .text-primary   { color: #2563eb !important; }
+
+/* ========================================================
+   Protect header-icon-box and cell-icon-badge elements
+   These use contextual classes (text-primary, bg-primary-subtle)
+   ======================================================== */
+
+/* Header icon boxes in th */
+.table th .header-icon-box,
+.table-custom th .header-icon-box {
+  background-color: inherit;
 }
+
+/* Cell icon badges in td */
+.table td .cell-icon-badge,
+.table-custom td .cell-icon-badge {
+  background-color: inherit;
+}
+
+/* ========================================================
+   Status Pills & Badge Protection (both modes)
+   ======================================================== */
+
+/* Status pills inherit their text color from their own contextual class, not td */
+body:not(.light-mode) .table td .status-pill.text-success,
+body:not(.light-mode) .table-custom td .status-pill.text-success {
+  color: #4ade80 !important;
+}
+body:not(.light-mode) .table td .status-pill.text-secondary,
+body:not(.light-mode) .table-custom td .status-pill.text-secondary {
+  color: #94a3b8 !important;
+}
+
+body.light-mode .table td .status-pill.text-success,
+body.light-mode .table-custom td .status-pill.text-success {
+  color: #16a34a !important;
+}
+body.light-mode .table td .status-pill.text-secondary,
+body.light-mode .table-custom td .status-pill.text-secondary {
+  color: #64748b !important;
+}
+
+/* Badge elements */
+body:not(.light-mode) .table td .badge.bg-warning-subtle,
+body:not(.light-mode) .table-custom td .badge.bg-warning-subtle {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+}
+
+body.light-mode .table td .badge.bg-warning-subtle,
+body.light-mode .table-custom td .badge.bg-warning-subtle {
+  color: #92400e !important;
+}
+
+/* Status dot circles - ensure their bg color is preserved */
+.table td .rounded-circle.bg-success { background-color: #22c55e !important; }
+.table td .rounded-circle.bg-secondary { background-color: #94a3b8 !important; }
+.table-custom td .rounded-circle.bg-success { background-color: #22c55e !important; }
+.table-custom td .rounded-circle.bg-secondary { background-color: #94a3b8 !important; }
 
 body.light-mode .scada-modal-title,
 [data-theme="light"] .scada-modal-title {
@@ -3862,180 +3955,43 @@ body.light-mode .scada-policy-footer span,
   color: #0f172a !important;
 }
 
-/* =========================================================
-   UNIVERSAL HIGH-CONTRAST STATUS BADGES, PILLS & ICON BOXES
-   ========================================================= */
+/* ========================================================
+   Universal Light Mode Enhancements for Crisp Text & Icons
+   ======================================================== */
 
-/* ── 1. DARK MODE BADGES & ICON BOXES ── */
-body:not(.light-mode) .header-icon-box,
-body:not(.light-mode) .cell-icon-badge {
-  background-color: rgba(56, 189, 248, 0.18) !important;
-  border: 1px solid rgba(56, 189, 248, 0.35) !important;
-  color: #38bdf8 !important;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2) !important;
-}
-body:not(.light-mode) .header-icon-box svg,
-body:not(.light-mode) .cell-icon-badge svg {
-  color: #38bdf8 !important;
-  stroke: #38bdf8 !important;
+body.light-mode h1, body.light-mode h2, body.light-mode h3, 
+body.light-mode h4, body.light-mode h5, body.light-mode h6 {
+  color: #0f172a;
 }
 
-body:not(.light-mode) .bg-success-subtle,
-body:not(.light-mode) .badge-success,
-body:not(.light-mode) .status-pill.bg-success-subtle,
-body:not(.light-mode) .badge.bg-success-subtle {
-  background-color: rgba(34, 197, 94, 0.2) !important;
-  color: #4ade80 !important;
-  border: 1px solid rgba(34, 197, 94, 0.4) !important;
-}
-body:not(.light-mode) .bg-success-subtle *,
-body:not(.light-mode) .status-pill.bg-success-subtle * {
-  color: #4ade80 !important;
-}
-body:not(.light-mode) .bg-success-subtle .rounded-circle,
-body:not(.light-mode) .status-pill.bg-success-subtle .rounded-circle,
-body:not(.light-mode) .status-pill .bg-success {
-  background-color: #22c55e !important;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.7) !important;
+body.light-mode .card:not([class*="bg-"]):not([style*="background-color"]) {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
 }
 
-body:not(.light-mode) .bg-warning-subtle,
-body:not(.light-mode) .badge-warning,
-body:not(.light-mode) .text-warning-emphasis,
-body:not(.light-mode) .status-pill.bg-warning-subtle,
-body:not(.light-mode) .badge.bg-warning-subtle {
-  background-color: rgba(245, 158, 11, 0.2) !important;
-  color: #fbbf24 !important;
-  border: 1px solid rgba(245, 158, 11, 0.4) !important;
-}
-body:not(.light-mode) .bg-warning-subtle *,
-body:not(.light-mode) .badge.bg-warning-subtle *,
-body:not(.light-mode) .text-warning-emphasis {
-  color: #fbbf24 !important;
+body.light-mode .modal-content {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
 }
 
-body:not(.light-mode) .bg-danger-subtle,
-body:not(.light-mode) .badge-danger,
-body:not(.light-mode) .status-pill.bg-danger-subtle,
-body:not(.light-mode) .badge.bg-danger-subtle {
-  background-color: rgba(239, 68, 68, 0.2) !important;
-  color: #f87171 !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
-}
-body:not(.light-mode) .bg-danger-subtle * {
-  color: #f87171 !important;
+body.light-mode .modal-header,
+body.light-mode .modal-footer {
+  border-color: #e2e8f0 !important;
 }
 
-body:not(.light-mode) .bg-primary-subtle,
-body:not(.light-mode) .bg-info-subtle,
-body:not(.light-mode) .badge-info,
-body:not(.light-mode) .badge.bg-primary-subtle {
-  background-color: rgba(56, 189, 248, 0.2) !important;
-  color: #38bdf8 !important;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
-}
-body:not(.light-mode) .bg-primary-subtle *,
-body:not(.light-mode) .bg-info-subtle * {
-  color: #38bdf8 !important;
-}
-
-body:not(.light-mode) .bg-secondary-subtle,
-body:not(.light-mode) .status-pill.bg-secondary-subtle,
-body:not(.light-mode) .badge.bg-secondary-subtle {
-  background-color: rgba(148, 163, 184, 0.2) !important;
-  color: #cbd5e1 !important;
-  border: 1px solid rgba(148, 163, 184, 0.4) !important;
-}
-body:not(.light-mode) .bg-secondary-subtle *,
-body:not(.light-mode) .status-pill.bg-secondary-subtle * {
-  color: #cbd5e1 !important;
-}
-body:not(.light-mode) .bg-secondary-subtle .rounded-circle {
-  background-color: #94a3b8 !important;
+/* Override hardcoded text-white in light mode unless inside filled badges/buttons */
+body.light-mode :not(.btn):not(.badge):not([class*="bg-primary"]):not([class*="bg-danger"]):not([class*="bg-success"]):not([class*="bg-dark"]):not([class*="bg-secondary"]) > .text-white,
+body.light-mode h1.text-white,
+body.light-mode h2.text-white,
+body.light-mode h3.text-white,
+body.light-mode h4.text-white,
+body.light-mode h5.text-white,
+body.light-mode h6.text-white,
+body.light-mode p.text-white,
+body.light-mode td .text-white {
+  color: #0f172a !important;
 }
 
-
-/* ── 2. LIGHT MODE BADGES & ICON BOXES ── */
-body.light-mode .header-icon-box,
-body.light-mode .cell-icon-badge {
-  background-color: rgba(2, 132, 199, 0.12) !important;
-  border: 1px solid rgba(2, 132, 199, 0.25) !important;
-  color: #0284c7 !important;
-}
-body.light-mode .header-icon-box svg,
-body.light-mode .cell-icon-badge svg {
-  color: #0284c7 !important;
-  stroke: #0284c7 !important;
-}
-
-body.light-mode .bg-success-subtle,
-body.light-mode .badge-success,
-body.light-mode .status-pill.bg-success-subtle,
-body.light-mode .badge.bg-success-subtle {
-  background-color: #dcfce7 !important;
-  color: #15803d !important;
-  border: 1px solid #bbf7d0 !important;
-}
-body.light-mode .bg-success-subtle *,
-body.light-mode .status-pill.bg-success-subtle * {
-  color: #15803d !important;
-}
-body.light-mode .bg-success-subtle .rounded-circle,
-body.light-mode .status-pill.bg-success-subtle .rounded-circle {
-  background-color: #16a34a !important;
-}
-
-body.light-mode .bg-warning-subtle,
-body.light-mode .badge-warning,
-body.light-mode .text-warning-emphasis,
-body.light-mode .status-pill.bg-warning-subtle,
-body.light-mode .badge.bg-warning-subtle {
-  background-color: #fef3c7 !important;
-  color: #b45309 !important;
-  border: 1px solid #fde68a !important;
-}
-body.light-mode .bg-warning-subtle *,
-body.light-mode .badge.bg-warning-subtle *,
-body.light-mode .text-warning-emphasis {
-  color: #b45309 !important;
-}
-
-body.light-mode .bg-danger-subtle,
-body.light-mode .badge-danger,
-body.light-mode .status-pill.bg-danger-subtle,
-body.light-mode .badge.bg-danger-subtle {
-  background-color: #fee2e2 !important;
-  color: #b91c1c !important;
-  border: 1px solid #fca5a5 !important;
-}
-body.light-mode .bg-danger-subtle * {
-  color: #b91c1c !important;
-}
-
-body.light-mode .bg-primary-subtle,
-body.light-mode .bg-info-subtle,
-body.light-mode .badge-info,
-body.light-mode .badge.bg-primary-subtle {
-  background-color: #e0f2fe !important;
-  color: #0369a1 !important;
-  border: 1px solid #bae6fd !important;
-}
-body.light-mode .bg-primary-subtle *,
-body.light-mode .bg-info-subtle * {
-  color: #0369a1 !important;
-}
-
-body.light-mode .bg-secondary-subtle,
-body.light-mode .status-pill.bg-secondary-subtle,
-body.light-mode .badge.bg-secondary-subtle {
-  background-color: #f1f5f9 !important;
-  color: #334155 !important;
-  border: 1px solid #cbd5e1 !important;
-}
-body.light-mode .bg-secondary-subtle *,
-body.light-mode .status-pill.bg-secondary-subtle * {
-  color: #334155 !important;
-}
-body.light-mode .bg-secondary-subtle .rounded-circle {
-  background-color: #64748b !important;
-}
