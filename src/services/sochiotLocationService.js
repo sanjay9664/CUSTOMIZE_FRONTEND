@@ -239,8 +239,12 @@ export const fetchDeviceDetails = async (deviceId, forceRefresh = false) => {
         const payload = data?.data || data;
         deviceDetailsCache.set(cacheKey, payload);
         return payload;
+      } else {
+        deviceDetailsCache.set(cacheKey, null);
+        return null;
       }
     } catch (err) {
+      deviceDetailsCache.set(cacheKey, null);
       const parsed = parseApiError(err, `Failed to fetch device details for device ID ${deviceId}`);
       console.warn('[SochiotLocationService] fetchDeviceDetails notice:', parsed.message);
     } finally {
@@ -251,6 +255,92 @@ export const fetchDeviceDetails = async (deviceId, forceRefresh = false) => {
 
   pendingDevicePromises.set(cacheKey, promise);
   return promise;
+};
+
+/**
+ * Calls https://app.sochiot.com/api/config-engine/device/get/byDeviceIds
+ * Accepts an array of Sochiot hardware device IDs, fetches their full configuration (including modules and event fields),
+ * caches each device in deviceDetailsCache, and returns the list of device configuration objects.
+ */
+export const fetchDevicesByDeviceIds = async (deviceIds, forceRefresh = false) => {
+  if (!Array.isArray(deviceIds) || deviceIds.length === 0) return [];
+  const cleanIds = Array.from(new Set(
+    deviceIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id) && id > 0 && id !== 101)
+  ));
+  if (cleanIds.length === 0) return [];
+
+  const cachedList = [];
+  const missingIds = [];
+  cleanIds.forEach(id => {
+    const key = `DEV_${id}`;
+    if (!forceRefresh && deviceDetailsCache.has(key) && deviceDetailsCache.get(key)) {
+      cachedList.push(deviceDetailsCache.get(key));
+    } else {
+      missingIds.push(id);
+    }
+  });
+
+  if (missingIds.length === 0) {
+    return cachedList;
+  }
+
+  try {
+    const headers = await getSochiotHeaders();
+    const base = EXTERNAL_URLS.configEngine ? EXTERNAL_URLS.configEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/config-engine';
+    const endpoint = CONFIG_ENDPOINTS.DEVICES_BY_IDS || '/config-engine/device/get/byDeviceIds';
+    const url = `${base}${endpoint.replace('/config-engine', '')}`;
+
+    let data = null;
+
+    // Primary: POST with payload { "ids": [...] } as per Sochiot API
+    try {
+      const resPost = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Accept': 'application/json, text/plain, */*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: missingIds })
+      });
+      if (resPost.ok) {
+        const json = await resPost.json();
+        data = json?.list || json?.data || json;
+      } else {
+        // Fallback: POST with raw array [...]
+        const resArray = await fetch(url, {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(missingIds)
+        });
+        if (resArray.ok) {
+          const json = await resArray.json();
+          data = json?.list || json?.data || json;
+        }
+      }
+    } catch (pe) {
+      console.warn('[SochiotLocationService] POST byDeviceIds notice:', pe.message);
+    }
+
+    const deviceList = Array.isArray(data) ? data : (data?.list || data?.devices || (data ? [data] : []));
+
+    // Cache the devices
+    deviceList.forEach(dev => {
+      if (dev && dev.id) {
+        deviceDetailsCache.set(`DEV_${dev.id}`, dev);
+      }
+    });
+
+    return [...cachedList, ...deviceList];
+  } catch (err) {
+    const parsed = parseApiError(err, 'Failed to fetch devices by IDs');
+    console.warn('[SochiotLocationService] fetchDevicesByDeviceIds error:', parsed.message);
+    return cachedList;
+  }
 };
 
 /**
@@ -353,6 +443,7 @@ export default {
   fetchUserLocationHierarchy,
   fetchEntityHierarchy,
   fetchDeviceDetails,
+  fetchDevicesByDeviceIds,
   extractDeviceModulesAndFields,
   clearSochiotCache
 };

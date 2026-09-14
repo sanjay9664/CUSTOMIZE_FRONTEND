@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Offcanvas, Form, Button, Row, Col, Badge, Spinner, Modal } from 'react-bootstrap';
 import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
@@ -6,7 +6,8 @@ import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService
 import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
 import LocationCascaderSelector from '../../../../components/common/LocationCascaderSelector';
 import { parseLocationValue } from '../../../../utils/locationTreeUtils';
-import { fetchDeviceDetails, extractDeviceModulesAndFields } from '../../../../services/sochiotLocationService';
+import { fetchDeviceDetails, extractDeviceModulesAndFields, fetchDevicesByDeviceIds } from '../../../../services/sochiotLocationService';
+import { getApiUrl } from '../../../../utils/apiConfig';
 
 const RegisterDeviceModal = ({
   show,
@@ -34,7 +35,8 @@ const RegisterDeviceModal = ({
   setSelectedAreaFilter = () => {},
   setSearchTerm = () => {},
   API_BASE_URL = '',
-  getAuthHeaders = () => ({})
+  getAuthHeaders = () => ({}),
+  selectedSiteFilter = ''
 }) => {
   const { activeSites: storeActiveSites } = useSiteStore();
   const effectiveSites = (sites && sites.length > 0) ? sites : (storeActiveSites || []);
@@ -95,6 +97,21 @@ const RegisterDeviceModal = ({
   // Device configuration cache: { [deviceId]: { device, modules } }
   const [deviceConfigs, setDeviceConfigs] = useState({});
   const [loadingDeviceIds, setLoadingDeviceIds] = useState({});
+  const inFlightDeviceIds = useRef(new Set());
+  const attemptedDeviceIds = useRef(new Set());
+
+  // Reset attempted/in-flight cache when modal opens for a new/different device
+  const prevDeviceIdRef = useRef(null);
+  useEffect(() => {
+    if (show) {
+      const currentDevId = editingDevice?.id || 'new';
+      if (prevDeviceIdRef.current !== currentDevId) {
+        prevDeviceIdRef.current = currentDevId;
+        attemptedDeviceIds.current.clear();
+        inFlightDeviceIds.current.clear();
+      }
+    }
+  }, [show, editingDevice?.id]);
 
   const handleDeviceTreeLoaded = React.useCallback((tree) => {
     setHardwareDeviceTree(tree || []);
@@ -103,43 +120,94 @@ const RegisterDeviceModal = ({
   const loadDeviceConfig = useCallback(async (deviceId, rowIdx = null) => {
     if (!deviceId || deviceId === '101') return;
     const cleanId = String(deviceId).trim();
-    if (deviceConfigs[cleanId] || loadingDeviceIds[cleanId]) return;
+    if (!cleanId) return;
+
+    // Prevent duplicate in-flight or re-attempting failed device IDs
+    if (attemptedDeviceIds.current.has(cleanId) || inFlightDeviceIds.current.has(cleanId)) return;
+
+    inFlightDeviceIds.current.add(cleanId);
+    attemptedDeviceIds.current.add(cleanId);
 
     setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: true }));
     try {
       const raw = await fetchDeviceDetails(cleanId);
       if (raw) {
         const parsed = extractDeviceModulesAndFields(raw);
-        setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed }));
+        setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed || { modules: [] } }));
 
         // Auto-select first module if row has no moduleId yet
         if (rowIdx !== null && parsed?.modules?.length > 0) {
           setDynamicTemplateFields(prev => {
             const copy = [...prev];
-            if (copy[rowIdx] && (!copy[rowIdx].moduleId || copy[rowIdx].moduleId === '4583')) {
+            if (copy[rowIdx] && !copy[rowIdx].moduleId) {
               copy[rowIdx].moduleId = String(parsed.modules[0].id);
+              copy[rowIdx].moduleName = parsed.modules[0].label || parsed.modules[0].name || '';
             }
             return copy;
           });
         }
+      } else {
+        setDeviceConfigs(prev => ({ ...prev, [cleanId]: { modules: [] } }));
       }
     } catch (err) {
-      console.warn('[RegisterDeviceModal] loadDeviceConfig error:', err);
+      console.warn('[RegisterDeviceModal] loadDeviceConfig notice for device:', cleanId, err);
+      setDeviceConfigs(prev => ({ ...prev, [cleanId]: { modules: [] } }));
     } finally {
+      inFlightDeviceIds.current.delete(cleanId);
       setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: false }));
     }
-  }, [deviceConfigs, loadingDeviceIds, setDynamicTemplateFields]);
+  }, [setDynamicTemplateFields]);
 
-  // Preload device configurations for any rows that already have a deviceId
+  // Batch preload device configurations using /config-engine/device/get/byDeviceIds
   useEffect(() => {
-    if (registerStep === 2 && Array.isArray(dynamicTemplateFields)) {
+    if (!show) return;
+    const ids = new Set();
+    if (Array.isArray(dynamicTemplateFields)) {
+      dynamicTemplateFields.forEach(f => {
+        const dId = parseInt(f.deviceId, 10);
+        if (!isNaN(dId) && dId > 0 && dId !== 101) ids.add(dId);
+      });
+    }
+    const rawDevIds = registerForm?.sochiotDeviceIds || editingDevice?.sochiotDeviceIds;
+    if (Array.isArray(rawDevIds)) {
+      rawDevIds.forEach(id => { const n = parseInt(id, 10); if (!isNaN(n) && n > 0 && n !== 101) ids.add(n); });
+    } else if (typeof rawDevIds === 'string' && rawDevIds.trim()) {
+      rawDevIds.split(',').forEach(s => { const n = parseInt(s.trim(), 10); if (!isNaN(n) && n > 0 && n !== 101) ids.add(n); });
+    }
+
+    const unattempted = Array.from(ids).filter(id => !attemptedDeviceIds.current.has(String(id)));
+    if (unattempted.length > 0) {
+      unattempted.forEach(id => attemptedDeviceIds.current.add(String(id)));
+      fetchDevicesByDeviceIds(unattempted).then(devs => {
+        if (Array.isArray(devs) && devs.length > 0) {
+          setDeviceConfigs(prev => {
+            const next = { ...prev };
+            devs.forEach(d => {
+              if (d && d.id) {
+                const parsed = extractDeviceModulesAndFields(d);
+                next[String(d.id)] = parsed;
+              }
+            });
+            return next;
+          });
+        }
+      }).catch(err => {
+        console.warn('[RegisterDeviceModal] batch fetchDevicesByDeviceIds notice:', err);
+      });
+    }
+  }, [show, editingDevice?.id, registerForm?.sochiotDeviceIds]);
+
+  // Preload device configurations for any rows that already have a deviceId (at most once per cleanId)
+  useEffect(() => {
+    if (show && Array.isArray(dynamicTemplateFields)) {
       dynamicTemplateFields.forEach((f, idx) => {
-        if (f.deviceId && f.deviceId !== '101' && !deviceConfigs[f.deviceId] && !loadingDeviceIds[f.deviceId]) {
-          loadDeviceConfig(f.deviceId, idx);
+        const dId = f.deviceId ? String(f.deviceId).trim() : '';
+        if (dId && dId !== '101' && !attemptedDeviceIds.current.has(dId)) {
+          loadDeviceConfig(dId, idx);
         }
       });
     }
-  }, [registerStep, dynamicTemplateFields, deviceConfigs, loadingDeviceIds, loadDeviceConfig]);
+  }, [show, dynamicTemplateFields, loadDeviceConfig]);
 
   useEffect(() => {
     if (show) {
@@ -804,6 +872,21 @@ const RegisterDeviceModal = ({
                   </Form.Group>
                 </Col>
 
+                {/* 7. Template Name (Optional) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Template Name (Optional)</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder={registerForm.siteId ? "e.g. EnergyMeter_Template_V1" : "Select site first"}
+                      value={registerForm.templateName || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, templateName: e.target.value })}
+                      disabled={!registerForm.siteId}
+                      className="wizard-input"
+                    />
+                  </Form.Group>
+                </Col>
+
                 {/* Location Hierarchy & Grouping */}
                 {/* <Col md={4}>
                   <Form.Group>
@@ -909,10 +992,10 @@ const RegisterDeviceModal = ({
                   sites={effectiveSites}
                   enableDeviceFilter={false}
                   className="mb-0"
-                  initialLocationValue={registerForm.siteId ? `LOCATION-${registerForm.siteId}` : null}
+                  initialLocationValue={registerForm.sochiotLocationId ? `LOCATION-${registerForm.sochiotLocationId}` : null}
                   onSelectLocation={(loc) => {
                     if (loc?.id) {
-                      setRegisterForm(prev => ({ ...prev, siteId: String(loc.id), siteName: loc.name || '' }));
+                      setRegisterForm(prev => ({ ...prev, sochiotLocationId: String(loc.id), sochiotLocationName: loc.name || '' }));
                     }
                   }}
                   onDeviceTreeLoaded={handleDeviceTreeLoaded}
@@ -923,10 +1006,10 @@ const RegisterDeviceModal = ({
                 <table className="table-wizard-custom" style={{ overflow: 'visible' }}>
                   <thead>
                     <tr>
+                      <th style={{ width: '22%' }}>Display Name</th>
                       <th style={{ width: '24%' }}>Gateway &amp; Device</th>
                       <th style={{ width: '18%' }}>Module ID</th>
-                      <th style={{ width: '20%' }}>Event Field</th>
-                      <th style={{ width: '20%' }}>Display Name</th>
+                      <th style={{ width: '18%' }}>Event Field</th>
                       <th style={{ width: '18%' }}>Threshold Limits</th>
                       <th style={{ width: '40px' }} className="text-center"></th>
                     </tr>
@@ -944,6 +1027,24 @@ const RegisterDeviceModal = ({
                     ) : (
                       dynamicTemplateFields.map((f, idx) => (
                       <tr key={idx}>
+                        {/* 1. Display Name */}
+                        <td>
+                          <Form.Control
+                            size="sm"
+                            type="text"
+                            placeholder="e.g. Incomer Voltage R"
+                            value={f.displayName || ''}
+                            onChange={(e) => {
+                              const copy = [...dynamicTemplateFields];
+                              copy[idx].displayName = e.target.value;
+                              setDynamicTemplateFields(copy);
+                            }}
+                            className="wizard-input"
+                            style={{ height: 32, fontSize: 12 }}
+                          />
+                        </td>
+
+                        {/* 2. Gateway & Device */}
                         <td>
                           <LocationCascaderSelector
                             options={hardwareDeviceTree}
@@ -957,9 +1058,16 @@ const RegisterDeviceModal = ({
                                 copy[idx].deviceId = selectedId;
                                 copy[idx].deviceName = leafNode.label;
                                 copy[idx].deviceVal = valArray;
-                                copy[idx].moduleId = '';
+                                const cachedConfig = deviceConfigs[selectedId];
+                                if (cachedConfig?.modules?.length > 0) {
+                                  copy[idx].moduleId = String(cachedConfig.modules[0].id);
+                                  copy[idx].moduleName = cachedConfig.modules[0].label || cachedConfig.modules[0].name || '';
+                                } else {
+                                  copy[idx].moduleId = '';
+                                  copy[idx].moduleName = '';
+                                }
                                 copy[idx].sochiotFieldName = '';
-                                copy[idx].displayName = '';
+                                // Preserve existing displayName - only manually editable
                                 copy[idx].isManualEntry = false;
                                 setDynamicTemplateFields(copy);
                                 loadDeviceConfig(selectedId, idx);
@@ -968,8 +1076,9 @@ const RegisterDeviceModal = ({
                                 copy[idx].deviceName = '';
                                 copy[idx].deviceVal = null;
                                 copy[idx].moduleId = '';
+                                copy[idx].moduleName = '';
                                 copy[idx].sochiotFieldName = '';
-                                copy[idx].displayName = '';
+                                // Preserve existing displayName - only manually editable
                                 copy[idx].isManualEntry = false;
                                 setDynamicTemplateFields(copy);
                               }
@@ -983,6 +1092,8 @@ const RegisterDeviceModal = ({
                             triggerIcon={<Cpu size={13} className="text-info flex-shrink-0" />}
                           />
                         </td>
+
+                        {/* 3. Module ID */}
                         <td>
                           {(() => {
                             const devConfig = deviceConfigs[f.deviceId];
@@ -997,9 +1108,11 @@ const RegisterDeviceModal = ({
                                 onChange={(e) => {
                                   const newModuleId = e.target.value;
                                   const copy = [...dynamicTemplateFields];
+                                  const selectedMod = modules.find(m => String(m.id) === String(newModuleId));
                                   copy[idx].moduleId = newModuleId;
+                                  copy[idx].moduleName = selectedMod ? (selectedMod.label || selectedMod.name || '') : (copy[idx].moduleName || '');
                                   copy[idx].sochiotFieldName = '';
-                                  copy[idx].displayName = '';
+                                  // Preserve existing displayName - only manually editable
                                   copy[idx].isManualEntry = false;
                                   setDynamicTemplateFields(copy);
                                 }}
@@ -1008,10 +1121,17 @@ const RegisterDeviceModal = ({
                               >
                                 {!f.deviceId ? (
                                   <option value="">Select Device First</option>
-                                ) : isLoadingModules ? (
+                                ) : isLoadingModules && !f.moduleId ? (
                                   <option value="">Loading modules...</option>
                                 ) : modules.length === 0 ? (
-                                  <option value="">No modules found</option>
+                                  <>
+                                    <option value="">No modules found</option>
+                                    {f.moduleId && (
+                                      <option value={String(f.moduleId)}>
+                                        {f.moduleName || f.deviceName || `Module #${f.moduleId}`}
+                                      </option>
+                                    )}
+                                  </>
                                 ) : (
                                   <>
                                     <option value="">Select Module</option>
@@ -1023,12 +1143,19 @@ const RegisterDeviceModal = ({
                                         </option>
                                       );
                                     })}
+                                    {f.moduleId && !modules.some(m => String(m.id) === String(f.moduleId)) && (
+                                      <option value={String(f.moduleId)}>
+                                        {f.moduleName || f.deviceName || `Module #${f.moduleId}`}
+                                      </option>
+                                    )}
                                   </>
                                 )}
                               </Form.Select>
                             );
                           })()}
                         </td>
+
+                        {/* 4. Event Field */}
                         <td>
                           {(() => {
                             const devConfig = deviceConfigs[f.deviceId];
@@ -1056,10 +1183,12 @@ const RegisterDeviceModal = ({
                                       }
                                       const copy = [...dynamicTemplateFields];
                                       copy[idx].sochiotFieldName = val;
-                                      // Auto populate display name from selected field definition
+                                      // Only auto-populate display name if not already set by user
                                       const matched = selectedModule?.allFields?.find(af => af.fieldName === val);
                                       if (matched) {
-                                        copy[idx].displayName = matched.displayName || matched.fieldName;
+                                        if (!copy[idx].displayName || !copy[idx].displayName.trim()) {
+                                          copy[idx].displayName = matched.displayName || matched.fieldName;
+                                        }
                                         if (matched.unit) copy[idx].unit = matched.unit;
                                         if (matched.dataType) copy[idx].dataType = matched.dataType;
                                       }
@@ -1139,21 +1268,8 @@ const RegisterDeviceModal = ({
                             );
                           })()}
                         </td>
-                        <td>
-                          <Form.Control
-                            size="sm"
-                            type="text"
-                            placeholder="e.g. Incomer Voltage R"
-                            value={f.displayName || ''}
-                            onChange={(e) => {
-                              const copy = [...dynamicTemplateFields];
-                              copy[idx].displayName = e.target.value;
-                              setDynamicTemplateFields(copy);
-                            }}
-                            className="wizard-input"
-                            style={{ height: 32, fontSize: 12 }}
-                          />
-                        </td>
+
+                        {/* 5. Threshold Limits */}
                         <td>
                           {(() => {
                             const hasLimits = (f.warningHigh !== null && f.warningHigh !== undefined && f.warningHigh !== '') ||
@@ -1177,6 +1293,8 @@ const RegisterDeviceModal = ({
                             );
                           })()}
                         </td>
+
+                        {/* 6. Remove action */}
                         <td className="text-center">
                           <Button
                             variant="link"
@@ -1205,6 +1323,7 @@ const RegisterDeviceModal = ({
                       const defaultDevName = lastField?.deviceName || '';
                       const defaultDevVal = lastField?.deviceVal || null;
                       const defaultModuleId = lastField?.moduleId || '';
+                      const defaultModuleName = lastField?.moduleName || '';
 
                       setDynamicTemplateFields([
                         ...dynamicTemplateFields,
@@ -1213,6 +1332,7 @@ const RegisterDeviceModal = ({
                           deviceName: defaultDevName,
                           deviceVal: defaultDevVal,
                           moduleId: defaultModuleId,
+                          moduleName: defaultModuleName,
                           sochiotFieldName: '',
                           displayName: '',
                           thresholdValue: '',
@@ -1261,6 +1381,9 @@ const RegisterDeviceModal = ({
             <button
               type="button"
               onClick={() => {
+                if (!registerForm.siteId) {
+                  return showToast('warning', 'Please select a Company / Site first');
+                }
                 if (!registerForm.name || !registerForm.name.trim()) {
                   return showToast('warning', 'Device Name is required to proceed to Template Settings');
                 }
@@ -1286,181 +1409,246 @@ const RegisterDeviceModal = ({
                   if (typeof showToast === 'function') showToast('danger', 'Device Name is required');
                   return;
                 }
+
+                const resolvedSiteId = registerForm.siteId 
+                  || (editingDevice && (editingDevice.siteId || editingDevice.site?.id || editingDevice.site_id))
+                  || (selectedSiteFilter && selectedSiteFilter !== 'ALL' ? String(selectedSiteFilter) : '')
+                  || (effectiveSites && effectiveSites.length > 0 ? String(effectiveSites[0].id) : '');
+
+                if (!resolvedSiteId) {
+                  if (typeof showToast === 'function') showToast('danger', 'Company / Site is required. Please select a site in Basic information.');
+                  return;
+                }
+
+                // Extract unique Sochiot hardware device IDs from dynamicTemplateFields
+                const fieldDeviceIds = (dynamicTemplateFields || [])
+                  .map(f => parseInt(f.deviceId, 10))
+                  .filter(n => !isNaN(n) && n > 0 && n !== 101);
+                let parsedSochiotIds = Array.from(new Set(fieldDeviceIds));
+
+                if (parsedSochiotIds.length === 0 && registerForm.sochiotDeviceIds) {
+                  parsedSochiotIds = String(registerForm.sochiotDeviceIds)
+                    .split(',')
+                    .map(id => parseInt(id.trim(), 10))
+                    .filter(n => !isNaN(n) && n > 0 && n !== 101);
+                }
+
+                if (parsedSochiotIds.length === 0 && editingDevice?.sochiotDeviceIds) {
+                  const existing = Array.isArray(editingDevice.sochiotDeviceIds)
+                    ? editingDevice.sochiotDeviceIds
+                    : [editingDevice.sochiotDeviceIds];
+                  parsedSochiotIds = existing
+                    .map(id => parseInt(id, 10))
+                    .filter(n => !isNaN(n) && n > 0 && n !== 101);
+                }
+
+                if (!editingDevice && parsedSochiotIds.length === 0) {
+                  if (typeof showToast === 'function') {
+                    showToast('danger', 'Please select at least one hardware device in Template Settings.');
+                  }
+                  return;
+                }
+
+                // Filter valid telemetry fields
+                const validFields = (dynamicTemplateFields || []).filter(f => 
+                  f && (f.sochiotFieldName || f.displayName) && f.moduleId
+                );
+
+                if (!editingDevice && validFields.length === 0) {
+                  if (typeof showToast === 'function') {
+                    showToast('danger', 'Please configure at least one telemetry field with Module ID & Event Field.');
+                  }
+                  return;
+                }
+
+                // Extract unique module IDs from validFields, dynamicTemplateFields, and registerForm
+                const fieldModuleIds = (validFields || [])
+                  .map(f => parseInt(f.moduleId, 10))
+                  .filter(m => !isNaN(m) && m > 0);
+
+                const dynamicModuleIds = (dynamicTemplateFields || [])
+                  .map(f => parseInt(f.moduleId, 10))
+                  .filter(m => !isNaN(m) && m > 0);
+
+                const formModuleIds = Array.isArray(registerForm?.moduleIds)
+                  ? registerForm.moduleIds.map(m => parseInt(m, 10)).filter(m => !isNaN(m) && m > 0)
+                  : (registerForm?.moduleIds ? String(registerForm.moduleIds).split(',').map(m => parseInt(m.trim(), 10)).filter(m => !isNaN(m) && m > 0) : []);
+
+                const parsedModuleIds = Array.from(new Set([...fieldModuleIds, ...dynamicModuleIds, ...formModuleIds]));
+
+                const templateSettings = validFields.map((f, idx) => {
+                  const mId = parseInt(f.moduleId, 10);
+                  const parsedMeta = f.meta 
+                    ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
+                    : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
+                  return {
+                    moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
+                    moduleName: String(f.moduleName || f.deviceName || 'General').trim(),
+                    fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
+                    sochiotFieldName: String(f.sochiotFieldName || '').trim(),
+                    displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
+                    dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(String(f.dataType).toUpperCase())) ? String(f.dataType).toUpperCase() : 'INTEGER',
+                    unit: f.unit || null,
+                    warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined && !isNaN(Number(f.warningHigh))) ? Number(f.warningHigh) : null,
+                    criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined && !isNaN(Number(f.criticalHigh))) ? Number(f.criticalHigh) : null,
+                    warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined && !isNaN(Number(f.warningLow))) ? Number(f.warningLow) : null,
+                    criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined && !isNaN(Number(f.criticalLow))) ? Number(f.criticalLow) : null,
+                    isCommand: Boolean(f.isCommand),
+                    commandAlias: f.commandAlias || null,
+                    isReadable: f.isReadable !== false,
+                    isDisplayed: f.isDisplayed !== false,
+                    graphable: f.graphable !== false,
+                    displayOrder: f.displayOrder ? parseInt(f.displayOrder, 10) : idx + 1,
+                    meta: parsedMeta
+                  };
+                });
+
+                const existingRules = Array.isArray(registerForm?.rules) && registerForm.rules.length > 0
+                  ? registerForm.rules
+                  : (Array.isArray(editingDevice?.rules) ? editingDevice.rules : []);
+
+                const formattedRules = existingRules.map(r => ({
+                  name: r.name,
+                  description: r.description || null,
+                  ruleType: r.ruleType || 'ALARM',
+                  priority: r.priority || 1,
+                  isActive: r.isActive !== false,
+                  sochiotModuleId: r.sochiotModuleId || null,
+                  fields: Array.isArray(r.fields) ? r.fields.map((rf, fIdx) => ({
+                    fieldName: rf.fieldName,
+                    displayName: rf.displayName || rf.fieldName,
+                    fieldGroup: rf.fieldGroup || 'CONDITION',
+                    value: String(rf.value ?? ''),
+                    dataType: rf.dataType || 'TEXT_SHORT',
+                    supportedValues: Array.isArray(rf.supportedValues) ? rf.supportedValues : (rf.fieldName === 'comparison_operator' ? [">", ">=", "<", "<=", "=="] : []),
+                    displayOrder: rf.displayOrder ?? fIdx,
+                    isRequired: rf.isRequired !== false,
+                    sochiotFieldName: rf.sochiotFieldName || rf.fieldName
+                  })) : []
+                }));
+
+                const baseDevicePayload = {
+                  name: registerForm.name.trim(),
+                  category: registerForm.category || 'ENERGY_METER',
+                  sochiotDeviceIds: parsedSochiotIds,
+                  serialNumber: registerForm.serialNumber ? registerForm.serialNumber.trim() : null,
+                  sochiotTemplateId: registerForm.sochiotTemplateId ? Number(registerForm.sochiotTemplateId) : (editingDevice?.sochiotTemplateId || null),
+                  templateName: registerForm.templateName ? registerForm.templateName.trim() : null,
+                  description: registerForm.description ? registerForm.description.trim() : null,
+                  areaId: (registerForm.areaId && activeAreas.some(a => String(a.id) === String(registerForm.areaId))) ? parseInt(registerForm.areaId, 10) : null,
+                  buildingId: (registerForm.buildingId && activeBuildings.some(b => String(b.id) === String(registerForm.buildingId))) ? parseInt(registerForm.buildingId, 10) : null,
+                  floorNo: (registerForm.floorNo !== '' && registerForm.floorNo !== null && registerForm.floorNo !== undefined && !isNaN(parseInt(registerForm.floorNo, 10))) ? parseInt(registerForm.floorNo, 10) : null,
+                  roomNo: (registerForm.roomNo !== '' && registerForm.roomNo !== null && registerForm.roomNo !== undefined && !isNaN(parseInt(registerForm.roomNo, 10))) ? parseInt(registerForm.roomNo, 10) : null,
+                  energyGroupId: registerForm.energyGroupId ? parseInt(registerForm.energyGroupId, 10) : null,
+                  displayOrder: parseInt(registerForm.displayOrder, 10) || 0,
+                  isActive: registerForm.isActive !== false,
+                  template_settings: templateSettings,
+                  rules: formattedRules
+                };
+
+                if (registerForm.assetId) {
+                  baseDevicePayload.assetId = String(registerForm.assetId);
+                }
+                if (registerForm.profileId && typeof registerForm.profileId === 'string' && registerForm.profileId.length >= 20 && !registerForm.profileId.includes(' ')) {
+                  baseDevicePayload.profileId = registerForm.profileId;
+                }
+
                 if (typeof setLoading === 'function') setLoading(true);
                 try {
                   await fetchAndStoreSochiotAccessToken();
-                  const siteId = registerForm.siteId || (sites && sites.length ? sites[0].id : 7);
-                  const generatedSochiotId = Math.floor(100000 + Math.random() * 899999);
-                  const rawSochiotId = String(registerForm.sochiotDeviceIds || '');
-                  let parsedSochiotIds = rawSochiotId
-                    .split(',')
-                    .map(id => parseInt(id.trim()))
-                    .filter(n => !isNaN(n) && n > 0);
+                  const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
+                  let res;
+                  if (editingDevice) {
+                    const patchPayload = {
+                      ...baseDevicePayload
+                    };
+                    // Ensure 'settings' is NEVER passed in device update payload, only 'template_settings'
+                    delete patchPayload.settings;
 
-                  if (parsedSochiotIds.length === 0) {
-                    const fieldDeviceIds = (dynamicTemplateFields || [])
-                      .map(f => parseInt(f.deviceId))
-                      .filter(n => !isNaN(n) && n > 0);
-                    if (fieldDeviceIds.length > 0) {
-                      parsedSochiotIds = Array.from(new Set(fieldDeviceIds));
-                    } else {
-                      parsedSochiotIds = [generatedSochiotId];
-                    }
-                  }
+                    const queryParam = resolvedSiteId ? `?siteId=${resolvedSiteId}` : '';
+                    const updateUrl = getApiUrl(`/devices/${editingDevice.id}${queryParam}`);
+                    res = await fetch(updateUrl, {
+                      method: 'PATCH',
+                      headers,
+                      body: JSON.stringify(patchPayload)
+                    });
 
-                  const templateSettings = (dynamicTemplateFields && dynamicTemplateFields.length > 0 ? dynamicTemplateFields : [
-                    {
-                      moduleId: 4583,
-                      sochiotFieldName: "3,100F",
-                      displayName: "Voltage R-N",
-                      dataType: "INTEGER",
-                      unit: "V",
-                      warningHigh: 250,
-                      criticalHigh: 260,
-                      warningLow: 210,
-                      criticalLow: 200,
-                      isCommand: false,
-                      graphable: true
-                    }
-                  ]).map(f => ({
-                    deviceId: f.deviceId ? (parseInt(f.deviceId) || f.deviceId) : undefined,
-                    deviceName: f.deviceName || undefined,
-                    moduleId: parseInt(f.moduleId) || 4583,
-                    sochiotFieldName: f.sochiotFieldName || '3,100F',
-                    displayName: f.displayName || 'Voltage R-N',
-                    dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(f.dataType)) ? f.dataType : 'INTEGER',
-                    unit: f.unit || 'V',
-                    warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined) ? (parseFloat(f.warningHigh) || null) : null,
-                    criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined) ? (parseFloat(f.criticalHigh) || null) : null,
-                    warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined) ? (parseFloat(f.warningLow) || null) : null,
-                    criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined) ? (parseFloat(f.criticalLow) || null) : null,
-                    isCommand: Boolean(f.isCommand),
-                    graphable: f.graphable !== false
-                  }));
-
-                  const payload = {
-                    name: registerForm.name?.trim() || 'EM_LIVEWIZE_178',
-                    category: registerForm.category || 'ENERGY_METER',
-                    sochiotDeviceIds: parsedSochiotIds,
-                    serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 899999)}`,
-                    templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
-                    template_settings: templateSettings
-                  };
-
-                  if (registerForm.assetId) {
-                    payload.assetId = String(registerForm.assetId);
-                  }
-                  if (registerForm.areaId && activeAreas.some(a => String(a.id) === String(registerForm.areaId))) {
-                    payload.areaId = parseInt(registerForm.areaId);
-                  }
-                  if (registerForm.buildingId && activeBuildings.some(b => String(b.id) === String(registerForm.buildingId))) {
-                    payload.buildingId = parseInt(registerForm.buildingId);
-                  }
-                  if (registerForm.floorNo && !isNaN(parseInt(registerForm.floorNo))) {
-                    payload.floorNo = parseInt(registerForm.floorNo);
-                  }
-                  if (registerForm.roomNo && !isNaN(parseInt(registerForm.roomNo))) {
-                    payload.roomNo = parseInt(registerForm.roomNo);
-                  }
-                  if (registerForm.description && registerForm.description.trim()) {
-                    payload.description = registerForm.description.trim();
-                  }
-                  if (registerForm.profileId && typeof registerForm.profileId === 'string' && registerForm.profileId.length >= 20 && !registerForm.profileId.includes(' ')) {
-                    payload.profileId = registerForm.profileId;
-                  }
-
-                  const newDeviceObj = {
-                    id: editingDevice?.id || Date.now(),
-                    name: registerForm.name.trim(),
-                    category: registerForm.category || 'ENERGY_METER',
-                    sochiotDeviceIds: payload.sochiotDeviceIds,
-                    serialNumber: payload.serialNumber,
-                    bmsDeviceId: registerForm.bmsDeviceId || `BMS-${Math.floor(1000 + Math.random() * 9000)}`,
-                    profileId: payload.profileId || null,
-                    templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
-                    settings: payload.template_settings,
-                    areaId: payload.areaId || 0,
-                    areaName: (activeAreas || []).find(a => String(a.id) === String(registerForm.areaId))?.name || 'No Specific Area',
-                    buildingId: payload.buildingId || 0,
-                    buildingName: (activeBuildings || []).find(b => String(b.id) === String(registerForm.buildingId))?.name || 'store-1',
-                    siteId: siteId,
-                    isActive: true,
-                    status: 'ACTIVE',
-                    createdAt: editingDevice?.createdAt || new Date().toISOString()
-                  };
-
-                  try {
-                    const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
-                    let res;
-                    if (editingDevice) {
-                      const patchPayload = {
-                        name: registerForm.name?.trim(),
-                        category: registerForm.category || 'ENERGY_METER',
-                        sochiotDeviceIds: parsedSochiotIds,
-                        serialNumber: payload.serialNumber,
-                        templateName: registerForm.templateName,
-                        template_settings: templateSettings,
-                        ...(registerForm.assetId ? { assetId: String(registerForm.assetId) } : {}),
-                        ...(payload.areaId ? { areaId: payload.areaId } : {}),
-                        ...(payload.buildingId ? { buildingId: payload.buildingId } : {}),
-                        ...(payload.floorNo !== undefined ? { floorNo: payload.floorNo } : {}),
-                        ...(payload.roomNo !== undefined ? { roomNo: payload.roomNo } : {}),
-                        ...(payload.description ? { description: payload.description } : {}),
-                        ...(payload.profileId ? { profileId: payload.profileId } : {})
-                      };
-                      res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDevice.id}`, {
-                        method: 'PATCH',
-                        headers,
-                        body: JSON.stringify(patchPayload)
-                      });
-                    } else {
-                      res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify(payload)
-                      });
-
-                      if (res.status === 409) {
-                        const fallbackUniqueId = Math.floor(10000 + Math.random() * 90000);
-                        payload.sochiotDeviceIds = [fallbackUniqueId];
-                        payload.serialNumber = `SN-${Date.now()}`;
-                        newDeviceObj.sochiotDeviceIds = [fallbackUniqueId];
-                        newDeviceObj.serialNumber = payload.serialNumber;
-                        res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
-                          method: 'POST',
-                          headers,
-                          body: JSON.stringify(payload)
+                    // Also sync device settings via PUT /sites/{siteId}/devices/{deviceId}/settings
+                    if (res.ok && templateSettings.length > 0 && resolvedSiteId) {
+                      try {
+                        const settingsForPut = validFields.map((f, idx) => {
+                          const mId = parseInt(f.moduleId, 10);
+                          const parsedMeta = f.meta 
+                            ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
+                            : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
+                          return {
+                            ...(f.id ? { id: f.id } : {}),
+                            moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
+                            moduleName: String(f.moduleName || f.deviceName || 'General').trim(),
+                            fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
+                            sochiotFieldName: String(f.sochiotFieldName || '').trim(),
+                            displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
+                            dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(String(f.dataType).toUpperCase())) ? String(f.dataType).toUpperCase() : 'INTEGER',
+                            unit: f.unit || null,
+                            enumValues: Array.isArray(f.enumValues) ? f.enumValues : [],
+                            warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined && !isNaN(Number(f.warningHigh))) ? Number(f.warningHigh) : null,
+                            criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined && !isNaN(Number(f.criticalHigh))) ? Number(f.criticalHigh) : null,
+                            warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined && !isNaN(Number(f.warningLow))) ? Number(f.warningLow) : null,
+                            criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined && !isNaN(Number(f.criticalLow))) ? Number(f.criticalLow) : null,
+                            isCommand: Boolean(f.isCommand),
+                            commandAlias: f.commandAlias || null,
+                            isReadable: f.isReadable !== false,
+                            isDisplayed: f.isDisplayed !== false,
+                            graphable: f.graphable !== false,
+                            displayOrder: f.displayOrder ? parseInt(f.displayOrder, 10) : idx + 1,
+                            meta: parsedMeta
+                          };
                         });
-                      }
-                    }
 
-                    if (res && res.ok) {
-                      const json = await res.json().catch(() => ({}));
-                      if (json && (json.id || json.data?.id)) {
-                        newDeviceObj.id = json.id || json.data.id;
+                        const settingsUrl = getApiUrl(`/sites/${resolvedSiteId}/devices/${editingDevice.id}/settings`);
+                        await fetch(settingsUrl, {
+                          method: 'PUT',
+                          headers,
+                          body: JSON.stringify({ settings: settingsForPut })
+                        });
+                      } catch (se) {
+                        console.warn('Device settings sync notice:', se);
                       }
                     }
-                  } catch (e) {
-                    console.warn('Network / API notice, saving locally:', e);
+                  } else {
+                    const createPayload = { ...baseDevicePayload };
+                    delete createPayload.settings;
+
+                    const createUrl = getApiUrl(`/sites/${resolvedSiteId}/devices/from-template`);
+                    res = await fetch(createUrl, {
+                      method: 'POST',
+                      headers,
+                      body: JSON.stringify(createPayload)
+                    });
                   }
 
-                  if (typeof setDevices === 'function') {
-                    setDevices(prev => [newDeviceObj, ...(Array.isArray(prev) ? prev.filter(d => String(d.id) !== String(newDeviceObj.id)) : [])]);
+                  if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    const errMsg = errData.error?.message || errData.message || `Server error (${res.status})`;
+                    if (typeof showToast === 'function') {
+                      showToast('danger', errMsg);
+                    }
+                    if (typeof setLoading === 'function') setLoading(false);
+                    return;
+                  }
+
+                  // Success
+                  if (typeof showToast === 'function') {
+                    showToast('success', editingDevice ? `Device "${registerForm.name}" updated successfully!` : `Device "${registerForm.name}" registered successfully!`);
                   }
                   if (typeof fetchDevices === 'function') {
                     fetchDevices();
                   }
 
-                  const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
-                  localStorage.setItem('bms_registered_devices', JSON.stringify([newDeviceObj, ...customDevices.filter(c => String(c.id) !== String(newDeviceObj.id))]));
-
                   if (typeof setSearchTerm === 'function') setSearchTerm('');
                   if (typeof setSelectedBuildingFilter === 'function') setSelectedBuildingFilter('ALL');
                   if (typeof setSelectedAreaFilter === 'function') setSelectedAreaFilter('ALL');
 
-                  if (typeof showToast === 'function') {
-                    showToast('success', editingDevice ? `Device "${registerForm.name}" updated successfully!` : `Device "${registerForm.name}" registered & added to list!`);
-                  }
                   onHide();
                 } catch (err) {
                   if (typeof showToast === 'function') {

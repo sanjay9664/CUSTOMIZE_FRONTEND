@@ -5,6 +5,7 @@ import { getApiUrl } from '../../../../utils/apiConfig';
 import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, FileText } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
 import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
+import { fetchDevicesByDeviceIds, extractDeviceModulesAndFields } from '../../../../services/sochiotLocationService';
 
 export const API_BASE_URL = getApiUrl();
 
@@ -78,6 +79,14 @@ export const useManageOrganisation = () => {
 
   const isInitialMount = useRef(true);
 
+  // Purge any stale mock storage that causes phantom non-DB devices (e.g. jkanjd, frfr)
+  useEffect(() => {
+    try {
+      localStorage.removeItem('bms_registered_devices');
+      localStorage.removeItem('bms_device_edits');
+    } catch (e) {}
+  }, []);
+
   // Active Entity Helpers
   const activeCompanies = normalizeList(companies, 'companies').filter(c => c && c.status !== 'INACTIVE' && !c.deletedAt);
   const activeTenants = normalizeList(tenants, 'tenants').filter(t => t && t.status !== 'INACTIVE' && !t.deletedAt);
@@ -141,7 +150,7 @@ export const useManageOrganisation = () => {
   const [wizardStep, setWizardStep] = useState(1);
 
   const [registerForm, setRegisterForm] = useState({
-    siteId: '', name: '', sochiotDeviceIds: '', category: '', areaId: '', buildingId: '', floorNo: '', roomNo: '', energyGroupId: '', description: '', serialNumber: '', profileId: '', templateName: ''
+    siteId: '', name: '', sochiotDeviceIds: '', moduleIds: [], sochiotTemplateId: null, category: '', areaId: '', buildingId: '', floorNo: '', roomNo: '', energyGroupId: '', description: '', serialNumber: '', profileId: '', templateName: ''
   });
 
   const [dynamicTemplateFields, setDynamicTemplateFields] = useState([]);
@@ -457,26 +466,21 @@ export const useManageOrganisation = () => {
       }
 
       const res = await fetch(endpoint, { headers: getAuthHeaders() });
-      const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
       if (res.ok) {
         const json = await res.json();
-        let list = normalizeList(json, 'devices');
-        const savedEdits = JSON.parse(localStorage.getItem('bms_device_edits') || '{}');
-        if (Object.keys(savedEdits).length > 0) {
-          list = list.map(d => savedEdits[d.id] ? { ...d, ...savedEdits[d.id] } : d);
-        }
-        const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
-        const combined = [...customDevices, ...list.filter(d => !customDevices.some(c => String(c.id) === String(d.id)))];
-        const finalDevices = combined.filter(d => !deletedIds.includes(String(d.id)));
+        const list = normalizeList(json, 'devices');
+        const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
+        const finalDevices = list.filter(d => !deletedIds.includes(String(d.id)));
         setDevices(finalDevices);
+
+        // Purge obsolete local mock storage that causes phantom non-DB devices (e.g. jkanjd, frfr)
+        try {
+          localStorage.removeItem('bms_registered_devices');
+          localStorage.removeItem('bms_device_edits');
+        } catch (e) {}
       }
     } catch (err) {
       console.warn('Devices fetch err:', err);
-      const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
-      const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
-      if (customDevices.length > 0) {
-        setDevices(prev => [...customDevices.filter(d => !deletedIds.includes(String(d.id))), ...prev]);
-      }
     }
   }, [selectedSiteFilter, selectedAssetFilter]);
 
@@ -994,39 +998,286 @@ export const useManageOrganisation = () => {
   };
 
   // Device Actions
-  const handleOpenEditDevice = (d) => {
+  const handleOpenEditDevice = async (d) => {
     fetchAndStoreSochiotAccessToken();
     setEditingDeviceItem(d);
     setRegisterStep(1);
+    const resolvedSiteId = d.siteId || d.site?.id || d.site_id || (selectedSiteFilter && selectedSiteFilter !== 'ALL' ? String(selectedSiteFilter) : '') || (activeSites && activeSites.length ? String(activeSites[0].id) : '');
+
+    // Set initial baseline from row data so modal opens immediately
     setRegisterForm({
       id: d.id,
-      siteId: d.siteId || '',
+      siteId: resolvedSiteId,
       name: d.name || '',
       sochiotDeviceIds: Array.isArray(d.sochiotDeviceIds) ? d.sochiotDeviceIds.join(', ') : (d.sochiotDeviceIds || d.sochiot_device_ids || ''),
       category: d.category || '',
-      areaId: d.areaId || '',
-      buildingId: d.buildingId || '',
-      floorNo: d.floorNo || '',
-      roomNo: d.roomNo || '',
+      areaId: d.areaId ? String(d.areaId) : '',
+      buildingId: d.buildingId ? String(d.buildingId) : '',
+      floorNo: d.floorNo !== null && d.floorNo !== undefined ? String(d.floorNo) : '',
+      roomNo: d.roomNo !== null && d.roomNo !== undefined ? String(d.roomNo) : '',
       energyGroupId: d.energyGroupId || '',
       description: d.description || '',
       serialNumber: d.serialNumber || '',
       profileId: d.profileId || '',
-      templateName: d.templateName || ''
+      templateName: d.templateName || '',
+      sochiotTemplateId: d.sochiotTemplateId || d.sochiot_template_id || null,
+      moduleIds: Array.isArray(d.moduleIds) ? d.moduleIds : (d.moduleId ? [d.moduleId] : []),
+      assetId: d.assetId ? String(d.assetId) : ''
     });
-    if (typeof setDynamicTemplateFields === 'function') {
-      setDynamicTemplateFields(d.templateFields || []);
+
+    const extractAllDeviceIds = (targetDev, settingsList = []) => {
+      const ids = new Set();
+      const rawDevIds = targetDev?.sochiotDeviceIds || targetDev?.sochiot_device_ids;
+      if (Array.isArray(rawDevIds)) {
+        rawDevIds.forEach(id => { const n = parseInt(id, 10); if (!isNaN(n) && n > 0 && n !== 101) ids.add(n); });
+      } else if (typeof rawDevIds === 'string' && rawDevIds.trim()) {
+        rawDevIds.split(',').forEach(s => { const n = parseInt(s.trim(), 10); if (!isNaN(n) && n > 0 && n !== 101) ids.add(n); });
+      } else if (typeof rawDevIds === 'number' && rawDevIds > 0 && rawDevIds !== 101) {
+        ids.add(rawDevIds);
+      }
+
+      (settingsList || []).forEach(s => {
+        if (s?.sochiotDeviceId) {
+          const n = parseInt(s.sochiotDeviceId, 10);
+          if (!isNaN(n) && n > 0 && n !== 101) ids.add(n);
+        }
+        if (s?.deviceId && targetDev?.id && String(s.deviceId) !== String(targetDev.id) && String(s.deviceId) !== '101') {
+          const n = parseInt(s.deviceId, 10);
+          if (!isNaN(n) && n > 0) ids.add(n);
+        }
+      });
+
+      return Array.from(ids);
+    };
+
+    const matchSettingsWithSochiotDevices = (settingsList, sochiotDevicesList, fallbackDevIds = [], currentDev = null) => {
+      const normalizedDevices = (sochiotDevicesList || []).map(dev => {
+        const extracted = extractDeviceModulesAndFields(dev);
+        return {
+          raw: dev,
+          id: String(dev.id || dev.hardwareId || ''),
+          name: dev.name || '',
+          modules: extracted.modules || []
+        };
+      });
+
+      return (settingsList || []).map(s => {
+        let matchedDev = null;
+        let matchedModule = null;
+        let matchedFieldDef = null;
+
+        const sDevName = (s.deviceName || '').trim().toLowerCase();
+        const sModName = (s.moduleName || '').trim().toLowerCase();
+        const sField = (s.sochiotFieldName || '').trim();
+        const sModId = s.moduleId ? String(s.moduleId).trim() : '';
+
+        // 1. Match device:
+        // 1a. If explicit sochiotDeviceId
+        if (s.sochiotDeviceId) {
+          matchedDev = normalizedDevices.find(dev => String(dev.id) === String(s.sochiotDeviceId));
+        }
+
+        // 1b. Match by device name (e.g. s.deviceName === "PARM" or "CHANGE")
+        if (!matchedDev && sDevName) {
+          matchedDev = normalizedDevices.find(dev => dev.name && dev.name.trim().toLowerCase() === sDevName);
+        }
+
+        // 1c. Match by event field presence across all devices (e.g. "4,20F")
+        if (!matchedDev && sField) {
+          for (const dev of normalizedDevices) {
+            const foundM = dev.modules.find(m => m.allFields?.some(f => f.fieldName === sField));
+            if (foundM) {
+              matchedDev = dev;
+              matchedModule = foundM;
+              matchedFieldDef = foundM.allFields?.find(f => f.fieldName === sField);
+              break;
+            }
+          }
+        }
+
+        // 1d. Match by moduleId across all devices
+        if (!matchedDev && sModId) {
+          for (const dev of normalizedDevices) {
+            const foundM = dev.modules.find(m => String(m.id) === sModId);
+            if (foundM) {
+              matchedDev = dev;
+              matchedModule = foundM;
+              break;
+            }
+          }
+        }
+
+        // 1e. If single device in list
+        if (!matchedDev && normalizedDevices.length === 1) {
+          matchedDev = normalizedDevices[0];
+        }
+
+        // 2. Match module within device:
+        if (matchedDev) {
+          if (!matchedModule && sModId) {
+            matchedModule = matchedDev.modules.find(m => String(m.id) === sModId);
+          }
+          if (!matchedModule && sField) {
+            matchedModule = matchedDev.modules.find(m => m.allFields?.some(f => f.fieldName === sField));
+          }
+          if (!matchedModule && sModName) {
+            matchedModule = matchedDev.modules.find(m => m.name && m.name.trim().toLowerCase() === sModName);
+          }
+          if (!matchedModule && matchedDev.modules.length === 1) {
+            matchedModule = matchedDev.modules[0];
+          }
+
+          if (matchedModule && sField) {
+            matchedFieldDef = matchedModule.allFields?.find(f => f.fieldName === sField);
+          }
+        }
+
+        const isDbFk = s?.deviceId && currentDev?.id && String(s.deviceId) === String(currentDev.id);
+        const fallbackId = (!isDbFk && s?.deviceId && String(s.deviceId) !== '101')
+          ? String(s.deviceId)
+          : (fallbackDevIds.length > 0 ? String(fallbackDevIds[0]) : '');
+
+        const resolvedDevId = matchedDev ? matchedDev.id : (s.sochiotDeviceId ? String(s.sochiotDeviceId) : fallbackId);
+        const resolvedDevName = matchedDev?.name || s.deviceName || (matchedDev?.id ? `Device #${matchedDev.id}` : '');
+        const resolvedModId = matchedModule ? String(matchedModule.id) : (s.moduleId ? String(s.moduleId) : '');
+        const resolvedModName = matchedModule?.name || matchedModule?.label || s.moduleName || (resolvedModId ? `Module #${resolvedModId}` : '');
+
+        return {
+          id: s.id,
+          deviceId: resolvedDevId,
+          deviceName: resolvedDevName,
+          moduleId: resolvedModId,
+          moduleName: resolvedModName,
+          sochiotFieldName: s.sochiotFieldName || '',
+          displayName: s.displayName || matchedFieldDef?.displayName || s.sochiotFieldName || '',
+          dataType: s.dataType || matchedFieldDef?.dataType || 'INTEGER',
+          unit: s.unit || matchedFieldDef?.unit || '',
+          warningHigh: s.warningHigh !== undefined && s.warningHigh !== null ? s.warningHigh : '',
+          criticalHigh: s.criticalHigh !== undefined && s.criticalHigh !== null ? s.criticalHigh : '',
+          warningLow: s.warningLow !== undefined && s.warningLow !== null ? s.warningLow : '',
+          criticalLow: s.criticalLow !== undefined && s.criticalLow !== null ? s.criticalLow : '',
+          isCommand: Boolean(s.isCommand),
+          graphable: s.graphable !== false
+        };
+      });
+    };
+
+    const initialSettings = (Array.isArray(d.template_settings) && d.template_settings.length > 0)
+      ? d.template_settings
+      : (Array.isArray(d.settings) && d.settings.length > 0)
+      ? d.settings
+      : (Array.isArray(d.deviceSettings) && d.deviceSettings.length > 0)
+      ? d.deviceSettings
+      : (Array.isArray(d.templateFields) && d.templateFields.length > 0)
+      ? d.templateFields
+      : [];
+
+    const initialDevIds = extractAllDeviceIds(d, initialSettings);
+    if (initialSettings.length > 0 && typeof setDynamicTemplateFields === 'function') {
+      setDynamicTemplateFields(matchSettingsWithSochiotDevices(initialSettings, [], initialDevIds, d));
+    } else if (typeof setDynamicTemplateFields === 'function') {
+      setDynamicTemplateFields([]);
     }
+
     setShowRegisterDeviceModal(true);
+
+    // Call GET /sites/{siteId}/devices/{deviceId} to fetch full pre-fed values and settings
+    if (resolvedSiteId && d.id) {
+      try {
+        const getUrl = `${API_BASE_URL}/sites/${resolvedSiteId}/devices/${d.id}`;
+        const res = await fetch(getUrl, {
+          method: 'GET',
+          headers: getAuthHeaders()
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const detail = json?.data || json;
+          if (detail && (detail.id || detail.name)) {
+            setEditingDeviceItem(detail);
+            setRegisterForm(prev => ({
+              ...prev,
+              id: detail.id,
+              siteId: String(detail.siteId || resolvedSiteId),
+              name: detail.name || prev.name,
+              sochiotDeviceIds: Array.isArray(detail.sochiotDeviceIds)
+                ? detail.sochiotDeviceIds.join(', ')
+                : (detail.sochiotDeviceIds || detail.sochiot_device_ids || prev.sochiotDeviceIds),
+              category: detail.category || prev.category,
+              areaId: detail.areaId ? String(detail.areaId) : prev.areaId,
+              buildingId: detail.buildingId ? String(detail.buildingId) : prev.buildingId,
+              floorNo: detail.floorNo !== null && detail.floorNo !== undefined ? String(detail.floorNo) : prev.floorNo,
+              roomNo: detail.roomNo !== null && detail.roomNo !== undefined ? String(detail.roomNo) : prev.roomNo,
+              energyGroupId: detail.energyGroupId || prev.energyGroupId,
+              description: detail.description || prev.description,
+              serialNumber: detail.serialNumber || prev.serialNumber,
+              profileId: detail.profileId || prev.profileId,
+              templateName: detail.templateName || prev.templateName,
+              sochiotTemplateId: detail.sochiotTemplateId || detail.sochiot_template_id || prev.sochiotTemplateId || null,
+              moduleIds: Array.isArray(detail.moduleIds) ? detail.moduleIds : prev.moduleIds,
+              assetId: detail.assetId ? String(detail.assetId) : prev.assetId
+            }));
+
+            let fullSettings = (Array.isArray(detail.settings) && detail.settings.length > 0)
+              ? detail.settings
+              : (Array.isArray(detail.template_settings) && detail.template_settings.length > 0)
+              ? detail.template_settings
+              : (Array.isArray(detail.deviceSettings) && detail.deviceSettings.length > 0)
+              ? detail.deviceSettings
+              : (Array.isArray(detail.templateFields) && detail.templateFields.length > 0)
+              ? detail.templateFields
+              : [];
+
+            // Fallback: If detail object didn't have settings, fetch from /sites/{siteId}/devices/{deviceId}/settings
+            if (fullSettings.length === 0) {
+              try {
+                const settingsUrl = `${API_BASE_URL}/sites/${resolvedSiteId}/devices/${d.id}/settings`;
+                const sRes = await fetch(settingsUrl, {
+                  method: 'GET',
+                  headers: getAuthHeaders()
+                });
+                if (sRes.ok) {
+                  const sJson = await sRes.json();
+                  fullSettings = normalizeList(sJson, 'settings');
+                }
+              } catch (se) {
+                console.warn('Fallback settings fetch error:', se);
+              }
+            }
+
+            // Fetch Sochiot device and module details using https://app.sochiot.com/api/config-engine/device/get/byDeviceIds
+            const allDevIds = extractAllDeviceIds(detail, fullSettings);
+            let sochiotDevs = [];
+            if (allDevIds.length > 0) {
+              try {
+                sochiotDevs = await fetchDevicesByDeviceIds(allDevIds);
+              } catch (be) {
+                console.warn('[useManageOrganisation] fetchDevicesByDeviceIds notice:', be);
+              }
+            }
+
+            if (fullSettings.length > 0 && typeof setDynamicTemplateFields === 'function') {
+              const mappedFields = matchSettingsWithSochiotDevices(fullSettings, sochiotDevs, allDevIds, detail);
+              setDynamicTemplateFields(mappedFields);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch device detail:', err);
+      }
+    }
   };
 
   const handleOpenRegisterDevice = () => {
     fetchAndStoreSochiotAccessToken();
     setEditingDeviceItem(null);
     setRegisterStep(1);
+    const defaultSiteId = (selectedSiteFilter && selectedSiteFilter !== 'ALL')
+      ? String(selectedSiteFilter)
+      : (activeSites && activeSites.length ? String(activeSites[0].id) : '');
     setRegisterForm({
       id: '',
-      siteId: activeSites && activeSites.length ? String(activeSites[0].id) : '',
+      siteId: defaultSiteId,
       name: '',
       sochiotDeviceIds: '',
       category: '',
@@ -1038,12 +1289,12 @@ export const useManageOrganisation = () => {
       description: '',
       serialNumber: '',
       profileId: '',
-      templateName: ''
+      templateName: '',
+      sochiotTemplateId: null,
+      moduleIds: []
     });
     if (typeof setDynamicTemplateFields === 'function') {
-      setDynamicTemplateFields([
-        { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: 250, criticalHigh: 270 }
-      ]);
+      setDynamicTemplateFields([]);
     }
     setShowRegisterDeviceModal(true);
   };
@@ -1055,10 +1306,16 @@ export const useManageOrganisation = () => {
     try {
       await fetchAndStoreSochiotAccessToken();
       const siteId = editingDeviceItem.siteId || 7;
-      const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDeviceItem.id}`, {
+      const queryParam = siteId ? `?siteId=${siteId}` : '';
+      const updateUrl = getApiUrl(`/devices/${editingDeviceItem.id}${queryParam}`);
+      const res = await fetch(updateUrl, {
         method: 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ name: editDeviceForm.name, category: editDeviceForm.category })
+        body: JSON.stringify({
+          name: editDeviceForm.name,
+          category: editDeviceForm.category,
+          ...(siteId ? { siteId: Number(siteId) } : {})
+        })
       });
       if (res.ok) {
         showToast('success', `Device updated successfully!`);

@@ -2399,6 +2399,67 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /devices/{id}:
+    patch:
+      tags: [Devices]
+      summary: Update Device
+      description: |
+        Update device attributes, category, relations (area, building, asset, energy group), or configuration by internal device ID.
+        The associated `siteId` can be supplied via query parameter (`?siteId=...`), in the request body (`siteId`), or omitted completely (in which case it is automatically resolved from the device record).
+        Requires `PERM_INST_MANAGE_DEVICE` permission. For non-superadmin users, multi-tenant site access is strictly verified against the user's permitted sites.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Internal Device ID
+          schema:
+            type: integer
+            example: 1
+        - name: siteId
+          in: query
+          required: false
+          description: Optional site ID to verify or scope device update
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeviceRequest'
+            example:
+              name: "Main Air Handling Unit"
+              category: "HVAC_AHU"
+              areaId: 2
+              buildingId: 1
+              displayOrder: 1
+      responses:
+        '200':
+          description: Device updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Device'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /resync-event-stats:
     post:
       tags: [Devices]
@@ -2689,7 +2750,8 @@ paths:
 
     patch:
       tags: [Devices]
-      summary: Update Device
+      summary: Update Device (Site-scoped)
+      description: Updates device within a specific site. Also accessible directly via PATCH `/api/v1/devices/{id}` where siteId is automatically resolved.
       parameters:
         - name: siteId
           in: path
@@ -4631,6 +4693,12 @@ components:
           items:
             type: integer
           example: [1231]
+        moduleIds:
+          type: array
+          items:
+            type: integer
+          description: Associated Sochiot module IDs configured for this device
+          example: [4583, 4709]
         templateName:
           type: string
           nullable: true
@@ -5581,6 +5649,12 @@ components:
           items:
             type: integer
           example: [1231]
+        moduleIds:
+          type: array
+          items:
+            type: integer
+          description: List of Sochiot module IDs configured for this device
+          example: [4583, 4709]
         areaId:
           type: integer
         buildingId:
@@ -5616,21 +5690,42 @@ components:
           $ref: '#/components/schemas/DeviceCategory'
         profileId:
           type: string
+        siteId:
+          type: integer
+          description: Optional site ID to verify or scope device association
+          example: 1
         sochiotDeviceIds:
           type: array
           items:
             type: integer
+        sochiotTemplateId:
+          type: integer
+          nullable: true
+          example: 160
+        moduleIds:
+          type: array
+          items:
+            type: integer
+          description: List of Sochiot module IDs configured for this device
+          example: [4583, 4709]
         areaId:
           type: integer
+          nullable: true
         buildingId:
           type: integer
+          nullable: true
+        floorNo:
+          type: integer
+          nullable: true
+        roomNo:
+          type: integer
+          nullable: true
+        energyGroupId:
+          type: integer
+          nullable: true
         assetId:
           type: string
           example: "ast_cm71"
-        roomNo:
-          type: integer
-        floorNo:
-          type: integer
         templateName:
           type: string
         displayOrder:
@@ -5640,6 +5735,58 @@ components:
         installedAt:
           type: string
           format: date-time
+        template_settings:
+          type: array
+          items:
+            type: object
+            required: [moduleId, sochiotFieldName, displayName, dataType]
+            properties:
+              moduleId:
+                type: integer
+              moduleName:
+                type: string
+              fieldId:
+                type: integer
+                nullable: true
+              sochiotFieldName:
+                type: string
+              displayName:
+                type: string
+              dataType:
+                $ref: '#/components/schemas/FieldDataType'
+              unit:
+                type: string
+                nullable: true
+              warningHigh:
+                type: number
+                nullable: true
+              criticalHigh:
+                type: number
+                nullable: true
+              warningLow:
+                type: number
+                nullable: true
+              criticalLow:
+                type: number
+                nullable: true
+              isCommand:
+                type: boolean
+              commandAlias:
+                type: string
+                nullable: true
+              isReadable:
+                type: boolean
+              isDisplayed:
+                type: boolean
+              graphable:
+                type: boolean
+              displayOrder:
+                type: integer
+              meta:
+                type: object
+                nullable: true
+        rules:
+          type: array
 
     DeviceTemplateRequest:
       type: object
@@ -5655,20 +5802,49 @@ components:
           items:
             type: integer
           example: [1231]
+        sochiotTemplateId:
+          type: integer
+          nullable: true
+          example: 160
+        moduleIds:
+          type: array
+          items:
+            type: integer
+          description: List of unique Sochiot hardware module IDs configured on this device template
+          example: [4583, 4709]
         serialNumber:
           type: string
         profileId:
           type: string
         areaId:
           type: integer
+          nullable: true
         buildingId:
           type: integer
+          nullable: true
+        floorNo:
+          type: integer
+          nullable: true
+        roomNo:
+          type: integer
+          nullable: true
+        energyGroupId:
+          type: integer
+          nullable: true
+        displayOrder:
+          type: integer
+          default: 0
+        isActive:
+          type: boolean
+          default: true
         assetId:
           type: string
           example: "ast_cm71"
         templateName:
           type: string
           example: "EnergyMeter_Template_V1"
+        description:
+          type: string
         template_settings:
           type: array
           items:
@@ -5677,6 +5853,11 @@ components:
             properties:
               moduleId:
                 type: integer
+              moduleName:
+                type: string
+              fieldId:
+                type: integer
+                nullable: true
               sochiotFieldName:
                 type: string
               displayName:
@@ -5685,18 +5866,35 @@ components:
                 $ref: '#/components/schemas/FieldDataType'
               unit:
                 type: string
+                nullable: true
               warningHigh:
                 type: number
+                nullable: true
               criticalHigh:
                 type: number
+                nullable: true
               warningLow:
                 type: number
+                nullable: true
               criticalLow:
                 type: number
+                nullable: true
               isCommand:
+                type: boolean
+              commandAlias:
+                type: string
+                nullable: true
+              isReadable:
+                type: boolean
+              isDisplayed:
                 type: boolean
               graphable:
                 type: boolean
+              displayOrder:
+                type: integer
+              meta:
+                type: object
+                nullable: true
         rules:
           type: array
           items:
@@ -5749,6 +5947,9 @@ components:
                 type: integer
               moduleId:
                 type: integer
+              moduleName:
+                type: string
+                nullable: true
               sochiotFieldName:
                 type: string
               displayName:

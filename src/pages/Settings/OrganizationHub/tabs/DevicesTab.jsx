@@ -498,7 +498,9 @@ const DevicesTab = ({
               }
 
               const rawIds = d.sochiotDeviceIds || d.sochiot_device_ids;
-              const displayIds = Array.isArray(rawIds) ? rawIds.join(', ') : String(rawIds || '101');
+              const displayIds = Array.isArray(rawIds) 
+                ? (rawIds.length > 0 ? rawIds.join(', ') : '-') 
+                : (rawIds ? String(rawIds) : '-');
               const isDevActive = d.isActive !== false;
 
               return (
