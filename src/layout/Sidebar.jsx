@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Droplets, Activity, Zap, Bell, ShieldAlert, Settings,
   ClipboardList, PenTool, History, LayoutDashboard,
@@ -35,6 +35,7 @@ const STRIP_W = 64;        // collapsed icon strip width
 
 const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isDark } = useTheme();
   const [openSections, setOpenSections] = useState({});
   const [hoverExpanded, setHoverExpanded] = useState(false);
@@ -258,7 +259,14 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
                   <button
                     className={`sb-mod-head ${hasActiveSub ? 'sb-mod-active' : ''} ${isOpen ? 'sb-mod-opened' : ''}`}
                     style={{ '--mc': t.c, '--mbg': t.bg, '--mb': t.b }}
-                    onClick={() => toggleSection(item.title)}
+                    onClick={() => {
+                      toggleSection(item.title);
+                      // Navigate to first sub-item on title click
+                      if (hasSubs && item.subItems[0]?.path) {
+                        navigate(item.subItems[0].path);
+                        handleNavClick();
+                      }
+                    }}
                   >
                     <span className="sb-mod-ico">{item.icon}</span>
                     <span className="sb-mod-txt">{item.title}</span>

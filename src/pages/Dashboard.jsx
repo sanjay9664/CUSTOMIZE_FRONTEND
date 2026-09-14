@@ -56,6 +56,682 @@ const SCADARadialGauge = ({ value, label, color, percent = 75 }) => {
   );
 };
 
+// ── FUTURISTIC ORBITAL SCADA RADAR WHEEL COMPONENT (GPU HARDWARE ACCELERATED) ──
+const FuturisticOrbitalSCADA = ({ services = [], navigate }) => {
+  const [isRotating, setIsRotating] = useState(true);
+  const [speedMode, setSpeedMode] = useState('normal'); // 'slow', 'normal', 'fast'
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [bgIndex, setBgIndex] = useState(0);
+  const [selectedSvcModal, setSelectedSvcModal] = useState(null);
+
+  const count = services.length;
+  const radius = 300;     // Compact 300px radius for zero top/bottom clipping
+  const ringSize = radius * 2; // 600px diameter ring
+  const stageW = 920;    // 920px Stage Width
+  const stageH = 720;    // 720px Stage Height
+  const cx = stageW / 2; // Exact Center X = 460
+  const cy = stageH / 2; // Exact Center Y = 360
+
+  // Speed duration: Normal (50s), Slow (80s), Fast (25s)
+  const duration = speedMode === 'slow' ? '80s' : speedMode === 'fast' ? '25s' : '50s';
+
+  // Auto-cycle backdrop image every 6s when not hovered
+  useEffect(() => {
+    if (!isRotating || hoveredIndex !== null || !services.length) return;
+    const timer = setInterval(() => {
+      setBgIndex(prev => (prev + 1) % services.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [isRotating, hoveredIndex, services.length]);
+
+  const activeSvc = hoveredIndex !== null ? services[hoveredIndex] : services[bgIndex % (services.length || 1)];
+  const bgImage = activeSvc?.image || '/cooling_tower.png';
+  const bgColor = activeSvc?.color || '#38bdf8';
+
+  return (
+    <div className={`futuristic-orbital-container mb-4 position-relative overflow-hidden rounded-4 p-4 text-center ${!isRotating || hoveredIndex !== null ? 'scada-orbital-paused' : ''}`}>
+      {/* Background Cinematic Translucent Image Backdrop */}
+      <div
+        className="position-absolute inset-0 scada-cinematic-bg-layer pointer-events-none"
+        style={{
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          transition: 'background-image 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease'
+        }}
+      />
+
+      {/* Cinematic Overlay Vignette Gradient */}
+      <div className="position-absolute inset-0 scada-cinematic-overlay-gradient pointer-events-none" />
+
+      {/* Dynamic Radial Accent Glow */}
+      <div
+        className="position-absolute pointer-events-none scada-radial-accent-glow"
+        style={{
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '650px',
+          height: '650px',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${bgColor}25 0%, transparent 70%)`,
+          transition: 'background 0.8s ease'
+        }}
+      />
+
+      {/* Top Controls & Header Bar */}
+      <div className="d-flex justify-content-between align-items-center mb-3 px-2 z-10 position-relative">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          {/* Active System Cinematic Tag Badge */}
+          {activeSvc && (
+            <div
+              className="d-none d-md-flex align-items-center gap-2 px-3 py-1 rounded-pill scada-cinematic-banner-tag"
+              style={{ borderLeft: `3px solid ${bgColor}` }}
+            >
+              <span className="fw-bold font-monospace text-truncate" style={{ fontSize: '0.72rem', color: bgColor }}>
+                FOCUS: {activeSvc.title}
+              </span>
+              <span className="text-slate-400 font-monospace" style={{ fontSize: '0.66rem' }}>
+                ({activeSvc.metrics?.[0]?.label || 'Status'}: {activeSvc.metrics?.[0]?.val || activeSvc.gaugeVal || 'ONLINE'})
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="d-flex align-items-center gap-2">
+          <button
+            onClick={() => setSpeedMode(prev => prev === 'normal' ? 'fast' : prev === 'fast' ? 'slow' : 'normal')}
+            className="btn btn-sm btn-outline-secondary rounded-pill px-3 font-monospace fs-11 fw-bold"
+            title="Cycle Orbit Speed"
+          >
+            ⚡ SPEED: {speedMode.toUpperCase()}
+          </button>
+          <button
+            onClick={() => setIsRotating(prev => !prev)}
+            className={`btn btn-sm ${isRotating ? 'btn-outline-info' : 'btn-outline-warning'} rounded-pill px-3.5 d-flex align-items-center gap-1.5 font-monospace fs-11 fw-bold`}
+            title="Toggle Rotation"
+          >
+            {isRotating ? <RefreshCw size={13} className="dashboard-fan-spin" /> : <Power size={13} />}
+            {isRotating ? 'ORBITING (60 FPS)' : 'PAUSED'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Orbit Stage Area (1080x780 with Auto-Scaling for Laptops & Mobile) */}
+      <div className="scada-radar-responsive-outer w-100 d-flex justify-content-center overflow-hidden">
+        <div
+          className="orbital-stage-wrapper position-relative my-2 mx-auto rounded-4"
+          style={{ width: `${stageW}px`, height: `${stageH}px` }}
+        >
+          {/* SVG Concentric Radar Rings Centered at (cx, cy) */}
+          <svg
+            className="position-absolute inset-0 pointer-events-none scada-radar-ring-svg"
+            width={stageW}
+            height={stageH}
+            viewBox={`0 0 ${stageW} ${stageH}`}
+            style={{ zIndex: 1 }}
+          >
+            <circle cx={cx} cy={cy} r={radius} stroke="rgba(56, 189, 248, 0.25)" strokeWidth="1.5" strokeDasharray="6 6" fill="none" />
+            <circle cx={cx} cy={cy} r={radius * 0.65} stroke="rgba(56, 189, 248, 0.12)" strokeWidth="1" fill="none" />
+            <circle cx={cx} cy={cy} r={radius * 0.35} stroke="rgba(56, 189, 248, 0.18)" strokeWidth="1.5" fill="none" />
+          </svg>
+
+          {/* CENTER REACTOR SCADA CORE HUB (DEAD CENTER AT cx=460, cy=360) */}
+          <div
+            className="position-absolute d-flex flex-column align-items-center justify-content-center cursor-pointer shadow-2xl rounded-circle text-center scada-core-reactor-hub"
+            onClick={() => setSelectedSvcModal(activeSvc)}
+            title="Click to inspect active SCADA core detail"
+            style={{
+              left: `${cx}px`,
+              top: `${cy}px`,
+              transform: 'translate(-50%, -50%)',
+              width: '165px',
+              height: '165px',
+              zIndex: 10,
+              background: 'radial-gradient(circle, #0c182e 0%, #030712 100%)',
+              border: '2px solid #38bdf8',
+              boxShadow: '0 0 50px rgba(56, 189, 248, 0.45), inset 0 0 25px rgba(56, 189, 248, 0.25)',
+            }}
+          >
+            <div
+              className="position-absolute inset-0 rounded-circle pointer-events-none"
+              style={{
+                border: '2px dashed #0284c7',
+                animation: 'dashboardSpin 18s linear infinite',
+                margin: '-7px'
+              }}
+            />
+            <div
+              className="position-absolute inset-0 rounded-circle pointer-events-none"
+              style={{
+                border: '1.5px solid rgba(168, 85, 247, 0.45)',
+                animation: 'dashboardSpin 12s linear infinite reverse',
+                margin: '-14px'
+              }}
+            />
+
+            <Cpu size={36} className="text-cyan-400 mb-1 orbital-core-pulse" />
+            <span className="fw-black font-monospace tracking-wider text-white uppercase" style={{ fontSize: '0.84rem' }}>
+              SCADA CORE
+            </span>
+            <span className="text-emerald-400 font-monospace fw-bold" style={{ fontSize: '0.66rem' }}>
+              ● 99.8% ONLINE
+            </span>
+            <span className="text-slate-400 font-monospace" style={{ fontSize: '0.60rem' }}>
+              420 kW LOAD
+            </span>
+          </div>
+
+          {/* GPU HARDWARE ACCELERATED ROTATING RING CONTAINER (ZER0 RE-RENDERS) */}
+          <div
+            className="position-absolute scada-orbital-ring-spinning"
+            style={{
+              left: `${cx}px`,
+              top: `${cy}px`,
+              width: `${ringSize}px`,
+              height: `${ringSize}px`,
+              zIndex: 5,
+              animationDuration: duration,
+              animationPlayState: (!isRotating || hoveredIndex !== null) ? 'paused' : 'running'
+            }}
+          >
+            {/* ORBITING SERVICE IMAGE CARDS DISTRIBUTED AROUND THE 700PX RING */}
+            {services.map((svc, idx) => {
+              const angleDeg = idx * (360 / count);
+              const angleRad = (angleDeg * Math.PI) / 180;
+              const nodeW = 148; // Card width
+              const nodeH = 80;  // Card height (sleek & compact)
+              const ringR = radius; // 300px radius
+              const nodeX = ringR + ringR * Math.cos(angleRad);
+              const nodeY = ringR + ringR * Math.sin(angleRad);
+              const isHovered = hoveredIndex === idx;
+
+              return (
+                <div
+                  key={svc.key || idx}
+                  style={{
+                    position: 'absolute',
+                    left: `${nodeX}px`,
+                    top: `${nodeY}px`,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: isHovered ? 50 : 5
+                  }}
+                >
+                  {/* COUNTER-SPIN CONTAINER TO KEEP TEXT & IMAGES PERFECTLY UPRIGHT AT ALL TIMES */}
+                  <div
+                    className="scada-node-upright-spinning cursor-pointer transition-all rounded-3 overflow-hidden shadow-lg d-flex flex-column position-relative"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedSvcModal(svc);
+                    }}
+                    onMouseEnter={() => setHoveredIndex(idx)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    style={{
+                      width: `${nodeW}px`,
+                      height: `${nodeH}px`,
+                      animationDuration: duration,
+                      animationPlayState: (!isRotating || hoveredIndex !== null) ? 'paused' : 'running',
+                      background: 'var(--scada-card, rgba(15, 23, 42, 0.95))',
+                      border: `1.5px solid ${isHovered ? svc.color : svc.color + '70'}`,
+                      boxShadow: isHovered
+                        ? `0 0 36px ${svc.color}90, 0 10px 28px rgba(0,0,0,0.85)`
+                        : `0 4px 14px rgba(0, 0, 0, 0.5), 0 0 12px ${svc.color}25`,
+                      transform: isHovered ? 'scale(1.22)' : 'scale(1)',
+                      backdropFilter: 'blur(12px)',
+                      transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease'
+                    }}
+                  >
+                    {/* Top Half: Mini Equipment/SCADA Photo Thumbnail */}
+                    <div className="position-relative w-100 overflow-hidden" style={{ height: '38px', backgroundColor: '#030712' }}>
+                      {svc.isSmartMeter ? (
+                        <div className="w-100 h-100 d-flex align-items-center justify-content-center p-1 smart-meter-mini-banner" style={{ background: 'linear-gradient(135deg, #030814 0%, #0c182e 100%)' }}>
+                          <div className="font-monospace text-emerald-400 fw-bold text-center smart-meter-text" style={{ fontSize: '0.60rem', lineHeight: '1.2' }}>
+                            ⚡ APM SMART METER<br />
+                            <span className="text-amber-300 smart-meter-val">{svc.gaugeVal} kWh</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={svc.image}
+                          alt={svc.title}
+                          className="w-100 h-100"
+                          style={{
+                            objectFit: 'cover',
+                            objectPosition: 'center',
+                            filter: isHovered ? 'brightness(1.15)' : 'brightness(0.95)'
+                          }}
+                        />
+                      )}
+
+                      {/* Overlaid Neon Icon Badge */}
+                      <div
+                        className="position-absolute top-1 start-1 rounded-circle d-flex align-items-center justify-content-center shadow"
+                        style={{
+                          width: '22px',
+                          height: '22px',
+                          backgroundColor: 'rgba(3, 7, 18, 0.88)',
+                          color: svc.color,
+                          border: `1px solid ${svc.color}`,
+                          backdropFilter: 'blur(4px)'
+                        }}
+                      >
+                        {svc.icon}
+                      </div>
+
+                      {/* Live Status Pill Overlay */}
+                      <div
+                        className="position-absolute bottom-1 end-1 px-1.5 py-0.5 rounded-pill font-monospace fw-bold uppercase shadow-sm d-flex align-items-center gap-1"
+                        style={{
+                          backgroundColor: 'rgba(3, 7, 18, 0.88)',
+                          color: svc.color,
+                          fontSize: '0.50rem',
+                          letterSpacing: '0.3px',
+                          border: `1px solid ${svc.color}50`
+                        }}
+                      >
+                        <span className="status-dot-pulse" style={{ width: '4px', height: '4px', backgroundColor: svc.color }}></span>
+                        ● LIVE
+                      </div>
+                    </div>
+
+                    {/* Bottom Half: Title & Dual Telemetry Metrics */}
+                    <div className="px-2 py-1 d-flex flex-column justify-content-between flex-grow-1 text-start scada-card-bottom-info" style={{ background: 'var(--scada-card, rgba(15, 23, 42, 0.95))' }}>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="fw-extrabold text-truncate scada-card-title me-1" style={{ fontSize: '0.64rem', color: 'var(--scada-text, #ffffff)' }}>
+                          {svc.title}
+                        </div>
+                        <span className="text-secondary opacity-75" style={{ fontSize: '0.55rem' }}>➔</span>
+                      </div>
+
+                      {/* Dual Key Metrics Badges */}
+                      <div className="d-flex align-items-center justify-content-between gap-1 mt-0.5">
+                        <div className="px-1 py-0.5 rounded font-monospace text-truncate d-flex align-items-center gap-1 scada-mini-metric-pill w-100" style={{ background: 'rgba(3, 7, 18, 0.65)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.55rem' }}>
+                          <span className="text-slate-400 opacity-80">{svc.metrics?.[0]?.label || 'State'}:</span>
+                          <span className="fw-bold text-truncate ms-auto" style={{ color: svc.color }}>
+                            {svc.metrics?.[0]?.val || svc.gaugeVal || 'ONLINE'}
+                          </span>
+                        </div>
+                        {svc.metrics?.[1] && (
+                          <div className="px-1 py-0.5 rounded font-monospace text-truncate d-flex align-items-center gap-1 scada-mini-metric-pill w-100" style={{ background: 'rgba(3, 7, 18, 0.65)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.55rem' }}>
+                            <span className="text-slate-400 opacity-80">{svc.metrics[1].label}:</span>
+                            <span className="fw-bold text-white text-truncate ms-auto scada-metric-val2">{svc.metrics[1].val}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* High-Tech Floating Popover Card on Hover */}
+                    {isHovered && (
+                      <div
+                        className="position-absolute start-50 translate-middle-x scada-hover-popover p-2.5 rounded-3 shadow-2xl z-50 text-start pointer-events-none"
+                        style={{
+                          bottom: '112%',
+                          width: '215px',
+                          background: 'rgba(7, 14, 28, 0.96)',
+                          border: `1.5px solid ${svc.color}`,
+                          boxShadow: `0 0 35px ${svc.color}70, 0 10px 25px rgba(0,0,0,0.9)`,
+                          backdropFilter: 'blur(16px)',
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1.5 pb-1 border-bottom border-secondary border-opacity-25">
+                          <div className="d-flex align-items-center gap-1.5">
+                            <div className="rounded-circle p-1 d-flex align-items-center justify-content-center" style={{ backgroundColor: `${svc.color}25`, color: svc.color }}>
+                              {svc.icon}
+                            </div>
+                            <span className="fw-extrabold font-monospace text-white text-truncate" style={{ fontSize: '0.72rem' }}>
+                              {svc.title}
+                            </span>
+                          </div>
+                          <Badge bg="success" className="px-1.5 py-0.5 rounded-pill font-monospace" style={{ fontSize: '0.52rem' }}>
+                            ● LIVE
+                          </Badge>
+                        </div>
+
+                        {/* All 3 Live Telemetry Parameters */}
+                        <div className="d-flex flex-column gap-1 mb-2">
+                          {svc.metrics?.map((m, mIdx) => (
+                            <div key={mIdx} className="d-flex justify-content-between align-items-center px-2 py-1 rounded bg-slate-900/70" style={{ fontSize: '0.60rem' }}>
+                              <span className="text-slate-400 d-flex align-items-center gap-1">
+                                {m.icon}
+                                {m.label}
+                              </span>
+                              <span className="font-monospace fw-bold text-white ms-2">{m.val}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Progress / Gauge Indicator Bar */}
+                        {svc.gaugePercent && (
+                          <div className="w-100 mb-1.5">
+                            <div className="d-flex justify-content-between font-monospace text-slate-400 mb-0.5" style={{ fontSize: '0.54rem' }}>
+                              <span>{svc.gaugeLabel || 'Efficiency'}</span>
+                              <span style={{ color: svc.color }}>{svc.gaugeVal || `${svc.gaugePercent}%`}</span>
+                            </div>
+                            <div className="w-100 rounded-pill overflow-hidden" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                              <div className="h-100 rounded-pill" style={{ width: `${svc.gaugePercent}%`, backgroundColor: svc.color, boxShadow: `0 0 8px ${svc.color}` }} />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="text-center font-monospace fw-bold text-cyan-400 pt-0.5" style={{ fontSize: '0.58rem' }}>
+                          Click to Launch UI ➔
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="text-center font-monospace text-slate-400 mt-1" style={{ fontSize: '0.68rem' }}>
+        ★ GPU-Accelerated SCADA Core — 350px wide orbit radius — Click any card to inspect system telemetry
+      </div>
+
+      {/* ── SYSTEM INFORMATION DETAIL MODAL OVERLAY ── */}
+      {selectedSvcModal && (
+        <div
+          className="position-fixed inset-0 d-flex align-items-center justify-content-center p-3 scada-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(3, 7, 18, 0.82)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 99999
+          }}
+          onClick={() => setSelectedSvcModal(null)}
+        >
+          <div
+            className="scada-system-modal-card rounded-4 border overflow-hidden shadow-2xl position-relative w-100"
+            style={{
+              maxWidth: '820px',
+              backgroundColor: 'var(--scada-card, #0f172a)',
+              borderColor: selectedSvcModal.color || '#38bdf8',
+              boxShadow: `0 20px 50px rgba(0,0,0,0.85), 0 0 35px ${selectedSvcModal.color}45`
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom"
+              style={{
+                background: `linear-gradient(90deg, ${selectedSvcModal.color}25 0%, rgba(15, 23, 42, 0.7) 100%)`,
+                borderColor: 'var(--scada-border, rgba(255,255,255,0.12))'
+              }}
+            >
+              <div className="d-flex align-items-center gap-3">
+                <div
+                  className="rounded-3 p-2.5 d-flex align-items-center justify-content-center shadow-sm"
+                  style={{
+                    backgroundColor: `${selectedSvcModal.color}25`,
+                    color: selectedSvcModal.color,
+                    border: `1.5px solid ${selectedSvcModal.color}60`
+                  }}
+                >
+                  {selectedSvcModal.icon}
+                </div>
+                <div className="text-start">
+                  <div className="d-flex align-items-center gap-2">
+                    <h5 className="fw-black mb-0 font-monospace text-truncate" style={{ color: 'var(--scada-text, #ffffff)' }}>
+                      {selectedSvcModal.title}
+                    </h5>
+                    <Badge
+                      className="rounded-pill px-2.5 py-1 font-monospace"
+                      style={{
+                        backgroundColor: `${selectedSvcModal.color}25`,
+                        color: selectedSvcModal.color,
+                        border: `1px solid ${selectedSvcModal.color}50`
+                      }}
+                    >
+                      ● LIVE SCADA INSPECTOR
+                    </Badge>
+                  </div>
+                  <div className="text-secondary font-monospace" style={{ fontSize: '0.72rem' }}>
+                    SYSTEM ID: {selectedSvcModal.key?.toUpperCase()} • SCADA NODE #{services.findIndex(s => s.key === selectedSvcModal.key) + 1}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedSvcModal(null)}
+                className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center p-0 text-white"
+                style={{ width: '34px', height: '34px', fontSize: '1.1rem', backgroundColor: 'rgba(255,255,255,0.08)' }}
+                title="Close System Inspector"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content Body */}
+            <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 130px)' }}>
+              <Row className="g-4 text-start">
+                {/* Left Column: Visual SCADA Equipment Banner & Submodules */}
+                <Col lg={5} md={12}>
+                  <div
+                    className="rounded-3 overflow-hidden position-relative border shadow-sm mb-3"
+                    style={{
+                      height: '210px',
+                      backgroundColor: '#030712',
+                      borderColor: `${selectedSvcModal.color}40`
+                    }}
+                  >
+                    {selectedSvcModal.isSmartMeter ? (
+                      <div className="w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 text-center" style={{ background: 'linear-gradient(135deg, #030814 0%, #0c182e 100%)' }}>
+                        <Zap size={40} className="text-amber-400 mb-2 orbital-core-pulse" />
+                        <div className="fw-black font-monospace text-emerald-400" style={{ fontSize: '1.15rem' }}>
+                          SOCHIOT APM METER
+                        </div>
+                        <div className="text-amber-300 font-monospace fw-bold" style={{ fontSize: '1.3rem' }}>
+                          {selectedSvcModal.gaugeVal} kWh
+                        </div>
+                        <small className="text-slate-400 font-monospace mt-1">Real-time Power & Energy Counter</small>
+                      </div>
+                    ) : (
+                      <img
+                        src={selectedSvcModal.image || '/cooling_tower.png'}
+                        alt={selectedSvcModal.title}
+                        className="w-100 h-100 object-fit-cover"
+                      />
+                    )}
+
+                    {/* Status Badge Tag */}
+                    <div
+                      className="position-absolute bottom-2 start-2 px-2.5 py-1 rounded-pill font-monospace fw-bold shadow-sm d-flex align-items-center gap-1.5"
+                      style={{
+                        backgroundColor: 'rgba(3, 7, 18, 0.88)',
+                        color: selectedSvcModal.color,
+                        fontSize: '0.68rem',
+                        border: `1px solid ${selectedSvcModal.color}60`
+                      }}
+                    >
+                      <span className="status-dot-pulse" style={{ width: '6px', height: '6px', backgroundColor: selectedSvcModal.color }} />
+                      STATUS: {selectedSvcModal.status || 'OPERATIONAL'}
+                    </div>
+                  </div>
+
+                  {/* Quick Module Views Navigation Buttons */}
+                  {selectedSvcModal.submenus && selectedSvcModal.submenus.length > 0 && (
+                    <div>
+                      <label className="form-label font-monospace text-uppercase text-secondary fw-bold mb-2" style={{ fontSize: '0.70rem' }}>
+                        Sub-Module Views
+                      </label>
+                      <div className="d-flex flex-wrap gap-1.5">
+                        {selectedSvcModal.submenus.map((sub, sIdx) => (
+                          <button
+                            key={sIdx}
+                            onClick={() => {
+                              setSelectedSvcModal(null);
+                              navigate(sub.route);
+                            }}
+                            className="btn btn-sm btn-outline-secondary rounded-pill font-monospace d-flex align-items-center gap-1 py-1 px-2.5"
+                            style={{ fontSize: '0.70rem' }}
+                          >
+                            <span>{sub.name}</span>
+                            <ArrowUpRight size={11} className="opacity-75" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Col>
+
+                {/* Right Column: Live Telemetry Parameters & Efficiency Gauge */}
+                <Col lg={7} md={12}>
+                  <div className="mb-3">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="font-monospace text-uppercase text-secondary fw-bold" style={{ fontSize: '0.70rem' }}>
+                        Live System Telemetry
+                      </span>
+                      <span className="badge bg-slate-800 text-cyan-400 font-monospace" style={{ fontSize: '0.66rem' }}>
+                        REFRESH RATE: 1.2s
+                      </span>
+                    </div>
+
+                    {/* Metrics Grid */}
+                    <div className="row g-2 mb-3">
+                      {selectedSvcModal.metrics?.map((m, mIdx) => (
+                        <div key={mIdx} className="col-6">
+                          <div
+                            className="p-2.5 rounded-3 border text-start d-flex align-items-center gap-2.5"
+                            style={{
+                              backgroundColor: 'var(--scada-card-hover, rgba(30, 41, 59, 0.5))',
+                              borderColor: 'var(--scada-border, rgba(255,255,255,0.08))'
+                            }}
+                          >
+                            <div className="p-2 rounded-2 flex-shrink-0" style={{ backgroundColor: `${selectedSvcModal.color}20`, color: selectedSvcModal.color }}>
+                              {m.icon}
+                            </div>
+                            <div className="text-truncate">
+                              <div className="text-secondary font-monospace text-uppercase text-truncate" style={{ fontSize: '0.62rem' }}>
+                                {m.label}
+                              </div>
+                              <div className="fw-black font-monospace text-truncate" style={{ fontSize: '0.90rem', color: 'var(--scada-text, #ffffff)' }}>
+                                {m.val}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Extra Diagnostic Parameters */}
+                      <div className="col-6">
+                        <div
+                          className="p-2.5 rounded-3 border text-start d-flex align-items-center gap-2.5"
+                          style={{
+                            backgroundColor: 'var(--scada-card-hover, rgba(30, 41, 59, 0.5))',
+                            borderColor: 'var(--scada-border, rgba(255,255,255,0.08))'
+                          }}
+                        >
+                          <div className="p-2 rounded-2 text-emerald-400 flex-shrink-0" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)' }}>
+                            <Activity size={14} />
+                          </div>
+                          <div className="text-truncate">
+                            <div className="text-secondary font-monospace text-uppercase text-truncate" style={{ fontSize: '0.62rem' }}>
+                              Health Index
+                            </div>
+                            <div className="fw-black font-monospace text-emerald-400 text-truncate" style={{ fontSize: '0.90rem' }}>
+                              99.4% PERFECT
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="col-6">
+                        <div
+                          className="p-2.5 rounded-3 border text-start d-flex align-items-center gap-2.5"
+                          style={{
+                            backgroundColor: 'var(--scada-card-hover, rgba(30, 41, 59, 0.5))',
+                            borderColor: 'var(--scada-border, rgba(255,255,255,0.08))'
+                          }}
+                        >
+                          <div className="p-2 rounded-2 text-purple-400 flex-shrink-0" style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)' }}>
+                            <ShieldCheck size={14} />
+                          </div>
+                          <div className="text-truncate">
+                            <div className="text-secondary font-monospace text-uppercase text-truncate" style={{ fontSize: '0.62rem' }}>
+                              PLC Protocol
+                            </div>
+                            <div className="fw-black font-monospace text-purple-300 text-truncate" style={{ fontSize: '0.90rem' }}>
+                              MODBUS RTU / TCP
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress / Gauge Indicator */}
+                    {selectedSvcModal.gaugePercent && (
+                      <div
+                        className="p-3 rounded-3 border"
+                        style={{
+                          backgroundColor: 'var(--scada-card-hover, rgba(30, 41, 59, 0.4))',
+                          borderColor: `${selectedSvcModal.color}30`
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-center font-monospace mb-1.5">
+                          <span className="text-secondary fw-bold" style={{ fontSize: '0.72rem' }}>
+                            {selectedSvcModal.gaugeLabel || 'Efficiency Loading Factor'}
+                          </span>
+                          <span className="fw-bold" style={{ color: selectedSvcModal.color, fontSize: '0.84rem' }}>
+                            {selectedSvcModal.gaugeVal || `${selectedSvcModal.gaugePercent}%`} ({selectedSvcModal.gaugePercent}%)
+                          </span>
+                        </div>
+                        <div className="w-100 rounded-pill overflow-hidden" style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                          <div
+                            className="h-100 rounded-pill"
+                            style={{
+                              width: `${selectedSvcModal.gaugePercent}%`,
+                              backgroundColor: selectedSvcModal.color,
+                              boxShadow: `0 0 12px ${selectedSvcModal.color}`,
+                              transition: 'width 0.8s ease'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Modal Action Footer */}
+            <div
+              className="px-4 py-3 border-top d-flex justify-content-between align-items-center"
+              style={{
+                backgroundColor: 'rgba(3, 7, 18, 0.4)',
+                borderColor: 'var(--scada-border, rgba(255,255,255,0.12))'
+              }}
+            >
+              <button
+                onClick={() => setSelectedSvcModal(null)}
+                className="btn btn-sm btn-outline-secondary rounded-pill px-4 font-monospace fw-bold"
+              >
+                Close Detail View
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedSvcModal(null);
+                  navigate(selectedSvcModal.route);
+                }}
+                className="btn btn-sm rounded-pill px-4 font-monospace fw-bold d-flex align-items-center gap-2 shadow"
+                style={{
+                  backgroundColor: selectedSvcModal.color,
+                  color: '#000000',
+                  border: 'none'
+                }}
+              >
+                <span>Launch Full Module Page</span>
+                <ArrowUpRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
@@ -189,150 +865,6 @@ const Dashboard = () => {
     if (selectedOrgId === 'ALL') return hierarchyZones;
     return hierarchyZones.filter(z => z.orgId === selectedOrgId);
   }, [hierarchyZones, selectedOrgId]);
-
-  // ── HERO CAROUSEL DATA ──────────────────────────────────────────────────
-  const carouselSlides = [
-    {
-      image: '/cooling_tower.png',
-      title: 'Cooling Tower System',
-      subtitle: 'Real-time monitoring of cooling tower performance, fan speed & water temperature',
-      color: '#06b6d4',
-      icon: <Wind size={22} />,
-      route: '/hvac/cooling-tower',
-      stats: [
-        { label: 'Fan Speed', value: '48 Hz' },
-        { label: 'Return Temp', value: '28.0°C' },
-        { label: 'Water Flow', value: '450 LPM' }
-      ]
-    },
-    {
-      image: '/dg_set.png',
-      title: 'DG Power System',
-      subtitle: 'Diesel generator monitoring with real-time load, fuel level & auto-start control',
-      color: '#f59e0b',
-      icon: <Zap size={22} />,
-      route: '/dg-set/overview',
-      stats: [
-        { label: 'DG Status', value: 'ON (Auto)' },
-        { label: 'Load', value: '68%' },
-        { label: 'Fuel Level', value: '78%' }
-      ]
-    },
-    {
-      image: '/chiller.png',
-      title: 'Chiller Plant System',
-      subtitle: 'Central chiller plant with COP monitoring, chilled water supply & condenser control',
-      color: '#38bdf8',
-      icon: <Thermometer size={22} />,
-      route: '/hvac/chiller',
-      stats: [
-        { label: 'Chillers', value: '2/2 ON' },
-        { label: 'COP Rate', value: '5.8' },
-        { label: 'Total Load', value: '486 kW' }
-      ]
-    },
-    {
-      image: '/ahu_v3.png',
-      title: 'AHU System',
-      subtitle: 'Air handling unit control with supply air temp, filter status & VFD drive monitoring',
-      color: '#14b8a6',
-      icon: <Wind size={22} />,
-      route: '/hvac/ahu',
-      stats: [
-        { label: 'Supply Air', value: '16.0°C' },
-        { label: 'Return Air', value: '24.2°C' },
-        { label: 'Airflow', value: '12.5k CFM' }
-      ]
-    },
-    {
-      image: '/images/fire_pump_scada.png',
-      title: 'Fire Safety System',
-      subtitle: 'Fire pump status, header pressure monitoring & jockey pump auto control',
-      color: '#ef4444',
-      icon: <ShieldAlert size={22} />,
-      route: '/fire-pumps/overview',
-      stats: [
-        { label: 'Fire Pump', value: 'ON' },
-        { label: 'Jockey', value: 'ON' },
-        { label: 'Pressure', value: '8.5 bar' }
-      ]
-    },
-    {
-      image: '/images/transformer_scada.png',
-      title: 'Transformer Unit',
-      subtitle: 'High voltage transformer with oil temperature, load percentage & winding analysis',
-      color: '#a855f7',
-      icon: <Cpu size={22} />,
-      route: '/transformer/overview',
-      stats: [
-        { label: 'Primary', value: '11 kV' },
-        { label: 'Oil Temp', value: '42.5°C' },
-        { label: 'Load', value: '78%' }
-      ]
-    },
-    {
-      image: '/images/motor_pump_scada.png',
-      title: 'Motors & Pumps',
-      subtitle: 'Motor & pump control with VFD status, current draw & vibration analytics',
-      color: '#38bdf8',
-      icon: <Activity size={22} />,
-      route: '/motors/overview',
-      stats: [
-        { label: 'Total', value: '4' },
-        { label: 'Running', value: '3' },
-        { label: 'Fault', value: '0' }
-      ]
-    },
-    {
-      image: '/images/bms_water_management_ui_1789023000792.png',
-      title: 'Water Management',
-      subtitle: 'Tank level monitoring, pump control & water flow rate analytics',
-      color: '#06b6d4',
-      icon: <Droplets size={22} />,
-      route: '/water-management/overview',
-      stats: [
-        { label: 'UG Tank', value: '72%' },
-        { label: 'OHT Tank', value: '64%' },
-        { label: 'Flow Rate', value: '12.5 m³/h' }
-      ]
-    }
-  ];
-
-  // ── CAROUSEL STATE & HANDLERS ───────────────────────────────────────────
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [carouselPaused, setCarouselPaused] = useState(false);
-  const [carouselTransitioning, setCarouselTransitioning] = useState(false);
-
-  const goToSlide = useCallback((idx) => {
-    setCarouselTransitioning(true);
-    setTimeout(() => {
-      setCarouselIndex(idx);
-      setTimeout(() => setCarouselTransitioning(false), 50);
-    }, 300);
-  }, []);
-
-  const nextSlide = useCallback(() => {
-    goToSlide((carouselIndex + 1) % carouselSlides.length);
-  }, [carouselIndex, carouselSlides.length, goToSlide]);
-
-  const prevSlide = useCallback(() => {
-    goToSlide(carouselIndex === 0 ? carouselSlides.length - 1 : carouselIndex - 1);
-  }, [carouselIndex, carouselSlides.length, goToSlide]);
-
-  // Auto-slide every 5s
-  useEffect(() => {
-    if (carouselPaused) return;
-    const autoSlide = setInterval(() => {
-      setCarouselTransitioning(true);
-      setTimeout(() => {
-        setCarouselIndex(prev => (prev + 1) % carouselSlides.length);
-        setTimeout(() => setCarouselTransitioning(false), 50);
-      }, 300);
-    }, 5000);
-    return () => clearInterval(autoSlide);
-  }, [carouselPaused, carouselSlides.length]);
-
-  const currentSlide = carouselSlides[carouselIndex];
 
   // ── TOP SUMMARY KPIS STRIP (MATCHING REFERENCE MOCKUP HEADER) ───────────
   const summaryKPIs = [
@@ -496,7 +1028,7 @@ const Dashboard = () => {
       icon: <Droplets size={18} />,
       color: '#06b6d4',
       status: 'Online',
-      image: '/images/bms_water_management_ui_1789023000792.png',
+      image: '/images/water_management_card.png',
       route: '/water-management/overview',
       gaugeVal: '72%',
       gaugeLabel: 'Tank Level',
@@ -562,11 +1094,11 @@ const Dashboard = () => {
     },
     {
       key: 'ltPanel',
-      title: 'Electrical Distribution',
+      title: 'LT Panel System',
       icon: <LayoutDashboard size={18} />,
       color: '#10b981',
       status: 'Online',
-      image: '/images/bms_power_grid_ui_1789023019864.png',
+      image: '/images/lt_panel_card.jpg',
       route: '/lt-panel/overview',
       gaugeVal: '320 kW',
       gaugeLabel: 'Load',
@@ -634,7 +1166,7 @@ const Dashboard = () => {
       icon: <BatteryCharging size={18} />,
       color: '#06b6d4',
       status: 'Online',
-      image: '/images/bms_power_grid_ui_1789023019864.png',
+      image: '/images/ups_battery_backup_scada.png',
       route: '/daily-dpr/overview',
       gaugeVal: '92%',
       gaugeLabel: 'Battery',
@@ -677,240 +1209,48 @@ const Dashboard = () => {
     }
   ];
 
+  const [modulesConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('scada_modules_config');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  const visibleServices = useMemo(() => {
+    const keyMap = {
+      energy: 'Energy Metering',
+      coolingTower: 'HVAC',
+      dgSet: 'DG Set',
+      motors: 'Motors',
+      hvac: 'HVAC',
+      ahu: 'HVAC',
+      water: 'Water Management',
+      transformer: 'Transformer',
+      fire: 'Fire',
+      ltPanel: 'LT Panel',
+      vrv: 'VRV',
+      aqi: 'AQI Sensor',
+      dailyDPR: 'Daily DPR',
+      alarm: 'Alarm System'
+    };
+
+    return servicesList.filter(svc => {
+      const configKey = keyMap[svc.key];
+      if (!configKey) return true;
+      return modulesConfig[configKey] !== false;
+    });
+  }, [servicesList, modulesConfig]);
+
   return (
     <div className="reference-scada-dashboard p-3">
-      {/* ── HERO CAROUSEL BANNER ──────────────────────────────────────── */}
-      <div
-        className="hero-carousel-wrapper position-relative mb-3 rounded-4 overflow-hidden"
-        onMouseEnter={() => setCarouselPaused(true)}
-        onMouseLeave={() => setCarouselPaused(false)}
-        style={{
-          height: '390px',
-          border: `1px solid ${currentSlide.color}40`,
-          boxShadow: `0 8px 32px rgba(0,0,0,0.7), 0 0 24px ${currentSlide.color}20`,
-          transition: 'border-color 0.5s ease, box-shadow 0.5s ease'
-        }}
-      >
-        {/* Background Image with Crossfade */}
-        <div
-          className="position-absolute inset-0 hero-carousel-bg"
-          style={{
-            backgroundImage: `url(${currentSlide.image})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            transition: 'opacity 0.5s ease-in-out',
-            opacity: carouselTransitioning ? 0 : 1
-          }}
-        />
 
-        {/* Dark / Light Responsive Gradient Overlay */}
-        <div
-          className="position-absolute inset-0 hero-gradient-overlay"
-          style={{
-            zIndex: 1
-          }}
-        />
 
-        {/* Accent Color Glow */}
-        <div
-          className="position-absolute"
-          style={{
-            top: '-50%',
-            right: '-10%',
-            width: '400px',
-            height: '400px',
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${currentSlide.color}18 0%, transparent 70%)`,
-            zIndex: 1,
-            transition: 'background 0.5s ease'
-          }}
-        />
+      {/* ── FUTURISTIC ORBITAL SCADA RADAR CORE WHEEL ─────────────── */}
+      <FuturisticOrbitalSCADA services={visibleServices} navigate={navigate} />
 
-        {/* Top Accent Bar */}
-        <div
-          className="position-absolute top-0 start-0 w-100"
-          style={{
-            height: '3px',
-            background: `linear-gradient(90deg, transparent 0%, ${currentSlide.color} 30%, ${currentSlide.color} 70%, transparent 100%)`,
-            zIndex: 3,
-            transition: 'background 0.5s ease'
-          }}
-        />
-
-        {/* Progress Bar */}
-        <div className="position-absolute bottom-0 start-0 w-100" style={{ height: '3px', backgroundColor: 'rgba(255,255,255,0.08)', zIndex: 3 }}>
-          <div
-            style={{
-              height: '100%',
-              backgroundColor: currentSlide.color,
-              width: carouselPaused ? `${((carouselIndex + 1) / carouselSlides.length) * 100}%` : '0%',
-              animation: carouselPaused ? 'none' : 'carouselProgress 5s linear infinite',
-              boxShadow: `0 0 8px ${currentSlide.color}`,
-              transition: 'background-color 0.5s ease'
-            }}
-          />
-        </div>
-
-        {/* Content */}
-        <div
-          className="position-relative h-100 d-flex align-items-center"
-          style={{
-            zIndex: 2,
-            paddingLeft: '68px',
-            paddingRight: '68px',
-            opacity: carouselTransitioning ? 0 : 1,
-            transform: carouselTransitioning ? 'translateY(8px)' : 'translateY(0)',
-            transition: 'opacity 0.35s ease, transform 0.35s ease'
-          }}
-        >
-          <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between w-100 gap-3">
-            {/* Left: Text Content */}
-            <div className="flex-grow-1" style={{ maxWidth: '520px' }}>
-              {/* Badge */}
-              <div
-                className="hero-live-badge d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2.5"
-                style={{
-                  backgroundColor: `${currentSlide.color}18`,
-                  border: `1px solid ${currentSlide.color}50`
-                }}
-              >
-                <span className="badge-icon flex-shrink-0" style={{ color: currentSlide.color }}>{currentSlide.icon}</span>
-                <span className="badge-text fw-bold font-monospace text-uppercase" style={{ fontSize: '0.68rem', color: currentSlide.color, letterSpacing: '0.8px' }}>
-                  Live System
-                </span>
-                <span className="status-dot-pulse flex-shrink-0" style={{ backgroundColor: '#0f766e', width: '6px', height: '6px' }}></span>
-              </div>
-
-              {/* Title */}
-              <h2 className="hero-carousel-title fw-bold mb-2" style={{ fontSize: '26px', letterSpacing: '-0.4px', lineHeight: '1.25' }}>
-                {currentSlide.title}
-              </h2>
-
-              {/* Subtitle */}
-              <p className="hero-carousel-subtitle mb-3" style={{ fontSize: '14px', lineHeight: '1.5', maxWidth: '480px' }}>
-                {currentSlide.subtitle}
-              </p>
-
-              {/* Stats Row */}
-              <div className="d-flex gap-2 flex-wrap">
-                {currentSlide.stats.map((stat, sIdx) => (
-                  <div
-                    key={sIdx}
-                    className="px-3 py-1.5 rounded-3 d-flex flex-column hero-stat-card"
-                    style={{
-                      backgroundColor: 'rgba(10, 18, 38, 0.85)',
-                      border: `1px solid ${currentSlide.color}30`,
-                      minWidth: '100px'
-                    }}
-                  >
-                    <small className="hero-stat-label fw-semibold text-uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.5px' }}>
-                      {stat.label}
-                    </small>
-                    <span className="hero-stat-val fw-extrabold font-monospace" style={{ fontSize: '0.85rem' }}>
-                      {stat.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right: View Button & Counter */}
-            <div className="d-flex flex-column align-items-end gap-2.5 flex-shrink-0">
-              <button
-                onClick={(e) => { e.stopPropagation(); navigate(currentSlide.route); }}
-                className="hero-action-btn d-flex align-items-center gap-2 px-3.5 py-2.5 rounded-3 border-0 fw-bold cursor-pointer"
-                style={{
-                  background: `linear-gradient(135deg, ${currentSlide.color} 0%, ${currentSlide.color}dd 100%)`,
-                  color: '#ffffff',
-                  fontSize: '0.82rem',
-                  transition: 'all 0.22s ease',
-                  boxShadow: `0 2px 10px ${currentSlide.color}40`
-                }}
-              >
-                <Eye size={15} />
-                View System
-                <ArrowUpRight size={14} />
-              </button>
-
-              {/* Slide Counter */}
-              <span className="hero-carousel-counter font-monospace fw-medium" style={{ fontSize: '13px' }}>
-                {String(carouselIndex + 1).padStart(2, '0')} / {String(carouselSlides.length).padStart(2, '0')}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Arrows */}
-        <button
-          onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-          className="carousel-nav-btn position-absolute d-flex align-items-center justify-content-center border-0"
-          style={{
-            left: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(10, 18, 38, 0.85)',
-            color: '#e2e8f0',
-            zIndex: 10,
-            cursor: 'pointer',
-            border: '1px solid rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(8px)',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <ChevronLeft size={17} />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-          className="carousel-nav-btn position-absolute d-flex align-items-center justify-content-center border-0"
-          style={{
-            right: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(10, 18, 38, 0.85)',
-            color: '#e2e8f0',
-            zIndex: 10,
-            cursor: 'pointer',
-            border: '1px solid rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(8px)',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <ChevronRight size={17} />
-        </button>
-
-        {/* Dot Indicators */}
-        <div
-          className="position-absolute d-flex align-items-center gap-1.5"
-          style={{ bottom: '14px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}
-        >
-          {carouselSlides.map((_, dIdx) => (
-            <button
-              key={dIdx}
-              onClick={(e) => { e.stopPropagation(); goToSlide(dIdx); }}
-              className="border-0 p-0 d-block"
-              style={{
-                width: dIdx === carouselIndex ? '24px' : '8px',
-                height: '8px',
-                borderRadius: '4px',
-                backgroundColor: dIdx === carouselIndex ? currentSlide.color : 'rgba(255,255,255,0.25)',
-                cursor: 'pointer',
-                transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-                boxShadow: dIdx === carouselIndex ? `0 0 8px ${currentSlide.color}80` : 'none'
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* ── 3-COLUMN SCADA CARDS GRID (MATCHING REFERENCE MOCKUP EXACTLY) ───── */}
+      {/* ── 3-COLUMN SCADA CARDS GRID ───── */}
       <Row className="g-3">
-        {servicesList.map((svc) => (
+        {visibleServices.map((svc) => (
           <Col xl={4} lg={6} md={12} key={svc.key}>
             <Card
               onClick={() => navigate(svc.route)}
@@ -1056,34 +1396,40 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
+                ) : svc.isCoolingTower ? (
+                  <div className="position-relative w-100 h-100 d-flex align-items-center justify-content-center">
+                    <div className="position-relative h-100" style={{ aspectRatio: '1/1' }}>
+                      <img src={svc.image} alt={svc.title} className="w-100 h-100" style={{ objectFit: 'contain' }} />
+
+                      {/* Animated Spinning Fan Overlay strictly locked onto the circular shroud ring */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '25.6%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%) rotateX(58deg)',
+                        width: '41%',
+                        aspectRatio: '1/1',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        zIndex: 5,
+                        pointerEvents: 'none'
+                      }}>
+                        <svg className="dashboard-fan-spin" viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
+                          <g stroke="#090d16" strokeWidth="1">
+                            {[0, 60, 120, 180, 240, 300].map(angle => (
+                              <g key={angle} transform={`rotate(${angle} 50 50)`}>
+                                <path d="M 50 50 L 34 16 A 35 35 0 0 1 66 16 Z" fill="rgba(8, 12, 20, 0.96)" stroke="#1f2937" strokeWidth="0.8" />
+                              </g>
+                            ))}
+                            <circle cx="50" cy="50" r="14" fill="#0f172a" stroke="#334155" strokeWidth="1" />
+                            <circle cx="50" cy="50" r="6" fill="#475569" />
+                          </g>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <img src={svc.image} alt={svc.title} className="card-banner-img" />
-                )}
-
-                {/* Animated Spinning Fan Overlay for Cooling Tower (Scaled to fit strictly inside the circular fan ring) */}
-                {svc.isCoolingTower && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '24.2%',
-                    left: '50.2%',
-                    transform: 'translate(-50%, -50%) rotateX(60deg)',
-                    width: '32.5%',
-                    aspectRatio: '1/1',
-                    zIndex: 5,
-                    pointerEvents: 'none'
-                  }}>
-                    <svg className="dashboard-fan-spin" viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
-                      <g stroke="#090d16" strokeWidth="1">
-                        {[0, 60, 120, 180, 240, 300].map(angle => (
-                          <g key={angle} transform={`rotate(${angle} 50 50)`}>
-                            <path d="M 50 50 L 34 16 A 35 35 0 0 1 66 16 Z" fill="rgba(8, 12, 20, 0.96)" stroke="#1f2937" strokeWidth="0.8" />
-                          </g>
-                        ))}
-                        <circle cx="50" cy="50" r="14" fill="#0f172a" stroke="#334155" strokeWidth="1" />
-                        <circle cx="50" cy="50" r="6" fill="#475569" />
-                      </g>
-                    </svg>
-                  </div>
                 )}
 
                 {/* Live Animated Fan Running Badge */}
@@ -1169,6 +1515,256 @@ const Dashboard = () => {
           100% { transform: rotate(360deg); }
         }
 
+        @keyframes scadaOrbitalSpin {
+          0% { transform: translate(-50%, -50%) rotate(0deg); }
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @keyframes scadaOrbitalCounterSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(-360deg); }
+        }
+
+        .scada-orbital-ring-spinning {
+          animation-name: scadaOrbitalSpin;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+          will-change: transform;
+        }
+
+        .scada-node-upright-spinning {
+          animation-name: scadaOrbitalCounterSpin;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+          will-change: transform;
+        }
+
+        .scada-orbital-paused .scada-orbital-ring-spinning,
+        .scada-orbital-paused .scada-node-upright-spinning {
+          animation-play-state: paused !important;
+        }
+
+        @keyframes orbitalCorePulse {
+          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.6)); }
+          50% { transform: scale(1.08); filter: drop-shadow(0 0 25px rgba(56, 189, 248, 0.95)); }
+        }
+
+        .orbital-core-pulse {
+          animation: orbitalCorePulse 3s ease-in-out infinite;
+        }
+
+        .scada-radar-responsive-outer {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+          overflow: hidden;
+        }
+
+        .orbital-stage-wrapper {
+          width: 920px;
+          height: 720px;
+          transform-origin: center center;
+          transition: transform 0.3s ease, margin 0.3s ease;
+          flex-shrink: 0;
+        }
+
+        @media (max-width: 1599px) {
+          .orbital-stage-wrapper {
+            transform: scale(0.80);
+            margin: -65px 0 !important;
+          }
+        }
+
+        @media (max-width: 1399px) {
+          .orbital-stage-wrapper {
+            transform: scale(0.70);
+            margin: -105px 0 !important;
+          }
+        }
+
+        @media (max-width: 1199px) {
+          .orbital-stage-wrapper {
+            transform: scale(0.58);
+            margin: -150px 0 !important;
+          }
+        }
+
+        @media (max-width: 991px) {
+          .orbital-stage-wrapper {
+            transform: scale(0.46);
+            margin: -195px 0 !important;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .orbital-stage-wrapper {
+            transform: scale(0.36);
+            margin: -230px 0 !important;
+          }
+        }
+
+        @media (max-width: 500px) {
+          .orbital-stage-wrapper {
+            transform: scale(0.28);
+            margin: -260px 0 !important;
+          }
+        }
+
+        .futuristic-orbital-container {
+          background: linear-gradient(145deg, rgba(8, 15, 30, 0.95) 0%, rgba(2, 6, 16, 0.98) 100%);
+          border: 1px solid rgba(56, 189, 248, 0.25);
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(56, 189, 248, 0.05);
+        }
+
+        .scada-cinematic-bg-layer {
+          opacity: 0.45;
+          filter: brightness(0.9) contrast(1.1);
+          mix-blend-mode: normal;
+        }
+
+        .scada-cinematic-overlay-gradient {
+          background: radial-gradient(circle at 50% 50%, rgba(6, 14, 30, 0.45) 0%, rgba(2, 6, 16, 0.78) 100%);
+        }
+
+        .scada-cinematic-banner-tag {
+          background: rgba(12, 24, 48, 0.85);
+          border: 1px solid rgba(56, 189, 248, 0.4);
+          backdrop-filter: blur(10px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        body.light-mode .futuristic-orbital-container {
+          background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%) !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 12px 36px rgba(15, 23, 42, 0.10) !important;
+        }
+
+        body.light-mode .scada-cinematic-bg-layer {
+          opacity: 0.65 !important;
+          filter: brightness(0.92) contrast(1.18) saturate(1.15) !important;
+          mix-blend-mode: multiply !important;
+        }
+
+        body.light-mode .scada-cinematic-overlay-gradient {
+          background: radial-gradient(circle at 50% 50%, rgba(248, 250, 252, 0.15) 0%, rgba(226, 232, 240, 0.60) 100%) !important;
+        }
+
+        body.light-mode .scada-cinematic-banner-tag {
+          background: #ffffff !important;
+          border: 1.5px solid #0284c7 !important;
+          box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15) !important;
+        }
+
+        body.light-mode .scada-core-reactor-hub {
+          background: radial-gradient(circle, #ffffff 0%, #e2e8f0 100%) !important;
+          border: 3px solid #0284c7 !important;
+          box-shadow: 0 0 50px rgba(2, 132, 199, 0.5), inset 0 0 25px rgba(2, 132, 199, 0.22) !important;
+        }
+
+        body.light-mode .scada-core-reactor-hub .text-white {
+          color: #0f172a !important;
+          text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+
+        body.light-mode .scada-core-reactor-hub .text-slate-400 {
+          color: #334155 !important;
+          font-weight: 700 !important;
+        }
+
+        body.light-mode .scada-radar-ring-svg circle {
+          stroke: #0284c7 !important;
+          stroke-opacity: 0.75 !important;
+          stroke-width: 2px !important;
+          filter: drop-shadow(0 0 6px rgba(2, 132, 199, 0.3));
+        }
+
+        body.light-mode .futuristic-orbital-container .text-slate-400 {
+          color: #334155 !important;
+          font-weight: 600 !important;
+        }
+
+        body.light-mode .futuristic-orbital-container .btn-outline-secondary {
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+          background: #ffffff !important;
+          font-weight: 700 !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        body.light-mode .futuristic-orbital-container .btn-outline-info {
+          border-color: #0284c7 !important;
+          color: #0284c7 !important;
+          background: #ffffff !important;
+          font-weight: 700 !important;
+          box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15) !important;
+        }
+
+        body.light-mode .scada-node-upright-spinning {
+          background: #ffffff !important;
+          border-width: 2px !important;
+          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16), 0 0 15px rgba(2, 132, 199, 0.2) !important;
+        }
+
+        body.light-mode .scada-card-bottom-info {
+          background: #ffffff !important;
+        }
+
+        body.light-mode .scada-card-title {
+          color: #0f172a !important;
+          font-weight: 800 !important;
+        }
+
+        body.light-mode .smart-meter-mini-banner {
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+        }
+
+        body.light-mode .smart-meter-text {
+          color: #059669 !important;
+        }
+
+        body.light-mode .smart-meter-val {
+          color: #d97706 !important;
+        }
+
+        body.light-mode .scada-mini-metric-pill {
+          background: #f1f5f9 !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+
+        body.light-mode .scada-mini-metric-pill .text-slate-400 {
+          color: #334155 !important;
+          font-weight: 700 !important;
+          opacity: 1 !important;
+        }
+
+        body.light-mode .scada-metric-val2 {
+          color: #0f172a !important;
+          font-weight: 800 !important;
+        }
+
+        body.light-mode .scada-hover-popover {
+          background: rgba(255, 255, 255, 0.98) !important;
+          border-color: #0284c7 !important;
+          box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22), 0 0 25px rgba(2, 132, 199, 0.3) !important;
+        }
+
+        body.light-mode .scada-hover-popover .text-white {
+          color: #0f172a !important;
+        }
+
+        body.light-mode .scada-hover-popover .bg-slate-900\/70 {
+          background: #f1f5f9 !important;
+        }
+
+        .orbital-bg-glow {
+          background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.08) 0%, transparent 60%);
+        }
+
+        .orbital-node-item:hover {
+          z-index: 100 !important;
+        }
+
         .dashboard-fan-spin {
           animation: dashboardSpin 0.42s linear infinite;
           transform-origin: center center;
@@ -1248,7 +1844,7 @@ const Dashboard = () => {
           border-radius: 16px !important;
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
           transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-          min-height: 580px;
+          min-height: 440px;
         }
 
         body.light-mode .reference-scada-card {
@@ -1365,7 +1961,7 @@ const Dashboard = () => {
         /* Panoramic Equipment Photo Banner */
         .card-photo-banner {
           width: 100%;
-          height: 480px;
+          height: 360px;
           background: radial-gradient(circle, rgba(10, 22, 46, 0.9) 0%, #01040d 100%);
           border-bottom: 1px solid rgba(255, 255, 255, 0.12);
           position: relative;

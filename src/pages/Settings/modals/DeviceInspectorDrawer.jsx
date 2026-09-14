@@ -81,6 +81,8 @@ const DeviceInspectorDrawer = ({
       show={show}
       onHide={onHide}
       placement="end"
+      restoreFocus={false}
+      enforceFocus={false}
       className="device-inspector-offcanvas"
       style={{
         width: 'min(92vw, 680px)',

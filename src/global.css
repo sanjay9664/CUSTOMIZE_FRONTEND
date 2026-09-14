@@ -36,32 +36,32 @@ body.dark-mode,
 body.light-mode,
 [data-theme="light"] {
   color-scheme: light;
-  --scada-bg: #f8fafc;
-  --scada-sidebar: #ffffff;
-  --scada-card: #ffffff;
-  --scada-card-hover: #f1f5f9;
-  --scada-header: #ffffff;
-  --scada-border: #e2e8f0;
-  --scada-border-strong: #cbd5e1;
-  --scada-text: #0f172a;
-  --scada-text-muted: #64748b;
-  --scada-text-subtle: #475569;
+  --scada-bg: #eef2f6;                 /* Eye-comfort soft slate tone (eliminates harsh white glare) */
+  --scada-sidebar: #f8fafc;            /* Soft off-white sidebar */
+  --scada-card: #ffffff;               /* Clean card container */
+  --scada-card-hover: #f1f5f9;         /* Soft hover highlight */
+  --scada-header: #f8fafc;             /* Soft off-white header */
+  --scada-border: #cbd5e1;             /* Soft subtle border */
+  --scada-border-strong: #94a3b8;      /* Crisp border */
+  --scada-text: #0f172a;               /* Slate 900 - Ultra-crisp, high-contrast dark text */
+  --scada-text-muted: #334155;         /* Slate 700 - Sharp, highly readable secondary text (no faint grey) */
+  --scada-text-subtle: #1e293b;        /* Slate 800 - Crisp subtle text */
   --scada-accent: #0284c7;
-  --scada-accent-bg: rgba(2, 132, 199, 0.08);
-  --scada-input-bg: #f8fafc;
+  --scada-accent-bg: rgba(2, 132, 199, 0.1);
+  --scada-input-bg: #ffffff;
   --scada-input-border: #cbd5e1;
-  --scada-table-head-bg: #f1f5f9;
-  --scada-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-  --scada-glass-bg: rgba(255, 255, 255, 0.95);
+  --scada-table-head-bg: #e2e8f0;       /* Muted table header */
+  --scada-shadow: 0 3px 10px -2px rgba(15, 23, 42, 0.08), 0 1px 4px -1px rgba(15, 23, 42, 0.04);
+  --scada-glass-bg: rgba(248, 250, 252, 0.94);
 
-  --status-running: #16a34a;
+  --status-running: #15803d;
   --status-running-bg: #dcfce7;
-  --status-fault: #dc2626;
+  --status-fault: #b91c1c;
   --status-fault-bg: #fee2e2;
-  --status-warning: #d97706;
+  --status-warning: #b45309;
   --status-warning-bg: #fef3c7;
-  --status-stopped: #64748b;
-  --status-stopped-bg: #f1f5f9;
+  --status-stopped: #475569;
+  --status-stopped-bg: #e2e8f0;
 }
 
 *, *::before, *::after,
@@ -108,7 +108,21 @@ body {
   color: var(--scada-text) !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease-out, color 0.25s ease-out;
+}
+
+/* Global Eye-Comfort Smooth Theme Transition */
+.scada-header, 
+.scada-sidebar, 
+.scada-card, 
+.card, 
+.modal-content, 
+.offcanvas, 
+.table, 
+.form-control, 
+.form-select, 
+.dropdown-menu {
+  transition: background-color 0.25s ease-out, color 0.25s ease-out, border-color 0.25s ease-out, box-shadow 0.25s ease-out !important;
 }
 
 /* Base Typography Colors */
@@ -241,14 +255,16 @@ body.light-mode .table {
 body.light-mode .scada-table thead th,
 body.light-mode .table thead th {
   background-color: var(--scada-table-head-bg) !important;
-  color: var(--scada-text-muted) !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
   border-bottom: 2px solid var(--scada-border) !important;
 }
 
 body.light-mode .scada-table tbody td,
 body.light-mode .table tbody td {
   border-bottom: 1px solid var(--scada-border) !important;
-  color: var(--scada-text) !important;
+  color: #0f172a !important;
+  font-weight: 500 !important;
 }
 
 body.light-mode .scada-table tbody tr:hover td,
@@ -868,18 +884,16 @@ body.light-mode .scada-header {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
-body.light-mode .scada-table thead th {
-  background-color: var(--scada-table-head-bg) !important;
-  color: var(--scada-text-muted) !important;
-  border-bottom: 2px solid var(--scada-border) !important;
-}
-
-body.light-mode .scada-table tbody tr:hover td {
-  background-color: rgba(0, 0, 0, 0.02) !important;
+/* Light Mode Table Overrides */
+body.light-mode .scada-table,
+body.light-mode .table {
   color: var(--scada-text) !important;
+  border-color: var(--scada-border) !important;
 }
 
-body.light-mode .scada-table tbody td {
+body.light-mode .scada-table thead th,
+body.light-mode .table thead th {
+  background-color: var(--scada-table-head-bg) !important;
   border-bottom: 1px solid var(--scada-border) !important;
 }
 
@@ -3473,6 +3487,197 @@ body.light-mode .scada-modal-header,
   border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
+/* 4. Global Custom Table in Dark Mode */
+body:not(.light-mode) .table-custom,
+body:not(.light-mode) .table {
+  color: #f8fafc !important;
+}
+
+body:not(.light-mode) .table-custom th,
+body:not(.light-mode) .table th {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body:not(.light-mode) .table-custom td,
+body:not(.light-mode) .table td {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body:not(.light-mode) .table-custom td .text-body-secondary,
+body:not(.light-mode) .table td .text-body-secondary,
+body:not(.light-mode) .text-body-secondary {
+  color: #cbd5e1 !important;
+}
+
+body:not(.light-mode) .table-custom td .text-muted,
+body:not(.light-mode) .table td .text-muted {
+  color: #94a3b8 !important;
+}
+
+body:not(.light-mode) .table-custom td .text-heading,
+body:not(.light-mode) .table td .text-heading {
+  color: #f8fafc !important;
+}
+
+/* Global Custom Table in Light Mode */
+body.light-mode .table-custom,
+body.light-mode .table {
+  color: #0f172a !important;
+}
+
+body.light-mode .table-custom th,
+body.light-mode .table th {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-mode .table-custom td,
+body.light-mode .table td {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-mode .table-custom td .text-body-secondary,
+body.light-mode .table td .text-body-secondary,
+body.light-mode .text-body-secondary {
+  color: #334155 !important;
+}
+
+body.light-mode .table-custom td .text-muted,
+body.light-mode .table td .text-muted {
+  color: #475569 !important;
+}
+
+body.light-mode .table-custom td .text-heading,
+body.light-mode .table td .text-heading {
+  color: #0f172a !important;
+}
+
+/* ========================================================
+   DARK MODE: Bootstrap Contextual Color Overrides
+   Fixes bg-*-subtle & text-* colors inside tables & globally
+   ======================================================== */
+
+/* --- Subtle Backgrounds (Dark Mode) --- */
+body:not(.light-mode) .bg-primary-subtle   { background-color: rgba(59, 130, 246, 0.15) !important; }
+body:not(.light-mode) .bg-success-subtle   { background-color: rgba(34, 197, 94, 0.15) !important; }
+body:not(.light-mode) .bg-danger-subtle    { background-color: rgba(239, 68, 68, 0.15) !important; }
+body:not(.light-mode) .bg-warning-subtle   { background-color: rgba(245, 158, 11, 0.15) !important; }
+body:not(.light-mode) .bg-secondary-subtle { background-color: rgba(148, 163, 184, 0.15) !important; }
+body:not(.light-mode) .bg-info-subtle      { background-color: rgba(56, 189, 248, 0.15) !important; }
+
+/* --- Contextual Text Colors (Dark Mode - High Specificity) --- */
+body:not(.light-mode) .text-primary   { color: #60a5fa !important; }
+body:not(.light-mode) .text-success   { color: #4ade80 !important; }
+body:not(.light-mode) .text-danger    { color: #f87171 !important; }
+body:not(.light-mode) .text-warning   { color: #fbbf24 !important; }
+body:not(.light-mode) .text-secondary { color: #94a3b8 !important; }
+body:not(.light-mode) .text-info      { color: #38bdf8 !important; }
+body:not(.light-mode) .text-warning-emphasis { color: #fbbf24 !important; }
+
+/* --- Inside table td specifically (even higher specificity) --- */
+body:not(.light-mode) .table td .text-primary,
+body:not(.light-mode) .table-custom td .text-primary   { color: #60a5fa !important; }
+body:not(.light-mode) .table td .text-success,
+body:not(.light-mode) .table-custom td .text-success   { color: #4ade80 !important; }
+body:not(.light-mode) .table td .text-danger,
+body:not(.light-mode) .table-custom td .text-danger    { color: #f87171 !important; }
+body:not(.light-mode) .table td .text-warning,
+body:not(.light-mode) .table-custom td .text-warning   { color: #fbbf24 !important; }
+body:not(.light-mode) .table td .text-secondary,
+body:not(.light-mode) .table-custom td .text-secondary { color: #94a3b8 !important; }
+body:not(.light-mode) .table td .text-info,
+body:not(.light-mode) .table-custom td .text-info      { color: #38bdf8 !important; }
+body:not(.light-mode) .table td .text-warning-emphasis,
+body:not(.light-mode) .table-custom td .text-warning-emphasis { color: #fbbf24 !important; }
+
+/* --- Inside table th specifically (header icons) --- */
+body:not(.light-mode) .table th .text-primary,
+body:not(.light-mode) .table-custom th .text-primary   { color: #60a5fa !important; }
+
+/* --- LIGHT MODE: Contextual colors in tables --- */
+body.light-mode .table td .text-primary,
+body.light-mode .table-custom td .text-primary   { color: #2563eb !important; }
+body.light-mode .table td .text-success,
+body.light-mode .table-custom td .text-success   { color: #16a34a !important; }
+body.light-mode .table td .text-danger,
+body.light-mode .table-custom td .text-danger    { color: #dc2626 !important; }
+body.light-mode .table td .text-warning,
+body.light-mode .table-custom td .text-warning   { color: #d97706 !important; }
+body.light-mode .table td .text-secondary,
+body.light-mode .table-custom td .text-secondary { color: #64748b !important; }
+body.light-mode .table td .text-info,
+body.light-mode .table-custom td .text-info      { color: #0284c7 !important; }
+body.light-mode .table td .text-warning-emphasis,
+body.light-mode .table-custom td .text-warning-emphasis { color: #92400e !important; }
+
+body.light-mode .table th .text-primary,
+body.light-mode .table-custom th .text-primary   { color: #2563eb !important; }
+
+/* ========================================================
+   Protect header-icon-box and cell-icon-badge elements
+   These use contextual classes (text-primary, bg-primary-subtle)
+   ======================================================== */
+
+/* Header icon boxes in th */
+.table th .header-icon-box,
+.table-custom th .header-icon-box {
+  background-color: inherit;
+}
+
+/* Cell icon badges in td */
+.table td .cell-icon-badge,
+.table-custom td .cell-icon-badge {
+  background-color: inherit;
+}
+
+/* ========================================================
+   Status Pills & Badge Protection (both modes)
+   ======================================================== */
+
+/* Status pills inherit their text color from their own contextual class, not td */
+body:not(.light-mode) .table td .status-pill.text-success,
+body:not(.light-mode) .table-custom td .status-pill.text-success {
+  color: #4ade80 !important;
+}
+body:not(.light-mode) .table td .status-pill.text-secondary,
+body:not(.light-mode) .table-custom td .status-pill.text-secondary {
+  color: #94a3b8 !important;
+}
+
+body.light-mode .table td .status-pill.text-success,
+body.light-mode .table-custom td .status-pill.text-success {
+  color: #16a34a !important;
+}
+body.light-mode .table td .status-pill.text-secondary,
+body.light-mode .table-custom td .status-pill.text-secondary {
+  color: #64748b !important;
+}
+
+/* Badge elements */
+body:not(.light-mode) .table td .badge.bg-warning-subtle,
+body:not(.light-mode) .table-custom td .badge.bg-warning-subtle {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+}
+
+body.light-mode .table td .badge.bg-warning-subtle,
+body.light-mode .table-custom td .badge.bg-warning-subtle {
+  color: #92400e !important;
+}
+
+/* Status dot circles - ensure their bg color is preserved */
+.table td .rounded-circle.bg-success { background-color: #22c55e !important; }
+.table td .rounded-circle.bg-secondary { background-color: #94a3b8 !important; }
+.table-custom td .rounded-circle.bg-success { background-color: #22c55e !important; }
+.table-custom td .rounded-circle.bg-secondary { background-color: #94a3b8 !important; }
+
 body.light-mode .scada-modal-title,
 [data-theme="light"] .scada-modal-title {
   color: #0f172a !important;
@@ -3749,3 +3954,44 @@ body.light-mode .scada-policy-footer span,
 [data-theme="light"] .scada-policy-footer span {
   color: #0f172a !important;
 }
+
+/* ========================================================
+   Universal Light Mode Enhancements for Crisp Text & Icons
+   ======================================================== */
+
+body.light-mode h1, body.light-mode h2, body.light-mode h3, 
+body.light-mode h4, body.light-mode h5, body.light-mode h6 {
+  color: #0f172a;
+}
+
+body.light-mode .card:not([class*="bg-"]):not([style*="background-color"]) {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-mode .modal-content {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-mode .modal-header,
+body.light-mode .modal-footer {
+  border-color: #e2e8f0 !important;
+}
+
+/* Override hardcoded text-white in light mode unless inside filled badges/buttons */
+body.light-mode :not(.btn):not(.badge):not([class*="bg-primary"]):not([class*="bg-danger"]):not([class*="bg-success"]):not([class*="bg-dark"]):not([class*="bg-secondary"]) > .text-white,
+body.light-mode h1.text-white,
+body.light-mode h2.text-white,
+body.light-mode h3.text-white,
+body.light-mode h4.text-white,
+body.light-mode h5.text-white,
+body.light-mode h6.text-white,
+body.light-mode p.text-white,
+body.light-mode td .text-white {
+  color: #0f172a !important;
+}
+
