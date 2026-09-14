@@ -113,6 +113,8 @@ const AssetInspectorDrawer = ({
       show={show}
       onHide={onHide}
       placement="end"
+      restoreFocus={false}
+      enforceFocus={false}
       className="asset-inspector-offcanvas"
       style={{
         width: 'min(92vw, 680px)',

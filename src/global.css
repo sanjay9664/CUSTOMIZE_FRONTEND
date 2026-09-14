@@ -36,32 +36,32 @@ body.dark-mode,
 body.light-mode,
 [data-theme="light"] {
   color-scheme: light;
-  --scada-bg: #f8fafc;
-  --scada-sidebar: #ffffff;
-  --scada-card: #ffffff;
-  --scada-card-hover: #f1f5f9;
-  --scada-header: #ffffff;
-  --scada-border: #e2e8f0;
-  --scada-border-strong: #cbd5e1;
-  --scada-text: #0f172a;
-  --scada-text-muted: #64748b;
-  --scada-text-subtle: #475569;
+  --scada-bg: #eef2f6;                 /* Eye-comfort soft slate tone (eliminates harsh white glare) */
+  --scada-sidebar: #f8fafc;            /* Soft off-white sidebar */
+  --scada-card: #ffffff;               /* Clean card container */
+  --scada-card-hover: #f1f5f9;         /* Soft hover highlight */
+  --scada-header: #f8fafc;             /* Soft off-white header */
+  --scada-border: #cbd5e1;             /* Soft subtle border */
+  --scada-border-strong: #94a3b8;      /* Crisp border */
+  --scada-text: #0f172a;               /* Slate 900 - Ultra-crisp, high-contrast dark text */
+  --scada-text-muted: #334155;         /* Slate 700 - Sharp, highly readable secondary text (no faint grey) */
+  --scada-text-subtle: #1e293b;        /* Slate 800 - Crisp subtle text */
   --scada-accent: #0284c7;
-  --scada-accent-bg: rgba(2, 132, 199, 0.08);
-  --scada-input-bg: #f8fafc;
+  --scada-accent-bg: rgba(2, 132, 199, 0.1);
+  --scada-input-bg: #ffffff;
   --scada-input-border: #cbd5e1;
-  --scada-table-head-bg: #f1f5f9;
-  --scada-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-  --scada-glass-bg: rgba(255, 255, 255, 0.95);
+  --scada-table-head-bg: #e2e8f0;       /* Muted table header */
+  --scada-shadow: 0 3px 10px -2px rgba(15, 23, 42, 0.08), 0 1px 4px -1px rgba(15, 23, 42, 0.04);
+  --scada-glass-bg: rgba(248, 250, 252, 0.94);
 
-  --status-running: #16a34a;
+  --status-running: #15803d;
   --status-running-bg: #dcfce7;
-  --status-fault: #dc2626;
+  --status-fault: #b91c1c;
   --status-fault-bg: #fee2e2;
-  --status-warning: #d97706;
+  --status-warning: #b45309;
   --status-warning-bg: #fef3c7;
-  --status-stopped: #64748b;
-  --status-stopped-bg: #f1f5f9;
+  --status-stopped: #475569;
+  --status-stopped-bg: #e2e8f0;
 }
 
 *, *::before, *::after,
@@ -108,7 +108,21 @@ body {
   color: var(--scada-text) !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease-out, color 0.25s ease-out;
+}
+
+/* Global Eye-Comfort Smooth Theme Transition */
+.scada-header, 
+.scada-sidebar, 
+.scada-card, 
+.card, 
+.modal-content, 
+.offcanvas, 
+.table, 
+.form-control, 
+.form-select, 
+.dropdown-menu {
+  transition: background-color 0.25s ease-out, color 0.25s ease-out, border-color 0.25s ease-out, box-shadow 0.25s ease-out !important;
 }
 
 /* Base Typography Colors */
@@ -241,14 +255,16 @@ body.light-mode .table {
 body.light-mode .scada-table thead th,
 body.light-mode .table thead th {
   background-color: var(--scada-table-head-bg) !important;
-  color: var(--scada-text-muted) !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
   border-bottom: 2px solid var(--scada-border) !important;
 }
 
 body.light-mode .scada-table tbody td,
 body.light-mode .table tbody td {
   border-bottom: 1px solid var(--scada-border) !important;
-  color: var(--scada-text) !important;
+  color: #0f172a !important;
+  font-weight: 500 !important;
 }
 
 body.light-mode .scada-table tbody tr:hover td,
@@ -868,18 +884,16 @@ body.light-mode .scada-header {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
-body.light-mode .scada-table thead th {
-  background-color: var(--scada-table-head-bg) !important;
-  color: var(--scada-text-muted) !important;
-  border-bottom: 2px solid var(--scada-border) !important;
-}
-
-body.light-mode .scada-table tbody tr:hover td {
-  background-color: rgba(0, 0, 0, 0.02) !important;
+/* Light Mode Table Overrides */
+body.light-mode .scada-table,
+body.light-mode .table {
   color: var(--scada-text) !important;
+  border-color: var(--scada-border) !important;
 }
 
-body.light-mode .scada-table tbody td {
+body.light-mode .scada-table thead th,
+body.light-mode .table thead th {
+  background-color: var(--scada-table-head-bg) !important;
   border-bottom: 1px solid var(--scada-border) !important;
 }
 

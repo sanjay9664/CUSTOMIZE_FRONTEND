@@ -70,6 +70,8 @@ const SiteInspectorDrawer = ({
       show={show}
       onHide={onHide}
       placement="end"
+      restoreFocus={false}
+      enforceFocus={false}
       className="site-inspector-offcanvas unified-register-drawer"
       style={{
         width: 'min(92vw, 680px)',
@@ -81,26 +83,30 @@ const SiteInspectorDrawer = ({
       }}
     >
       <style>{`
-        /* Fast & Ultra-Smooth Hardware-Accelerated Opening & Closing */
-        .site-inspector-offcanvas.offcanvas,
-        .site-inspector-offcanvas.offcanvas.showing,
-        .site-inspector-offcanvas.offcanvas.show {
-          transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease !important;
+        /* Ultra-Fast Lightning Hardware-Accelerated Opening & Closing */
+        .site-inspector-offcanvas.offcanvas {
+          transition: transform 0.09s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.09s ease !important;
           will-change: transform;
-          transform: translate3d(0, 0, 0) !important;
           backface-visibility: hidden;
           background: #0f172a !important;
+          transform: translate3d(100%, 0, 0) !important;
         }
 
-        .site-inspector-offcanvas.offcanvas.hiding {
-          transition: transform 0.14s cubic-bezier(0.4, 0, 1, 1), opacity 0.14s ease-out !important;
-          will-change: transform, opacity;
+        .site-inspector-offcanvas.offcanvas.showing,
+        .site-inspector-offcanvas.offcanvas.show {
+          transform: translate3d(0, 0, 0) !important;
+        }
+
+        .site-inspector-offcanvas.offcanvas.hiding,
+        .site-inspector-offcanvas.offcanvas:not(.show):not(.showing) {
+          transform: translate3d(100%, 0, 0) !important;
+          transition: transform 0.07s cubic-bezier(0.4, 0, 1, 1), opacity 0.07s ease-out !important;
         }
 
         .offcanvas-backdrop,
         .offcanvas-backdrop.fade,
         .offcanvas-backdrop.show {
-          transition: opacity 0.12s linear !important;
+          transition: opacity 0.05s linear !important;
           background: rgba(8, 14, 26, 0.65) !important;
         }
 
@@ -223,7 +229,12 @@ const SiteInspectorDrawer = ({
         }
 
         body.light-mode .site-inspector-offcanvas .text-slate-200 {
+          color: #1e293b !important;
+        }
+
+        body.light-mode .site-inspector-offcanvas .text-muted {
           color: #334155 !important;
+          font-weight: 500 !important;
         }
 
         body.light-mode .site-inspector-offcanvas .border-bottom {
