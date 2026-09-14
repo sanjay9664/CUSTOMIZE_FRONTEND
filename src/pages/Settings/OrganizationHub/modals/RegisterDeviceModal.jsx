@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
+import { Offcanvas, Form, Button, Row, Col, Badge, Spinner, Modal } from 'react-bootstrap';
 import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
 import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
@@ -42,6 +42,55 @@ const RegisterDeviceModal = ({
   const [selectedHardwareDevice, setSelectedHardwareDevice] = useState(null);
   const [availableHardwareDevices, setAvailableHardwareDevices] = useState([]);
   const [hardwareDeviceTree, setHardwareDeviceTree] = useState([]);
+
+  // Threshold Limits configuration modal state
+  const [thresholdModalIndex, setThresholdModalIndex] = useState(null);
+  const [thresholdDraft, setThresholdDraft] = useState({
+    warningHigh: '',
+    criticalHigh: '',
+    warningLow: '',
+    criticalLow: ''
+  });
+
+  const handleOpenThresholdModal = (idx) => {
+    const f = dynamicTemplateFields[idx] || {};
+    setThresholdModalIndex(idx);
+    setThresholdDraft({
+      warningHigh: f.warningHigh !== undefined && f.warningHigh !== null ? f.warningHigh : '',
+      criticalHigh: f.criticalHigh !== undefined && f.criticalHigh !== null ? f.criticalHigh : '',
+      warningLow: f.warningLow !== undefined && f.warningLow !== null ? f.warningLow : '',
+      criticalLow: f.criticalLow !== undefined && f.criticalLow !== null ? f.criticalLow : ''
+    });
+  };
+
+  const handleCloseThresholdModal = () => {
+    setThresholdModalIndex(null);
+  };
+
+  const handleSaveThresholdDraft = () => {
+    if (thresholdModalIndex === null) return;
+    const copy = [...dynamicTemplateFields];
+    if (copy[thresholdModalIndex]) {
+      const parseVal = (val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        const num = parseFloat(val);
+        return isNaN(num) ? null : num;
+      };
+
+      const wH = parseVal(thresholdDraft.warningHigh);
+      const cH = parseVal(thresholdDraft.criticalHigh);
+      const wL = parseVal(thresholdDraft.warningLow);
+      const cL = parseVal(thresholdDraft.criticalLow);
+
+      copy[thresholdModalIndex].warningHigh = wH;
+      copy[thresholdModalIndex].criticalHigh = cH;
+      copy[thresholdModalIndex].warningLow = wL;
+      copy[thresholdModalIndex].criticalLow = cL;
+      copy[thresholdModalIndex].thresholdValue = wH !== null ? wH : '';
+      setDynamicTemplateFields(copy);
+    }
+    setThresholdModalIndex(null);
+  };
 
   // Device configuration cache: { [deviceId]: { device, modules } }
   const [deviceConfigs, setDeviceConfigs] = useState({});
@@ -115,6 +164,7 @@ const RegisterDeviceModal = ({
   };
 
   return (
+    <>
     <Offcanvas
       show={show}
       onHide={onHide}
@@ -354,6 +404,49 @@ const RegisterDeviceModal = ({
           background-color: #1d4ed8;
           border-color: #1d4ed8;
         }
+
+        /* ── Threshold Limits Action Button & Modal (Dark Default) ── */
+        .btn-threshold-limits {
+          background-color: #1e293b !important;
+          border: 1px solid #334155 !important;
+          color: #f8fafc !important;
+          font-size: 12px !important;
+          font-weight: 500 !important;
+          border-radius: 6px !important;
+          transition: all 0.15s ease !important;
+          cursor: pointer !important;
+        }
+        .btn-threshold-limits:hover {
+          background-color: rgba(245, 158, 11, 0.12) !important;
+          border-color: #f59e0b !important;
+          color: #fbbf24 !important;
+          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15) !important;
+        }
+        .threshold-limits-chip {
+          background-color: rgba(245, 158, 11, 0.15);
+          color: #fbbf24;
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          line-height: 1.2;
+        }
+        .threshold-card {
+          background-color: #0f172a;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+        .threshold-label {
+          color: #e2e8f0;
+        }
+        .threshold-input {
+          background-color: #1e293b !important;
+          color: #f8fafc !important;
+          border: 1px solid #334155 !important;
+          border-radius: 8px !important;
+          height: 38px;
+        }
+        .threshold-input:focus {
+          border-color: #38bdf8 !important;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+        }
         .register-wizard-drawer .wizard-btn-primary:disabled {
           background-color: #1e3a8a;
           border-color: #1e3a8a;
@@ -469,10 +562,52 @@ const RegisterDeviceModal = ({
         body.light-mode .register-wizard-drawer .wizard-btn-primary {
           background-color: #2563eb;
           border: 1px solid #2563eb;
-          color: #ffffff;
         }
         body.light-mode .register-wizard-drawer .wizard-btn-primary:hover {
           background-color: #1d4ed8;
+        }
+
+        /* ── Threshold Limits Light Mode ── */
+        body.light-mode .btn-threshold-limits {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #1e293b !important;
+          font-size: 12px !important;
+          font-weight: 500 !important;
+          border-radius: 6px !important;
+          transition: all 0.15s ease !important;
+          cursor: pointer !important;
+        }
+        body.light-mode .btn-threshold-limits:hover {
+          background-color: #fefce8 !important;
+          border-color: #f59e0b !important;
+          color: #b45309 !important;
+          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12) !important;
+        }
+        body.light-mode .threshold-limits-chip {
+          background-color: #fef3c7;
+          color: #b45309;
+          border: 1px solid #fde68a;
+          line-height: 1.2;
+        }
+        body.light-mode .threshold-card {
+          background-color: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.light-mode .threshold-label {
+          color: #1e293b !important;
+        }
+        body.light-mode .threshold-input {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 8px !important;
+          height: 38px;
+        }
+        body.light-mode .threshold-input:focus {
+          border-color: #2563eb !important;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
         }
         body.light-mode .register-wizard-drawer .wizard-btn-primary:disabled {
           background-color: #93c5fd;
@@ -788,11 +923,11 @@ const RegisterDeviceModal = ({
                 <table className="table-wizard-custom" style={{ overflow: 'visible' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '25%' }}>Gateway &amp; Device</th>
+                      <th style={{ width: '24%' }}>Gateway &amp; Device</th>
                       <th style={{ width: '18%' }}>Module ID</th>
                       <th style={{ width: '20%' }}>Event Field</th>
-                      <th style={{ width: '21%' }}>Display Name</th>
-                      <th style={{ width: '16%' }}>Thresholds</th>
+                      <th style={{ width: '20%' }}>Display Name</th>
+                      <th style={{ width: '18%' }}>Threshold Limits</th>
                       <th style={{ width: '40px' }} className="text-center"></th>
                     </tr>
                   </thead>
@@ -1020,37 +1155,27 @@ const RegisterDeviceModal = ({
                           />
                         </td>
                         <td>
-                          <div className="d-flex align-items-center gap-1">
-                            <Form.Control
-                              size="sm"
-                              type="number"
-                              placeholder="Warn (250)"
-                              value={f.warningHigh ?? 250}
-                              onChange={(e) => {
-                                const copy = [...dynamicTemplateFields];
-                                copy[idx].warningHigh = parseInt(e.target.value) || 250;
-                                copy[idx].thresholdValue = e.target.value;
-                                setDynamicTemplateFields(copy);
-                              }}
-                              className="wizard-input font-monospace text-warning fw-medium"
-                              style={{ width: 80, height: 32, fontSize: 11 }}
-                              title="Warning High Threshold"
-                            />
-                            <Form.Control
-                              size="sm"
-                              type="number"
-                              placeholder="Crit (260)"
-                              value={f.criticalHigh ?? 260}
-                              onChange={(e) => {
-                                const copy = [...dynamicTemplateFields];
-                                copy[idx].criticalHigh = parseInt(e.target.value) || 260;
-                                setDynamicTemplateFields(copy);
-                              }}
-                              className="wizard-input font-monospace text-danger fw-medium"
-                              style={{ width: 80, height: 32, fontSize: 11 }}
-                              title="Critical High Threshold"
-                            />
-                          </div>
+                          {(() => {
+                            const hasLimits = (f.warningHigh !== null && f.warningHigh !== undefined && f.warningHigh !== '') ||
+                                              (f.criticalHigh !== null && f.criticalHigh !== undefined && f.criticalHigh !== '');
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenThresholdModal(idx)}
+                                className="btn btn-threshold-limits d-flex align-items-center justify-content-between gap-1.5 px-2.5 rounded-2 w-100 text-nowrap"
+                                style={{ height: 32 }}
+                                title={hasLimits ? `Threshold Boundaries:\nWarning: ${f.warningHigh ?? '-'} (High) / ${f.warningLow ?? '-'} (Low)\nCritical: ${f.criticalHigh ?? '-'} (High) / ${f.criticalLow ?? '-'} (Low)` : 'Click to configure optional threshold limits'}
+                              >
+                                <div className="d-flex align-items-center gap-1.5 overflow-hidden">
+                                  <Sliders size={13} className="text-warning flex-shrink-0" />
+                                  <span className="fs-12 fw-semibold">Threshold Limits</span>
+                                </div>
+                                <span className={`threshold-limits-chip font-monospace fs-10 px-1.5 py-0.5 rounded flex-shrink-0 ${!hasLimits ? 'opacity-75' : ''}`}>
+                                  {hasLimits ? `${f.warningHigh ?? '-'}/${f.criticalHigh ?? '-'}` : 'Optional'}
+                                </span>
+                              </button>
+                            );
+                          })()}
                         </td>
                         <td className="text-center">
                           <Button
@@ -1090,9 +1215,11 @@ const RegisterDeviceModal = ({
                           moduleId: defaultModuleId,
                           sochiotFieldName: '',
                           displayName: '',
-                          thresholdValue: '240',
-                          warningHigh: 250,
-                          criticalHigh: 270,
+                          thresholdValue: '',
+                          warningHigh: null,
+                          criticalHigh: null,
+                          warningLow: null,
+                          criticalLow: null,
                           dataType: 'INTEGER',
                           unit: '',
                           isCommand: false,
@@ -1140,7 +1267,7 @@ const RegisterDeviceModal = ({
                 if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
                   if (typeof setDynamicTemplateFields === 'function') {
                     setDynamicTemplateFields([
-                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: 250, criticalHigh: 270 }
+                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: null, criticalHigh: null, warningLow: null, criticalLow: null }
                     ]);
                   }
                 }
@@ -1203,10 +1330,10 @@ const RegisterDeviceModal = ({
                     displayName: f.displayName || 'Voltage R-N',
                     dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(f.dataType)) ? f.dataType : 'INTEGER',
                     unit: f.unit || 'V',
-                    warningHigh: parseInt(f.warningHigh ?? f.thresholdValue) || 250,
-                    criticalHigh: parseInt(f.criticalHigh) || ((parseInt(f.warningHigh ?? f.thresholdValue) || 250) + 10),
-                    warningLow: parseInt(f.warningLow) || 210,
-                    criticalLow: parseInt(f.criticalLow) || 200,
+                    warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined) ? (parseFloat(f.warningHigh) || null) : null,
+                    criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined) ? (parseFloat(f.criticalHigh) || null) : null,
+                    warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined) ? (parseFloat(f.warningLow) || null) : null,
+                    criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined) ? (parseFloat(f.criticalLow) || null) : null,
                     isCommand: Boolean(f.isCommand),
                     graphable: f.graphable !== false
                   }));
@@ -1351,6 +1478,109 @@ const RegisterDeviceModal = ({
         </div>
       </Offcanvas.Body>
     </Offcanvas>
+
+    {/* Threshold Limits Modal */}
+    <Modal
+      show={thresholdModalIndex !== null}
+      onHide={handleCloseThresholdModal}
+      centered
+      size="lg"
+      className="glass-modal"
+    >
+      <Modal.Header closeButton className="border-secondary border-opacity-25">
+        <Modal.Title className="fw-bold d-flex align-items-center gap-2 fs-15 wizard-subheading">
+          <Sliders className="text-warning" size={18} />
+          <span>
+            Configure Threshold Limits
+            {thresholdModalIndex !== null && (dynamicTemplateFields[thresholdModalIndex]?.displayName || dynamicTemplateFields[thresholdModalIndex]?.sochiotFieldName) && (
+              <span className="text-info font-monospace fs-13 ms-2 fw-normal">
+                ({dynamicTemplateFields[thresholdModalIndex]?.displayName || dynamicTemplateFields[thresholdModalIndex]?.sochiotFieldName})
+              </span>
+            )}
+          </span>
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body className="p-3">
+        {thresholdModalIndex !== null && (
+          <Row className="g-3">
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Warning High
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.warningHigh}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningHigh: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Critical High
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.criticalHigh}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalHigh: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Warning Low
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.warningLow}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningLow: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Critical Low
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.criticalLow}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalLow: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+        )}
+      </Modal.Body>
+      <Modal.Footer className="border-secondary border-opacity-25">
+        <Button variant="outline-secondary" size="sm" onClick={handleCloseThresholdModal}>
+          Cancel
+        </Button>
+        <Button
+          variant="warning"
+          size="sm"
+          onClick={handleSaveThresholdDraft}
+          className="fw-bold text-dark px-4"
+          style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}
+        >
+          Save Threshold Limits
+        </Button>
+      </Modal.Footer>
+    </Modal>
+    </>
   );
 };
 
