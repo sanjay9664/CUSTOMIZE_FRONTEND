@@ -16,6 +16,7 @@ export const CONFIG_ENDPOINTS = {
   // Lazy entity query: /config-engine/entity/{NODE_TYPE}/{NODE_ID}
   ENTITY_HIERARCHY: (nodeType, nodeId) => `/config-engine/entity/${nodeType}/${nodeId}`,
   DEVICE_DETAILS: (deviceId) => `/config-engine/device/${deviceId}`,
+  DEVICES_BY_IDS: '/config-engine/device/get/byDeviceIds',
   LAUNCHPAD_HIERARCHY: '/config-engine/launchpad/hierarchy/',
   UNLINKED_CLUSTERS: '/config-engine/cluster/unlinkedClusters',
   UNLINKED_PANELS: (uuid) => `/config-engine/gateway/unlinked/subgateways/uuid/${uuid}`,

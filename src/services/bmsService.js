@@ -85,7 +85,14 @@ export const bmsService = {
   createSiteDevice: (siteId, data) => apiClient.post(`/sites/${siteId}/devices`, data),
   createDeviceFromTemplate: (siteId, data) => apiClient.post(`/sites/${siteId}/devices/from-template`, data),
   getSiteDeviceTemplates: (siteId) => apiClient.get(`/sites/${siteId}/devices/templates`),
-  updateSiteDevice: (siteId, deviceId, data) => apiClient.patch(`/sites/${siteId}/devices/${deviceId}`, data),
+  updateDevice: (deviceId, data, siteId) => {
+    const query = siteId ? `?siteId=${siteId}` : '';
+    return apiClient.patch(`/devices/${deviceId}${query}`, siteId ? { ...data, siteId: Number(siteId) } : data);
+  },
+  updateSiteDevice: (siteId, deviceId, data) => {
+    const query = siteId ? `?siteId=${siteId}` : '';
+    return apiClient.patch(`/devices/${deviceId}${query}`, { ...data, siteId: Number(siteId) });
+  },
   deleteSiteDevice: (siteId, deviceId) => apiClient.delete(`/sites/${siteId}/devices/${deviceId}`),
   syncSiteDevice: (siteId, deviceId) => apiClient.post(`/sites/${siteId}/devices/${deviceId}/sync`),
   getDeviceLiveTelemetry: (siteId, deviceId) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/live`),

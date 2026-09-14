@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { Offcanvas, Form, Button, Row, Col, Badge, Spinner, Modal } from 'react-bootstrap';
 import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
 import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
 import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
 import LocationCascaderSelector from '../../../../components/common/LocationCascaderSelector';
 import { parseLocationValue } from '../../../../utils/locationTreeUtils';
-import { fetchDeviceDetails, extractDeviceModulesAndFields } from '../../../../services/sochiotLocationService';
+import { fetchDeviceDetails, extractDeviceModulesAndFields, fetchDevicesByDeviceIds } from '../../../../services/sochiotLocationService';
+import { getApiUrl } from '../../../../utils/apiConfig';
 
 const RegisterDeviceModal = ({
   show,
@@ -34,7 +35,8 @@ const RegisterDeviceModal = ({
   setSelectedAreaFilter = () => {},
   setSearchTerm = () => {},
   API_BASE_URL = '',
-  getAuthHeaders = () => ({})
+  getAuthHeaders = () => ({}),
+  selectedSiteFilter = ''
 }) => {
   const { activeSites: storeActiveSites } = useSiteStore();
   const effectiveSites = (sites && sites.length > 0) ? sites : (storeActiveSites || []);
@@ -43,9 +45,73 @@ const RegisterDeviceModal = ({
   const [availableHardwareDevices, setAvailableHardwareDevices] = useState([]);
   const [hardwareDeviceTree, setHardwareDeviceTree] = useState([]);
 
+  // Threshold Limits configuration modal state
+  const [thresholdModalIndex, setThresholdModalIndex] = useState(null);
+  const [thresholdDraft, setThresholdDraft] = useState({
+    warningHigh: '',
+    criticalHigh: '',
+    warningLow: '',
+    criticalLow: ''
+  });
+
+  const handleOpenThresholdModal = (idx) => {
+    const f = dynamicTemplateFields[idx] || {};
+    setThresholdModalIndex(idx);
+    setThresholdDraft({
+      warningHigh: f.warningHigh !== undefined && f.warningHigh !== null ? f.warningHigh : '',
+      criticalHigh: f.criticalHigh !== undefined && f.criticalHigh !== null ? f.criticalHigh : '',
+      warningLow: f.warningLow !== undefined && f.warningLow !== null ? f.warningLow : '',
+      criticalLow: f.criticalLow !== undefined && f.criticalLow !== null ? f.criticalLow : ''
+    });
+  };
+
+  const handleCloseThresholdModal = () => {
+    setThresholdModalIndex(null);
+  };
+
+  const handleSaveThresholdDraft = () => {
+    if (thresholdModalIndex === null) return;
+    const copy = [...dynamicTemplateFields];
+    if (copy[thresholdModalIndex]) {
+      const parseVal = (val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        const num = parseFloat(val);
+        return isNaN(num) ? null : num;
+      };
+
+      const wH = parseVal(thresholdDraft.warningHigh);
+      const cH = parseVal(thresholdDraft.criticalHigh);
+      const wL = parseVal(thresholdDraft.warningLow);
+      const cL = parseVal(thresholdDraft.criticalLow);
+
+      copy[thresholdModalIndex].warningHigh = wH;
+      copy[thresholdModalIndex].criticalHigh = cH;
+      copy[thresholdModalIndex].warningLow = wL;
+      copy[thresholdModalIndex].criticalLow = cL;
+      copy[thresholdModalIndex].thresholdValue = wH !== null ? wH : '';
+      setDynamicTemplateFields(copy);
+    }
+    setThresholdModalIndex(null);
+  };
+
   // Device configuration cache: { [deviceId]: { device, modules } }
   const [deviceConfigs, setDeviceConfigs] = useState({});
   const [loadingDeviceIds, setLoadingDeviceIds] = useState({});
+  const inFlightDeviceIds = useRef(new Set());
+  const attemptedDeviceIds = useRef(new Set());
+
+  // Reset attempted/in-flight cache when modal opens for a new/different device
+  const prevDeviceIdRef = useRef(null);
+  useEffect(() => {
+    if (show) {
+      const currentDevId = editingDevice?.id || 'new';
+      if (prevDeviceIdRef.current !== currentDevId) {
+        prevDeviceIdRef.current = currentDevId;
+        attemptedDeviceIds.current.clear();
+        inFlightDeviceIds.current.clear();
+      }
+    }
+  }, [show, editingDevice?.id]);
 
   const handleDeviceTreeLoaded = React.useCallback((tree) => {
     setHardwareDeviceTree(tree || []);
@@ -54,43 +120,94 @@ const RegisterDeviceModal = ({
   const loadDeviceConfig = useCallback(async (deviceId, rowIdx = null) => {
     if (!deviceId || deviceId === '101') return;
     const cleanId = String(deviceId).trim();
-    if (deviceConfigs[cleanId] || loadingDeviceIds[cleanId]) return;
+    if (!cleanId) return;
+
+    // Prevent duplicate in-flight or re-attempting failed device IDs
+    if (attemptedDeviceIds.current.has(cleanId) || inFlightDeviceIds.current.has(cleanId)) return;
+
+    inFlightDeviceIds.current.add(cleanId);
+    attemptedDeviceIds.current.add(cleanId);
 
     setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: true }));
     try {
       const raw = await fetchDeviceDetails(cleanId);
       if (raw) {
         const parsed = extractDeviceModulesAndFields(raw);
-        setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed }));
+        setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed || { modules: [] } }));
 
         // Auto-select first module if row has no moduleId yet
         if (rowIdx !== null && parsed?.modules?.length > 0) {
           setDynamicTemplateFields(prev => {
             const copy = [...prev];
-            if (copy[rowIdx] && (!copy[rowIdx].moduleId || copy[rowIdx].moduleId === '4583')) {
+            if (copy[rowIdx] && !copy[rowIdx].moduleId) {
               copy[rowIdx].moduleId = String(parsed.modules[0].id);
+              copy[rowIdx].moduleName = parsed.modules[0].label || parsed.modules[0].name || '';
             }
             return copy;
           });
         }
+      } else {
+        setDeviceConfigs(prev => ({ ...prev, [cleanId]: { modules: [] } }));
       }
     } catch (err) {
-      console.warn('[RegisterDeviceModal] loadDeviceConfig error:', err);
+      console.warn('[RegisterDeviceModal] loadDeviceConfig notice for device:', cleanId, err);
+      setDeviceConfigs(prev => ({ ...prev, [cleanId]: { modules: [] } }));
     } finally {
+      inFlightDeviceIds.current.delete(cleanId);
       setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: false }));
     }
-  }, [deviceConfigs, loadingDeviceIds, setDynamicTemplateFields]);
+  }, [setDynamicTemplateFields]);
 
-  // Preload device configurations for any rows that already have a deviceId
+  // Batch preload device configurations using /config-engine/device/get/byDeviceIds
   useEffect(() => {
-    if (registerStep === 2 && Array.isArray(dynamicTemplateFields)) {
+    if (!show) return;
+    const ids = new Set();
+    if (Array.isArray(dynamicTemplateFields)) {
+      dynamicTemplateFields.forEach(f => {
+        const dId = parseInt(f.deviceId, 10);
+        if (!isNaN(dId) && dId > 0 && dId !== 101) ids.add(dId);
+      });
+    }
+    const rawDevIds = registerForm?.sochiotDeviceIds || editingDevice?.sochiotDeviceIds;
+    if (Array.isArray(rawDevIds)) {
+      rawDevIds.forEach(id => { const n = parseInt(id, 10); if (!isNaN(n) && n > 0 && n !== 101) ids.add(n); });
+    } else if (typeof rawDevIds === 'string' && rawDevIds.trim()) {
+      rawDevIds.split(',').forEach(s => { const n = parseInt(s.trim(), 10); if (!isNaN(n) && n > 0 && n !== 101) ids.add(n); });
+    }
+
+    const unattempted = Array.from(ids).filter(id => !attemptedDeviceIds.current.has(String(id)));
+    if (unattempted.length > 0) {
+      unattempted.forEach(id => attemptedDeviceIds.current.add(String(id)));
+      fetchDevicesByDeviceIds(unattempted).then(devs => {
+        if (Array.isArray(devs) && devs.length > 0) {
+          setDeviceConfigs(prev => {
+            const next = { ...prev };
+            devs.forEach(d => {
+              if (d && d.id) {
+                const parsed = extractDeviceModulesAndFields(d);
+                next[String(d.id)] = parsed;
+              }
+            });
+            return next;
+          });
+        }
+      }).catch(err => {
+        console.warn('[RegisterDeviceModal] batch fetchDevicesByDeviceIds notice:', err);
+      });
+    }
+  }, [show, editingDevice?.id, registerForm?.sochiotDeviceIds]);
+
+  // Preload device configurations for any rows that already have a deviceId (at most once per cleanId)
+  useEffect(() => {
+    if (show && Array.isArray(dynamicTemplateFields)) {
       dynamicTemplateFields.forEach((f, idx) => {
-        if (f.deviceId && f.deviceId !== '101' && !deviceConfigs[f.deviceId] && !loadingDeviceIds[f.deviceId]) {
-          loadDeviceConfig(f.deviceId, idx);
+        const dId = f.deviceId ? String(f.deviceId).trim() : '';
+        if (dId && dId !== '101' && !attemptedDeviceIds.current.has(dId)) {
+          loadDeviceConfig(dId, idx);
         }
       });
     }
-  }, [registerStep, dynamicTemplateFields, deviceConfigs, loadingDeviceIds, loadDeviceConfig]);
+  }, [show, dynamicTemplateFields, loadDeviceConfig]);
 
   useEffect(() => {
     if (show) {
@@ -115,6 +232,7 @@ const RegisterDeviceModal = ({
   };
 
   return (
+    <>
     <Offcanvas
       show={show}
       onHide={onHide}
@@ -221,6 +339,9 @@ const RegisterDeviceModal = ({
           flex: 1;
           overflow-y: auto;
           padding: 24px 48px 120px 48px;
+        }
+        .register-wizard-drawer .location-device-filter-container {
+          margin-bottom: 0 !important;
         }
 
         /* ── Form Labels & Inputs (Dark Default) ── */
@@ -351,6 +472,49 @@ const RegisterDeviceModal = ({
           background-color: #1d4ed8;
           border-color: #1d4ed8;
         }
+
+        /* ── Threshold Limits Action Button & Modal (Dark Default) ── */
+        .btn-threshold-limits {
+          background-color: #1e293b !important;
+          border: 1px solid #334155 !important;
+          color: #f8fafc !important;
+          font-size: 12px !important;
+          font-weight: 500 !important;
+          border-radius: 6px !important;
+          transition: all 0.15s ease !important;
+          cursor: pointer !important;
+        }
+        .btn-threshold-limits:hover {
+          background-color: rgba(245, 158, 11, 0.12) !important;
+          border-color: #f59e0b !important;
+          color: #fbbf24 !important;
+          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15) !important;
+        }
+        .threshold-limits-chip {
+          background-color: rgba(245, 158, 11, 0.15);
+          color: #fbbf24;
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          line-height: 1.2;
+        }
+        .threshold-card {
+          background-color: #0f172a;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+        .threshold-label {
+          color: #e2e8f0;
+        }
+        .threshold-input {
+          background-color: #1e293b !important;
+          color: #f8fafc !important;
+          border: 1px solid #334155 !important;
+          border-radius: 8px !important;
+          height: 38px;
+        }
+        .threshold-input:focus {
+          border-color: #38bdf8 !important;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+        }
         .register-wizard-drawer .wizard-btn-primary:disabled {
           background-color: #1e3a8a;
           border-color: #1e3a8a;
@@ -466,10 +630,52 @@ const RegisterDeviceModal = ({
         body.light-mode .register-wizard-drawer .wizard-btn-primary {
           background-color: #2563eb;
           border: 1px solid #2563eb;
-          color: #ffffff;
         }
         body.light-mode .register-wizard-drawer .wizard-btn-primary:hover {
           background-color: #1d4ed8;
+        }
+
+        /* ── Threshold Limits Light Mode ── */
+        body.light-mode .btn-threshold-limits {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #1e293b !important;
+          font-size: 12px !important;
+          font-weight: 500 !important;
+          border-radius: 6px !important;
+          transition: all 0.15s ease !important;
+          cursor: pointer !important;
+        }
+        body.light-mode .btn-threshold-limits:hover {
+          background-color: #fefce8 !important;
+          border-color: #f59e0b !important;
+          color: #b45309 !important;
+          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12) !important;
+        }
+        body.light-mode .threshold-limits-chip {
+          background-color: #fef3c7;
+          color: #b45309;
+          border: 1px solid #fde68a;
+          line-height: 1.2;
+        }
+        body.light-mode .threshold-card {
+          background-color: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.light-mode .threshold-label {
+          color: #1e293b !important;
+        }
+        body.light-mode .threshold-input {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 8px !important;
+          height: 38px;
+        }
+        body.light-mode .threshold-input:focus {
+          border-color: #2563eb !important;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
         }
         body.light-mode .register-wizard-drawer .wizard-btn-primary:disabled {
           background-color: #93c5fd;
@@ -666,6 +872,21 @@ const RegisterDeviceModal = ({
                   </Form.Group>
                 </Col>
 
+                {/* 7. Template Name (Optional) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Template Name (Optional)</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder={registerForm.siteId ? "e.g. EnergyMeter_Template_V1" : "Select site first"}
+                      value={registerForm.templateName || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, templateName: e.target.value })}
+                      disabled={!registerForm.siteId}
+                      className="wizard-input"
+                    />
+                  </Form.Group>
+                </Col>
+
                 {/* Location Hierarchy & Grouping */}
                 {/* <Col md={4}>
                   <Form.Group>
@@ -748,16 +969,19 @@ const RegisterDeviceModal = ({
           {registerStep === 2 && (
             <div className="d-flex flex-column gap-3">
               {/* Sochiot Location Search Filter (Single Location Selector) */}
-              <div className="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-25">
-                <div className="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+              <div className="py-1 px-0">
+                <div className="d-flex align-items-center justify-content-between mb-1.5 flex-wrap gap-2">
                   <div className="d-flex align-items-center gap-2">
-                    <span className="fs-13 fw-semibold text-white">
+                    <span className="fs-13 fw-semibold wizard-subheading">
                       Search Location
                     </span>
                     <span className="badge bg-secondary bg-opacity-30 text-info border border-info border-opacity-25 fs-11 fw-normal">
                       Sochiot Cloud &amp; BMS
                     </span>
                   </div>
+                  <span className="badge wizard-badge px-2.5 py-1 fs-11 font-monospace">
+                    {dynamicTemplateFields.length} FIELD{dynamicTemplateFields.length !== 1 ? 'S' : ''}
+                  </span>
                 </div>
                 <LocationDeviceFilter
                   showTitle={false}
@@ -767,39 +991,26 @@ const RegisterDeviceModal = ({
                   areas={activeAreas}
                   sites={effectiveSites}
                   enableDeviceFilter={false}
-                  initialLocationValue={registerForm.siteId ? `LOCATION-${registerForm.siteId}` : null}
+                  className="mb-0"
+                  initialLocationValue={registerForm.sochiotLocationId ? `LOCATION-${registerForm.sochiotLocationId}` : null}
                   onSelectLocation={(loc) => {
                     if (loc?.id) {
-                      setRegisterForm(prev => ({ ...prev, siteId: String(loc.id), siteName: loc.name || '' }));
+                      setRegisterForm(prev => ({ ...prev, sochiotLocationId: String(loc.id), sochiotLocationName: loc.name || '' }));
                     }
                   }}
                   onDeviceTreeLoaded={handleDeviceTreeLoaded}
                 />
               </div>
 
-              <div className="d-flex justify-content-between align-items-center pb-2">
-                <div>
-                  <h6 className="fw-semibold fs-14 mb-1 wizard-subheading">
-                    Event Fields &amp; Mapping
-                  </h6>
-                  <span className="fs-12 wizard-muted-text">
-                    Define the telemetry fields this device will report and map them to friendly display names.
-                  </span>
-                </div>
-                <span className="badge wizard-badge px-3 py-1.5 fs-11 font-monospace">
-                  {dynamicTemplateFields.length} FIELD{dynamicTemplateFields.length !== 1 ? 'S' : ''}
-                </span>
-              </div>
-
               <div className="table-responsive" style={{ overflow: 'visible' }}>
                 <table className="table-wizard-custom" style={{ overflow: 'visible' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '25%' }}>Gateway &amp; Device</th>
+                      <th style={{ width: '22%' }}>Display Name</th>
+                      <th style={{ width: '24%' }}>Gateway &amp; Device</th>
                       <th style={{ width: '18%' }}>Module ID</th>
-                      <th style={{ width: '20%' }}>Event Field</th>
-                      <th style={{ width: '21%' }}>Display Name</th>
-                      <th style={{ width: '16%' }}>Thresholds</th>
+                      <th style={{ width: '18%' }}>Event Field</th>
+                      <th style={{ width: '18%' }}>Threshold Limits</th>
                       <th style={{ width: '40px' }} className="text-center"></th>
                     </tr>
                   </thead>
@@ -816,6 +1027,24 @@ const RegisterDeviceModal = ({
                     ) : (
                       dynamicTemplateFields.map((f, idx) => (
                       <tr key={idx}>
+                        {/* 1. Display Name */}
+                        <td>
+                          <Form.Control
+                            size="sm"
+                            type="text"
+                            placeholder="e.g. Incomer Voltage R"
+                            value={f.displayName || ''}
+                            onChange={(e) => {
+                              const copy = [...dynamicTemplateFields];
+                              copy[idx].displayName = e.target.value;
+                              setDynamicTemplateFields(copy);
+                            }}
+                            className="wizard-input"
+                            style={{ height: 32, fontSize: 12 }}
+                          />
+                        </td>
+
+                        {/* 2. Gateway & Device */}
                         <td>
                           <LocationCascaderSelector
                             options={hardwareDeviceTree}
@@ -829,9 +1058,16 @@ const RegisterDeviceModal = ({
                                 copy[idx].deviceId = selectedId;
                                 copy[idx].deviceName = leafNode.label;
                                 copy[idx].deviceVal = valArray;
-                                copy[idx].moduleId = '';
+                                const cachedConfig = deviceConfigs[selectedId];
+                                if (cachedConfig?.modules?.length > 0) {
+                                  copy[idx].moduleId = String(cachedConfig.modules[0].id);
+                                  copy[idx].moduleName = cachedConfig.modules[0].label || cachedConfig.modules[0].name || '';
+                                } else {
+                                  copy[idx].moduleId = '';
+                                  copy[idx].moduleName = '';
+                                }
                                 copy[idx].sochiotFieldName = '';
-                                copy[idx].displayName = '';
+                                // Preserve existing displayName - only manually editable
                                 copy[idx].isManualEntry = false;
                                 setDynamicTemplateFields(copy);
                                 loadDeviceConfig(selectedId, idx);
@@ -840,8 +1076,9 @@ const RegisterDeviceModal = ({
                                 copy[idx].deviceName = '';
                                 copy[idx].deviceVal = null;
                                 copy[idx].moduleId = '';
+                                copy[idx].moduleName = '';
                                 copy[idx].sochiotFieldName = '';
-                                copy[idx].displayName = '';
+                                // Preserve existing displayName - only manually editable
                                 copy[idx].isManualEntry = false;
                                 setDynamicTemplateFields(copy);
                               }
@@ -855,6 +1092,8 @@ const RegisterDeviceModal = ({
                             triggerIcon={<Cpu size={13} className="text-info flex-shrink-0" />}
                           />
                         </td>
+
+                        {/* 3. Module ID */}
                         <td>
                           {(() => {
                             const devConfig = deviceConfigs[f.deviceId];
@@ -869,9 +1108,11 @@ const RegisterDeviceModal = ({
                                 onChange={(e) => {
                                   const newModuleId = e.target.value;
                                   const copy = [...dynamicTemplateFields];
+                                  const selectedMod = modules.find(m => String(m.id) === String(newModuleId));
                                   copy[idx].moduleId = newModuleId;
+                                  copy[idx].moduleName = selectedMod ? (selectedMod.label || selectedMod.name || '') : (copy[idx].moduleName || '');
                                   copy[idx].sochiotFieldName = '';
-                                  copy[idx].displayName = '';
+                                  // Preserve existing displayName - only manually editable
                                   copy[idx].isManualEntry = false;
                                   setDynamicTemplateFields(copy);
                                 }}
@@ -880,10 +1121,17 @@ const RegisterDeviceModal = ({
                               >
                                 {!f.deviceId ? (
                                   <option value="">Select Device First</option>
-                                ) : isLoadingModules ? (
+                                ) : isLoadingModules && !f.moduleId ? (
                                   <option value="">Loading modules...</option>
                                 ) : modules.length === 0 ? (
-                                  <option value="">No modules found</option>
+                                  <>
+                                    <option value="">No modules found</option>
+                                    {f.moduleId && (
+                                      <option value={String(f.moduleId)}>
+                                        {f.moduleName || f.deviceName || `Module #${f.moduleId}`}
+                                      </option>
+                                    )}
+                                  </>
                                 ) : (
                                   <>
                                     <option value="">Select Module</option>
@@ -895,12 +1143,19 @@ const RegisterDeviceModal = ({
                                         </option>
                                       );
                                     })}
+                                    {f.moduleId && !modules.some(m => String(m.id) === String(f.moduleId)) && (
+                                      <option value={String(f.moduleId)}>
+                                        {f.moduleName || f.deviceName || `Module #${f.moduleId}`}
+                                      </option>
+                                    )}
                                   </>
                                 )}
                               </Form.Select>
                             );
                           })()}
                         </td>
+
+                        {/* 4. Event Field */}
                         <td>
                           {(() => {
                             const devConfig = deviceConfigs[f.deviceId];
@@ -928,10 +1183,12 @@ const RegisterDeviceModal = ({
                                       }
                                       const copy = [...dynamicTemplateFields];
                                       copy[idx].sochiotFieldName = val;
-                                      // Auto populate display name from selected field definition
+                                      // Only auto-populate display name if not already set by user
                                       const matched = selectedModule?.allFields?.find(af => af.fieldName === val);
                                       if (matched) {
-                                        copy[idx].displayName = matched.displayName || matched.fieldName;
+                                        if (!copy[idx].displayName || !copy[idx].displayName.trim()) {
+                                          copy[idx].displayName = matched.displayName || matched.fieldName;
+                                        }
                                         if (matched.unit) copy[idx].unit = matched.unit;
                                         if (matched.dataType) copy[idx].dataType = matched.dataType;
                                       }
@@ -1011,54 +1268,33 @@ const RegisterDeviceModal = ({
                             );
                           })()}
                         </td>
+
+                        {/* 5. Threshold Limits */}
                         <td>
-                          <Form.Control
-                            size="sm"
-                            type="text"
-                            placeholder="e.g. Incomer Voltage R"
-                            value={f.displayName || ''}
-                            onChange={(e) => {
-                              const copy = [...dynamicTemplateFields];
-                              copy[idx].displayName = e.target.value;
-                              setDynamicTemplateFields(copy);
-                            }}
-                            className="wizard-input"
-                            style={{ height: 32, fontSize: 12 }}
-                          />
+                          {(() => {
+                            const hasLimits = (f.warningHigh !== null && f.warningHigh !== undefined && f.warningHigh !== '') ||
+                                              (f.criticalHigh !== null && f.criticalHigh !== undefined && f.criticalHigh !== '');
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenThresholdModal(idx)}
+                                className="btn btn-threshold-limits d-flex align-items-center justify-content-between gap-1.5 px-2.5 rounded-2 w-100 text-nowrap"
+                                style={{ height: 32 }}
+                                title={hasLimits ? `Threshold Boundaries:\nWarning: ${f.warningHigh ?? '-'} (High) / ${f.warningLow ?? '-'} (Low)\nCritical: ${f.criticalHigh ?? '-'} (High) / ${f.criticalLow ?? '-'} (Low)` : 'Click to configure optional threshold limits'}
+                              >
+                                <div className="d-flex align-items-center gap-1.5 overflow-hidden">
+                                  <Sliders size={13} className="text-warning flex-shrink-0" />
+                                  <span className="fs-12 fw-semibold">Threshold Limits</span>
+                                </div>
+                                <span className={`threshold-limits-chip font-monospace fs-10 px-1.5 py-0.5 rounded flex-shrink-0 ${!hasLimits ? 'opacity-75' : ''}`}>
+                                  {hasLimits ? `${f.warningHigh ?? '-'}/${f.criticalHigh ?? '-'}` : 'Optional'}
+                                </span>
+                              </button>
+                            );
+                          })()}
                         </td>
-                        <td>
-                          <div className="d-flex align-items-center gap-1">
-                            <Form.Control
-                              size="sm"
-                              type="number"
-                              placeholder="Warn (250)"
-                              value={f.warningHigh ?? 250}
-                              onChange={(e) => {
-                                const copy = [...dynamicTemplateFields];
-                                copy[idx].warningHigh = parseInt(e.target.value) || 250;
-                                copy[idx].thresholdValue = e.target.value;
-                                setDynamicTemplateFields(copy);
-                              }}
-                              className="wizard-input font-monospace text-warning fw-medium"
-                              style={{ width: 80, height: 32, fontSize: 11 }}
-                              title="Warning High Threshold"
-                            />
-                            <Form.Control
-                              size="sm"
-                              type="number"
-                              placeholder="Crit (260)"
-                              value={f.criticalHigh ?? 260}
-                              onChange={(e) => {
-                                const copy = [...dynamicTemplateFields];
-                                copy[idx].criticalHigh = parseInt(e.target.value) || 260;
-                                setDynamicTemplateFields(copy);
-                              }}
-                              className="wizard-input font-monospace text-danger fw-medium"
-                              style={{ width: 80, height: 32, fontSize: 11 }}
-                              title="Critical High Threshold"
-                            />
-                          </div>
-                        </td>
+
+                        {/* 6. Remove action */}
                         <td className="text-center">
                           <Button
                             variant="link"
@@ -1087,6 +1323,7 @@ const RegisterDeviceModal = ({
                       const defaultDevName = lastField?.deviceName || '';
                       const defaultDevVal = lastField?.deviceVal || null;
                       const defaultModuleId = lastField?.moduleId || '';
+                      const defaultModuleName = lastField?.moduleName || '';
 
                       setDynamicTemplateFields([
                         ...dynamicTemplateFields,
@@ -1095,11 +1332,14 @@ const RegisterDeviceModal = ({
                           deviceName: defaultDevName,
                           deviceVal: defaultDevVal,
                           moduleId: defaultModuleId,
+                          moduleName: defaultModuleName,
                           sochiotFieldName: '',
                           displayName: '',
-                          thresholdValue: '240',
-                          warningHigh: 250,
-                          criticalHigh: 270,
+                          thresholdValue: '',
+                          warningHigh: null,
+                          criticalHigh: null,
+                          warningLow: null,
+                          criticalLow: null,
                           dataType: 'INTEGER',
                           unit: '',
                           isCommand: false,
@@ -1141,13 +1381,16 @@ const RegisterDeviceModal = ({
             <button
               type="button"
               onClick={() => {
+                if (!registerForm.siteId) {
+                  return showToast('warning', 'Please select a Company / Site first');
+                }
                 if (!registerForm.name || !registerForm.name.trim()) {
                   return showToast('warning', 'Device Name is required to proceed to Template Settings');
                 }
                 if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
                   if (typeof setDynamicTemplateFields === 'function') {
                     setDynamicTemplateFields([
-                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: 250, criticalHigh: 270 }
+                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: null, criticalHigh: null, warningLow: null, criticalLow: null }
                     ]);
                   }
                 }
@@ -1166,181 +1409,246 @@ const RegisterDeviceModal = ({
                   if (typeof showToast === 'function') showToast('danger', 'Device Name is required');
                   return;
                 }
+
+                const resolvedSiteId = registerForm.siteId 
+                  || (editingDevice && (editingDevice.siteId || editingDevice.site?.id || editingDevice.site_id))
+                  || (selectedSiteFilter && selectedSiteFilter !== 'ALL' ? String(selectedSiteFilter) : '')
+                  || (effectiveSites && effectiveSites.length > 0 ? String(effectiveSites[0].id) : '');
+
+                if (!resolvedSiteId) {
+                  if (typeof showToast === 'function') showToast('danger', 'Company / Site is required. Please select a site in Basic information.');
+                  return;
+                }
+
+                // Extract unique Sochiot hardware device IDs from dynamicTemplateFields
+                const fieldDeviceIds = (dynamicTemplateFields || [])
+                  .map(f => parseInt(f.deviceId, 10))
+                  .filter(n => !isNaN(n) && n > 0 && n !== 101);
+                let parsedSochiotIds = Array.from(new Set(fieldDeviceIds));
+
+                if (parsedSochiotIds.length === 0 && registerForm.sochiotDeviceIds) {
+                  parsedSochiotIds = String(registerForm.sochiotDeviceIds)
+                    .split(',')
+                    .map(id => parseInt(id.trim(), 10))
+                    .filter(n => !isNaN(n) && n > 0 && n !== 101);
+                }
+
+                if (parsedSochiotIds.length === 0 && editingDevice?.sochiotDeviceIds) {
+                  const existing = Array.isArray(editingDevice.sochiotDeviceIds)
+                    ? editingDevice.sochiotDeviceIds
+                    : [editingDevice.sochiotDeviceIds];
+                  parsedSochiotIds = existing
+                    .map(id => parseInt(id, 10))
+                    .filter(n => !isNaN(n) && n > 0 && n !== 101);
+                }
+
+                if (!editingDevice && parsedSochiotIds.length === 0) {
+                  if (typeof showToast === 'function') {
+                    showToast('danger', 'Please select at least one hardware device in Template Settings.');
+                  }
+                  return;
+                }
+
+                // Filter valid telemetry fields
+                const validFields = (dynamicTemplateFields || []).filter(f => 
+                  f && (f.sochiotFieldName || f.displayName) && f.moduleId
+                );
+
+                if (!editingDevice && validFields.length === 0) {
+                  if (typeof showToast === 'function') {
+                    showToast('danger', 'Please configure at least one telemetry field with Module ID & Event Field.');
+                  }
+                  return;
+                }
+
+                // Extract unique module IDs from validFields, dynamicTemplateFields, and registerForm
+                const fieldModuleIds = (validFields || [])
+                  .map(f => parseInt(f.moduleId, 10))
+                  .filter(m => !isNaN(m) && m > 0);
+
+                const dynamicModuleIds = (dynamicTemplateFields || [])
+                  .map(f => parseInt(f.moduleId, 10))
+                  .filter(m => !isNaN(m) && m > 0);
+
+                const formModuleIds = Array.isArray(registerForm?.moduleIds)
+                  ? registerForm.moduleIds.map(m => parseInt(m, 10)).filter(m => !isNaN(m) && m > 0)
+                  : (registerForm?.moduleIds ? String(registerForm.moduleIds).split(',').map(m => parseInt(m.trim(), 10)).filter(m => !isNaN(m) && m > 0) : []);
+
+                const parsedModuleIds = Array.from(new Set([...fieldModuleIds, ...dynamicModuleIds, ...formModuleIds]));
+
+                const templateSettings = validFields.map((f, idx) => {
+                  const mId = parseInt(f.moduleId, 10);
+                  const parsedMeta = f.meta 
+                    ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
+                    : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
+                  return {
+                    moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
+                    moduleName: String(f.moduleName || f.deviceName || 'General').trim(),
+                    fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
+                    sochiotFieldName: String(f.sochiotFieldName || '').trim(),
+                    displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
+                    dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(String(f.dataType).toUpperCase())) ? String(f.dataType).toUpperCase() : 'INTEGER',
+                    unit: f.unit || null,
+                    warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined && !isNaN(Number(f.warningHigh))) ? Number(f.warningHigh) : null,
+                    criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined && !isNaN(Number(f.criticalHigh))) ? Number(f.criticalHigh) : null,
+                    warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined && !isNaN(Number(f.warningLow))) ? Number(f.warningLow) : null,
+                    criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined && !isNaN(Number(f.criticalLow))) ? Number(f.criticalLow) : null,
+                    isCommand: Boolean(f.isCommand),
+                    commandAlias: f.commandAlias || null,
+                    isReadable: f.isReadable !== false,
+                    isDisplayed: f.isDisplayed !== false,
+                    graphable: f.graphable !== false,
+                    displayOrder: f.displayOrder ? parseInt(f.displayOrder, 10) : idx + 1,
+                    meta: parsedMeta
+                  };
+                });
+
+                const existingRules = Array.isArray(registerForm?.rules) && registerForm.rules.length > 0
+                  ? registerForm.rules
+                  : (Array.isArray(editingDevice?.rules) ? editingDevice.rules : []);
+
+                const formattedRules = existingRules.map(r => ({
+                  name: r.name,
+                  description: r.description || null,
+                  ruleType: r.ruleType || 'ALARM',
+                  priority: r.priority || 1,
+                  isActive: r.isActive !== false,
+                  sochiotModuleId: r.sochiotModuleId || null,
+                  fields: Array.isArray(r.fields) ? r.fields.map((rf, fIdx) => ({
+                    fieldName: rf.fieldName,
+                    displayName: rf.displayName || rf.fieldName,
+                    fieldGroup: rf.fieldGroup || 'CONDITION',
+                    value: String(rf.value ?? ''),
+                    dataType: rf.dataType || 'TEXT_SHORT',
+                    supportedValues: Array.isArray(rf.supportedValues) ? rf.supportedValues : (rf.fieldName === 'comparison_operator' ? [">", ">=", "<", "<=", "=="] : []),
+                    displayOrder: rf.displayOrder ?? fIdx,
+                    isRequired: rf.isRequired !== false,
+                    sochiotFieldName: rf.sochiotFieldName || rf.fieldName
+                  })) : []
+                }));
+
+                const baseDevicePayload = {
+                  name: registerForm.name.trim(),
+                  category: registerForm.category || 'ENERGY_METER',
+                  sochiotDeviceIds: parsedSochiotIds,
+                  serialNumber: registerForm.serialNumber ? registerForm.serialNumber.trim() : null,
+                  sochiotTemplateId: registerForm.sochiotTemplateId ? Number(registerForm.sochiotTemplateId) : (editingDevice?.sochiotTemplateId || null),
+                  templateName: registerForm.templateName ? registerForm.templateName.trim() : null,
+                  description: registerForm.description ? registerForm.description.trim() : null,
+                  areaId: (registerForm.areaId && activeAreas.some(a => String(a.id) === String(registerForm.areaId))) ? parseInt(registerForm.areaId, 10) : null,
+                  buildingId: (registerForm.buildingId && activeBuildings.some(b => String(b.id) === String(registerForm.buildingId))) ? parseInt(registerForm.buildingId, 10) : null,
+                  floorNo: (registerForm.floorNo !== '' && registerForm.floorNo !== null && registerForm.floorNo !== undefined && !isNaN(parseInt(registerForm.floorNo, 10))) ? parseInt(registerForm.floorNo, 10) : null,
+                  roomNo: (registerForm.roomNo !== '' && registerForm.roomNo !== null && registerForm.roomNo !== undefined && !isNaN(parseInt(registerForm.roomNo, 10))) ? parseInt(registerForm.roomNo, 10) : null,
+                  energyGroupId: registerForm.energyGroupId ? parseInt(registerForm.energyGroupId, 10) : null,
+                  displayOrder: parseInt(registerForm.displayOrder, 10) || 0,
+                  isActive: registerForm.isActive !== false,
+                  template_settings: templateSettings,
+                  rules: formattedRules
+                };
+
+                if (registerForm.assetId) {
+                  baseDevicePayload.assetId = String(registerForm.assetId);
+                }
+                if (registerForm.profileId && typeof registerForm.profileId === 'string' && registerForm.profileId.length >= 20 && !registerForm.profileId.includes(' ')) {
+                  baseDevicePayload.profileId = registerForm.profileId;
+                }
+
                 if (typeof setLoading === 'function') setLoading(true);
                 try {
                   await fetchAndStoreSochiotAccessToken();
-                  const siteId = registerForm.siteId || (sites && sites.length ? sites[0].id : 7);
-                  const generatedSochiotId = Math.floor(100000 + Math.random() * 899999);
-                  const rawSochiotId = String(registerForm.sochiotDeviceIds || '');
-                  let parsedSochiotIds = rawSochiotId
-                    .split(',')
-                    .map(id => parseInt(id.trim()))
-                    .filter(n => !isNaN(n) && n > 0);
+                  const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
+                  let res;
+                  if (editingDevice) {
+                    const patchPayload = {
+                      ...baseDevicePayload
+                    };
+                    // Ensure 'settings' is NEVER passed in device update payload, only 'template_settings'
+                    delete patchPayload.settings;
 
-                  if (parsedSochiotIds.length === 0) {
-                    const fieldDeviceIds = (dynamicTemplateFields || [])
-                      .map(f => parseInt(f.deviceId))
-                      .filter(n => !isNaN(n) && n > 0);
-                    if (fieldDeviceIds.length > 0) {
-                      parsedSochiotIds = Array.from(new Set(fieldDeviceIds));
-                    } else {
-                      parsedSochiotIds = [generatedSochiotId];
-                    }
-                  }
+                    const queryParam = resolvedSiteId ? `?siteId=${resolvedSiteId}` : '';
+                    const updateUrl = getApiUrl(`/devices/${editingDevice.id}${queryParam}`);
+                    res = await fetch(updateUrl, {
+                      method: 'PATCH',
+                      headers,
+                      body: JSON.stringify(patchPayload)
+                    });
 
-                  const templateSettings = (dynamicTemplateFields && dynamicTemplateFields.length > 0 ? dynamicTemplateFields : [
-                    {
-                      moduleId: 4583,
-                      sochiotFieldName: "3,100F",
-                      displayName: "Voltage R-N",
-                      dataType: "INTEGER",
-                      unit: "V",
-                      warningHigh: 250,
-                      criticalHigh: 260,
-                      warningLow: 210,
-                      criticalLow: 200,
-                      isCommand: false,
-                      graphable: true
-                    }
-                  ]).map(f => ({
-                    deviceId: f.deviceId ? (parseInt(f.deviceId) || f.deviceId) : undefined,
-                    deviceName: f.deviceName || undefined,
-                    moduleId: parseInt(f.moduleId) || 4583,
-                    sochiotFieldName: f.sochiotFieldName || '3,100F',
-                    displayName: f.displayName || 'Voltage R-N',
-                    dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(f.dataType)) ? f.dataType : 'INTEGER',
-                    unit: f.unit || 'V',
-                    warningHigh: parseInt(f.warningHigh ?? f.thresholdValue) || 250,
-                    criticalHigh: parseInt(f.criticalHigh) || ((parseInt(f.warningHigh ?? f.thresholdValue) || 250) + 10),
-                    warningLow: parseInt(f.warningLow) || 210,
-                    criticalLow: parseInt(f.criticalLow) || 200,
-                    isCommand: Boolean(f.isCommand),
-                    graphable: f.graphable !== false
-                  }));
-
-                  const payload = {
-                    name: registerForm.name?.trim() || 'EM_LIVEWIZE_178',
-                    category: registerForm.category || 'ENERGY_METER',
-                    sochiotDeviceIds: parsedSochiotIds,
-                    serialNumber: registerForm.serialNumber || `SN-${Math.floor(100000 + Math.random() * 899999)}`,
-                    templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
-                    template_settings: templateSettings
-                  };
-
-                  if (registerForm.assetId) {
-                    payload.assetId = String(registerForm.assetId);
-                  }
-                  if (registerForm.areaId && activeAreas.some(a => String(a.id) === String(registerForm.areaId))) {
-                    payload.areaId = parseInt(registerForm.areaId);
-                  }
-                  if (registerForm.buildingId && activeBuildings.some(b => String(b.id) === String(registerForm.buildingId))) {
-                    payload.buildingId = parseInt(registerForm.buildingId);
-                  }
-                  if (registerForm.floorNo && !isNaN(parseInt(registerForm.floorNo))) {
-                    payload.floorNo = parseInt(registerForm.floorNo);
-                  }
-                  if (registerForm.roomNo && !isNaN(parseInt(registerForm.roomNo))) {
-                    payload.roomNo = parseInt(registerForm.roomNo);
-                  }
-                  if (registerForm.description && registerForm.description.trim()) {
-                    payload.description = registerForm.description.trim();
-                  }
-                  if (registerForm.profileId && typeof registerForm.profileId === 'string' && registerForm.profileId.length >= 20 && !registerForm.profileId.includes(' ')) {
-                    payload.profileId = registerForm.profileId;
-                  }
-
-                  const newDeviceObj = {
-                    id: editingDevice?.id || Date.now(),
-                    name: registerForm.name.trim(),
-                    category: registerForm.category || 'ENERGY_METER',
-                    sochiotDeviceIds: payload.sochiotDeviceIds,
-                    serialNumber: payload.serialNumber,
-                    bmsDeviceId: registerForm.bmsDeviceId || `BMS-${Math.floor(1000 + Math.random() * 9000)}`,
-                    profileId: payload.profileId || null,
-                    templateName: registerForm.templateName || 'EnergyMeter_Template_V1',
-                    settings: payload.template_settings,
-                    areaId: payload.areaId || 0,
-                    areaName: (activeAreas || []).find(a => String(a.id) === String(registerForm.areaId))?.name || 'No Specific Area',
-                    buildingId: payload.buildingId || 0,
-                    buildingName: (activeBuildings || []).find(b => String(b.id) === String(registerForm.buildingId))?.name || 'store-1',
-                    siteId: siteId,
-                    isActive: true,
-                    status: 'ACTIVE',
-                    createdAt: editingDevice?.createdAt || new Date().toISOString()
-                  };
-
-                  try {
-                    const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
-                    let res;
-                    if (editingDevice) {
-                      const patchPayload = {
-                        name: registerForm.name?.trim(),
-                        category: registerForm.category || 'ENERGY_METER',
-                        sochiotDeviceIds: parsedSochiotIds,
-                        serialNumber: payload.serialNumber,
-                        templateName: registerForm.templateName,
-                        template_settings: templateSettings,
-                        ...(registerForm.assetId ? { assetId: String(registerForm.assetId) } : {}),
-                        ...(payload.areaId ? { areaId: payload.areaId } : {}),
-                        ...(payload.buildingId ? { buildingId: payload.buildingId } : {}),
-                        ...(payload.floorNo !== undefined ? { floorNo: payload.floorNo } : {}),
-                        ...(payload.roomNo !== undefined ? { roomNo: payload.roomNo } : {}),
-                        ...(payload.description ? { description: payload.description } : {}),
-                        ...(payload.profileId ? { profileId: payload.profileId } : {})
-                      };
-                      res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDevice.id}`, {
-                        method: 'PATCH',
-                        headers,
-                        body: JSON.stringify(patchPayload)
-                      });
-                    } else {
-                      res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify(payload)
-                      });
-
-                      if (res.status === 409) {
-                        const fallbackUniqueId = Math.floor(10000 + Math.random() * 90000);
-                        payload.sochiotDeviceIds = [fallbackUniqueId];
-                        payload.serialNumber = `SN-${Date.now()}`;
-                        newDeviceObj.sochiotDeviceIds = [fallbackUniqueId];
-                        newDeviceObj.serialNumber = payload.serialNumber;
-                        res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
-                          method: 'POST',
-                          headers,
-                          body: JSON.stringify(payload)
+                    // Also sync device settings via PUT /sites/{siteId}/devices/{deviceId}/settings
+                    if (res.ok && templateSettings.length > 0 && resolvedSiteId) {
+                      try {
+                        const settingsForPut = validFields.map((f, idx) => {
+                          const mId = parseInt(f.moduleId, 10);
+                          const parsedMeta = f.meta 
+                            ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
+                            : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
+                          return {
+                            ...(f.id ? { id: f.id } : {}),
+                            moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
+                            moduleName: String(f.moduleName || f.deviceName || 'General').trim(),
+                            fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
+                            sochiotFieldName: String(f.sochiotFieldName || '').trim(),
+                            displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
+                            dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(String(f.dataType).toUpperCase())) ? String(f.dataType).toUpperCase() : 'INTEGER',
+                            unit: f.unit || null,
+                            enumValues: Array.isArray(f.enumValues) ? f.enumValues : [],
+                            warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined && !isNaN(Number(f.warningHigh))) ? Number(f.warningHigh) : null,
+                            criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined && !isNaN(Number(f.criticalHigh))) ? Number(f.criticalHigh) : null,
+                            warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined && !isNaN(Number(f.warningLow))) ? Number(f.warningLow) : null,
+                            criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined && !isNaN(Number(f.criticalLow))) ? Number(f.criticalLow) : null,
+                            isCommand: Boolean(f.isCommand),
+                            commandAlias: f.commandAlias || null,
+                            isReadable: f.isReadable !== false,
+                            isDisplayed: f.isDisplayed !== false,
+                            graphable: f.graphable !== false,
+                            displayOrder: f.displayOrder ? parseInt(f.displayOrder, 10) : idx + 1,
+                            meta: parsedMeta
+                          };
                         });
-                      }
-                    }
 
-                    if (res && res.ok) {
-                      const json = await res.json().catch(() => ({}));
-                      if (json && (json.id || json.data?.id)) {
-                        newDeviceObj.id = json.id || json.data.id;
+                        const settingsUrl = getApiUrl(`/sites/${resolvedSiteId}/devices/${editingDevice.id}/settings`);
+                        await fetch(settingsUrl, {
+                          method: 'PUT',
+                          headers,
+                          body: JSON.stringify({ settings: settingsForPut })
+                        });
+                      } catch (se) {
+                        console.warn('Device settings sync notice:', se);
                       }
                     }
-                  } catch (e) {
-                    console.warn('Network / API notice, saving locally:', e);
+                  } else {
+                    const createPayload = { ...baseDevicePayload };
+                    delete createPayload.settings;
+
+                    const createUrl = getApiUrl(`/sites/${resolvedSiteId}/devices/from-template`);
+                    res = await fetch(createUrl, {
+                      method: 'POST',
+                      headers,
+                      body: JSON.stringify(createPayload)
+                    });
                   }
 
-                  if (typeof setDevices === 'function') {
-                    setDevices(prev => [newDeviceObj, ...(Array.isArray(prev) ? prev.filter(d => String(d.id) !== String(newDeviceObj.id)) : [])]);
+                  if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    const errMsg = errData.error?.message || errData.message || `Server error (${res.status})`;
+                    if (typeof showToast === 'function') {
+                      showToast('danger', errMsg);
+                    }
+                    if (typeof setLoading === 'function') setLoading(false);
+                    return;
+                  }
+
+                  // Success
+                  if (typeof showToast === 'function') {
+                    showToast('success', editingDevice ? `Device "${registerForm.name}" updated successfully!` : `Device "${registerForm.name}" registered successfully!`);
                   }
                   if (typeof fetchDevices === 'function') {
                     fetchDevices();
                   }
 
-                  const customDevices = JSON.parse(localStorage.getItem('bms_registered_devices') || '[]');
-                  localStorage.setItem('bms_registered_devices', JSON.stringify([newDeviceObj, ...customDevices.filter(c => String(c.id) !== String(newDeviceObj.id))]));
-
                   if (typeof setSearchTerm === 'function') setSearchTerm('');
                   if (typeof setSelectedBuildingFilter === 'function') setSelectedBuildingFilter('ALL');
                   if (typeof setSelectedAreaFilter === 'function') setSelectedAreaFilter('ALL');
 
-                  if (typeof showToast === 'function') {
-                    showToast('success', editingDevice ? `Device "${registerForm.name}" updated successfully!` : `Device "${registerForm.name}" registered & added to list!`);
-                  }
                   onHide();
                 } catch (err) {
                   if (typeof showToast === 'function') {
@@ -1358,6 +1666,109 @@ const RegisterDeviceModal = ({
         </div>
       </Offcanvas.Body>
     </Offcanvas>
+
+    {/* Threshold Limits Modal */}
+    <Modal
+      show={thresholdModalIndex !== null}
+      onHide={handleCloseThresholdModal}
+      centered
+      size="lg"
+      className="glass-modal"
+    >
+      <Modal.Header closeButton className="border-secondary border-opacity-25">
+        <Modal.Title className="fw-bold d-flex align-items-center gap-2 fs-15 wizard-subheading">
+          <Sliders className="text-warning" size={18} />
+          <span>
+            Configure Threshold Limits
+            {thresholdModalIndex !== null && (dynamicTemplateFields[thresholdModalIndex]?.displayName || dynamicTemplateFields[thresholdModalIndex]?.sochiotFieldName) && (
+              <span className="text-info font-monospace fs-13 ms-2 fw-normal">
+                ({dynamicTemplateFields[thresholdModalIndex]?.displayName || dynamicTemplateFields[thresholdModalIndex]?.sochiotFieldName})
+              </span>
+            )}
+          </span>
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body className="p-3">
+        {thresholdModalIndex !== null && (
+          <Row className="g-3">
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Warning High
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.warningHigh}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningHigh: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Critical High
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.criticalHigh}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalHigh: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Warning Low
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.warningLow}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningLow: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+
+            <Col xs={12} sm={6} md={3}>
+              <Form.Group>
+                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
+                  Critical Low
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={thresholdDraft.criticalLow}
+                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalLow: e.target.value })}
+                  className="threshold-input font-monospace fs-13"
+                  placeholder="Optional"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+        )}
+      </Modal.Body>
+      <Modal.Footer className="border-secondary border-opacity-25">
+        <Button variant="outline-secondary" size="sm" onClick={handleCloseThresholdModal}>
+          Cancel
+        </Button>
+        <Button
+          variant="warning"
+          size="sm"
+          onClick={handleSaveThresholdDraft}
+          className="fw-bold text-dark px-4"
+          style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}
+        >
+          Save Threshold Limits
+        </Button>
+      </Modal.Footer>
+    </Modal>
+    </>
   );
 };
 

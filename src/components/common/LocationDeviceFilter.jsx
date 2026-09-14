@@ -243,6 +243,9 @@ const LocationDeviceFilter = ({
         .location-device-filter-container {
           margin-bottom: 1.25rem;
         }
+        .location-device-filter-container.mb-0 {
+          margin-bottom: 0 !important;
+        }
 
         .location-filter-header-title {
           font-size: 1.75rem;
