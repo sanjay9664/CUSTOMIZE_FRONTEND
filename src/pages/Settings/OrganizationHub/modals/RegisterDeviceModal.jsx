@@ -222,6 +222,9 @@ const RegisterDeviceModal = ({
           overflow-y: auto;
           padding: 24px 48px 120px 48px;
         }
+        .register-wizard-drawer .location-device-filter-container {
+          margin-bottom: 0 !important;
+        }
 
         /* ── Form Labels & Inputs (Dark Default) ── */
         .register-wizard-drawer .wizard-label {
@@ -748,16 +751,19 @@ const RegisterDeviceModal = ({
           {registerStep === 2 && (
             <div className="d-flex flex-column gap-3">
               {/* Sochiot Location Search Filter (Single Location Selector) */}
-              <div className="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-25">
-                <div className="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+              <div className="py-1 px-0">
+                <div className="d-flex align-items-center justify-content-between mb-1.5 flex-wrap gap-2">
                   <div className="d-flex align-items-center gap-2">
-                    <span className="fs-13 fw-semibold text-white">
+                    <span className="fs-13 fw-semibold wizard-subheading">
                       Search Location
                     </span>
                     <span className="badge bg-secondary bg-opacity-30 text-info border border-info border-opacity-25 fs-11 fw-normal">
                       Sochiot Cloud &amp; BMS
                     </span>
                   </div>
+                  <span className="badge wizard-badge px-2.5 py-1 fs-11 font-monospace">
+                    {dynamicTemplateFields.length} FIELD{dynamicTemplateFields.length !== 1 ? 'S' : ''}
+                  </span>
                 </div>
                 <LocationDeviceFilter
                   showTitle={false}
@@ -767,6 +773,7 @@ const RegisterDeviceModal = ({
                   areas={activeAreas}
                   sites={effectiveSites}
                   enableDeviceFilter={false}
+                  className="mb-0"
                   initialLocationValue={registerForm.siteId ? `LOCATION-${registerForm.siteId}` : null}
                   onSelectLocation={(loc) => {
                     if (loc?.id) {
@@ -775,20 +782,6 @@ const RegisterDeviceModal = ({
                   }}
                   onDeviceTreeLoaded={handleDeviceTreeLoaded}
                 />
-              </div>
-
-              <div className="d-flex justify-content-between align-items-center pb-2">
-                <div>
-                  <h6 className="fw-semibold fs-14 mb-1 wizard-subheading">
-                    Event Fields &amp; Mapping
-                  </h6>
-                  <span className="fs-12 wizard-muted-text">
-                    Define the telemetry fields this device will report and map them to friendly display names.
-                  </span>
-                </div>
-                <span className="badge wizard-badge px-3 py-1.5 fs-11 font-monospace">
-                  {dynamicTemplateFields.length} FIELD{dynamicTemplateFields.length !== 1 ? 'S' : ''}
-                </span>
               </div>
 
               <div className="table-responsive" style={{ overflow: 'visible' }}>
