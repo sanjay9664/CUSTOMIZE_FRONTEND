@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Badge } from 'react-bootstrap';
 import { Radio, FileText, BellRing } from 'lucide-react';
 import PdfButton from '../../../../components/PdfButton';
 import { generateUserCustomPdfReport } from '../../../../utils/pdfReportGenerator';
+import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
 
 const ReportSection = ({
   activeTab,
@@ -11,14 +12,29 @@ const ReportSection = ({
   formatDate = (d) => d || 'N/A',
   sites = [],
   assets = [],
+  companies = [],
+  tenants = [],
+  zones = [],
+  areas = [],
   setShowReportModal = () => {},
   reportsList = [],
   setShowAlarmModal = () => {},
   alarmsList = []
 }) => {
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState(null);
+  const [selectedDeviceFilter, setSelectedDeviceFilter] = useState(null);
+
   const safeLogs = Array.isArray(telemetryLogs) ? telemetryLogs : [];
-  const safeReports = Array.isArray(reportsList) ? reportsList : [];
+  const rawReports = Array.isArray(reportsList) ? reportsList : [];
   const safeAlarms = Array.isArray(alarmsList) ? alarmsList : [];
+
+  // Filter reports if location filter is active
+  const safeReports = selectedLocationFilter
+    ? rawReports.filter(r => {
+        if (!r.siteId) return true;
+        return String(r.siteId) === String(selectedLocationFilter.id);
+      })
+    : rawReports;
 
   return (
     <div>
@@ -75,7 +91,21 @@ const ReportSection = ({
       {/* TAB: ASYNC REPORTS MANAGEMENT */}
       {activeTab === 'report' && (
         <div className="p-3">
-          <div className="d-flex justify-content-between align-items-center mb-3">
+          {/* Location & Entity Filter (Image 2 style: Reports heading + [ 📍 ] location pill) */}
+          <LocationDeviceFilter
+            title="Reports"
+            showTitle={true}
+            companies={companies}
+            tenants={tenants}
+            zones={zones}
+            areas={areas}
+            sites={sites}
+            enableDeviceFilter={true}
+            onSelectLocation={(loc) => setSelectedLocationFilter(loc)}
+            onSelectDevice={(dev) => setSelectedDeviceFilter(dev)}
+          />
+
+          <div className="d-flex justify-content-between align-items-center mb-3 mt-4 pt-2 border-top border-secondary border-opacity-25">
             <h5 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
               <FileText className="text-info" /> Async DPR &amp; Telemetry Reports Generator
             </h5>

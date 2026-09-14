@@ -9,3 +9,6 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 openapidocs.yml
+.agents
+.gemini
+graphify-out

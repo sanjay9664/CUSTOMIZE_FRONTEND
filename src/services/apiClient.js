@@ -101,6 +101,10 @@ async function handleResponse(res) {
       }
     }
 
+    if (res.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('bms_auth_unauthorized', { detail: { status: 401, message } }));
+    }
+
     throw new ApiError(message, res.status, code, responseData);
   }
 

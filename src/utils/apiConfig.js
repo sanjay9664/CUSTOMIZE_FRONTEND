@@ -38,7 +38,8 @@ export const AUTH_ENDPOINTS = {
   login: getApiUrl('/auth/login'),
   refresh: getApiUrl('/auth/refresh'),
   logout: getApiUrl('/auth/logout'),
-  me: getApiUrl('/auth/me')
+  me: getApiUrl('/auth/me'),
+  accessToken: getApiUrl('/auth/Access-token')
 };
 
 export const EXTERNAL_URLS = {

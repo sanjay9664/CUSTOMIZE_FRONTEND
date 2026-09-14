@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { Cpu, MapPin, Box, Sliders, Layers, AlertTriangle } from 'lucide-react';
-import bmsService from '../../../services/bmsService';
+import bmsService, { fetchAndStoreSochiotAccessToken } from '../../../services/bmsService';
 import { normalizeList } from '../../../services/apiClient';
 
 export const DEVICE_CATEGORIES = [
@@ -61,13 +61,14 @@ const DeviceModal = ({
   // Sync form data when modal opens or editingDevice changes
   useEffect(() => {
     if (show) {
+      fetchAndStoreSochiotAccessToken();
       setError(null);
       if (editingDevice) {
         const resolvedSiteId = editingDevice.siteId || editingDevice.site?.id;
         setForm({
           name: editingDevice.name || '',
           category: editingDevice.category || 'ENERGY_METER',
-          siteId: resolvedSiteId ? String(resolvedSiteId) : (sites[0]?.id ? String(sites[0].id) : '7'),
+          siteId: resolvedSiteId ? String(resolvedSiteId) : '',
           assetId: editingDevice.assetId ? String(editingDevice.assetId) : '',
           serialNumber: editingDevice.serialNumber || '',
           bmsDeviceId: editingDevice.bmsDeviceId || '',
@@ -80,11 +81,10 @@ const DeviceModal = ({
           isActive: editingDevice.isActive !== undefined ? Boolean(editingDevice.isActive) : true
         });
       } else {
-        const defaultSiteId = sites[0]?.id ? String(sites[0].id) : '7';
         setForm({
           name: '',
           category: 'ENERGY_METER',
-          siteId: defaultSiteId,
+          siteId: '',
           assetId: '',
           serialNumber: '',
           bmsDeviceId: '',
@@ -127,6 +127,11 @@ const DeviceModal = ({
     e.preventDefault();
     setError(null);
 
+    if (!form.siteId) {
+      setError('Please select a site first.');
+      return;
+    }
+
     if (!form.name.trim()) {
       setError('Device Name is required.');
       return;
@@ -165,7 +170,8 @@ const DeviceModal = ({
 
     setSubmitting(true);
     try {
-      const siteIdNum = Number(form.siteId || (sites[0]?.id || 7));
+      await fetchAndStoreSochiotAccessToken();
+      const siteIdNum = Number(form.siteId);
       if (isEdit) {
         await bmsService.updateSiteDevice(siteIdNum, editingDevice.id, payload);
       } else {
@@ -234,6 +240,11 @@ const DeviceModal = ({
           border-color: #0284c7 !important;
           box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
         }
+        .scada-device-modal .form-control:disabled,
+        .scada-device-modal .form-select:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
         .scada-device-modal label {
           font-size: 0.76rem;
           font-weight: 600;
@@ -250,7 +261,7 @@ const DeviceModal = ({
       <Modal.Header closeButton>
         <Modal.Title className="fs-6 fw-bold d-flex align-items-center gap-2">
           <Cpu size={18} className="text-info" />
-          <span>{isEdit ? `Edit Device: ${editingDevice.name}` : 'Provision New Device'}</span>
+          <span>{isEdit ? `Edit Device: ${editingDevice.name}` : 'Register Device'}</span>
         </Modal.Title>
       </Modal.Header>
 
@@ -264,26 +275,75 @@ const DeviceModal = ({
           )}
 
           <Row className="g-3">
-            {/* Device Identity Section */}
+            {/* 1. Initial Site Selector */}
+            <Col xs={12} md={6}>
+              <Form.Group>
+                <Form.Label>Site <span className="text-danger">*</span></Form.Label>
+                <Form.Select
+                  value={form.siteId}
+                  onChange={(e) => setForm({ ...form, siteId: e.target.value, assetId: '' })}
+                  required
+                >
+                  <option value="">-- Select Site --</option>
+                  {sites.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+
+            {/* 2. Asset Selector (Filtered to selected site only; enabled only after site selection) */}
+            <Col xs={12} md={6}>
+              <Form.Group>
+                <Form.Label>Linked Asset</Form.Label>
+                <Form.Select
+                  value={form.assetId}
+                  onChange={(e) => setForm({ ...form, assetId: e.target.value })}
+                  disabled={!form.siteId || loadingAssets}
+                >
+                  {!form.siteId ? (
+                    <option value="">-- Select Site First --</option>
+                  ) : loadingAssets ? (
+                    <option value="">Loading assets for site...</option>
+                  ) : availableAssets.length === 0 ? (
+                    <option value="">-- No Assets Under This Site --</option>
+                  ) : (
+                    <>
+                      <option value="">-- Select Asset (Optional) --</option>
+                      {availableAssets.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} [{a.assetType || 'EQUIPMENT'}] {a.serialNumber ? `(SN: ${a.serialNumber})` : ''}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+
+            {/* 3. Device Name (Active only after site selection) */}
             <Col xs={12} md={6}>
               <Form.Group>
                 <Form.Label>Device Name <span className="text-danger">*</span></Form.Label>
                 <Form.Control
                   type="text"
-                  placeholder="e.g. EM_LIVEWIZE_178"
+                  placeholder={form.siteId ? "e.g. EM_LIVEWIZE_178" : "Select site first"}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  disabled={!form.siteId}
                   required
                 />
               </Form.Group>
             </Col>
 
+            {/* 4. Device / Asset Profile Selection (Active only after site selection) */}
             <Col xs={12} md={6}>
               <Form.Group>
-                <Form.Label>Device Category <span className="text-danger">*</span></Form.Label>
+                <Form.Label>Device Profile / Category <span className="text-danger">*</span></Form.Label>
                 <Form.Select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  disabled={!form.siteId}
                   required
                 >
                   {DEVICE_CATEGORIES.map(cat => (
@@ -293,20 +353,37 @@ const DeviceModal = ({
               </Form.Group>
             </Col>
 
-            {/* Serial Number & BMS Device ID */}
+            {/* 5. Serial Number (Active only after site selection) */}
             <Col xs={12} md={6}>
               <Form.Group>
                 <Form.Label>Serial Number (SN)</Form.Label>
                 <Form.Control
                   type="text"
-                  placeholder="e.g. 9454c5f385e821"
+                  placeholder={form.siteId ? "e.g. 9454c5f385e821" : "Select site first"}
                   value={form.serialNumber}
                   onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
+                  disabled={!form.siteId}
                 />
               </Form.Group>
             </Col>
 
-            <Col xs={12} md={6}>
+            {/* 6. Description (Active only after site selection) */}
+            <Col xs={12}>
+              <Form.Group>
+                <Form.Label>Description / Installation Notes</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  placeholder={form.siteId ? "Additional operational details or location notes..." : "Select site first"}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  disabled={!form.siteId}
+                />
+              </Form.Group>
+            </Col>
+
+            {/* Additional Identifiers & Connection Settings */}
+            <Col xs={12} md={4}>
               <Form.Group>
                 <Form.Label>BMS Device ID / Code</Form.Label>
                 <Form.Control
@@ -314,57 +391,25 @@ const DeviceModal = ({
                   placeholder="e.g. BMS-DEV-001"
                   value={form.bmsDeviceId}
                   onChange={(e) => setForm({ ...form, bmsDeviceId: e.target.value })}
+                  disabled={!form.siteId}
                 />
               </Form.Group>
             </Col>
 
-            {/* Asset Linkage & Site Section */}
-            <Col xs={12} md={6}>
+            <Col xs={12} md={4}>
               <Form.Group>
-                <Form.Label>Physical Site</Form.Label>
-                <Form.Select
-                  value={form.siteId}
-                  onChange={(e) => setForm({ ...form, siteId: e.target.value, assetId: '' })}
-                >
-                  {sites.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-
-            <Col xs={12} md={6}>
-              <Form.Group>
-                <Form.Label>Linked Asset (Hierarchy Placement)</Form.Label>
-                <Form.Select
-                  value={form.assetId}
-                  onChange={(e) => setForm({ ...form, assetId: e.target.value })}
-                  disabled={loadingAssets}
-                >
-                  <option value="">-- Unassigned (Site-Level Device) --</option>
-                  {availableAssets.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} [{a.assetType || 'EQUIPMENT'}] {a.serialNumber ? `(SN: ${a.serialNumber})` : ''}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-
-            {/* Hardware & Sochiot Connection */}
-            <Col xs={12} md={6}>
-              <Form.Group>
-                <Form.Label>Sochiot Hardware IDs (Comma-separated)</Form.Label>
+                <Form.Label>Sochiot Hardware IDs</Form.Label>
                 <Form.Control
                   type="text"
                   placeholder="e.g. 1231, 1232"
                   value={form.sochiotDeviceIds}
                   onChange={(e) => setForm({ ...form, sochiotDeviceIds: e.target.value })}
+                  disabled={!form.siteId}
                 />
               </Form.Group>
             </Col>
 
-            <Col xs={12} md={6}>
+            <Col xs={12} md={4}>
               <Form.Group>
                 <Form.Label>Template Name</Form.Label>
                 <Form.Control
@@ -372,20 +417,7 @@ const DeviceModal = ({
                   placeholder="e.g. EnergyMeter_Template_V1"
                   value={form.templateName}
                   onChange={(e) => setForm({ ...form, templateName: e.target.value })}
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Description & Operational Status */}
-            <Col xs={12}>
-              <Form.Group>
-                <Form.Label>Description / Installation Notes</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={2}
-                  placeholder="Additional operational details or location notes..."
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  disabled={!form.siteId}
                 />
               </Form.Group>
             </Col>
@@ -398,6 +430,7 @@ const DeviceModal = ({
                 checked={form.isActive}
                 onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
                 className="fs-13 fw-semibold text-info"
+                disabled={!form.siteId}
               />
             </Col>
           </Row>
@@ -414,7 +447,7 @@ const DeviceModal = ({
             disabled={submitting}
             style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
           >
-            {submitting ? <Spinner animation="border" size="sm" /> : (isEdit ? 'Save Device' : 'Provision Device')}
+            {submitting ? <Spinner animation="border" size="sm" /> : (isEdit ? 'Save Device' : 'Register Device')}
           </Button>
         </Modal.Footer>
       </Form>

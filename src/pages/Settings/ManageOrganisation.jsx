@@ -268,7 +268,7 @@ const ManageOrganisation = () => {
       )}
 
       {/* TAB CONTENT TABLES */}
-      <Card className="bg-dark-card border-0 shadow-sm overflow-hidden">
+      <Card className="bg-dark-card border-0 shadow-sm" style={{ overflow: 'visible' }}>
         {(org.activeTab === 'company' || org.activeTab === 'tenant') && (
           <OrganizationSection
             activeTab={org.activeTab}
@@ -330,7 +330,12 @@ const ManageOrganisation = () => {
             setSelectedAreaFilter={org.setSelectedAreaFilter}
             activeBuildings={org.activeBuildings}
             activeAreas={org.activeAreas}
-            filteredDevices={org.filteredDevices || org.activeDevices || org.devices || []}
+            activeAssets={org.activeAssets}
+            selectedAssetFilter={org.selectedAssetFilter}
+            setSelectedAssetFilter={org.setSelectedAssetFilter}
+            selectedAssetTypeFilter={org.selectedAssetTypeFilter}
+            setSelectedAssetTypeFilter={org.setSelectedAssetTypeFilter}
+            filteredDevices={org.filteredDevices}
             handleOpenRecentEvents={org.handleOpenRecentEvents}
             handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}
             showConfigDevicesModal={org.showConfigDevicesModal}
@@ -340,14 +345,19 @@ const ManageOrganisation = () => {
             setRegisterStep={org.setRegisterStep}
             setRegisterForm={org.setRegisterForm}
             setShowRegisterDeviceModal={org.setShowRegisterDeviceModal}
-            setDynamicTemplateFields={org.setDynamicTemplateFields}
+            handleOpenRegisterDevice={org.handleOpenRegisterDevice}
+            setEditingDeviceItem={org.setEditingDeviceItem}
             handleOpenEditDevice={org.handleOpenEditDevice}
             handleOpenLiveModal={org.handleOpenLiveModal}
             handleOpenSettingsModal={org.handleOpenSettingsModal}
             handleOpenThresholdsModal={org.handleOpenThresholdsModal}
             handleOpenRulesModal={org.handleOpenRulesModal}
-            handleOpenAuditLog={org.handleOpenAuditLogModal || org.handleOpenAuditLog}
+            handleOpenAuditLog={org.handleOpenAuditLog}
+            setSelectedDeviceForAudit={org.setSelectedDeviceForAudit}
+            setSelectedDeviceForCommandsTab={org.setSelectedDeviceForCommandsTab}
+            setShowSendCommandModal={org.setShowSendCommandModal}
             handleDeleteDevice={org.handleDeleteDevice}
+            fetchDevices={org.fetchDevices}
           />
         )}
 
@@ -414,6 +424,11 @@ const ManageOrganisation = () => {
             setShowResyncModal={org.setShowResyncModal}
             activeDevices={org.activeDevices}
             assets={org.assets}
+            sites={org.activeSites || []}
+            companies={org.activeCompanies || []}
+            tenants={org.activeTenants || []}
+            zones={org.activeZones || []}
+            areas={org.activeAreas || []}
             setShowReportModal={org.setShowReportModal}
             reportsList={org.reportsList}
             setShowAlarmModal={org.setShowAlarmModal}

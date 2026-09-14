@@ -4,6 +4,7 @@ import { getCookie, getAuthToken } from '../../../../utils/cookieUtils';
 import { getApiUrl } from '../../../../utils/apiConfig';
 import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, FileText } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
+import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
 
 export const API_BASE_URL = getApiUrl();
 
@@ -131,6 +132,8 @@ export const useManageOrganisation = () => {
 
   const [selectedBuildingFilter, setSelectedBuildingFilter] = useState('ALL');
   const [selectedAreaFilter, setSelectedAreaFilter] = useState('ALL');
+  const [selectedAssetFilter, setSelectedAssetFilter] = useState('ALL');
+  const [selectedAssetTypeFilter, setSelectedAssetTypeFilter] = useState('ALL');
   const [deviceSubTab, setDeviceSubTab] = useState('registration');
   const [showRegisterDeviceModal, setShowRegisterDeviceModal] = useState(false);
   const [registerStep, setRegisterStep] = useState(1);
@@ -417,12 +420,14 @@ export const useManageOrganisation = () => {
     */
   }, [selectedBuildingSiteId]);
 
-  // Fetch Assets
-  const fetchAssets = useCallback(async () => {
+  // Fetch Assets (per OpenAPI: GET /sites/{siteId}/assets or GET /assets)
+  const fetchAssets = useCallback(async (siteIdParam = null) => {
     try {
-      // The documented /assets endpoint aggregates only the caller's
-      // authorized sites on the server, keeping this tab to one HTTP request.
-      const response = await fetch(`${API_BASE_URL}/assets`, { headers: getAuthHeaders() });
+      const activeSiteId = siteIdParam !== null ? siteIdParam : selectedSiteFilter;
+      const url = activeSiteId && activeSiteId !== 'ALL'
+        ? `${API_BASE_URL}/sites/${activeSiteId}/assets`
+        : `${API_BASE_URL}/assets`;
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error('Assets could not be loaded');
       const listResponse = await response.json();
       let list = normalizeList(listResponse, 'assets');
@@ -439,12 +444,19 @@ export const useManageOrganisation = () => {
     } catch (err) {
       console.warn('Assets fetch err:', err);
     }
-  }, []);
+  }, [selectedSiteFilter]);
 
-  // Fetch Devices
+  // Fetch Devices (per OpenAPI: /assets/{id}/devices, /sites/{siteId}/devices, or /devices)
   const fetchDevices = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/devices`, { headers: getAuthHeaders() });
+      let endpoint = `${API_BASE_URL}/devices`;
+      if (selectedAssetFilter && selectedAssetFilter !== 'ALL') {
+        endpoint = `${API_BASE_URL}/assets/${selectedAssetFilter}/devices`;
+      } else if (selectedSiteFilter && selectedSiteFilter !== 'ALL') {
+        endpoint = `${API_BASE_URL}/sites/${selectedSiteFilter}/devices`;
+      }
+
+      const res = await fetch(endpoint, { headers: getAuthHeaders() });
       const deletedIds = JSON.parse(localStorage.getItem('bms_deleted_devices') || '[]');
       if (res.ok) {
         const json = await res.json();
@@ -466,7 +478,7 @@ export const useManageOrganisation = () => {
         setDevices(prev => [...customDevices.filter(d => !deletedIds.includes(String(d.id))), ...prev]);
       }
     }
-  }, []);
+  }, [selectedSiteFilter, selectedAssetFilter]);
 
   // Manual full refresh only. Do not invoke this on mount: loading every
   // hierarchy resource when the user opens one tab creates unnecessary network
@@ -983,6 +995,7 @@ export const useManageOrganisation = () => {
 
   // Device Actions
   const handleOpenEditDevice = (d) => {
+    fetchAndStoreSochiotAccessToken();
     setEditingDeviceItem(d);
     setRegisterStep(1);
     setRegisterForm({
@@ -1007,11 +1020,40 @@ export const useManageOrganisation = () => {
     setShowRegisterDeviceModal(true);
   };
 
+  const handleOpenRegisterDevice = () => {
+    fetchAndStoreSochiotAccessToken();
+    setEditingDeviceItem(null);
+    setRegisterStep(1);
+    setRegisterForm({
+      id: '',
+      siteId: activeSites && activeSites.length ? String(activeSites[0].id) : '',
+      name: '',
+      sochiotDeviceIds: '',
+      category: '',
+      areaId: '',
+      buildingId: '',
+      floorNo: '',
+      roomNo: '',
+      energyGroupId: '',
+      description: '',
+      serialNumber: '',
+      profileId: '',
+      templateName: ''
+    });
+    if (typeof setDynamicTemplateFields === 'function') {
+      setDynamicTemplateFields([
+        { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: 250, criticalHigh: 270 }
+      ]);
+    }
+    setShowRegisterDeviceModal(true);
+  };
+
   const handleSaveEditDevice = async (e) => {
     e.preventDefault();
     if (!editingDeviceItem) return;
     setLoading(true);
     try {
+      await fetchAndStoreSochiotAccessToken();
       const siteId = editingDeviceItem.siteId || 7;
       const res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDeviceItem.id}`, {
         method: 'PATCH',
@@ -1369,6 +1411,7 @@ export const useManageOrganisation = () => {
     } else if (activeTab === 'asset') {
       fetchAssets();
     } else if (activeTab === 'device') {
+      fetchAssets();
       fetchDevices();
     } else if (activeTab === 'widgets' && typeof handleFetchWidgets === 'function') {
       handleFetchWidgets(selectedDeviceForWidgets);
@@ -1428,7 +1471,13 @@ export const useManageOrganisation = () => {
     const matchesSite = !selectedSiteFilter || selectedSiteFilter === 'ALL' || String(d.siteId) === String(selectedSiteFilter);
     const matchesBuilding = !selectedBuildingFilter || selectedBuildingFilter === 'ALL' || String(d.buildingId) === String(selectedBuildingFilter);
     const matchesArea = !selectedAreaFilter || selectedAreaFilter === 'ALL' || String(d.areaId) === String(selectedAreaFilter);
-    return matchesSearch && matchesSite && matchesBuilding && matchesArea;
+    const matchesAsset = !selectedAssetFilter || selectedAssetFilter === 'ALL' || String(d.assetId) === String(selectedAssetFilter);
+    let matchesAssetType = true;
+    if (selectedAssetTypeFilter && selectedAssetTypeFilter !== 'ALL') {
+      const linkedAsset = activeAssets.find(a => String(a.id) === String(d.assetId)) || d.asset;
+      matchesAssetType = linkedAsset && String(linkedAsset.assetType || '').toUpperCase() === String(selectedAssetTypeFilter).toUpperCase();
+    }
+    return matchesSearch && matchesSite && matchesBuilding && matchesArea && matchesAsset && matchesAssetType;
   });
 
   const isOrgGroup = ['company', 'tenant'].includes(activeTab);
@@ -1477,6 +1526,7 @@ export const useManageOrganisation = () => {
     activeCompanies, activeTenants, activeZones, activeAreas, activeSites, activeBuildings, activeAssets, activeDevices,
     searchTerm, setSearchTerm, selectedTenantFilter, setSelectedTenantFilter, selectedZoneFilter, setSelectedZoneFilter, selectedSiteFilter, setSelectedSiteFilter,
     selectedBuildingSiteId, setSelectedBuildingSiteId, selectedBuildingFilter, setSelectedBuildingFilter, selectedAreaFilter, setSelectedAreaFilter,
+    selectedAssetFilter, setSelectedAssetFilter, selectedAssetTypeFilter, setSelectedAssetTypeFilter,
     showCompanyModal, setShowCompanyModal, editingCompany, companyForm, setCompanyForm, handleOpenCreateCompany, handleOpenEditCompany, handleSaveCompany, handleDeleteCompany,
     showTenantModal, setShowTenantModal, editingTenant, tenantForm, setTenantForm, handleOpenCreateTenant, handleOpenEditTenant, handleSaveTenant, handleReactivateTenant, handleDeleteTenant,
     showZoneModal, setShowZoneModal, editingZone, zoneForm, setZoneForm, handleOpenCreateZone, handleOpenEditZone, handleSaveZone, handleReactivateZone, handleDeleteZone,
@@ -1491,7 +1541,7 @@ export const useManageOrganisation = () => {
     showAuditLogModal, setShowAuditLogModal, selectedDeviceForAudit, setSelectedDeviceForAudit, auditLogList: auditLogs, handleOpenAuditLog,
     showRecentEventsModal, setShowRecentEventsModal, recentEventsList, handleOpenRecentEvents, handleGlobalResyncEventStats, showConfigDevicesModal, setShowConfigDevicesModal,
     showRulesModal, setShowRulesModal, selectedDeviceForRules, deviceRulesForm: ruleForm, setDeviceRulesForm: setRuleForm, handleOpenRulesModal, handleSaveRules,
-    showEditDeviceModal, setShowEditDeviceModal, editingDeviceItem, editDeviceForm, setEditDeviceForm, handleOpenEditDevice, handleSaveEditDevice, handleDeleteDevice,
+    showEditDeviceModal, setShowEditDeviceModal, editingDeviceItem, setEditingDeviceItem, editDeviceForm, setEditDeviceForm, handleOpenEditDevice, handleOpenRegisterDevice, handleSaveEditDevice, handleDeleteDevice,
     showCreateWidgetModal, setShowCreateWidgetModal, widgetFilterActiveOnly, setWidgetFilterActiveOnly, selectedDeviceForWidgets, setSelectedDeviceForWidgets, widgetsList, widgetForm, setWidgetForm, handleSyncWidgetsFromSochiot, handleReorderWidgets, handleDeleteAllWidgets, handleFetchWidgets, showEditWidgetModal, setShowEditWidgetModal, editingWidget, handleOpenEditWidgetModal, handleSaveWidget, handleDeleteWidget,
     selectedDeviceForRulesTab, setSelectedDeviceForRulesTab, rulesList, handleFetchRulesTab, handleSyncAllRulesFromSochiot, handleUpdateSingleRuleField, showRuleDetailsModal, setShowRuleDetailsModal, inspectingRule, handleOpenRuleDetails, showEditRuleModal, setShowEditRuleModal, editingRule, ruleForm, setRuleForm, handleOpenEditRuleModal, handleSaveRuleItem, handleSyncSpecificRuleToSochiot, handleSyncSpecificRuleByFields, handleDeleteRuleItem,
     selectedDeviceForCommandsTab, setSelectedDeviceForCommandsTab, commandsList, handleFetchCommandHistory, showSendCommandModal, setShowSendCommandModal, sendCommandFormData, setSendCommandFormData, handleExecuteSendCommand, showCommandDetailsModal, setShowCommandDetailsModal, inspectingCommand, handleOpenCommandDetails,

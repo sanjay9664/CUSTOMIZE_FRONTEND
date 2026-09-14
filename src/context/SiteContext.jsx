@@ -4,6 +4,8 @@ const SiteContext = createContext();
 
 import { getAuthToken } from '../utils/cookieUtils';
 import { getApiUrl } from '../utils/apiConfig';
+import { BMS_ENDPOINTS } from '../constants/apiEndpoints';
+import { fetchUserLocationHierarchy } from '../services/sochiotLocationService';
 
 const getAuthHeaders = () => {
   const token = getAuthToken() || '';
@@ -34,6 +36,54 @@ export const SiteProvider = ({ children }) => {
   const [selectedSite, setSelectedSite] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Global Sochiot Location & Scope State (inspired by ismartaccess-frontend-v2 locationReducer)
+  const [sochiotUserLocation, setSochiotUserLocation] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(() => {
+    try {
+      const stored = localStorage.getItem('global_location_scope');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [locationHierarchy, setLocationHierarchy] = useState([]);
+  const [preferredLocation, setPreferredLocation] = useState(null);
+
+  const loadSochiotHierarchy = useCallback(async (forceRefresh = false) => {
+    try {
+      const data = await fetchUserLocationHierarchy(forceRefresh);
+      if (data?.userZoneLocationVO) {
+        setSochiotUserLocation(data.userZoneLocationVO);
+        if (data.preferredZoneNodeId && data.preferredZoneNodeType) {
+          setPreferredLocation({
+            nodeType: data.preferredZoneNodeType,
+            nodeId: data.preferredZoneNodeId,
+            parentHierarchy: data.preferredLocationParentHierarchy
+          });
+        }
+        return data;
+      }
+    } catch (err) {
+      console.warn('[SiteContext] loadSochiotHierarchy error:', err);
+    }
+    return null;
+  }, []);
+
+  const setCurrentLocationScope = useCallback((locationObj) => {
+    setCurrentLocation(locationObj);
+    if (locationObj?.path) {
+      setLocationHierarchy(locationObj.path);
+    }
+    try {
+      if (locationObj) {
+        localStorage.setItem('global_location_scope', JSON.stringify(locationObj));
+      } else {
+        localStorage.removeItem('global_location_scope');
+      }
+    } catch (e) {}
+    window.dispatchEvent(new CustomEvent('bms_location_scope_changed', { detail: locationObj }));
+  }, []);
+
   const fetchSites = useCallback(async () => {
     const token = getAuthToken();
     if (!token) {
@@ -42,7 +92,7 @@ export const SiteProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      const res = await fetch(getApiUrl('/sites'), { headers: getAuthHeaders() });
+      const res = await fetch(getApiUrl(BMS_ENDPOINTS.SITES), { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         const list = normalizeList(json, 'sites');
@@ -173,7 +223,15 @@ export const SiteProvider = ({ children }) => {
         fetchSites,
         addSite,
         updateSite,
-        deleteSite
+        deleteSite,
+        // Global Location Scope (ismartaccess-frontend-v2 pattern)
+        sochiotUserLocation,
+        setSochiotUserLocation,
+        currentLocation,
+        locationHierarchy,
+        preferredLocation,
+        loadSochiotHierarchy,
+        setCurrentLocationScope
       }}
     >
       {children}
@@ -213,10 +271,32 @@ export const useSiteStore = () => {
         const updated = stored.filter(s => String(s.id) !== String(siteId));
         try { localStorage.setItem('scada_sites_db', JSON.stringify(updated)); } catch(e) {}
         window.dispatchEvent(new CustomEvent('bms_sites_updated', { detail: updated }));
-      }
+      },
+      sochiotUserLocation: null,
+      currentLocation: null,
+      locationHierarchy: [],
+      preferredLocation: null,
+      loadSochiotHierarchy: async () => null,
+      setCurrentLocationScope: () => {}
     };
   }
   return context;
+};
+
+/**
+ * Dedicated hook for hierarchical location and scope management
+ * (Inspired by ismartaccess-frontend-v2 Location Reducer)
+ */
+export const useLocationScope = () => {
+  const store = useSiteStore();
+  return {
+    sochiotUserLocation: store.sochiotUserLocation,
+    currentLocation: store.currentLocation,
+    locationHierarchy: store.locationHierarchy,
+    preferredLocation: store.preferredLocation,
+    loadSochiotHierarchy: store.loadSochiotHierarchy,
+    setCurrentLocationScope: store.setCurrentLocationScope
+  };
 };
 
 export default SiteContext;

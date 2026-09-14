@@ -241,6 +241,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
 
+  /auth/Access-token:
+    get:
+      tags: [Auth]
+      summary: Get Sochiot Auth Token
+      description: Returns a valid Sochiot platform authentication token (Super Admin only). Authenticates with Sochiot auth engine using super admin credentials and caches the token in Redis for 14 minutes.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sochiot auth token returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SochiotTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   # ============================================================
   # B. USERS SERVICE
   # ============================================================
@@ -5090,6 +5109,20 @@ components:
             expiresIn:
               type: integer
               example: 900
+
+    SochiotTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              description: Sochiot auth bearer token
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
     CreateUserRequest:
       type: object

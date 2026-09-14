@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Offcanvas, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
-import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus } from 'lucide-react';
+import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
+import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
+import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
+import LocationCascaderSelector from '../../../../components/common/LocationCascaderSelector';
+import { parseLocationValue } from '../../../../utils/locationTreeUtils';
+import { fetchDeviceDetails, extractDeviceModulesAndFields } from '../../../../services/sochiotLocationService';
 
 const RegisterDeviceModal = ({
   show,
@@ -11,9 +16,13 @@ const RegisterDeviceModal = ({
   registerForm = {},
   setRegisterForm = () => {},
   sites = [],
+  activeAssets = [],
   editingDevice = null,
   activeAreas = [],
   activeBuildings = [],
+  companies = [],
+  tenants = [],
+  zones = [],
   dynamicTemplateFields = [],
   setDynamicTemplateFields = () => {},
   fetchDevices = () => {},
@@ -29,6 +38,82 @@ const RegisterDeviceModal = ({
 }) => {
   const { activeSites: storeActiveSites } = useSiteStore();
   const effectiveSites = (sites && sites.length > 0) ? sites : (storeActiveSites || []);
+
+  const [selectedHardwareDevice, setSelectedHardwareDevice] = useState(null);
+  const [availableHardwareDevices, setAvailableHardwareDevices] = useState([]);
+  const [hardwareDeviceTree, setHardwareDeviceTree] = useState([]);
+
+  // Device configuration cache: { [deviceId]: { device, modules } }
+  const [deviceConfigs, setDeviceConfigs] = useState({});
+  const [loadingDeviceIds, setLoadingDeviceIds] = useState({});
+
+  const handleDeviceTreeLoaded = React.useCallback((tree) => {
+    setHardwareDeviceTree(tree || []);
+  }, []);
+
+  const loadDeviceConfig = useCallback(async (deviceId, rowIdx = null) => {
+    if (!deviceId || deviceId === '101') return;
+    const cleanId = String(deviceId).trim();
+    if (deviceConfigs[cleanId] || loadingDeviceIds[cleanId]) return;
+
+    setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: true }));
+    try {
+      const raw = await fetchDeviceDetails(cleanId);
+      if (raw) {
+        const parsed = extractDeviceModulesAndFields(raw);
+        setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed }));
+
+        // Auto-select first module if row has no moduleId yet
+        if (rowIdx !== null && parsed?.modules?.length > 0) {
+          setDynamicTemplateFields(prev => {
+            const copy = [...prev];
+            if (copy[rowIdx] && (!copy[rowIdx].moduleId || copy[rowIdx].moduleId === '4583')) {
+              copy[rowIdx].moduleId = String(parsed.modules[0].id);
+            }
+            return copy;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[RegisterDeviceModal] loadDeviceConfig error:', err);
+    } finally {
+      setLoadingDeviceIds(prev => ({ ...prev, [cleanId]: false }));
+    }
+  }, [deviceConfigs, loadingDeviceIds, setDynamicTemplateFields]);
+
+  // Preload device configurations for any rows that already have a deviceId
+  useEffect(() => {
+    if (registerStep === 2 && Array.isArray(dynamicTemplateFields)) {
+      dynamicTemplateFields.forEach((f, idx) => {
+        if (f.deviceId && f.deviceId !== '101' && !deviceConfigs[f.deviceId] && !loadingDeviceIds[f.deviceId]) {
+          loadDeviceConfig(f.deviceId, idx);
+        }
+      });
+    }
+  }, [registerStep, dynamicTemplateFields, deviceConfigs, loadingDeviceIds, loadDeviceConfig]);
+
+  useEffect(() => {
+    if (show) {
+      fetchAndStoreSochiotAccessToken();
+    }
+  }, [show]);
+
+  const handleSelectHardwareDevice = (dev) => {
+    setSelectedHardwareDevice(dev);
+    if (dev) {
+      setAvailableHardwareDevices(prev => {
+        if (prev.some(d => String(d.id) === String(dev.id))) return prev;
+        return [...prev, dev];
+      });
+      if (dev.id) {
+        setDynamicTemplateFields(prev => prev.map(f => ({
+          ...f,
+          deviceId: f.deviceId === '101' ? String(dev.id) : f.deviceId
+        })));
+      }
+    }
+  };
+
   return (
     <Offcanvas
       show={show}
@@ -135,7 +220,7 @@ const RegisterDeviceModal = ({
         .register-wizard-drawer .wizard-content-scroll {
           flex: 1;
           overflow-y: auto;
-          padding: 24px 48px;
+          padding: 24px 48px 120px 48px;
         }
 
         /* ── Form Labels & Inputs (Dark Default) ── */
@@ -185,7 +270,7 @@ const RegisterDeviceModal = ({
           border-spacing: 0;
           border: 1px solid #334155;
           border-radius: 8px;
-          overflow: hidden;
+          overflow: visible;
         }
         .register-wizard-drawer .table-wizard-custom th {
           background-color: #1e293b;
@@ -451,14 +536,14 @@ const RegisterDeviceModal = ({
           {registerStep === 1 && (
             <div>
               <Row className="g-4">
-                {/* Company / Site */}
-                <Col md={4}>
+                {/* 1. Company / Site */}
+                <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="wizard-label">Company / Site</Form.Label>
+                    <Form.Label className="wizard-label">Company / Site *</Form.Label>
                     <Form.Select
                       disabled={!!editingDevice}
                       value={registerForm.siteId || ''}
-                      onChange={(e) => setRegisterForm({ ...registerForm, siteId: e.target.value })}
+                      onChange={(e) => setRegisterForm({ ...registerForm, siteId: e.target.value, assetId: '' })}
                       className="wizard-select"
                       style={editingDevice ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
                     >
@@ -468,79 +553,157 @@ const RegisterDeviceModal = ({
                   </Form.Group>
                 </Col>
 
-                {/* Machine Name / Device Name */}
-                <Col md={4}>
+                {/* 2. Asset Selector (Filtered to selected site; only active after site selection) */}
+                <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="wizard-label">Machine / Device Name *</Form.Label>
+                    <Form.Label className="wizard-label">Asset</Form.Label>
+                    <Form.Select
+                      disabled={!registerForm.siteId}
+                      value={registerForm.assetId || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, assetId: e.target.value })}
+                      className="wizard-select"
+                    >
+                      {!registerForm.siteId ? (
+                        <option value="">-- Select Site First --</option>
+                      ) : (
+                        <>
+                          <option value="">Select Asset</option>
+                          {(activeAssets || [])
+                            .filter(a => String(a.siteId) === String(registerForm.siteId))
+                            .map(a => (
+                              <option key={a.id} value={a.id}>
+                                {a.name} [{a.assetType || 'EQUIPMENT'}]
+                              </option>
+                            ))}
+                        </>
+                      )}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                {/* 3. Machine Name / Device Name (Only after site selection) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Device Name *</Form.Label>
                     <Form.Control
                       type="text"
-                      placeholder="e.g. Incomer-1 LT Panel"
+                      placeholder={registerForm.siteId ? "e.g. Incomer-1 LT Panel" : "Select site first"}
                       value={registerForm.name || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                      disabled={!registerForm.siteId}
                       required
                       className="wizard-input"
                     />
                   </Form.Group>
                 </Col>
 
-                {/* Template / Device Category */}
-                <Col md={4}>
+                {/* 4. Device Profile / Category (Only after site selection) */}
+                <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="wizard-label">Template / Category</Form.Label>
+                    <Form.Label className="wizard-label">Device Profile</Form.Label>
                     <Form.Select
                       value={registerForm.category || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, category: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
-                      <option value="">Select Template / Category</option>
-                      <option value="ENERGY_METER">ENERGY_METER (Energy Meter)</option>
-                      <option value="DIESEL_GENERATOR">DIESEL_GENERATOR (Diesel Generator)</option>
-                      <option value="UPS">UPS (Uninterruptible Power Supply)</option>
-                      <option value="HVAC">HVAC (Heating &amp; Air Conditioning)</option>
-                      <option value="WATER_PUMP">WATER_PUMP (Water &amp; Hydro Pump)</option>
-                      <option value="ENVIRONMENT_SENSOR">ENVIRONMENT_SENSOR (AQI &amp; Ambient)</option>
-                      <option value="OTHER">OTHER (General Device)</option>
+                      <option value="">Select Profile</option>
+                      <option value="ENERGY_METER">ENERGY_METER</option>
+                      <option value="UG_TANK">UG_TANK</option>
+                      <option value="AG_TANK">AG_TANK</option>
+                      <option value="PUMP">PUMP</option>
+                      <option value="VALVE">VALVE</option>
+                      <option value="GENERATOR">GENERATOR</option>
+                      <option value="LT_PANEL">LT_PANEL</option>
+                      <option value="FIRE_PUMP">FIRE_PUMP</option>
+                      <option value="HVAC_CHILLER">HVAC_CHILLER</option>
+                      <option value="HVAC_AHU">HVAC_AHU</option>
+                      <option value="HVAC_COOLING_TOWER">HVAC_COOLING_TOWER</option>
+                      <option value="VRV">VRV</option>
+                      <option value="AQI_SENSOR">AQI_SENSOR</option>
+                      <option value="BREAKER">BREAKER</option>
+                      <option value="STP">STP</option>
+                      <option value="WTP">WTP</option>
+                      <option value="LIFT">LIFT</option>
+                      <option value="LIGHTING">LIGHTING</option>
+                      <option value="FIRE_PANEL">FIRE_PANEL</option>
+                      <option value="CONTROLLER">CONTROLLER</option>
+                      <option value="SENSOR">SENSOR</option>
+                      <option value="AC">AC</option>
+                      <option value="OTHER">OTHER</option>
                     </Form.Select>
                   </Form.Group>
                 </Col>
 
-                {/* Building / Block (Optional) */}
-                <Col md={4}>
+                {/* 5. Serial Number (Only after site selection) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Serial Number</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder={registerForm.siteId ? "e.g. SN-492019" : "Select site first"}
+                      value={registerForm.serialNumber || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, serialNumber: e.target.value })}
+                      disabled={!registerForm.siteId}
+                      className="wizard-input"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* 6. Description / Location Notes (Only after site selection) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="wizard-label">Description</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={1}
+                      placeholder={registerForm.siteId ? "e.g. Ground floor plant room..." : "Select site first"}
+                      value={registerForm.description || ''}
+                      onChange={(e) => setRegisterForm({ ...registerForm, description: e.target.value })}
+                      disabled={!registerForm.siteId}
+                      className="wizard-input"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Location Hierarchy & Grouping */}
+                {/* <Col md={4}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Building / Block (Optional)</Form.Label>
                     <Form.Select
                       value={registerForm.buildingId || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, buildingId: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
                       <option value="">Select Building</option>
                       {activeBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </Form.Select>
                   </Form.Group>
-                </Col>
+                </Col> */}
 
-                {/* Area (Optional) */}
-                <Col md={4}>
+                {/* <Col md={4}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Area (Optional)</Form.Label>
                     <Form.Select
                       value={registerForm.areaId || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, areaId: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
                       <option value="">Select Area</option>
                       {activeAreas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </Form.Select>
                   </Form.Group>
-                </Col>
+                </Col> */}
 
-                {/* Energy Group (Optional) */}
-                <Col md={4}>
+                {/* <Col md={4}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Energy Group (Optional)</Form.Label>
                     <Form.Select
                       value={registerForm.energyGroupId || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, energyGroupId: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-select"
                     >
                       <option value="">Select Energy Group</option>
@@ -548,10 +711,9 @@ const RegisterDeviceModal = ({
                       <option value="2">HVAC Chiller Loop</option>
                     </Form.Select>
                   </Form.Group>
-                </Col>
-
-                {/* Floor Number (Optional) */}
-                <Col md={4}>
+                </Col> */}
+{/* 
+                <Col md={6}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Floor Number (Optional)</Form.Label>
                     <Form.Control
@@ -559,13 +721,13 @@ const RegisterDeviceModal = ({
                       placeholder="e.g. 3"
                       value={registerForm.floorNo || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, floorNo: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-input"
                     />
                   </Form.Group>
-                </Col>
+                </Col> */}
 
-                {/* Room Number (Optional) */}
-                <Col md={4}>
+                {/* <Col md={6}>
                   <Form.Group>
                     <Form.Label className="wizard-label">Room Number (Optional)</Form.Label>
                     <Form.Control
@@ -573,39 +735,11 @@ const RegisterDeviceModal = ({
                       placeholder="e.g. 302"
                       value={registerForm.roomNo || ''}
                       onChange={(e) => setRegisterForm({ ...registerForm, roomNo: e.target.value })}
+                      disabled={!registerForm.siteId}
                       className="wizard-input"
                     />
                   </Form.Group>
-                </Col>
-
-                {/* Serial Number (Optional) */}
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label className="wizard-label">Serial Number (Optional)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="e.g. SN-492019"
-                      value={registerForm.serialNumber || ''}
-                      onChange={(e) => setRegisterForm({ ...registerForm, serialNumber: e.target.value })}
-                      className="wizard-input"
-                    />
-                  </Form.Group>
-                </Col>
-
-                {/* Description / Location Notes */}
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label className="wizard-label">Description / Location Notes</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      placeholder="e.g. Ground floor plant room, serves block A &amp; B..."
-                      value={registerForm.description || ''}
-                      onChange={(e) => setRegisterForm({ ...registerForm, description: e.target.value })}
-                      className="wizard-input"
-                    />
-                  </Form.Group>
-                </Col>
+                </Col> */}
               </Row>
             </div>
           )}
@@ -613,6 +747,36 @@ const RegisterDeviceModal = ({
           {/* Step 2: Template Settings */}
           {registerStep === 2 && (
             <div className="d-flex flex-column gap-3">
+              {/* Sochiot Location Search Filter (Single Location Selector) */}
+              <div className="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-25">
+                <div className="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="fs-13 fw-semibold text-white">
+                      Search Location
+                    </span>
+                    <span className="badge bg-secondary bg-opacity-30 text-info border border-info border-opacity-25 fs-11 fw-normal">
+                      Sochiot Cloud &amp; BMS
+                    </span>
+                  </div>
+                </div>
+                <LocationDeviceFilter
+                  showTitle={false}
+                  companies={companies}
+                  tenants={tenants}
+                  zones={zones}
+                  areas={activeAreas}
+                  sites={effectiveSites}
+                  enableDeviceFilter={false}
+                  initialLocationValue={registerForm.siteId ? `LOCATION-${registerForm.siteId}` : null}
+                  onSelectLocation={(loc) => {
+                    if (loc?.id) {
+                      setRegisterForm(prev => ({ ...prev, siteId: String(loc.id), siteName: loc.name || '' }));
+                    }
+                  }}
+                  onDeviceTreeLoaded={handleDeviceTreeLoaded}
+                />
+              </div>
+
               <div className="d-flex justify-content-between align-items-center pb-2">
                 <div>
                   <h6 className="fw-semibold fs-14 mb-1 wizard-subheading">
@@ -627,75 +791,232 @@ const RegisterDeviceModal = ({
                 </span>
               </div>
 
-              <div className="table-responsive">
-                <table className="table-wizard-custom">
+              <div className="table-responsive" style={{ overflow: 'visible' }}>
+                <table className="table-wizard-custom" style={{ overflow: 'visible' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '20%' }}>Device ID</th>
-                      <th style={{ width: '22%' }}>Module ID</th>
-                      <th style={{ width: '22%' }}>Event Field</th>
-                      <th style={{ width: '22%' }}>Display Name</th>
-                      <th style={{ width: '14%' }}>Thresholds</th>
-                      <th style={{ width: '50px' }} className="text-center"></th>
+                      <th style={{ width: '25%' }}>Gateway &amp; Device</th>
+                      <th style={{ width: '18%' }}>Module ID</th>
+                      <th style={{ width: '20%' }}>Event Field</th>
+                      <th style={{ width: '21%' }}>Display Name</th>
+                      <th style={{ width: '16%' }}>Thresholds</th>
+                      <th style={{ width: '40px' }} className="text-center"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dynamicTemplateFields.map((f, idx) => (
+                    {dynamicTemplateFields.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-4 text-slate-400 fs-13">
+                          <div className="d-flex flex-column align-items-center justify-content-center gap-1">
+                            <span className="fw-medium text-slate-300">No telemetry fields added yet.</span>
+                            <span className="fs-12 text-slate-500">Click <strong>+ Add Field</strong> below to add and configure device telemetry fields.</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      dynamicTemplateFields.map((f, idx) => (
                       <tr key={idx}>
                         <td>
-                          <Form.Select
-                            size="sm"
-                            value={f.deviceId}
-                            onChange={(e) => {
+                          <LocationCascaderSelector
+                            options={hardwareDeviceTree}
+                            value={f.deviceVal || f.deviceId}
+                            fallbackLabel={f.deviceName || (f.deviceId && f.deviceId !== '101' ? `Device #${f.deviceId}` : (f.deviceId === '101' ? `101 (${registerForm.name || 'Default'})` : ''))}
+                            onChange={(valArray, pathNodes, leafNode) => {
                               const copy = [...dynamicTemplateFields];
-                              copy[idx].deviceId = e.target.value;
-                              setDynamicTemplateFields(copy);
+                              if (leafNode) {
+                                const parsed = parseLocationValue(leafNode.value);
+                                const selectedId = String(parsed?.id || leafNode.id);
+                                copy[idx].deviceId = selectedId;
+                                copy[idx].deviceName = leafNode.label;
+                                copy[idx].deviceVal = valArray;
+                                copy[idx].moduleId = '';
+                                copy[idx].sochiotFieldName = '';
+                                copy[idx].displayName = '';
+                                copy[idx].isManualEntry = false;
+                                setDynamicTemplateFields(copy);
+                                loadDeviceConfig(selectedId, idx);
+                              } else {
+                                copy[idx].deviceId = '';
+                                copy[idx].deviceName = '';
+                                copy[idx].deviceVal = null;
+                                copy[idx].moduleId = '';
+                                copy[idx].sochiotFieldName = '';
+                                copy[idx].displayName = '';
+                                copy[idx].isManualEntry = false;
+                                setDynamicTemplateFields(copy);
+                              }
                             }}
-                            className="wizard-select"
-                            style={{ height: 32, fontSize: 12 }}
-                          >
-                            <option value="101">Select Device</option>
-                            <option value="101">101 ({registerForm.name || 'Device'})</option>
-                          </Form.Select>
-                        </td>
-                        <td>
-                          <Form.Select
-                            size="sm"
-                            value={f.moduleId}
-                            onChange={(e) => {
-                              const copy = [...dynamicTemplateFields];
-                              copy[idx].moduleId = e.target.value;
-                              setDynamicTemplateFields(copy);
-                            }}
-                            className="wizard-select"
-                            style={{ height: 32, fontSize: 12 }}
-                          >
-                            <option value="4583">Select Module</option>
-                            <option value="4583">4583 - Main Incomer</option>
-                            <option value="4584">4584 - Chiller Unit</option>
-                          </Form.Select>
-                        </td>
-                        <td>
-                          <Form.Control
-                            size="sm"
-                            type="text"
-                            placeholder="e.g. 3,100F"
-                            value={f.sochiotFieldName}
-                            onChange={(e) => {
-                              const copy = [...dynamicTemplateFields];
-                              copy[idx].sochiotFieldName = e.target.value;
-                              setDynamicTemplateFields(copy);
-                            }}
-                            className="wizard-input font-monospace"
-                            style={{ height: 32, fontSize: 12 }}
+                            changeOnSelect={true}
+                            displayOnlyChild={true}
+                            placeholder="Select Device"
+                            searchPlaceholder="Search gateway / device..."
+                            variant="compact"
+                            allowClear={true}
+                            triggerIcon={<Cpu size={13} className="text-info flex-shrink-0" />}
                           />
                         </td>
                         <td>
+                          {(() => {
+                            const devConfig = deviceConfigs[f.deviceId];
+                            const isLoadingModules = loadingDeviceIds[f.deviceId];
+                            const modules = devConfig?.modules || [];
+
+                            return (
+                              <Form.Select
+                                size="sm"
+                                value={f.moduleId || ''}
+                                disabled={!f.deviceId || isLoadingModules}
+                                onChange={(e) => {
+                                  const newModuleId = e.target.value;
+                                  const copy = [...dynamicTemplateFields];
+                                  copy[idx].moduleId = newModuleId;
+                                  copy[idx].sochiotFieldName = '';
+                                  copy[idx].displayName = '';
+                                  copy[idx].isManualEntry = false;
+                                  setDynamicTemplateFields(copy);
+                                }}
+                                className="wizard-select"
+                                style={{ height: 32, fontSize: 12 }}
+                              >
+                                {!f.deviceId ? (
+                                  <option value="">Select Device First</option>
+                                ) : isLoadingModules ? (
+                                  <option value="">Loading modules...</option>
+                                ) : modules.length === 0 ? (
+                                  <option value="">No modules found</option>
+                                ) : (
+                                  <>
+                                    <option value="">Select Module</option>
+                                    {modules.map(m => {
+                                      const cleanLabel = (m.label || m.name || '').replace(/\s*\((general|other)\)/gi, '').replace(/\b(general|other)\b/gi, '').trim() || m.name;
+                                      return (
+                                        <option key={m.id} value={String(m.id)}>
+                                          {cleanLabel}
+                                        </option>
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </Form.Select>
+                            );
+                          })()}
+                        </td>
+                        <td>
+                          {(() => {
+                            const devConfig = deviceConfigs[f.deviceId];
+                            const modules = devConfig?.modules || [];
+                            const selectedModule = modules.find(m => String(m.id) === String(f.moduleId));
+                            const eventFields = selectedModule?.eventFields || [];
+                            const settingFields = selectedModule?.settingFields || [];
+                            const hasFields = eventFields.length > 0 || settingFields.length > 0;
+
+                            return (
+                              <div className="d-flex align-items-center gap-1 w-100">
+                                {hasFields && !f.isManualEntry ? (
+                                  <Form.Select
+                                    size="sm"
+                                    value={f.sochiotFieldName || ''}
+                                    disabled={!f.moduleId}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val === '__custom__') {
+                                        const copy = [...dynamicTemplateFields];
+                                        copy[idx].isManualEntry = true;
+                                        copy[idx].sochiotFieldName = '';
+                                        setDynamicTemplateFields(copy);
+                                        return;
+                                      }
+                                      const copy = [...dynamicTemplateFields];
+                                      copy[idx].sochiotFieldName = val;
+                                      // Auto populate display name from selected field definition
+                                      const matched = selectedModule?.allFields?.find(af => af.fieldName === val);
+                                      if (matched) {
+                                        copy[idx].displayName = matched.displayName || matched.fieldName;
+                                        if (matched.unit) copy[idx].unit = matched.unit;
+                                        if (matched.dataType) copy[idx].dataType = matched.dataType;
+                                      }
+                                      setDynamicTemplateFields(copy);
+                                    }}
+                                    className="wizard-select font-monospace"
+                                    style={{ height: 32, fontSize: 12 }}
+                                  >
+                                    <option value="">Select Event / Setting Field</option>
+                                    {eventFields.length > 0 && (
+                                      <optgroup label="Events Fields">
+                                        {eventFields.map(ef => {
+                                          const displayLabel = ef.displayName || ef.fieldName;
+                                          const unitText = ef.unit ? ` (${ef.unit})` : '';
+                                          return (
+                                            <option key={ef.id} value={ef.fieldName}>
+                                              {displayLabel}{unitText}
+                                            </option>
+                                          );
+                                        })}
+                                      </optgroup>
+                                    )}
+                                    {settingFields.length > 0 && (
+                                      <optgroup label="Setting Fields">
+                                        {settingFields.map(sf => {
+                                          const displayLabel = sf.displayName || sf.fieldName;
+                                          const unitText = sf.unit ? ` (${sf.unit})` : '';
+                                          return (
+                                            <option key={sf.mappingId || sf.id} value={sf.fieldName}>
+                                              {displayLabel}{unitText}
+                                            </option>
+                                          );
+                                        })}
+                                      </optgroup>
+                                    )}
+                                    {f.sochiotFieldName && !selectedModule?.allFields?.some(af => af.fieldName === f.sochiotFieldName) && (
+                                      <option value={f.sochiotFieldName}>
+                                        {f.displayName || f.sochiotFieldName}
+                                      </option>
+                                    )}
+                                    <option value="__custom__">+ Enter Custom Field...</option>
+                                  </Form.Select>
+                                ) : (
+                                  <div className="d-flex align-items-center w-100 gap-1">
+                                    <Form.Control
+                                      size="sm"
+                                      type="text"
+                                      placeholder={f.moduleId ? "e.g. OFF_TIME or 3,100F" : (!f.deviceId ? "Select device first" : "Select module first")}
+                                      value={f.sochiotFieldName || ''}
+                                      disabled={!f.moduleId}
+                                      onChange={(e) => {
+                                        const copy = [...dynamicTemplateFields];
+                                        copy[idx].sochiotFieldName = e.target.value;
+                                        setDynamicTemplateFields(copy);
+                                      }}
+                                      className="wizard-input font-monospace"
+                                      style={{ height: 32, fontSize: 12 }}
+                                    />
+                                    {hasFields && (
+                                      <button
+                                        type="button"
+                                        title="Select from module fields list"
+                                        onClick={() => {
+                                          const copy = [...dynamicTemplateFields];
+                                          copy[idx].isManualEntry = false;
+                                          setDynamicTemplateFields(copy);
+                                        }}
+                                        className="btn btn-sm btn-outline-info p-0 px-1.5 flex-shrink-0"
+                                        style={{ height: 32, fontSize: 11 }}
+                                      >
+                                        List
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td>
                           <Form.Control
                             size="sm"
                             type="text"
-                            placeholder="e.g. Voltage R"
-                            value={f.displayName}
+                            placeholder="e.g. Incomer Voltage R"
+                            value={f.displayName || ''}
                             onChange={(e) => {
                               const copy = [...dynamicTemplateFields];
                               copy[idx].displayName = e.target.value;
@@ -752,7 +1073,7 @@ const RegisterDeviceModal = ({
                           </Button>
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
 
@@ -761,16 +1082,26 @@ const RegisterDeviceModal = ({
                   <button
                     type="button"
                     onClick={() => {
+                      const lastField = dynamicTemplateFields[dynamicTemplateFields.length - 1];
+                      const defaultDev = lastField?.deviceId || '';
+                      const defaultDevName = lastField?.deviceName || '';
+                      const defaultDevVal = lastField?.deviceVal || null;
+                      const defaultModuleId = lastField?.moduleId || '';
+
                       setDynamicTemplateFields([
                         ...dynamicTemplateFields,
                         {
-                          deviceId: registerForm.sochiotDeviceIds || '101',
-                          moduleId: '4583',
+                          deviceId: defaultDev,
+                          deviceName: defaultDevName,
+                          deviceVal: defaultDevVal,
+                          moduleId: defaultModuleId,
                           sochiotFieldName: '',
                           displayName: '',
                           thresholdValue: '240',
+                          warningHigh: 250,
+                          criticalHigh: 270,
                           dataType: 'INTEGER',
-                          unit: 'V',
+                          unit: '',
                           isCommand: false,
                           graphable: true
                         }
@@ -813,6 +1144,14 @@ const RegisterDeviceModal = ({
                 if (!registerForm.name || !registerForm.name.trim()) {
                   return showToast('warning', 'Device Name is required to proceed to Template Settings');
                 }
+                if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
+                  if (typeof setDynamicTemplateFields === 'function') {
+                    setDynamicTemplateFields([
+                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: 250, criticalHigh: 270 }
+                    ]);
+                  }
+                }
+                fetchAndStoreSochiotAccessToken();
                 setRegisterStep(2);
               }}
               className="wizard-btn-primary"
@@ -829,6 +1168,7 @@ const RegisterDeviceModal = ({
                 }
                 if (typeof setLoading === 'function') setLoading(true);
                 try {
+                  await fetchAndStoreSochiotAccessToken();
                   const siteId = registerForm.siteId || (sites && sites.length ? sites[0].id : 7);
                   const generatedSochiotId = Math.floor(100000 + Math.random() * 899999);
                   const rawSochiotId = String(registerForm.sochiotDeviceIds || '');
@@ -838,7 +1178,14 @@ const RegisterDeviceModal = ({
                     .filter(n => !isNaN(n) && n > 0);
 
                   if (parsedSochiotIds.length === 0) {
-                    parsedSochiotIds = [generatedSochiotId];
+                    const fieldDeviceIds = (dynamicTemplateFields || [])
+                      .map(f => parseInt(f.deviceId))
+                      .filter(n => !isNaN(n) && n > 0);
+                    if (fieldDeviceIds.length > 0) {
+                      parsedSochiotIds = Array.from(new Set(fieldDeviceIds));
+                    } else {
+                      parsedSochiotIds = [generatedSochiotId];
+                    }
                   }
 
                   const templateSettings = (dynamicTemplateFields && dynamicTemplateFields.length > 0 ? dynamicTemplateFields : [
@@ -856,6 +1203,8 @@ const RegisterDeviceModal = ({
                       graphable: true
                     }
                   ]).map(f => ({
+                    deviceId: f.deviceId ? (parseInt(f.deviceId) || f.deviceId) : undefined,
+                    deviceName: f.deviceName || undefined,
                     moduleId: parseInt(f.moduleId) || 4583,
                     sochiotFieldName: f.sochiotFieldName || '3,100F',
                     displayName: f.displayName || 'Voltage R-N',
@@ -878,6 +1227,9 @@ const RegisterDeviceModal = ({
                     template_settings: templateSettings
                   };
 
+                  if (registerForm.assetId) {
+                    payload.assetId = String(registerForm.assetId);
+                  }
                   if (registerForm.areaId && activeAreas.some(a => String(a.id) === String(registerForm.areaId))) {
                     payload.areaId = parseInt(registerForm.areaId);
                   }
@@ -898,7 +1250,7 @@ const RegisterDeviceModal = ({
                   }
 
                   const newDeviceObj = {
-                    id: Date.now(),
+                    id: editingDevice?.id || Date.now(),
                     name: registerForm.name.trim(),
                     category: registerForm.category || 'ENERGY_METER',
                     sochiotDeviceIds: payload.sochiotDeviceIds,
@@ -914,31 +1266,55 @@ const RegisterDeviceModal = ({
                     siteId: siteId,
                     isActive: true,
                     status: 'ACTIVE',
-                    createdAt: new Date().toISOString()
+                    createdAt: editingDevice?.createdAt || new Date().toISOString()
                   };
 
                   try {
                     const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
-                    let res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
-                      method: 'POST',
-                      headers,
-                      body: JSON.stringify(payload)
-                    });
-
-                    if (res.status === 409) {
-                      const fallbackUniqueId = Math.floor(10000 + Math.random() * 90000);
-                      payload.sochiotDeviceIds = [fallbackUniqueId];
-                      payload.serialNumber = `SN-${Date.now()}`;
-                      newDeviceObj.sochiotDeviceIds = [fallbackUniqueId];
-                      newDeviceObj.serialNumber = payload.serialNumber;
+                    let res;
+                    if (editingDevice) {
+                      const patchPayload = {
+                        name: registerForm.name?.trim(),
+                        category: registerForm.category || 'ENERGY_METER',
+                        sochiotDeviceIds: parsedSochiotIds,
+                        serialNumber: payload.serialNumber,
+                        templateName: registerForm.templateName,
+                        template_settings: templateSettings,
+                        ...(registerForm.assetId ? { assetId: String(registerForm.assetId) } : {}),
+                        ...(payload.areaId ? { areaId: payload.areaId } : {}),
+                        ...(payload.buildingId ? { buildingId: payload.buildingId } : {}),
+                        ...(payload.floorNo !== undefined ? { floorNo: payload.floorNo } : {}),
+                        ...(payload.roomNo !== undefined ? { roomNo: payload.roomNo } : {}),
+                        ...(payload.description ? { description: payload.description } : {}),
+                        ...(payload.profileId ? { profileId: payload.profileId } : {})
+                      };
+                      res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/${editingDevice.id}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify(patchPayload)
+                      });
+                    } else {
                       res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
                         method: 'POST',
                         headers,
                         body: JSON.stringify(payload)
                       });
+
+                      if (res.status === 409) {
+                        const fallbackUniqueId = Math.floor(10000 + Math.random() * 90000);
+                        payload.sochiotDeviceIds = [fallbackUniqueId];
+                        payload.serialNumber = `SN-${Date.now()}`;
+                        newDeviceObj.sochiotDeviceIds = [fallbackUniqueId];
+                        newDeviceObj.serialNumber = payload.serialNumber;
+                        res = await fetch(`${API_BASE_URL}/sites/${siteId}/devices/from-template`, {
+                          method: 'POST',
+                          headers,
+                          body: JSON.stringify(payload)
+                        });
+                      }
                     }
 
-                    if (res.ok) {
+                    if (res && res.ok) {
                       const json = await res.json().catch(() => ({}));
                       if (json && (json.id || json.data?.id)) {
                         newDeviceObj.id = json.id || json.data.id;
@@ -963,12 +1339,12 @@ const RegisterDeviceModal = ({
                   if (typeof setSelectedAreaFilter === 'function') setSelectedAreaFilter('ALL');
 
                   if (typeof showToast === 'function') {
-                    showToast('success', `Device "${registerForm.name}" registered & added to list!`);
+                    showToast('success', editingDevice ? `Device "${registerForm.name}" updated successfully!` : `Device "${registerForm.name}" registered & added to list!`);
                   }
                   onHide();
                 } catch (err) {
                   if (typeof showToast === 'function') {
-                    showToast('danger', err.message || 'Error registering device');
+                    showToast('danger', err.message || 'Error saving device');
                   }
                 }
                 if (typeof setLoading === 'function') setLoading(false);
@@ -976,7 +1352,7 @@ const RegisterDeviceModal = ({
               disabled={loading}
               className="wizard-btn-primary"
             >
-              {loading ? <Spinner animation="border" size="sm" /> : 'Register Device'}
+              {loading ? <Spinner animation="border" size="sm" /> : (editingDevice ? 'Update Device' : 'Register Device')}
             </button>
           )}
         </div>
