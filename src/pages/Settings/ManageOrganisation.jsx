@@ -347,12 +347,13 @@ const ManageOrganisation = () => {
             setShowRegisterDeviceModal={org.setShowRegisterDeviceModal}
             handleOpenRegisterDevice={org.handleOpenRegisterDevice}
             setEditingDeviceItem={org.setEditingDeviceItem}
+            setDynamicTemplateFields={org.setDynamicTemplateFields}
             handleOpenEditDevice={org.handleOpenEditDevice}
             handleOpenLiveModal={org.handleOpenLiveModal}
             handleOpenSettingsModal={org.handleOpenSettingsModal}
             handleOpenThresholdsModal={org.handleOpenThresholdsModal}
             handleOpenRulesModal={org.handleOpenRulesModal}
-            handleOpenAuditLog={org.handleOpenAuditLog}
+            handleOpenAuditLog={org.handleOpenAuditLogModal || org.handleOpenAuditLog}
             setSelectedDeviceForAudit={org.setSelectedDeviceForAudit}
             setSelectedDeviceForCommandsTab={org.setSelectedDeviceForCommandsTab}
             setShowSendCommandModal={org.setShowSendCommandModal}
