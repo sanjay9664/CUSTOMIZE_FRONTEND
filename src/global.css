@@ -1,7 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 :root,
 body.dark-mode,
 [data-theme="dark"] {
   color-scheme: dark;
+  --scada-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --scada-bg: #0b0f19;
   --scada-sidebar: #0f172a;
   --scada-card: #131b2e;
@@ -62,8 +65,39 @@ body.light-mode,
 }
 
 *, *::before, *::after,
-body, button, input, select, textarea, table, th, td, h1, h2, h3, h4, h5, h6, .font-monospace, .sub-text, .form-label {
+html, body, #root, button, input, select, textarea, table, th, td, h1, h2, h3, h4, h5, h6, .font-monospace, .sub-text, .form-label, .badge, .card, .dropdown-menu, .modal, .btn, .nav-link, .form-control, .form-select {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+/* ── Custom Flex Gap Utilities (Fixing gap-1.5 & gap-2.5 in Bootstrap 5) ── */
+.gap-0\.5 { gap: 0.25rem !important; }
+.gap-1\.5 { gap: 0.5rem !important; }
+.gap-2\.5 { gap: 0.75rem !important; }
+
+/* ── Universal Status Pill Badge ── */
+.status-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 4px 10px !important;
+  border-radius: 20px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.status-pill .status-dot,
+.status-pill .rounded-circle {
+  width: 7px !important;
+  height: 7px !important;
+  min-width: 7px !important;
+  min-height: 7px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+  margin-right: 3px !important;
 }
 
 /* Master Layout & Base Styles */
@@ -2760,11 +2794,29 @@ body.light-mode .scada-glass-card,
 body.light-mode .scada-card,
 body.light-mode .reference-scada-card,
 body.light-mode .scada-tile,
-body.light-mode .quick-stat-card {
+body.light-mode .quick-stat-card,
+body.light-mode .scada-card-surface,
+body.light-mode .bg-dark-card,
+body.light-mode .table-responsive,
+body.light-mode .card {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
   color: #0f172a !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px !important;
+  border-radius: 16px !important;
+}
+
+body:not(.light-mode) .scada-glass-card,
+body:not(.light-mode) .scada-card,
+body:not(.light-mode) .reference-scada-card,
+body:not(.light-mode) .scada-tile,
+body:not(.light-mode) .quick-stat-card,
+body:not(.light-mode) .scada-card-surface,
+body:not(.light-mode) .bg-dark-card,
+body:not(.light-mode) .table-responsive,
+body:not(.light-mode) .card {
+  box-shadow: rgba(0, 0, 0, 0.45) 0px 10px 50px, 0 0 24px rgba(56, 189, 248, 0.08) !important;
+  border-radius: 16px !important;
 }
 
 body.light-mode .scada-glass-card .text-white,
@@ -2797,7 +2849,7 @@ body.light-mode .ahu-telemetry-label-card {
   background-color: #ffffff !important;
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px !important;
 }
 
 body.light-mode .offcanvas {
@@ -2825,6 +2877,9 @@ body.light-mode .offcanvas-body {
   align-items: center !important;
   background-color: var(--scada-card) !important;
   border: 1px solid var(--scada-border) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 16px !important;
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -2866,7 +2921,7 @@ body.light-mode .offcanvas-body {
 body.light-mode .sub-header-nav-bar {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px !important;
 }
 
 .sub-header-nav-bar .nav {
@@ -2880,14 +2935,14 @@ body.light-mode .sub-header-nav-bar {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 0.35rem !important;
-  font-size: 0.78rem !important;
+  gap: 0.3rem !important;
+  font-size: 0.76rem !important;
   font-weight: 600 !important;
-  padding: 0 0.65rem !important;
-  height: 34px !important;
-  min-height: 34px !important;
+  padding: 0 0.55rem !important;
+  height: 30px !important;
+  min-height: 30px !important;
   margin: 1px 1px !important;
-  border-radius: 8px !important;
+  border-radius: 6px !important;
   transition: all 0.15s cubic-bezier(0, 0, 0.2, 1) !important;
   white-space: nowrap !important;
   text-decoration: none !important;

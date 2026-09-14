@@ -39,7 +39,7 @@ const ManageOrganisationHeader = ({ org = {} }) => {
   return (
     <>
       {/* Sub-Header Tabs Row */}
-      <div className="px-3 py-2.5 my-3 rounded-3 border shadow-sm sub-header-nav-bar" style={{ margin: '12px 0 1.35rem 0', backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
+      <div className="px-2.5 py-1.5 mb-2 rounded-3 border shadow-sm sub-header-nav-bar" style={{ margin: '0 0 0.65rem 0', backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="d-flex align-items-center justify-content-between flex-nowrap gap-2 w-100 overflow-x-auto">
           <Nav variant="pills" activeKey={org.activeTab} className="flex-nowrap gap-1.5 align-items-center flex-shrink-0">
             <Nav.Item>

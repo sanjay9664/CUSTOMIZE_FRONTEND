@@ -441,7 +441,7 @@ const SettingsIndex = () => {
       `}</style>
 
       {/* Sub-Header Tabs Row - Unified Executive Glass Segmented Bar */}
-      <div className="px-3 py-2.5 my-3 rounded-3 border shadow-sm sub-header-nav-bar" style={{ margin: '12px 0 1.5rem 0', backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
+      <div className="px-3 py-2.5 mb-3 rounded-3 border shadow-sm sub-header-nav-bar" style={{ margin: '0 0 1.25rem 0', backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="d-flex align-items-center justify-content-between flex-nowrap gap-2 w-100 overflow-x-auto">
           <Nav variant="pills" activeKey={activeTab} className="flex-nowrap gap-1.5 align-items-center flex-shrink-0">
             <Nav.Item>
@@ -594,7 +594,7 @@ const SettingsIndex = () => {
 
       {/* Tab Content */}
       {activeTab === 'hub' ? (
-        <Container fluid className="py-4 px-lg-5" style={{ maxWidth: 1300, margin: '0 auto' }}>
+        <Container fluid className="py-4 px-lg-4" style={{ width: '100%', margin: '0 auto' }}>
 
           {/* ═══════════════════ HUB HEADER ═══════════════════════════ */}
           <div className="text-center mb-4 hub-animated">

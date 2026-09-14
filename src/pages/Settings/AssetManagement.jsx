@@ -6,7 +6,7 @@ import {
   Search, List, ChevronRight, ChevronDown, Layers,
   Edit3, Trash2, Eye, GitFork, CornerDownRight, Cpu, CheckCircle2,
   Filter, X, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown,
-  Box, MapPin, MoreVertical, Wrench
+  Box, MapPin, MoreVertical, Wrench, Calendar
 } from 'lucide-react';
 import { useSiteStore } from '../../context/SiteContext';
 import bmsService from '../../services/bmsService';
@@ -574,25 +574,23 @@ const AssetManagement = ({ embedded = false }) => {
     const childCount = hasChildren ? node.children.length : 0;
     const accent = getDepthAccent(depth);
 
-    const depthIconClass = depth === 0 ? 'depth-0' : depth === 1 ? 'depth-1' : depth === 2 ? 'depth-2' : 'depth-sub';
-
     return (
       <div key={node.id} className={`tree-node-wrapper ${depth === 0 ? 'tree-root-wrapper' : ''}`}>
         <div
           className={`tree-node-row ${depth > 0 ? 'tree-node-child' : 'tree-node-root'}`}
           style={{
-            paddingLeft: `${20 + depth * 36}px`,
-            paddingRight: 18,
-            paddingTop: depth === 0 ? 14 : 11,
-            paddingBottom: depth === 0 ? 14 : 11,
+            paddingLeft: `${16 + depth * 32}px`,
+            paddingRight: 16,
+            paddingTop: depth === 0 ? 12 : 10,
+            paddingBottom: depth === 0 ? 12 : 10,
             cursor: hasChildren ? 'pointer' : 'default',
-            borderLeft: depth > 0 ? `3px solid ${accent.accent}22` : 'none',
+            borderLeft: depth > 0 ? `3px solid ${accent.accent}33` : 'none',
           }}
           onClick={() => {
             if (hasChildren) toggleNodeExpand(String(node.id));
           }}
         >
-          <div className="d-flex align-items-center flex-grow-1 min-w-0" style={{ gap: '14px' }}>
+          <div className="d-flex align-items-center flex-grow-1 min-w-0" style={{ gap: '12px' }}>
             {/* Expand/Collapse chevron */}
             {hasChildren ? (
               <button
@@ -618,23 +616,33 @@ const AssetManagement = ({ embedded = false }) => {
               </span>
             )}
 
-            {/* Icon container */}
-            <div className={`tree-icon-container ${depthIconClass}`}>
+            {/* Vibrant Icon container per depth */}
+            <div
+              className="rounded-2 p-1.5 d-flex align-items-center justify-content-center flex-shrink-0"
+              style={{
+                width: 32,
+                height: 32,
+                marginRight: 8,
+                backgroundColor: depth === 0 ? 'rgba(37, 99, 235, 0.14)' : depth === 1 ? 'rgba(168, 85, 247, 0.14)' : depth === 2 ? 'rgba(20, 184, 166, 0.14)' : 'rgba(234, 179, 8, 0.14)',
+                border: depth === 0 ? '1px solid rgba(59, 130, 246, 0.3)' : depth === 1 ? '1px solid rgba(168, 85, 247, 0.3)' : depth === 2 ? '1px solid rgba(45, 212, 191, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+                color: depth === 0 ? '#2563eb' : depth === 1 ? '#a855f7' : depth === 2 ? '#0d9488' : '#ca8a04'
+              }}
+            >
               {depth === 0 ? (
-                <Building2 size={17} />
+                <Building2 size={16} />
               ) : depth === 1 ? (
                 <Layers size={15} />
               ) : depth === 2 ? (
                 <MapPin size={14} />
               ) : (
-                <Cpu size={13} />
+                <Sliders size={14} />
               )}
             </div>
 
             {/* Name + Badge + sub-id */}
             <div className="min-w-0 tree-node-info">
               <div className="d-flex align-items-center" style={{ gap: '10px' }}>
-                <span className="fw-bold asset-primary-name text-truncate" title={node.name} style={{ fontSize: depth === 0 ? '0.88rem' : '0.82rem' }}>
+                <span className="fw-bold asset-primary-name text-truncate fs-13" title={node.name}>
                   {node.name}
                 </span>
                 <span className={`asset-type-badge ${getTypeBadgeClass(node.assetType)}`}>
@@ -646,41 +654,34 @@ const AssetManagement = ({ embedded = false }) => {
                   </span>
                 )}
               </div>
-              <div className="asset-sub-id text-truncate" style={{ marginTop: 2 }}>
+              <div className="asset-sub-id text-truncate fs-11 font-monospace" style={{ marginTop: 2 }}>
                 {node.serialNumber ? `SN: ${node.serialNumber}` : node.id}
               </div>
             </div>
           </div>
 
           {/* Middle: Site + Status */}
-          <div className="d-none d-md-flex align-items-center flex-shrink-0" style={{ gap: '16px', marginRight: 14 }}>
-            <span className="tree-site-pill">
-              {siteObj?.name || `Site #${node.siteId || '7'}`}
+          <div className="d-none d-md-flex align-items-center flex-shrink-0" style={{ gap: '14px', marginRight: 14 }}>
+            <span className="tree-site-pill d-inline-flex align-items-center">
+              <Building2 size={13} className="text-primary me-1.5" style={{ marginRight: 6 }} />
+              <span>{siteObj?.name || `Site #${node.siteId || '7'}`}</span>
             </span>
 
-            <div className="tree-status-pill" style={{ background: isInactive ? 'rgba(148,163,184,0.1)' : isMaintenance ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)', borderColor: isInactive ? 'rgba(148,163,184,0.25)' : isMaintenance ? 'rgba(245,158,11,0.3)' : 'rgba(34,197,94,0.3)' }}>
-              <span
-                className="tree-status-dot"
-                style={{
-                  backgroundColor: isInactive ? '#94a3b8' : (isMaintenance ? '#f59e0b' : '#22c55e'),
-                  boxShadow: isInactive ? 'none' : `0 0 8px ${isMaintenance ? 'rgba(245,158,11,0.5)' : 'rgba(34,197,94,0.5)'}`
-                }}
-              />
-              <span style={{ color: isInactive ? '#94a3b8' : isMaintenance ? '#fbbf24' : '#4ade80', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.03em' }}>
-                {node.status || (isInactive ? 'INACTIVE' : 'ACTIVE')}
-              </span>
+            <div className={`status-pill ${isInactive ? 'bg-secondary-subtle text-secondary' : isMaintenance ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success'}`}>
+              <span className={`status-dot ${isInactive ? 'bg-secondary' : isMaintenance ? 'bg-warning' : 'bg-success'}`} />
+              <span>{node.status || (isInactive ? 'INACTIVE' : 'ACTIVE')}</span>
             </div>
           </div>
 
           {/* Right: Actions Menu */}
-          <div className="d-flex align-items-center flex-shrink-0" style={{ gap: '5px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="d-flex align-items-center flex-shrink-0" style={{ gap: '6px' }} onClick={(e) => e.stopPropagation()}>
             <button type="button" className="btn-scada-inspect" onClick={() => handleInspect(node)}>
-              <Eye size={12} />
+              <Eye size={12} style={{ marginRight: 4 }} />
               <span>Inspect</span>
             </button>
 
             <button type="button" className="btn-scada-edit" onClick={() => handleOpenEdit(node)}>
-              <Edit3 size={12} />
+              <Edit3 size={12} style={{ marginRight: 4 }} />
               <span>Edit</span>
             </button>
 
@@ -693,12 +694,12 @@ const AssetManagement = ({ embedded = false }) => {
                 style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', minWidth: 180, padding: '6px 0', backdropFilter: 'blur(12px)', background: 'rgba(15,23,42,0.96)' }}
               >
                 <Dropdown.Item onClick={() => handleOpenCreate(node)} className="fs-12 d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
-                  <Plus size={14} className="text-info" />
+                  <Plus size={14} className="text-info me-2" style={{ marginRight: 8 }} />
                   <span>Add Child Asset</span>
                 </Dropdown.Item>
                 <Dropdown.Divider className="border-secondary border-opacity-30" style={{ margin: '4px 0' }} />
                 <Dropdown.Item onClick={() => handleOpenDelete(node)} className="fs-12 text-danger d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
-                  <Trash2 size={14} />
+                  <Trash2 size={14} className="me-2" style={{ marginRight: 8 }} />
                   <span>Delete Asset</span>
                 </Dropdown.Item>
               </Dropdown.Menu>
@@ -764,14 +765,15 @@ const AssetManagement = ({ embedded = false }) => {
         .asset-management-wrapper .scada-card-surface {
           background: rgba(15, 23, 42, 0.95);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          border-radius: 16px;
+          box-shadow: rgba(0, 0, 0, 0.45) 0px 10px 50px, 0 0 24px rgba(56, 189, 248, 0.08);
           overflow: visible !important;
         }
         body.light-mode .asset-management-wrapper .scada-card-surface {
           background: #ffffff !important;
-          border-color: #cbd5e1 !important;
-          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px !important;
+          border-radius: 16px !important;
         }
 
         /* ── Header Typography & Badges ── */
@@ -1741,54 +1743,66 @@ const AssetManagement = ({ embedded = false }) => {
         </div>
       </div>
 
-      {/* COMPACT SUMMARY / KPI STRIP (Mathematically Real Server Data) */}
+      {/* COMPACT SUMMARY / KPI STRIP (Matching Image 1 NEW reference) */}
       <div className="compact-kpi-strip">
         <div className="compact-kpi-item">
           <div>
-            <div className="kpi-lbl">Total</div>
-            <div className="fs-5 fw-bold kpi-val-primary lh-1 mt-1">{stats.total}</div>
+            <div className="kpi-lbl">TOTAL</div>
+            <div className="fs-4 fw-bold kpi-val-primary lh-1 mt-1">{stats.total}</div>
           </div>
-          <Box size={16} className="text-info opacity-75" />
+          <div className="kpi-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center">
+            <Box size={16} />
+          </div>
         </div>
 
         <div className="compact-kpi-item">
           <div>
-            <div className="kpi-lbl">Active</div>
-            <div className="fs-5 fw-bold text-success lh-1 mt-1">{stats.active}</div>
+            <div className="kpi-lbl">ACTIVE</div>
+            <div className="fs-4 fw-bold text-success lh-1 mt-1">{stats.active}</div>
           </div>
-          <CheckCircle2 size={16} className="text-success opacity-75" />
+          <div className="kpi-icon-box bg-success-subtle text-success rounded-2 p-1.5 d-flex align-items-center justify-content-center">
+            <CheckCircle2 size={16} />
+          </div>
         </div>
 
         <div className="compact-kpi-item">
           <div>
-            <div className="kpi-lbl">Maintenance</div>
-            <div className="fs-5 fw-bold text-warning lh-1 mt-1">{stats.maintenance}</div>
+            <div className="kpi-lbl">UNDER MAINTENANCE</div>
+            <div className="fs-4 fw-bold text-warning lh-1 mt-1">{stats.maintenance}</div>
           </div>
-          <Wrench size={16} className="text-warning opacity-75" />
+          <div className="kpi-icon-box bg-warning-subtle text-warning rounded-2 p-1.5 d-flex align-items-center justify-content-center">
+            <Wrench size={16} />
+          </div>
         </div>
 
         <div className="compact-kpi-item">
           <div>
-            <div className="kpi-lbl">Buildings</div>
-            <div className="fs-5 fw-bold text-primary lh-1 mt-1">{stats.buildings}</div>
+            <div className="kpi-lbl">BUILDINGS</div>
+            <div className="fs-4 fw-bold text-primary lh-1 mt-1">{stats.buildings}</div>
           </div>
-          <Building2 size={16} className="text-primary opacity-75" />
+          <div className="kpi-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center">
+            <Building2 size={16} />
+          </div>
         </div>
 
         <div className="compact-kpi-item">
           <div>
-            <div className="kpi-lbl">Spaces & Rooms</div>
-            <div className="fs-5 fw-bold text-info lh-1 mt-1">{stats.spaces}</div>
+            <div className="kpi-lbl">SPACES & ROOMS</div>
+            <div className="fs-4 fw-bold text-info lh-1 mt-1">{stats.spaces}</div>
           </div>
-          <Layers size={16} className="text-info opacity-75" />
+          <div className="kpi-icon-box bg-info-subtle text-info rounded-2 p-1.5 d-flex align-items-center justify-content-center">
+            <Layers size={16} />
+          </div>
         </div>
 
         <div className="compact-kpi-item">
           <div>
-            <div className="kpi-lbl">Equipment</div>
-            <div className="fs-5 fw-bold text-danger lh-1 mt-1">{stats.equipment}</div>
+            <div className="kpi-lbl">EQUIPMENT</div>
+            <div className="fs-4 fw-bold text-danger lh-1 mt-1">{stats.equipment}</div>
           </div>
-          <Cpu size={16} className="text-danger opacity-75" />
+          <div className="kpi-icon-box bg-danger-subtle text-danger rounded-2 p-1.5 d-flex align-items-center justify-content-center">
+            <Cpu size={16} />
+          </div>
         </div>
       </div>
 
@@ -1974,18 +1988,18 @@ const AssetManagement = ({ embedded = false }) => {
                       const parentLabel = parentObj ? (parentObj.name || parentObj.serialNumber) : parentId;
 
                       return (
-                        <tr key={a.id}>
+                        <tr key={a.id} className="row-hover-effect">
                           {/* Asset Name Primary dominant, Asset ID secondary subdued */}
                           <td>
-                            <div className="d-flex align-items-center gap-2">
-                              <div className="tree-icon-container depth-sub">
-                                <Sliders size={14} className="text-info" />
+                            <div className="d-flex align-items-center">
+                              <div className="rounded-2 p-1.5 me-2.5 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 32, height: 32, backgroundColor: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)', color: '#ca8a04', marginRight: 10 }}>
+                                <Sliders size={16} />
                               </div>
                               <div className="min-w-0">
-                                <div className="fw-bold asset-primary-name text-truncate" title={a.name}>
+                                <div className="fw-bold asset-primary-name text-truncate fs-13" title={a.name}>
                                   {a.name}
                                 </div>
-                                <div className="asset-sub-id text-truncate">
+                                <div className="asset-sub-id text-truncate fs-11 font-monospace">
                                   {a.serialNumber ? `SN: ${a.serialNumber}` : a.id}
                                 </div>
                               </div>
@@ -2002,40 +2016,40 @@ const AssetManagement = ({ embedded = false }) => {
                           {/* Parent */}
                           <td className="asset-meta-text">
                             {parentId ? (
-                              <div className="d-flex align-items-center gap-1 text-truncate" style={{ maxWidth: 200 }} title={parentObj ? `${parentObj.name}${parentObj.serialNumber ? ` (${parentObj.serialNumber})` : ''}` : parentId}>
-                                <CornerDownRight size={12} className="text-muted flex-shrink-0" />
-                                <span className="font-monospace">{parentLabel}</span>
+                              <div className="d-flex align-items-center text-truncate" style={{ maxWidth: 200 }} title={parentObj ? `${parentObj.name}${parentObj.serialNumber ? ` (${parentObj.serialNumber})` : ''}` : parentId}>
+                                <CornerDownRight size={13} className="text-primary flex-shrink-0 me-2" style={{ marginRight: 8 }} />
+                                <span className="font-monospace fw-medium">{parentLabel}</span>
                               </div>
                             ) : (
-                              <span className="text-muted fs-11">Root Node</span>
+                              <div className="d-flex align-items-center text-muted">
+                                <GitFork size={13} className="text-muted flex-shrink-0 me-2" style={{ marginRight: 8 }} />
+                                <span className="font-monospace fs-12">Root Node</span>
+                              </div>
                             )}
                           </td>
 
                           {/* Site */}
-                          <td className="asset-meta-text text-truncate" style={{ maxWidth: 140 }}>
-                            {siteObj?.name || `Site #${a.siteId || '7'}`}
+                          <td className="asset-meta-text text-truncate" style={{ maxWidth: 150 }}>
+                            <div className="d-flex align-items-center">
+                              <Building2 size={14} className="text-primary flex-shrink-0 me-2" style={{ marginRight: 8 }} />
+                              <span className="fw-medium">{siteObj?.name || `Site #${a.siteId || '7'}`}</span>
+                            </div>
                           </td>
 
                           {/* Status */}
                           <td>
-                            <div className="d-flex align-items-center gap-1.5">
-                              <span
-                                style={{
-                                  width: 7,
-                                  height: 7,
-                                  borderRadius: '50%',
-                                  backgroundColor: isInactive ? '#94a3b8' : (isMaintenance ? '#f59e0b' : '#22c55e')
-                                }}
-                              />
-                              <span className="fs-11 fw-semibold asset-meta-text">
-                                {a.status || (isInactive ? 'INACTIVE' : 'ACTIVE')}
-                              </span>
+                            <div className={`status-pill ${isInactive ? 'bg-secondary-subtle text-secondary' : isMaintenance ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success'}`}>
+                              <span className={`status-dot ${isInactive ? 'bg-secondary' : isMaintenance ? 'bg-warning' : 'bg-success'}`} />
+                              <span>{a.status || (isInactive ? 'INACTIVE' : 'ACTIVE')}</span>
                             </div>
                           </td>
 
                           {/* Updated */}
                           <td className="asset-sub-id">
-                            {formatDate(a.updatedAt || a.createdAt)}
+                            <div className="d-flex align-items-center fs-12">
+                              <Calendar size={13} className="text-primary flex-shrink-0 me-2" style={{ marginRight: 8 }} />
+                              <span>{formatDate(a.updatedAt || a.createdAt)}</span>
+                            </div>
                           </td>
 
                           {/* Actions: [Inspect] [Edit] [...] */}
