@@ -287,7 +287,7 @@ const Settings = () => {
         </div>
 
         <div className="d-flex gap-2 align-items-center flex-wrap">
-          <Button variant="outline-info" size="sm" className="fw-bold fs-11 d-flex align-items-center gap-1 me-2" onClick={() => navigate('/settings/users')}>
+          <Button variant="outline-info" size="sm" className="fw-bold fs-11 d-flex align-items-center gap-1 me-2" onClick={() => navigate('/admin/manage-users')}>
             <UserCheck size={16} /> User & Hierarchy Settings
           </Button>
 

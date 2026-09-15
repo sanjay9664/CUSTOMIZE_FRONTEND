@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import logo from "../assets/logo.png";
 import { useTheme } from '../context/ThemeContext';
+import { useSiteStore } from '../context/SiteContext';
+import { bmsService } from '../services/bmsService';
+import { normalizeList } from '../services/apiClient';
 
 const THEMES = {
   "Dashboard":        { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
@@ -59,17 +62,60 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const isAdmin = userRole === 'ADMIN';
   const isImpersonating = !!localStorage.getItem('impersonator_backup_role');
 
+  // Dynamic DG devices from backend
+  const { selectedSite, activeSites } = useSiteStore();
+  const [dgDevices, setDgDevices] = useState([]);
+
+  // Fetch GENERATOR devices when site changes
+  useEffect(() => {
+    const fetchDgDevices = async () => {
+      // Determine current siteId from selectedSite or first activeSite or localStorage
+      let siteId = selectedSite?.id;
+      if (!siteId && activeSites?.length > 0) siteId = activeSites[0].id;
+      if (!siteId) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
+          if (stored.length > 0) siteId = stored[0].id;
+        } catch (e) {}
+      }
+      if (!siteId) { setDgDevices([]); return; }
+
+      try {
+        const res = await bmsService.getSiteDevices(siteId, { category: 'GENERATOR' });
+        const devices = normalizeList(res, 'devices');
+        const generators = devices.filter(d => d.category === 'GENERATOR' && d.isActive !== false);
+        setDgDevices(generators);
+        // Cache for Overview page
+        try { localStorage.setItem('dg_generator_devices', JSON.stringify(generators)); } catch (e) {}
+      } catch (err) {
+        console.warn('[Sidebar] Failed to fetch DG devices:', err);
+        // Fallback to cached
+        try {
+          const cached = JSON.parse(localStorage.getItem('dg_generator_devices') || '[]');
+          if (cached.length > 0) setDgDevices(cached);
+        } catch (e) {}
+      }
+    };
+    fetchDgDevices();
+  }, [selectedSite?.id, activeSites]);
+
   const isExpanded = !collapsed || hoverExpanded;
 
   const menuItems = useMemo(() => [
     { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", disabled: modulesConfig ? !modulesConfig["Dashboard"] : false },
     // Electrical Systems
     { title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Transformer"] : false,
-      subItems: [{ title: "Overview", path: "/transformer/overview" }, { title: "Transformer-1", path: "/transformer/t1" }, { title: "Transformer-2", path: "/transformer/t2" }, { title: "Load / Temp", path: "/transformer/load" }, { title: "PDF Report", path: "/transformer/report" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
+      subItems: [{ title: "Overview", path: "/transformer/overview" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
     { title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? !modulesConfig["LT Panel"] : false,
-      subItems: [{ title: "Overview", path: "/lt-panel/overview" }, { title: "LT Room-1", path: "/lt-panel/room1" }, { title: "LT Room-2", path: "/lt-panel/room2" }, { title: "LT Room-3", path: "/lt-panel/room3" }, { title: "Incoming / Outgoing", path: "/lt-panel/io" }, { title: "Breaker Status", path: "/lt-panel/breaker" }, { title: "PDF Report", path: "/lt-panel/report" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
+      subItems: [{ title: "Overview", path: "/lt-panel/overview" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
     { title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? !modulesConfig["DG Set"] : false,
-      subItems: [{ title: "Overview", path: "/dg-set/overview" }, { title: "DG Set-1", path: "/dg-set/dg1" }, { title: "DG Set-2", path: "/dg-set/dg2" }, { title: "DG Set-3", path: "/dg-set/dg3" }].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
+      subItems: [
+        { title: "Overview", path: "/dg-set/overview" },
+        ...dgDevices.map((dev, idx) => ({
+          title: dev.name || `DG Set-${idx + 1}`,
+          path: `/dg-set/device/${dev.id}`
+        }))
+      ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
     { title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Energy Metering"] : false,
       subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true) },
     // HVAC & Environmental Systems
@@ -85,7 +131,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     { title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? !modulesConfig["Water Management"] : false,
       subItems: [{ title: "Overview", path: "/water-management/overview" }, { title: "AG TANK", path: "/water-management/ag-pump" }, { title: "UG TANK", path: "/water-management/ug-pump" }].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
     { title: "Motors", icon: <Activity size={20} />, disabled: modulesConfig ? !modulesConfig["Motors"] : false,
-      subItems: [{ title: "Overview", path: "/motors/overview" }, { title: "Pump Room 1", path: "/motors/room1" }, { title: "Pump Room 2", path: "/motors/room2" }, { title: "VFD / DOL Status", path: "/motors/status" }, { title: "PDF Report", path: "/motors/report" }].filter(s => submodulesConfig.showMotors?.[s.title] ?? true) },
+      subItems: [{ title: "Overview", path: "/motors/overview" }].filter(s => submodulesConfig.showMotors?.[s.title] ?? true) },
     // Safety & Alarms
     { title: "Fire", icon: <ShieldAlert size={20} />, disabled: modulesConfig ? !modulesConfig["Fire"] : false,
       subItems: [{ title: "Overview", path: "/fire-pumps/overview" }, { title: "Pump Status", path: "/fire-pumps/status" }, { title: "Header Pressure", path: "/fire-pumps/pressure" }, { title: "Jockey / Main", path: "/fire-pumps/jockey" }, { title: "PDF Report", path: "/fire-pumps/report" }].filter(s => submodulesConfig.showFirePumps?.[s.title] ?? true) },
@@ -102,7 +148,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     // Help & Support
     { title: "Help", icon: <HelpCircle size={20} />, disabled: modulesConfig ? modulesConfig["Help"] === false : false,
       subItems: [{ title: "Feedback", path: "/help/feedback" }, { title: "Policy & Condition", path: "/help/policy" }] }
-  ], [modulesConfig, submodulesConfig]);
+  ], [modulesConfig, submodulesConfig, dgDevices]);
 
   const filteredItems = useMemo(() => {
     return menuItems.filter(item => {
@@ -224,13 +270,12 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
             <span className="sb-link-text">Settings</span>
           </NavLink>
 
-          {isAdmin && (
-            <NavLink to="/admin/manage-users" onClick={handleNavClick}
-              className={({ isActive }) => `sb-link sb-admin ${isActive ? 'active' : ''}`}>
-              <span className="sb-link-icon"><User size={18} /></span>
-              <span className="sb-link-text">Manage Users</span>
-            </NavLink>
-          )}
+          {/* User Settings — always visible */}
+          <NavLink to="/admin/manage-users" onClick={handleNavClick}
+            className={({ isActive }) => `sb-link sb-admin ${isActive ? 'active' : ''}`}>
+            <span className="sb-link-icon"><User size={18} /></span>
+            <span className="sb-link-text">User Settings</span>
+          </NavLink>
 
           <div className="sb-sep" />
 

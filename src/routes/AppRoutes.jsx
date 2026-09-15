@@ -130,6 +130,8 @@ const AppRoutes = () => {
 
       {/* DG Set */}
       <Route path="/dg-set/overview" element={<DGSetOverview />} />
+      <Route path="/dg-set/device/:deviceId" element={<DGSetOverview />} />
+      {/* Legacy routes for backward compatibility */}
       <Route path="/dg-set/dg1" element={<DGSetOverview />} />
       <Route path="/dg-set/dg2" element={<DGSetOverview />} />
       <Route path="/dg-set/dg3" element={<DGSetOverview />} />
@@ -169,7 +171,7 @@ const AppRoutes = () => {
       {/* Settings & User Administration */}
       <Route path="/global-settings" element={<SettingsIndex />} />
       <Route path="/settings" element={<SettingsIndex />} />
-      <Route path="/settings/users" element={<SettingsIndex />} />
+      <Route path="/settings/users" element={<Navigate to="/admin/manage-users" replace />} />
       <Route path="/settings/sites" element={<SettingsIndex />} />
       <Route path="/settings/assets" element={<AssetManagement />} />
       <Route path="/asset-management" element={<AssetManagement />} />
@@ -181,15 +183,8 @@ const AppRoutes = () => {
       {/* Super Admin Routes */}
       <Route path="/super-admin" element={<Navigate to="/dashboard" replace />} />
 
-      {/* Admin Routes with Declarative Role Guard */}
-      <Route 
-        path="/admin/manage-users" 
-        element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN']}>
-            <UserManagement />
-          </ProtectedRoute>
-        } 
-      />
+      {/* User Settings — accessible to all logged-in users */}
+      <Route path="/admin/manage-users" element={<UserManagement />} />
       <Route 
         path="/admin/audit-logs" 
         element={
