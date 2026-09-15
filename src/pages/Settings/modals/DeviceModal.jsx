@@ -3,32 +3,9 @@ import { Modal, Button, Form, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { Cpu, MapPin, Box, Sliders, Layers, AlertTriangle } from 'lucide-react';
 import bmsService, { fetchAndStoreSochiotAccessToken } from '../../../services/bmsService';
 import { normalizeList } from '../../../services/apiClient';
+import { DEVICE_CATEGORIES, formatCategoryLabel } from '../../../constants/deviceTemplates';
 
-export const DEVICE_CATEGORIES = [
-  'ENERGY_METER',
-  'UG_TANK',
-  'AG_TANK',
-  'PUMP',
-  'VALVE',
-  'GENERATOR',
-  'LT_PANEL',
-  'FIRE_PUMP',
-  'HVAC_CHILLER',
-  'HVAC_AHU',
-  'HVAC_COOLING_TOWER',
-  'VRV',
-  'AQI_SENSOR',
-  'BREAKER',
-  'STP',
-  'WTP',
-  'LIFT',
-  'LIGHTING',
-  'FIRE_PANEL',
-  'CONTROLLER',
-  'SENSOR',
-  'AC',
-  'OTHER'
-];
+export { DEVICE_CATEGORIES };
 
 const DeviceModal = ({
   show = false,
@@ -48,7 +25,6 @@ const DeviceModal = ({
     bmsDeviceId: '',
     profileId: 'prf_default',
     sochiotDeviceIds: '',
-    templateName: '',
     description: '',
     isActive: true
   });
@@ -76,7 +52,6 @@ const DeviceModal = ({
           sochiotDeviceIds: Array.isArray(editingDevice.sochiotDeviceIds)
             ? editingDevice.sochiotDeviceIds.join(', ')
             : (editingDevice.sochiotDeviceIds || ''),
-          templateName: editingDevice.templateName || '',
           description: editingDevice.description || '',
           isActive: editingDevice.isActive !== undefined ? Boolean(editingDevice.isActive) : true
         });
@@ -90,7 +65,6 @@ const DeviceModal = ({
           bmsDeviceId: '',
           profileId: 'prf_default',
           sochiotDeviceIds: '',
-          templateName: '',
           description: '',
           isActive: true
         });
@@ -163,7 +137,7 @@ const DeviceModal = ({
       serialNumber: form.serialNumber.trim() || null,
       bmsDeviceId: form.bmsDeviceId.trim() || null,
       description: form.description.trim() || null,
-      templateName: form.templateName.trim() || null,
+      templateName: null,
       assetId: form.assetId ? String(form.assetId) : null,
       isActive: form.isActive
     };
@@ -336,10 +310,10 @@ const DeviceModal = ({
               </Form.Group>
             </Col>
 
-            {/* 4. Device / Asset Profile Selection (Active only after site selection) */}
+            {/* 4. Device Category (Active only after site selection) */}
             <Col xs={12} md={6}>
               <Form.Group>
-                <Form.Label>Device Profile / Category <span className="text-danger">*</span></Form.Label>
+                <Form.Label>Device Category <span className="text-danger">*</span></Form.Label>
                 <Form.Select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
@@ -347,7 +321,7 @@ const DeviceModal = ({
                   required
                 >
                   {DEVICE_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat.replace(/_/g, ' ')}</option>
+                    <option key={cat} value={cat}>{formatCategoryLabel(cat)}</option>
                   ))}
                 </Form.Select>
               </Form.Group>
@@ -383,7 +357,7 @@ const DeviceModal = ({
             </Col>
 
             {/* Additional Identifiers & Connection Settings */}
-            <Col xs={12} md={4}>
+            <Col xs={12} md={6}>
               <Form.Group>
                 <Form.Label>BMS Device ID / Code</Form.Label>
                 <Form.Control
@@ -396,7 +370,7 @@ const DeviceModal = ({
               </Form.Group>
             </Col>
 
-            <Col xs={12} md={4}>
+            <Col xs={12} md={6}>
               <Form.Group>
                 <Form.Label>Sochiot Hardware IDs</Form.Label>
                 <Form.Control
@@ -404,19 +378,6 @@ const DeviceModal = ({
                   placeholder="e.g. 1231, 1232"
                   value={form.sochiotDeviceIds}
                   onChange={(e) => setForm({ ...form, sochiotDeviceIds: e.target.value })}
-                  disabled={!form.siteId}
-                />
-              </Form.Group>
-            </Col>
-
-            <Col xs={12} md={4}>
-              <Form.Group>
-                <Form.Label>Template Name</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="e.g. EnergyMeter_Template_V1"
-                  value={form.templateName}
-                  onChange={(e) => setForm({ ...form, templateName: e.target.value })}
                   disabled={!form.siteId}
                 />
               </Form.Group>

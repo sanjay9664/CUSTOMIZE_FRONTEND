@@ -3,6 +3,7 @@ import { Form, Button, Badge } from 'react-bootstrap';
 import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText, Layers, MapPin, X } from 'lucide-react';
 import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
 import CommonFilterPopover from '../../../../components/common/CommonFilterPopover';
+import { formatCategoryLabel } from '../../../../constants/deviceTemplates';
 
 const DevicesTab = ({
   searchTerm = '',
@@ -382,8 +383,7 @@ const DevicesTab = ({
                   energyGroupId: '',
                   description: '',
                   serialNumber: '',
-                  profileId: '',
-                  templateName: ''
+                  profileId: ''
                 });
                 if (typeof setDynamicTemplateFields === 'function') {
                   setDynamicTemplateFields([]);
@@ -527,7 +527,7 @@ const DevicesTab = ({
                       }}
                     >
                       <span className="rounded-circle" style={{ width: 6, height: 6, backgroundColor: badgeColor }}></span>
-                      {catUpper}
+                      {formatCategoryLabel(d.category)}
                     </span>
                   </td>
                   <td className="py-3 px-3 font-monospace device-sn-text fw-medium fs-13">
