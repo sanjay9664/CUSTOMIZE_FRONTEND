@@ -5,6 +5,7 @@ import {
   AlertTriangle, Copy, Check, Clock, ExternalLink, Activity, RefreshCw
 } from 'lucide-react';
 import bmsService from '../../../services/bmsService';
+import { formatCategoryLabel } from '../../../constants/deviceTemplates';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -341,8 +342,8 @@ const DeviceInspectorDrawer = ({
                   <div className="fs-13 font-monospace text-slate-200 mt-0.5">{device.profileId || 'N/A'}</div>
                 </Col>
                 <Col xs={6}>
-                  <div className="fs-11 text-muted">Template Name</div>
-                  <div className="fs-13 text-slate-200 mt-0.5">{device.templateName || 'None'}</div>
+                  <div className="fs-11 text-muted">Device Category</div>
+                  <div className="fs-13 text-slate-200 mt-0.5 fw-semibold">{formatCategoryLabel(device.category) || 'N/A'}</div>
                 </Col>
                 <Col xs={12}>
                   <div className="fs-11 text-muted">Sochiot Hardware Device IDs</div>

@@ -150,7 +150,7 @@ export const useManageOrganisation = () => {
   const [wizardStep, setWizardStep] = useState(1);
 
   const [registerForm, setRegisterForm] = useState({
-    siteId: '', name: '', sochiotDeviceIds: '', moduleIds: [], sochiotTemplateId: null, category: '', areaId: '', buildingId: '', floorNo: '', roomNo: '', energyGroupId: '', description: '', serialNumber: '', profileId: '', templateName: ''
+    siteId: '', name: '', sochiotDeviceIds: '', moduleIds: [], sochiotTemplateId: null, category: 'ENERGY_METER', areaId: '', buildingId: '', floorNo: '', roomNo: '', energyGroupId: '', description: '', serialNumber: '', profileId: '', assetId: ''
   });
 
   const [dynamicTemplateFields, setDynamicTemplateFields] = useState([]);
@@ -1019,7 +1019,6 @@ export const useManageOrganisation = () => {
       description: d.description || '',
       serialNumber: d.serialNumber || '',
       profileId: d.profileId || '',
-      templateName: d.templateName || '',
       sochiotTemplateId: d.sochiotTemplateId || d.sochiot_template_id || null,
       moduleIds: Array.isArray(d.moduleIds) ? d.moduleIds : (d.moduleId ? [d.moduleId] : []),
       assetId: d.assetId ? String(d.assetId) : ''
@@ -1212,7 +1211,6 @@ export const useManageOrganisation = () => {
               description: detail.description || prev.description,
               serialNumber: detail.serialNumber || prev.serialNumber,
               profileId: detail.profileId || prev.profileId,
-              templateName: detail.templateName || prev.templateName,
               sochiotTemplateId: detail.sochiotTemplateId || detail.sochiot_template_id || prev.sochiotTemplateId || null,
               moduleIds: Array.isArray(detail.moduleIds) ? detail.moduleIds : prev.moduleIds,
               assetId: detail.assetId ? String(detail.assetId) : prev.assetId
@@ -1289,7 +1287,7 @@ export const useManageOrganisation = () => {
       description: '',
       serialNumber: '',
       profileId: '',
-      templateName: '',
+      assetId: '',
       sochiotTemplateId: null,
       moduleIds: []
     });
