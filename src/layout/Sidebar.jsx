@@ -158,8 +158,12 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     });
   }, [menuItems, isAdmin, isSuperAdmin, modulesConfig]);
 
-  // Auto-open the section containing active route
+  // When collapsing, close all options. When expanded, auto-open active section.
   useEffect(() => {
+    if (!isExpanded) {
+      setOpenSections({});
+      return;
+    }
     const autoOpen = {};
     filteredItems.forEach(item => {
       if (item.subItems?.some(s => location.pathname === s.path)) {
@@ -167,7 +171,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       }
     });
     setOpenSections(prev => ({ ...prev, ...autoOpen }));
-  }, [location.pathname, filteredItems]);
+  }, [location.pathname, filteredItems, isExpanded]);
 
   // High performance hardware-accelerated hover transition
   const handleMouseEnter = useCallback(() => {
@@ -257,7 +261,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
         <nav className="sb-nav">
           {/* Verification */}
           {isImpersonating && (
-            <div className="sb-verify" onClick={handleExitImpersonation}>
+            <div className="sb-verify" onClick={handleExitImpersonation} title="Exit Verification">
               <ShieldAlert size={14} />
               <span className="sb-verify-txt">Exit Verification</span>
             </div>
@@ -265,6 +269,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
 
           {/* Settings */}
           <NavLink to="/settings" onClick={handleNavClick}
+            title="Settings"
             className={({ isActive }) => `sb-link sb-settings ${isActive ? 'active' : ''}`}>
             <span className="sb-link-icon"><Settings size={18} /></span>
             <span className="sb-link-text">Settings</span>
@@ -272,6 +277,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
 
           {/* User Settings — always visible */}
           <NavLink to="/admin/manage-users" onClick={handleNavClick}
+            title="User Settings"
             className={({ isActive }) => `sb-link sb-admin ${isActive ? 'active' : ''}`}>
             <span className="sb-link-icon"><User size={18} /></span>
             <span className="sb-link-text">User Settings</span>
@@ -282,7 +288,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           {/* Modules */}
           {filteredItems.map((item, idx) => {
             const t = THEMES[item.title] || THEMES["Dashboard"];
-            const isOpen = openSections[item.title];
+            const isOpen = isExpanded && Boolean(openSections[item.title]);
             const hasSubs = item.subItems && item.subItems.length > 0;
             const hasActiveSub = item.subItems?.some(s => location.pathname === s.path);
 
@@ -294,6 +300,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
                   <NavLink
                     to={item.path}
                     onClick={handleNavClick}
+                    title={item.title}
                     className={({ isActive }) => `sb-mod-head ${isActive ? 'sb-mod-active' : ''}`}
                     style={{ '--mc': t.c, '--mbg': t.bg, '--mb': t.b }}
                   >
@@ -302,10 +309,13 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
                   </NavLink>
                 ) : (
                   <button
+                    title={item.title}
                     className={`sb-mod-head ${hasActiveSub ? 'sb-mod-active' : ''} ${isOpen ? 'sb-mod-opened' : ''}`}
                     style={{ '--mc': t.c, '--mbg': t.bg, '--mb': t.b }}
                     onClick={() => {
-                      toggleSection(item.title);
+                      if (isExpanded) {
+                        toggleSection(item.title);
+                      }
                       // Navigate to first sub-item on title click
                       if (hasSubs && item.subItems[0]?.path) {
                         navigate(item.subItems[0].path);
@@ -429,6 +439,7 @@ body.light-mode .sb-brand { border-bottom-color: #e2e8f0; }
 .sb--collapsed .sb-verify-txt {
   opacity: 0;
   visibility: hidden;
+  display: none !important;
   pointer-events: none;
 }
 
@@ -454,6 +465,19 @@ body.light-mode .sb-brand { border-bottom-color: #e2e8f0; }
 .sb-nav::-webkit-scrollbar { width: 3px; }
 .sb-nav::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.15); border-radius: 3px; }
 
+/* Collapsed strip mode: hide scrollbar & zero padding that causes horizontal layout shift */
+.sb--collapsed .sb-nav {
+  padding: 8px 0 20px 0 !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.sb--collapsed .sb-nav::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* Top Links */
 .sb-link {
   display: flex; align-items: center; justify-content: flex-start;
@@ -463,9 +487,26 @@ body.light-mode .sb-brand { border-bottom-color: #e2e8f0; }
   white-space: nowrap;
 }
 
+.sb--collapsed .sb-link {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 auto 4px auto !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  border-radius: 12px !important;
+}
+
 .sb-link-icon {
   display: flex; align-items: center; justify-content: center;
   width: 28px; height: 28px; flex-shrink: 0;
+}
+
+.sb--collapsed .sb-link-icon {
+  width: 34px !important;
+  height: 34px !important;
+  margin: 0 auto !important;
 }
 
 .sb-settings { color: #f59e0b; }
@@ -483,6 +524,11 @@ body.light-mode .sb-settings:hover, body.light-mode .sb-settings.active { backgr
 }
 body.light-mode .sb-sep { background: linear-gradient(90deg, transparent, rgba(0,0,0,0.06), transparent); }
 
+.sb--collapsed .sb-sep {
+  width: 36px !important;
+  margin: 6px auto 8px auto !important;
+}
+
 /* Verify banner */
 .sb-verify {
   display: flex; align-items: center; justify-content: flex-start;
@@ -494,8 +540,26 @@ body.light-mode .sb-sep { background: linear-gradient(90deg, transparent, rgba(0
   cursor: pointer;
 }
 
+.sb--collapsed .sb-verify {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  margin: 0 auto 4px auto !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  border-radius: 12px !important;
+}
+
 /* Module Section */
 .sb-mod { margin-bottom: 1px; }
+
+.sb--collapsed .sb-mod {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  margin-bottom: 4px !important;
+}
 
 .sb-mod-head {
   display: flex; align-items: center;
@@ -508,6 +572,17 @@ body.light-mode .sb-sep { background: linear-gradient(90deg, transparent, rgba(0
   min-height: 44px;
 }
 
+.sb--collapsed .sb-mod-head {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  border-radius: 12px !important;
+}
+
 .sb-mod-head:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
 body.light-mode .sb-mod-head { color: #475569; }
 body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04); }
@@ -515,12 +590,21 @@ body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04
 .sb-mod-active { color: var(--mc) !important; background: var(--mbg) !important; }
 .sb-mod-opened { color: var(--mc) !important; }
 
+.sb--collapsed .sb-mod-active {
+  background: var(--mbg) !important;
+  border: 1px solid var(--mb) !important;
+}
+
 /* Module Icon Circle */
 .sb-mod-ico {
   display: flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--mbg); border: 1.5px solid var(--mb);
   color: var(--mc); flex-shrink: 0; transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.sb--collapsed .sb-mod-ico {
+  margin: 0 auto !important;
 }
 
 .sb-mod-head:hover .sb-mod-ico {
@@ -544,6 +628,21 @@ body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04
 .sb-dd-open { max-height: 600px; }
 
 .sb-dd-inner { padding: 3px 0 6px; }
+
+/* In collapsed mode, completely suppress dropdown elements to avoid ghost heights and vertical shifting */
+.sb--collapsed .sb-dd,
+.sb--collapsed .sb-dd-inner,
+.sb--collapsed .sb-sub {
+  display: none !important;
+  max-height: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
 
 .sb-sub {
   display: flex; align-items: center;
