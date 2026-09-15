@@ -82,7 +82,7 @@ const QUICK_ACTIONS = [
 // ── SYSTEM CONFIG CARDS ──────────────────────────────────────────────────
 const SYSTEM_CARDS = [
   { key: 'global', title: 'Global Settings', description: 'Module visibility, feature toggles & system preferences', icon: Settings, color: '#f59e0b', path: '/settings?tab=global', isGlobal: true },
-  { key: 'users', title: 'User Administration', description: 'Manage users, invitations, roles & permissions', icon: Users, color: '#06b6d4', path: '/settings/users', isUsers: true },
+  { key: 'users', title: 'User Administration', description: 'Manage users, invitations, roles & permissions', icon: Users, color: '#06b6d4', path: '/admin/manage-users', isUsers: true },
   { key: 'commands', title: 'Device Commands', description: 'Remote Modbus/BACnet commands & execution', icon: Terminal, color: '#64748b', tab: 'commands' },
 ];
 
@@ -123,14 +123,14 @@ const SettingsIndex = () => {
       setActiveTab('report_group');
     } else if (location.search.includes('tab=device')) {
       setActiveTab('device');
-    } else if (location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users')) {
-      setActiveTab('users');
+    } else if (location.pathname.includes('/settings/users')) {
+      navigate('/admin/manage-users', { replace: true });
     } else if (location.pathname.includes('/manage-organisation')) {
       setActiveTab('org');
     } else if (location.pathname === '/settings' && !location.search) {
       setActiveTab('hub');
     }
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, navigate]);
 
   const isExtraTabActiveIndex = ['widgets', 'rules', 'commands', 'report_group', 'buildings', 'building'].includes(activeTab);
   const [showExtraTabsIndex, setShowExtraTabsIndex] = useState(() => {
@@ -202,7 +202,7 @@ const SettingsIndex = () => {
     setActiveTab(tab);
     if (tab === 'hub') navigate('/settings');
     else if (tab === 'global') navigate('/settings');
-    else if (tab === 'users') navigate('/settings/users');
+    else if (tab === 'users') navigate('/admin/manage-users');
     else if (tab === 'org') navigate('/manage-organisation');
     else if (tab === 'location') navigate('/manage-organisation?tab=zone');
     else if (tab === 'device') navigate('/manage-organisation?tab=device');
@@ -458,14 +458,6 @@ const SettingsIndex = () => {
                 className={`sub-nav-pill-btn ${activeTab === 'global' ? 'active-pill' : 'inactive-pill'}`}
               >
                 <Settings size={15} className={activeTab === 'global' ? 'text-dark' : 'text-slate-400'} /> Global
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => { setActiveTab('users'); navigate('/settings/users'); }}
-                className={`sub-nav-pill-btn ${activeTab === 'users' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Users size={15} className={activeTab === 'users' ? 'text-dark' : 'text-slate-400'} /> Users
               </Nav.Link>
             </Nav.Item>
 
@@ -780,8 +772,6 @@ const SettingsIndex = () => {
         </Container>
       ) : activeTab === 'global' ? (
         <GlobalSettings />
-      ) : activeTab === 'users' ? (
-        <UserAdministration />
       ) : activeTab === 'sites' ? (
         <SiteManagement />
       ) : activeTab === 'assets' ? (

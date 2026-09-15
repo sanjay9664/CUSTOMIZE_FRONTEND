@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, User, Bell, LayoutGrid, Sun, Building2, Shield, Users, Building, ChevronDown, MapPin } from 'lucide-react';
+import { Menu, Search, User, Bell, LayoutGrid, Sun, Building2, Shield, Users, Building, ChevronDown, MapPin, Sliders, UserPlus, Settings } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -57,75 +57,17 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           </Dropdown.Toggle>
 
           <Dropdown.Menu className="bg-dark border-secondary shadow-lg mt-2 p-2" style={{ minWidth: '220px', borderRadius: '12px' }}>
-            <div className="px-3 py-2 border-bottom border-secondary border-opacity-25 mb-1">
-              <p className="mb-0 fw-bold text-info fs-12 uppercase tracking-wider">Quick Management</p>
-              <small className="text-muted fs-11">Organization & User Controls</small>
-            </div>
-
-            <Dropdown.Item 
-              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
-              onClick={() => navigate('/manage-organisation?tab=company')}
-            >
-              <Building size={16} className="text-info" />
-              <div className="d-flex flex-column">
-                <span className="fw-semibold fs-13">Company</span>
-                <small className="text-muted fs-11">Create & Manage SAAS Companies</small>
-              </div>
-            </Dropdown.Item>
-
-            <Dropdown.Item 
-              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
-              onClick={() => navigate('/manage-organisation')}
-            >
-              <Building2 size={16} className="text-cyan-400" />
-              <div className="d-flex flex-column">
-                <span className="fw-semibold fs-13">Manage Organisation</span>
-                <small className="text-muted fs-11">Tenants, Zones, Areas & Sites</small>
-              </div>
-            </Dropdown.Item>
-
-            <Dropdown.Item 
-              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
-              onClick={() => navigate('/manage-organisation?tab=site')}
-            >
-              <MapPin size={16} className="text-purple-400" />
-              <div className="d-flex flex-column">
-                <span className="fw-semibold fs-13">Site Management</span>
-                <small className="text-muted fs-11">Physical Sites & Location Controls</small>
-              </div>
-            </Dropdown.Item>
-
-            <Dropdown.Item 
-              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
-              onClick={() => navigate('/manage-organisation?tab=building')}
-            >
-              <Building2 size={16} className="text-info" />
-              <div className="d-flex flex-column">
-                <span className="fw-semibold fs-13">Building Settings</span>
-                <small className="text-muted fs-11">Manage Buildings & Site Selector</small>
-              </div>
-            </Dropdown.Item>
-
-            <Dropdown.Item 
-              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
-              onClick={() => navigate('/settings/users')}
-            >
-              <Shield size={16} className="text-amber-400" />
-              <div className="d-flex flex-column">
-                <span className="fw-semibold fs-13">Manage Roles</span>
-                <small className="text-muted fs-11">Role & Permission Configurations</small>
-              </div>
-            </Dropdown.Item>
-
-            <Dropdown.Item 
-              className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2"
-              onClick={() => navigate('/settings/users')}
-            >
+            <Dropdown.Item className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2" onClick={() => navigate('/admin/manage-users')}>
               <Users size={16} className="text-emerald-400" />
-              <div className="d-flex flex-column">
-                <span className="fw-semibold fs-13">Users</span>
-                <small className="text-muted fs-11">User Administration & Access</small>
-              </div>
+              <span>Users</span>
+            </Dropdown.Item>
+            <Dropdown.Item className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2" onClick={() => navigate('/admin/manage-users?tab=roles')}>
+              <Shield size={16} className="text-amber-400" />
+              <span>Manage Roles</span>
+            </Dropdown.Item>
+            <Dropdown.Item className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2" onClick={() => navigate('/manage-organisation')}>
+              <Building2 size={16} className="text-cyan-400" />
+              <span>Manage Organisation</span>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
@@ -196,6 +138,124 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
         .fs-7 { font-size: 0.72rem; }
         .custom-toggle::after { display: none; }
         .hover-bg-secondary:hover { background-color: rgba(255, 255, 255, 0.1); }
+
+        /* ── MANAGE HUB DROPDOWN (3 CARDS MATCHING USER DESIGN) ── */
+        .manage-hub-dropdown {
+          min-width: 660px !important;
+          background: #ffffff !important;
+          border-radius: 20px !important;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25) !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+
+        body.dark-mode .manage-hub-dropdown,
+        .scada-header .manage-hub-dropdown {
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
+        }
+
+        .manage-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+        }
+
+        .manage-card-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 24px 16px;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-mode .manage-card-item {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .manage-card-item:hover {
+          transform: translateY(-5px);
+          background: #ffffff;
+          border-color: #06b6d4;
+          box-shadow: 0 12px 30px rgba(6, 182, 212, 0.18);
+        }
+
+        body.dark-mode .manage-card-item:hover {
+          background: rgba(6, 182, 212, 0.08);
+          border-color: #38bdf8;
+          box-shadow: 0 12px 35px rgba(56, 189, 248, 0.25);
+        }
+
+        .manage-icon-box {
+          width: 86px;
+          height: 86px;
+          border-radius: 16px;
+          border: 2px dashed #cbd5e1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #64748b;
+          margin-bottom: 16px;
+          transition: all 0.25s ease;
+          background: #f8fafc;
+        }
+
+        body.dark-mode .manage-icon-box {
+          border-color: rgba(255, 255, 255, 0.2);
+          color: #94a3b8;
+          background: rgba(0, 0, 0, 0.25);
+        }
+
+        .manage-card-item:hover .manage-icon-box {
+          border-color: #06b6d4;
+          color: #0284c7;
+          transform: scale(1.06);
+          box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+        }
+
+        body.dark-mode .manage-card-item:hover .manage-icon-box {
+          border-color: #38bdf8;
+          color: #38bdf8;
+          box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+        }
+
+        .manage-card-title {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 6px;
+        }
+
+        body.dark-mode .manage-card-title {
+          color: #f8fafc;
+        }
+
+        .manage-card-desc {
+          font-size: 0.78rem;
+          color: #64748b;
+          margin-bottom: 0;
+          line-height: 1.35;
+        }
+
+        body.dark-mode .manage-card-desc {
+          color: #94a3b8;
+        }
+
+        @media (max-width: 768px) {
+          .manage-hub-dropdown {
+            min-width: 100% !important;
+            width: 320px !important;
+          }
+          .manage-cards-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}} />
     </header>
   );

@@ -6,6 +6,7 @@ import {
   ShieldCheck, ArrowRight, Settings, Download
 } from 'lucide-react';
 import motorImage from '../../assets/motor.png';
+import HierarchySelector from '../../components/HierarchySelector';
 
 const MotorCard = ({ id, name, status, rpm, current, temp, vibration, efficiency }) => {
   const isRunning = status === 'Running';
@@ -114,6 +115,8 @@ const MotorCard = ({ id, name, status, rpm, current, temp, vibration, efficiency
 
 const MotorsOverview = () => {
   const [time, setTime] = useState(new Date());
+  const [selectedDevice, setSelectedDevice] = useState(null);
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'units', 'vfd', 'rooms'
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -127,10 +130,27 @@ const MotorsOverview = () => {
     { id: 'C-01-CHL', name: 'Chiller Compressor 01', status: 'Fault', rpm: '0', current: '0.0', temp: '75', vibration: '0.0', efficiency: 0 },
   ];
 
+  const startersData = [
+    { id: 'VFD-01', motor: 'Main Supply Pump 01', type: 'VFD (ABB ACS580)', freq: '48.5 Hz', speed: '97%', status: 'RUNNING', temp: '44°C' },
+    { id: 'VFD-02', motor: 'Main Supply Pump 02', type: 'VFD (Danfoss FC302)', freq: '0.0 Hz', speed: '0%', status: 'STANDBY', temp: '26°C' },
+    { id: 'DOL-01', motor: 'Exhaust Fan A1', type: 'Direct On-Line (DOL)', freq: '50.0 Hz', speed: '100%', status: 'RUNNING', temp: '38°C' },
+    { id: 'SOFT-01', motor: 'Chiller Compressor 01', type: 'Soft Starter (Schneider)', freq: '0.0 Hz', speed: '0%', status: 'FAULT', temp: '62°C' }
+  ];
+
   return (
     <div className="motors-page fade-in p-4">
+      <HierarchySelector
+        moduleTitle="MOTORS"
+        accentColor="#10b981"
+        deviceCategory="PUMP"
+        assetType="PUMP_ROOM"
+        deviceLabel="MOTOR"
+        deviceBasePath="/motors/device"
+        icon={<RotateCw size={13} />}
+        onDeviceSelect={(dev) => setSelectedDevice(dev)}
+      />
       {/* HEADER SECTION */}
-      <div className="d-flex justify-content-between align-items-start mb-5 pb-4 border-bottom border-white border-opacity-5">
+      <div className="d-flex justify-content-between align-items-start mb-4 pb-4 border-bottom border-white border-opacity-5">
         <div>
           <div className="d-flex align-items-center gap-3 mb-2">
             <div className="status-badge-glow">
@@ -152,6 +172,28 @@ const MotorsOverview = () => {
           <button className="btn-scada-glass-premium"><RefreshCw size={16} className="me-2" /> RE-CALIBRATE</button>
           <button className="btn-scada-glow-premium"><Download size={16} className="me-2" /> EXPORT LOGS</button>
         </div>
+      </div>
+
+      {/* VIEW TABS BAR */}
+      <div className="d-flex align-items-center gap-2 mb-4 p-1 rounded-3" style={{ background: 'var(--scada-card, rgba(30, 41, 59, 0.5))', border: '1px solid var(--scada-border, rgba(255,255,255,0.08))' }}>
+        {[
+          { key: 'all', label: 'All Views Unified' },
+          { key: 'units', label: 'Motor Units & Telemetry' },
+          { key: 'vfd', label: 'VFD / DOL Starters' },
+          { key: 'rooms', label: 'Pump Rooms Summary' }
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`btn btn-sm px-3 py-2 rounded-2 fw-bold font-monospace fs-9 uppercase transition-all ${
+              activeTab === tab.key 
+                ? 'btn-success text-dark shadow-sm' 
+                : 'text-secondary border-0 bg-transparent'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* QUICK STATS */}
@@ -178,13 +220,93 @@ const MotorsOverview = () => {
       </Row>
 
       {/* MOTORS GRID */}
-      <Row className="g-4">
-        {motorsData.map((motor, i) => (
-          <Col xl={6} key={i}>
-            <MotorCard {...motor} />
-          </Col>
-        ))}
-      </Row>
+      {(activeTab === 'all' || activeTab === 'units') && (
+        <Row className="g-4 mb-5">
+          {motorsData.map((motor, i) => (
+            <Col xl={6} key={i}>
+              <MotorCard {...motor} />
+            </Col>
+          ))}
+        </Row>
+      )}
+
+      {/* VFD / DOL STARTERS MATRIX */}
+      {(activeTab === 'all' || activeTab === 'vfd') && (
+        <div className="mb-5">
+          <h4 className="text-white fw-black uppercase tracking-wide mb-3 d-flex align-items-center">
+            <Zap className="me-2 text-success" size={22} />
+            VFD & DOL Starter Controllers Matrix
+          </h4>
+          <Card className="border-0 bg-panel overflow-hidden rounded-4">
+            <div className="table-responsive">
+              <Table hover variant="dark" className="mb-0 align-middle">
+                <thead style={{ background: 'rgba(0,0,0,0.5)' }}>
+                  <tr className="font-monospace text-uppercase fs-10 text-secondary">
+                    <th className="py-3 px-4">Starter ID</th>
+                    <th className="py-3">Associated Motor</th>
+                    <th className="py-3">Starter Type</th>
+                    <th className="py-3 text-end">Output Freq</th>
+                    <th className="py-3 text-end">Speed Ratio</th>
+                    <th className="py-3 text-end">Heat Temp</th>
+                    <th className="py-3 text-center">Control State</th>
+                  </tr>
+                </thead>
+                <tbody className="font-monospace fs-9">
+                  {startersData.map(st => (
+                    <tr key={st.id}>
+                      <td className="px-4 py-3 text-info fw-bold">{st.id}</td>
+                      <td className="py-3 text-white fw-bold">{st.motor}</td>
+                      <td className="py-3 text-secondary">{st.type}</td>
+                      <td className="py-3 text-end text-warning fw-bold">{st.freq}</td>
+                      <td className="py-3 text-end text-cyan-400 fw-bold">{st.speed}</td>
+                      <td className="py-3 text-end text-rose-400">{st.temp}</td>
+                      <td className="py-3 text-center">
+                        <Badge bg={st.status === 'RUNNING' ? 'success' : st.status === 'FAULT' ? 'danger' : 'secondary'} className="px-3 py-1">
+                          {st.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* PUMP ROOMS SUMMARY */}
+      {(activeTab === 'all' || activeTab === 'rooms') && (
+        <div className="mb-5">
+          <h4 className="text-white fw-black uppercase tracking-wide mb-3 d-flex align-items-center">
+            <Activity className="me-2 text-info" size={22} />
+            Pump Room Facility Distribution
+          </h4>
+          <Row className="g-4">
+            {[
+              { room: 'Pump Room 1 (Main Basement)', count: 12, running: 10, power: '180 kW', status: 'Optimal' },
+              { room: 'Pump Room 2 (Secondary Tower)', count: 8, running: 6, power: '95 kW', status: 'Optimal' },
+              { room: 'Fire Pump House', count: 4, running: 1, power: '45 kW', status: 'Standby Ready' }
+            ].map((rm, idx) => (
+              <Col md={4} key={idx}>
+                <div className="p-4 rounded-4 bg-panel border-0">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h6 className="text-white fw-bold m-0 font-monospace">{rm.room}</h6>
+                    <Badge bg="success" className="fs-10 font-monospace">{rm.status}</Badge>
+                  </div>
+                  <div className="d-flex justify-content-between text-secondary fs-9 font-monospace mb-1">
+                    <span>Active Pumps:</span>
+                    <strong className="text-white">{rm.running} / {rm.count} RUNNING</strong>
+                  </div>
+                  <div className="d-flex justify-content-between text-secondary fs-9 font-monospace">
+                    <span>Total Power Draw:</span>
+                    <strong className="text-warning">{rm.power}</strong>
+                  </div>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         .motors-page { background: var(--scada-bg); min-height: 100vh; font-family: 'Inter', sans-serif; color: var(--scada-text); }

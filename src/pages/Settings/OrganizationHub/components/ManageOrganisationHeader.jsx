@@ -52,11 +52,6 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                 <Settings size={15} className={org.activeTab === 'global' ? 'text-dark' : 'text-slate-400'} /> Global
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings/users')} className={`sub-nav-pill-btn ${org.activeTab === 'users' ? 'active-pill' : 'inactive-pill'}`}>
-                <Users size={15} className={org.activeTab === 'users' ? 'text-dark' : 'text-slate-400'} /> Users
-              </Nav.Link>
-            </Nav.Item>
 
             <div className="vr bg-secondary opacity-30 mx-1 flex-shrink-0" style={{ height: '24px' }} />
 

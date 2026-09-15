@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Badge, ProgressBar, Toast, ToastContainer, Table } from 'react-bootstrap';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Row, Col, Card, Badge, ProgressBar, Toast, ToastContainer, Table, Dropdown } from 'react-bootstrap';
 import { 
   Factory, ShieldAlert, Zap, Activity, Gauge, Fuel, History, 
   Fan, Settings, Thermometer, Droplets, FileDown, Home, 
   Database, AlertCircle, AlertTriangle, TrendingDown,
-  ChevronRight, ArrowRightCircle
+  ChevronRight, ArrowRightCircle, ChevronDown
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { io } from 'socket.io-client';
+import { bmsService } from '../../services/bmsService';
+import { normalizeList } from '../../services/apiClient';
+import { useSiteStore } from '../../context/SiteContext';
+import HierarchySelector from '../../components/HierarchySelector';
 
 // VIBRANT BUT BALANCED SCADA PALETTE
 const SCADA_COLORS = {
@@ -29,9 +33,117 @@ const SCADA_COLORS = {
 const SiemensStyleDG = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { deviceId: routeDeviceId } = useParams();
+  const { sites: contextSites, activeSites } = useSiteStore();
   
-  // Determine activeDG based on route path: /dg-set/dg3 -> DG3, /dg-set/dg2 -> DG2, else DG1
-  const activeDG = pathname.includes('dg3') ? 'DG3' : pathname.includes('dg2') ? 'DG2' : 'DG1';
+  // ── HIERARCHICAL SELECTION STATE ──
+  const allSites = useMemo(() => {
+    const s = activeSites?.length > 0 ? activeSites : contextSites || [];
+    if (s.length === 0) {
+      try { return JSON.parse(localStorage.getItem('scada_sites_db') || '[]'); } catch (e) { return []; }
+    }
+    return s;
+  }, [activeSites, contextSites]);
+
+  const [selectedSiteId, setSelectedSiteId] = useState(() => {
+    if (allSites.length > 0) return allSites[0].id;
+    return null;
+  });
+  const [dgDevices, setDgDevices] = useState([]);
+  const [dgAssets, setDgAssets] = useState([]);
+  const [selectedAssetId, setSelectedAssetId] = useState(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+
+  // Auto-select first site when sites load
+  useEffect(() => {
+    if (!selectedSiteId && allSites.length > 0) {
+      setSelectedSiteId(allSites[0].id);
+    }
+  }, [allSites]);
+
+  // Fetch GENERATOR devices + DG assets when site changes
+  useEffect(() => {
+    if (!selectedSiteId) return;
+    setLoadingDevices(true);
+    const fetchData = async () => {
+      try {
+        // Fetch devices with GENERATOR category
+        const devRes = await bmsService.getSiteDevices(selectedSiteId, { category: 'GENERATOR' });
+        const devices = normalizeList(devRes, 'devices').filter(d => d.category === 'GENERATOR' && d.isActive !== false);
+        setDgDevices(devices);
+        try { localStorage.setItem('dg_generator_devices', JSON.stringify(devices)); } catch (e) {}
+
+        // Fetch DG-type assets
+        try {
+          const assetRes = await bmsService.getAssets(selectedSiteId, { assetType: 'DG' });
+          const assets = normalizeList(assetRes, 'assets').filter(a => a.assetType === 'DG');
+          setDgAssets(assets);
+        } catch (e) {
+          setDgAssets([]);
+        }
+      } catch (err) {
+        console.warn('[DGOverview] Failed to fetch DG data:', err);
+        // Fallback to cached
+        try { setDgDevices(JSON.parse(localStorage.getItem('dg_generator_devices') || '[]')); } catch (e) {}
+      } finally {
+        setLoadingDevices(false);
+      }
+    };
+    fetchData();
+    // Reset downstream selections on site change
+    setSelectedAssetId(null);
+    setSelectedDeviceId(null);
+  }, [selectedSiteId]);
+
+  // Auto-select first asset when assets load
+  useEffect(() => {
+    if (dgAssets.length > 0 && !selectedAssetId) {
+      setSelectedAssetId(dgAssets[0].id);
+    }
+  }, [dgAssets]);
+
+  // Filter devices by selected asset (if asset has linked devices), or show all
+  const filteredDevices = useMemo(() => {
+    if (!selectedAssetId) return dgDevices;
+    const devicesForAsset = dgDevices.filter(d => d.assetId === selectedAssetId);
+    return devicesForAsset.length > 0 ? devicesForAsset : dgDevices;
+  }, [dgDevices, selectedAssetId]);
+
+  // Determine active device: from route param, or legacy path, or auto-select first
+  useEffect(() => {
+    if (routeDeviceId) {
+      setSelectedDeviceId(Number(routeDeviceId));
+    } else if (pathname.includes('dg3') && filteredDevices.length >= 3) {
+      setSelectedDeviceId(filteredDevices[2].id);
+    } else if (pathname.includes('dg2') && filteredDevices.length >= 2) {
+      setSelectedDeviceId(filteredDevices[1].id);
+    } else if (pathname.includes('dg1') && filteredDevices.length >= 1) {
+      setSelectedDeviceId(filteredDevices[0].id);
+    } else if (filteredDevices.length > 0 && !selectedDeviceId) {
+      setSelectedDeviceId(filteredDevices[0].id);
+    }
+  }, [routeDeviceId, pathname, filteredDevices]);
+
+  // Derived display values
+  const activeDevice = useMemo(() => filteredDevices.find(d => d.id === selectedDeviceId) || filteredDevices[0] || null, [filteredDevices, selectedDeviceId]);
+  const activeDG = useMemo(() => {
+    if (!activeDevice) return 'DG1';
+    const idx = filteredDevices.findIndex(d => d.id === activeDevice.id);
+    return `DG${idx + 1}`;
+  }, [activeDevice, filteredDevices]);
+  const activeDeviceDisplayName = useMemo(() => {
+    if (!activeDevice) return 'DG Set-1';
+    return activeDevice.name || `DG Set-${filteredDevices.findIndex(d => d.id === activeDevice.id) + 1}`;
+  }, [activeDevice, filteredDevices]);
+  const selectedSiteName = useMemo(() => {
+    const s = allSites.find(s => String(s.id) === String(selectedSiteId));
+    return s?.name || 'Select Site';
+  }, [allSites, selectedSiteId]);
+  const selectedAssetName = useMemo(() => {
+    const a = dgAssets.find(a => a.id === selectedAssetId);
+    return a?.name || 'All Assets';
+  }, [dgAssets, selectedAssetId]);
   
   const [showToast, setShowToast] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -301,7 +413,7 @@ const SiemensStyleDG = () => {
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139); // slate-500
         doc.text(`Generated on: ${dateStr}`, 14, 30);
-        doc.text(`Target Asset: ${activeDG}`, 14, 35);
+        doc.text(`Target Asset: ${activeDeviceDisplayName}`, 14, 35);
         
         doc.setDrawColor(226, 232, 240); // slate-200
         doc.line(14, 40, 196, 40);
@@ -381,7 +493,7 @@ const SiemensStyleDG = () => {
             doc.text(`Page ${i} of ${pageCount} - SCADA Automated Report`, 14, 285);
         }
 
-        doc.save(`DG_SET_REPORT_${activeDG}.pdf`);
+        doc.save(`DG_SET_REPORT_${activeDeviceDisplayName.replace(/\s+/g, '_')}.pdf`);
         setShowToast(true);
     } catch (e) {
         console.error('Error generating PDF', e);
@@ -412,7 +524,7 @@ const SiemensStyleDG = () => {
   return (
     <div id="pdf-content" className="fade-in p-2 min-vh-100" style={{ backgroundColor: 'var(--scada-bg)', color: 'var(--scada-text)' }}>
       {/* PREMIUM HIGH-GLOW NAV BAR */}
-      <div className="d-flex flex-column flex-lg-row align-items-center p-3 mb-3 shadow-sm justify-content-between rounded-4 gap-3 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
+      <div className="d-flex flex-column flex-lg-row align-items-center p-3 mb-0 shadow-sm justify-content-between rounded-top-4 gap-3 border border-bottom-0" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
         <div className="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start gap-3 w-100 w-lg-auto">
             <div className="text-info px-4 py-1.5 fw-black fs-9 rounded-2 border border-info border-opacity-20">HMI CONTROL CENTER</div>
             <div className="d-flex align-items-center gap-2">
@@ -426,11 +538,6 @@ const SiemensStyleDG = () => {
             <button onClick={() => navigate('/dashboard')} className="btn btn-sm fw-black border rounded-2 px-4 py-1.5 btn-outline-secondary fs-12">
                 <Home size={14} className="me-2" /> DASHBOARD
             </button>
-            <div className="d-flex align-items-center px-3 py-1 rounded-2 border" style={{ minHeight: '32px', backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
-                <span className="text-info fw-black fs-12 uppercase tracking-wider" style={{ letterSpacing: '1px' }}>
-                    {activeDG === 'DG3' ? 'DG Set-3' : activeDG === 'DG2' ? 'DG Set-2' : 'DG Set-1'}
-                </span>
-            </div>
             <button 
               onClick={handlePdfDownload} 
               disabled={!isAdmin}
@@ -443,6 +550,20 @@ const SiemensStyleDG = () => {
             {new Date().toLocaleTimeString()}
         </div>
       </div>
+
+      {/* ═══ HIERARCHICAL SELECTOR PANEL ═══ */}
+      <HierarchySelector
+        moduleTitle="DG SET"
+        accentColor="#0891b2"
+        deviceCategory="GENERATOR"
+        assetType="DG"
+        deviceBasePath="/dg-set/device"
+        deviceLabel="DG"
+        icon={<Database size={13} />}
+        selectedDeviceId={selectedDeviceId}
+        onDeviceSelect={(dev) => { setSelectedDeviceId(dev.id); }}
+        onSiteChange={(siteId) => { setSelectedSiteId(siteId); }}
+      />
 
       <Row className="g-3">
         {/* LEFT: SAFETY & ASSET */}
