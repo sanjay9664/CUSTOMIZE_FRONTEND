@@ -14,22 +14,22 @@ import { normalizeList } from '../services/apiClient';
 
 const THEMES = {
   "Dashboard":        { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "Water Management": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "Motors":           { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
+  "Energy Metering": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
   "DG Set":           { c: "#c084fc", bg: "rgba(192,132,252,0.10)", b: "rgba(192,132,252,0.28)" },
-  "Alarm System":     { c: "#f87171", bg: "rgba(248,113,113,0.10)", b: "rgba(248,113,113,0.28)" },
   "LT Panel":        { c: "#fbbf24", bg: "rgba(251,191,36,0.10)",  b: "rgba(251,191,36,0.28)" },
   "Transformer":     { c: "#fb923c", bg: "rgba(251,146,60,0.10)",  b: "rgba(251,146,60,0.28)" },
+  "HVAC":            { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
+  "VRV":             { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
+  "AC":              { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
+  "AQI Sensor":      { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
+  "Water Management": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
+  "Motors":           { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
   "Fire":            { c: "#ef4444", bg: "rgba(239,68,68,0.10)",   b: "rgba(239,68,68,0.28)" },
+  "Alarm System":     { c: "#f87171", bg: "rgba(248,113,113,0.10)", b: "rgba(248,113,113,0.28)" },
   "Ticketing":       { c: "#34d399", bg: "rgba(52,211,153,0.10)",  b: "rgba(52,211,153,0.28)" },
   "Maintenance":     { c: "#818cf8", bg: "rgba(129,140,248,0.10)", b: "rgba(129,140,248,0.28)" },
   "Service History": { c: "#a78bfa", bg: "rgba(167,139,250,0.10)", b: "rgba(167,139,250,0.28)" },
   "Daily DPR":       { c: "#f472b6", bg: "rgba(244,114,182,0.10)", b: "rgba(244,114,182,0.28)" },
-  "Energy Metering": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
-  "VRV":             { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "AQI Sensor":      { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
-  "HVAC":            { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "AC":              { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
   "Help":            { c: "#a855f7", bg: "rgba(168,85,247,0.10)", b: "rgba(168,85,247,0.28)" },
 };
 
@@ -103,11 +103,10 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
 
   const menuItems = useMemo(() => [
     { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", disabled: modulesConfig ? !modulesConfig["Dashboard"] : false },
-    // Electrical Systems
-    { title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Transformer"] : false,
-      subItems: [{ title: "Overview", path: "/transformer/overview" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
-    { title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? !modulesConfig["LT Panel"] : false,
-      subItems: [{ title: "Overview", path: "/lt-panel/overview" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
+    // Energy Metering
+    { title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Energy Metering"] : false,
+      subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true) },
+    // DG Set
     { title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? !modulesConfig["DG Set"] : false,
       subItems: [
         { title: "Overview", path: "/dg-set/overview" },
@@ -116,8 +115,12 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           path: `/dg-set/device/${dev.id}`
         }))
       ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
-    { title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Energy Metering"] : false,
-      subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true) },
+    // LT Panel
+    { title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? !modulesConfig["LT Panel"] : false,
+      subItems: [{ title: "Overview", path: "/lt-panel/overview" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
+    // Transformer
+    { title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? !modulesConfig["Transformer"] : false,
+      subItems: [{ title: "Overview", path: "/transformer/overview" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
     // HVAC & Environmental Systems
     { title: "HVAC", icon: <Thermometer size={20} />, disabled: modulesConfig ? !modulesConfig["HVAC"] : false,
       subItems: [{ title: "Chiller", path: "/hvac/chiller" }, { title: "AHU", path: "/hvac/ahu" }, { title: "Cooling Tower", path: "/hvac/cooling-tower" }, { title: "PDF Report", path: "/hvac/report" }].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true) },
