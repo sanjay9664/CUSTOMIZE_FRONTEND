@@ -550,33 +550,7 @@ const UserManagement = () => {
           </Card>
         </Tab>
 
-        <Tab eventKey="config" title={<><Shield size={16} className="me-2"/> {selectedUser ? `Access: ${selectedUser.name}` : 'Permission Config'}</>} disabled={!selectedUser}>
-           {selectedUser && (
-             <Card className="glass-card border-0">
-               <Card.Body className="p-4">
-                  <h5 className="text-info mb-4 d-flex align-items-center gap-2"><Lock size={20}/> Toggle Visible Modules for {selectedUser.name}</h5>
-                  <div className="permission-grid">
-                    {Object.entries(moduleDetails).map(([key, module]) => (
-                      <div key={key} className="permission-item p-3 mb-2 rounded border border-light border-opacity-10 d-flex justify-content-between align-items-center">
-                        <div className="d-flex align-items-center gap-3">
-                          <div className={`p-2 rounded ${config?.[key] ? 'bg-info bg-opacity-10 text-info' : 'bg-secondary bg-opacity-10 text-muted'}`}>{module.icon}</div>
-                          <span className={config?.[key] ? 'text-white fw-bold' : 'text-muted'}>{module.label}</span>
-                        </div>
-                        <button className={`modern-toggle ${config?.[key] ? 'on' : 'off'}`} onClick={() => setConfig({...config, [key]: !config?.[key]})}>
-                          <span className="toggle-slider"></span>
-                          <span className="toggle-label">{config?.[key] ? 'ON' : 'OFF'}</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="text-end mt-4">
-                    <Button variant="secondary" className="me-2 rounded-pill" onClick={() => setActiveTab('list')}>Cancel</Button>
-                    <Button variant="info" className="rounded-pill px-5" onClick={handleSavePermissions}><Save size={18} className="me-2"/> Save Access Rules</Button>
-                  </div>
-               </Card.Body>
-             </Card>
-           )}
-        </Tab>
+
       </Tabs>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered className="scada-modal">
