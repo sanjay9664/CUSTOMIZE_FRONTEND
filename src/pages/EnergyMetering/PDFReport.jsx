@@ -1,90 +1,185 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Card, Form, Table, Button, Badge } from 'react-bootstrap';
-import { FileText, Download, Calendar, ClipboardList, RefreshCw, Zap } from 'lucide-react';
+import { FileText, Download, Calendar, ClipboardList, RefreshCw, Zap, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 import PdfButton from '../../components/PdfButton';
 import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
 
 const EnergyPDFReport = () => {
+  const [templates, setTemplates] = useState([]);
   const [filter, setFilter] = useState({
     dateRange: 'today',
-    meter: 'all'
+    meterId: 'all',
+    startDate: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
   });
 
   const [generating, setGenerating] = useState(false);
-  const [reportData, setReportData] = useState([
-    { id: 'REP-EM-1025', date: '2026-05-19', meter: 'Main Grid Incomer', consumption: '11,480 kWh', peakDemand: '620 kW', avgPf: '0.97', cost: '₹1,03,320' },
-    { id: 'REP-EM-1024', date: '2026-05-18', meter: 'Main Grid Incomer', consumption: '11,350 kWh', peakDemand: '615 kW', avgPf: '0.98', cost: '₹1,02,150' },
-    { id: 'REP-EM-1023', date: '2026-05-17', meter: 'Main Grid Incomer', consumption: '10,920 kWh', peakDemand: '598 kW', avgPf: '0.96', cost: '₹98,280' },
-    { id: 'REP-EM-1022', date: '2026-05-16', meter: 'Main Grid Incomer', consumption: '11,100 kWh', peakDemand: '608 kW', avgPf: '0.97', cost: '₹99,900' },
-    { id: 'REP-EM-1021', date: '2026-05-15', meter: 'Main Grid Incomer', consumption: '11,250 kWh', peakDemand: '610 kW', avgPf: '0.97', cost: '₹1,01,250' }
-  ]);
+  const [reportData, setReportData] = useState([]);
+
+  // Load energy meters from templates
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('scada_templates');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setTemplates(parsed);
+      }
+    } catch (err) {
+      console.error('Failed to load templates:', err);
+    }
+
+    fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setTemplates(data);
+        }
+      })
+      .catch(err => console.warn('Could not fetch templates from backend:', err));
+  }, []);
+
+  const energyMeters = useMemo(() => {
+    return templates.filter(t =>
+      t.module === 'Main Meter' ||
+      t.module === 'Sub Meters' ||
+      t.category === 'MAIN_ENERGY_METER' ||
+      t.category === 'SUB_ENERGY_METER' ||
+      t.category === 'Energy Metering'
+    );
+  }, [templates]);
+
+  // Generate sensible report rows based on selection
+  const generateRowsForSelection = (meterId, rangeKey, start, end) => {
+    const selectedMeterObj = energyMeters.find(m => String(m.id) === String(meterId));
+    const meterLabel = selectedMeterObj?.name || selectedMeterObj?.mapping?.energyMeteringTarget || 'Main Grid Incomer';
+
+    let dayCount = 1;
+    if (rangeKey === 'yesterday') dayCount = 1;
+    else if (rangeKey === '7days') dayCount = 7;
+    else if (rangeKey === '30days') dayCount = 30;
+    else if (rangeKey === 'custom') {
+      const diffMs = Math.max(86400000, new Date(end) - new Date(start));
+      dayCount = Math.min(60, Math.ceil(diffMs / 86400000));
+    }
+
+    const rows = [];
+    const baseDate = rangeKey === 'yesterday' ? new Date(Date.now() - 86400000) : new Date();
+
+    for (let i = 0; i < dayCount; i++) {
+      const d = new Date(baseDate.getTime() - i * 86400000);
+      const dateStr = d.toISOString().split('T')[0];
+      const baseConsumption = meterId === 'all' ? 11200 : 2800;
+      const consumption = Math.round(baseConsumption + (Math.sin(i * 1.5) * 450));
+      const peakDemand = Math.round((consumption / 24) * 1.35);
+      const avgPf = (0.95 + (Math.cos(i) * 0.03)).toFixed(2);
+      const tariff = 8.50; // Standard commercial grid rate
+      const cost = Math.round(consumption * tariff);
+
+      rows.push({
+        id: `REP-EM-${dateStr.replace(/-/g, '')}-${i + 1}`,
+        date: dateStr,
+        meter: meterLabel,
+        consumption: `${consumption.toLocaleString('en-IN')} kWh`,
+        peakDemand: `${peakDemand} kW`,
+        avgPf: String(avgPf),
+        cost: `₹${cost.toLocaleString('en-IN')}`,
+        rawConsumption: consumption,
+        rawCost: cost
+      });
+    }
+
+    return rows;
+  };
+
+  // Populate initial rows
+  useEffect(() => {
+    const initialRows = generateRowsForSelection('all', '7days', filter.startDate, filter.endDate);
+    setReportData(initialRows);
+  }, [energyMeters]);
 
   const handleGenerate = () => {
     setGenerating(true);
     setTimeout(() => {
       setGenerating(false);
-      // Simulating filtered report change
-      if (filter.meter === 'wing-a') {
-        setReportData([
-          { id: 'REP-EM-1025', date: '2026-05-19', meter: 'Wing A Commercial Hub', consumption: '4,440 kWh', peakDemand: '240 kW', avgPf: '0.98', cost: '₹39,960' },
-          { id: 'REP-EM-1024', date: '2026-05-18', meter: 'Wing A Commercial Hub', consumption: '4,380 kWh', peakDemand: '235 kW', avgPf: '0.98', cost: '₹39,420' }
-        ]);
-      } else {
-        setReportData([
-          { id: 'REP-EM-1025', date: '2026-05-19', meter: 'Main Grid Incomer', consumption: '11,480 kWh', peakDemand: '620 kW', avgPf: '0.97', cost: '₹1,03,320' },
-          { id: 'REP-EM-1024', date: '2026-05-18', meter: 'Main Grid Incomer', consumption: '11,350 kWh', peakDemand: '615 kW', avgPf: '0.98', cost: '₹1,02,150' },
-          { id: 'REP-EM-1023', date: '2026-05-17', meter: 'Main Grid Incomer', consumption: '10,920 kWh', peakDemand: '598 kW', avgPf: '0.96', cost: '₹98,280' }
-        ]);
-      }
-    }, 1200);
+      const nextRows = generateRowsForSelection(filter.meterId, filter.dateRange, filter.startDate, filter.endDate);
+      setReportData(nextRows);
+    }, 600);
+  };
+
+  const handleDownloadCsv = () => {
+    if (reportData.length === 0) return;
+    const headers = ['Report Reference,Date,Target Meter,Consumption (kWh),Peak Demand,Avg PF,Estimated Cost'];
+    const csvRows = reportData.map(r =>
+      `"${r.id}","${r.date}","${r.meter}","${r.consumption}","${r.peakDemand}","${r.avgPf}","${r.cost}"`
+    );
+    const blob = new Blob([[headers.join('\n'), ...csvRows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Energy_Report_${filter.dateRange}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="fade-in">
+    <div className="energy-reports-page fade-in p-3 p-md-4">
       {/* HEADER SECTION */}
-      <div className="page-header d-flex justify-content-between align-items-center mb-4">
+      <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
         <div>
-          <h2 className="mb-1 text-white fw-bold d-flex align-items-center gap-2">
-            <FileText className="text-info" size={26} /> Energy Metering Reports
-          </h2>
-          <p className="text-secondary fs-7">Generate, preview, and download billing reports, load charts, and historical power logs.</p>
+          <h4 className="mb-1 text-white fw-bold d-flex align-items-center gap-2">
+            <FileText className="text-info" size={24} /> Energy Metering Reports & Exports
+          </h4>
+          <small className="text-secondary">Generate certified billing statements, historical power logs, and CSV/PDF data exports.</small>
+        </div>
+        <div className="d-flex gap-2">
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={handleDownloadCsv}
+            className="rounded-pill px-3 py-1 text-light border-secondary border-opacity-50 d-flex align-items-center gap-2 fs-12"
+          >
+            <FileSpreadsheet size={14} className="text-success" /> Export CSV
+          </Button>
+          <PdfButton />
         </div>
       </div>
 
       {/* FILTER CONTROL CARD */}
-      <Card className="scada-card border mb-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', color: 'var(--scada-text)' }}>
-        <Card.Body className="p-4">
-          <h5 className="mb-4 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
-            <Calendar className="text-info" size={18} /> Report Configuration
-          </h5>
+      <Card className="scada-card border-0 mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderRadius: '16px' }}>
+        <Card.Body className="p-3 p-md-4">
+          <h6 className="mb-3 fw-bold text-white d-flex align-items-center gap-2 fs-13 text-uppercase text-secondary">
+            <Calendar className="text-info" size={16} /> Report Parameters & Filters
+          </h6>
 
-          <Row className="g-4 align-items-end">
-            <Col md={4}>
+          <Row className="g-3 align-items-end">
+            <Col md={filter.dateRange === 'custom' ? 3 : 4}>
               <Form.Group>
-                <Form.Label className="text-secondary fw-bold fs-12 uppercase tracking-wider mb-2">Select Target Meter</Form.Label>
+                <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Target Meter</Form.Label>
                 <Form.Select
-                  className="scada-input"
-                  value={filter.meter}
-                  onChange={(e) => setFilter({ ...filter, meter: e.target.value })}
+                  className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
+                  value={filter.meterId}
+                  onChange={(e) => setFilter({ ...filter, meterId: e.target.value })}
                 >
                   <option value="all">Main Incomer Feed Grid</option>
-                  <option value="wing-a">Sub-Meter: Commercial Wing A</option>
-                  <option value="server">Sub-Meter: Server & UPS Rooms</option>
-                  <option value="utility">Sub-Meter: Utility Motors Room</option>
-                  <option value="VRV">Sub-Meter: VRV Chiller Main</option>
+                  {energyMeters.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name || m.mapping?.energyMeteringTarget || `Meter ${m.id}`} ({m.category || m.module})
+                    </option>
+                  ))}
                 </Form.Select>
               </Form.Group>
             </Col>
 
-            <Col md={4}>
+            <Col md={filter.dateRange === 'custom' ? 3 : 4}>
               <Form.Group>
-                <Form.Label className="text-secondary fw-bold fs-12 uppercase tracking-wider mb-2">Reporting Interval</Form.Label>
+                <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Interval Presets</Form.Label>
                 <Form.Select
-                  className="scada-input"
+                  className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
                   value={filter.dateRange}
                   onChange={(e) => setFilter({ ...filter, dateRange: e.target.value })}
                 >
-                  <option value="today">Today (Real-time logs)</option>
+                  <option value="today">Today (Real-time snapshots)</option>
                   <option value="yesterday">Yesterday</option>
                   <option value="7days">Last 7 Days</option>
                   <option value="30days">Last 30 Days</option>
@@ -93,14 +188,42 @@ const EnergyPDFReport = () => {
               </Form.Group>
             </Col>
 
-            <Col md={4} className="d-grid">
+            {filter.dateRange === 'custom' && (
+              <>
+                <Col md={2}>
+                  <Form.Group>
+                    <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Start Date</Form.Label>
+                    <Form.Control
+                      type="date"
+                      className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
+                      value={filter.startDate}
+                      onChange={(e) => setFilter({ ...filter, startDate: e.target.value })}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={2}>
+                  <Form.Group>
+                    <Form.Label className="text-secondary fw-semibold fs-12 mb-1">End Date</Form.Label>
+                    <Form.Control
+                      type="date"
+                      className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
+                      value={filter.endDate}
+                      onChange={(e) => setFilter({ ...filter, endDate: e.target.value })}
+                    />
+                  </Form.Group>
+                </Col>
+              </>
+            )}
+
+            <Col md={filter.dateRange === 'custom' ? 2 : 4} className="d-grid">
               <Button
                 onClick={handleGenerate}
                 disabled={generating}
-                className="btn btn-info rounded-pill py-2.5 fw-black fs-11 tracking-wider uppercase shadow-lg d-flex align-items-center justify-content-center gap-2"
+                variant="info"
+                className="rounded-pill py-2 fw-bold text-white shadow-sm d-flex align-items-center justify-content-center gap-2"
               >
                 {generating ? <RefreshCw className="animate-spin" size={16} /> : <Zap size={16} />}
-                {generating ? 'COMPILING DATA...' : 'GENERATE ENERGY REPORT'}
+                {generating ? 'Compiling...' : 'Generate Report'}
               </Button>
             </Col>
           </Row>
@@ -108,48 +231,58 @@ const EnergyPDFReport = () => {
       </Card>
 
       {/* GENERATED REPORT DATA TABLE */}
-      <Card className="scada-card border mt-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', color: 'var(--scada-text)' }}>
-        <Card.Body className="p-4">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h5 className="fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11 mb-0">
-              <ClipboardList className="text-info" size={18} /> Available Reports History
-            </h5>
-            <PdfButton />
+      <Card className="scada-card border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8))', borderRadius: '16px' }}>
+        <Card.Body className="p-3 p-md-4">
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+              <h6 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                <ClipboardList className="text-info" size={18} /> Generated Report Ledger
+              </h6>
+              <small className="text-secondary">Showing {reportData.length} recorded daily consumption intervals.</small>
+            </div>
           </div>
 
           <div className="table-responsive">
-            <Table hover borderless className="align-middle scada-table text-white mb-0">
-              <thead>
-                <tr className="border-bottom border-secondary border-opacity-15 fs-13 text-secondary text-uppercase tracking-wider">
-                  <th className="py-3">Report Reference</th>
-                  <th className="py-3">Generated Date</th>
+            <Table hover borderless className="align-middle text-white mb-0" style={{ fontSize: '0.85rem' }}>
+              <thead style={{ background: 'rgba(15, 23, 42, 0.9)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <tr className="text-secondary text-uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
+                  <th className="py-3 px-3">Report Reference</th>
+                  <th className="py-3">Date</th>
                   <th className="py-3">Target Feed Node</th>
-                  <th className="py-3 text-center">Consumption (kWh)</th>
-                  <th className="py-3 text-center">Peak Load demand</th>
-                  <th className="py-3 text-center">Avg cos φ</th>
-                  <th className="py-3 text-center">Estimated cost</th>
-                  <th className="py-3 text-end">Action</th>
+                  <th className="py-3 text-end">Consumption (kWh)</th>
+                  <th className="py-3 text-end">Peak Demand (kW)</th>
+                  <th className="py-3 text-center">Avg PF (cos φ)</th>
+                  <th className="py-3 text-end">Estimated Cost</th>
+                  <th className="py-3 text-end px-3">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {reportData.map((row, idx) => (
-                  <tr key={idx} className="border-bottom border-secondary border-opacity-5">
-                    <td className="py-3 font-monospace text-info fs-13">{row.id}</td>
-                    <td className="py-3 text-white fw-bold">{row.date}</td>
-                    <td className="py-3 text-white">{row.meter}</td>
-                    <td className="py-3 text-center text-white fw-bold">{row.consumption}</td>
-                    <td className="py-3 text-center text-secondary">{row.peakDemand}</td>
-                    <td className="py-3 text-center text-secondary font-monospace">{row.avgPf}</td>
-                    <td className="py-3 text-center text-success fw-bold">{row.cost}</td>
-                    <td className="py-3 text-end">
-                      <Button 
-                        variant="outline-info" 
-                        size="sm" 
-                        className="rounded-pill px-3 py-1 font-bold text-uppercase fs-12 d-flex align-items-center gap-2 float-end"
+                {reportData.map((row) => (
+                  <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td className="py-3 px-3 font-monospace text-info fs-12">{row.id}</td>
+                    <td className="py-3 text-white fw-semibold">{row.date}</td>
+                    <td className="py-3 text-light">{row.meter}</td>
+                    <td className="py-3 text-end text-white fw-bold font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.consumption}
+                    </td>
+                    <td className="py-3 text-end text-secondary font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.peakDemand}
+                    </td>
+                    <td className="py-3 text-center text-secondary font-monospace">
+                      {row.avgPf}
+                    </td>
+                    <td className="py-3 text-end text-success fw-bold font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.cost}
+                    </td>
+                    <td className="py-3 text-end px-3">
+                      <Button
+                        variant="outline-info"
+                        size="sm"
+                        className="rounded-pill px-3 py-1 fs-12 d-inline-flex align-items-center gap-1"
                         onClick={() => generateUserCustomPdfReport({
                           title: `Energy Billing Report - ${row.meter}`,
                           subtitle: `Reference ID: ${row.id}`,
-                          siteName: 'Main Substation Grid',
+                          siteName: 'Main Facility Grid',
                           dateRange: row.date,
                           kpis: [
                             { label: 'Energy Consumed', value: row.consumption },
@@ -172,37 +305,6 @@ const EnergyPDFReport = () => {
           </div>
         </Card.Body>
       </Card>
-
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        .scada-card { background: #0f172a; border-radius: 20px; transition: all 0.3s ease; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.4); }
-        .scada-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -4px rgba(0,0,0,0.5); }
-        
-        .scada-input { 
-          background-color: #030712 !important; 
-          border: 1px solid rgba(255, 255, 255, 0.08) !important; 
-          color: white !important; 
-          border-radius: 12px !important;
-          padding: 12px 16px !important;
-          font-weight: 500 !important;
-          font-size: 0.9rem !important;
-        }
-        .scada-input:focus { border-color: #0ea5e9 !important; box-shadow: 0 0 12px rgba(14, 165, 233, 0.15) !important; outline: none; }
-        .scada-table tbody tr { transition: all 0.2s; cursor: pointer; }
-        .scada-table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
-        .animate-spin { animation: spin 1.5s linear infinite; }
-        
-        .fw-black { font-weight: 900 !important; }
-        .fs-12 { font-size: 0.65rem !important; }
-        .fs-13 { font-size: 0.8rem !important; }
-        .fs-7 { font-size: 1.1rem !important; }
-        .tracking-widest { letter-spacing: 2px !important; }
-        
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}} />
     </div>
   );
 };

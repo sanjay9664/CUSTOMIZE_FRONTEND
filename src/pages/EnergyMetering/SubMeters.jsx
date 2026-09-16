@@ -8,9 +8,18 @@ import { useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import './MFMMeter.css';
 
-const GROUP_EVENT_NAME = 'energy-meter-groups-updated';
-const GROUP_COLORS = ['#38bdf8', '#22c55e', '#f59e0b', '#f97316', '#a78bfa', '#f43f5e'];
-const createGroupId = () => `group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+import {
+  PARAMETER_SYNONYMS,
+  getValueForField,
+  formatNumber
+} from './utils/energyTelemetry';
+import {
+  useMeterGroups,
+  normalizeMeterGroups,
+  createGroupId,
+  GROUP_COLORS,
+  GROUP_EVENT_NAME
+} from './hooks/useMeterGroups';
 
 const FIELD_LABELS = {
   ebKvah: { label: 'EB KVAH', unit: 'kVAh' },
@@ -296,64 +305,7 @@ const StatBox = ({ label, value, unit, colorClass }) => (
   </div>
 );
 
-const normalizeMeterGroups = (groups, meters) => {
-  const templateIdMap = new Map();
-  const meterLookup = new Map();
-  const globallyAssigned = new Set();
-  const usedGroupIds = new Set();
-  meters.forEach(meter => {
-    const templateId = String(meter.templateId ?? meter.id);
-    templateIdMap.set(templateId, templateId);
-    templateIdMap.set(String(meter.id), templateId);
-    meterLookup.set(templateId, {
-      id: templateId,
-      label: meter.label,
-      type: meter.type || 'Sub Meter',
-      category: meter.type || 'Sub Meter'
-    });
-  });
-  return (Array.isArray(groups) ? groups : [])
-    .map((group, index) => {
-      const requestedId = String(group?.id || '').trim();
-      const safeId = requestedId && !usedGroupIds.has(requestedId) ? requestedId : createGroupId();
-      usedGroupIds.add(safeId);
-
-      const groupMeterIds = Array.from(
-        new Set((Array.isArray(group?.meterIds) ? group.meterIds : []).map(id => String(id)))
-      )
-        .map(id => templateIdMap.get(id))
-        .filter(Boolean)
-        .filter(id => {
-          if (globallyAssigned.has(id)) return false;
-          globallyAssigned.add(id);
-          return true;
-        });
-
-      return {
-        id: safeId,
-        name: String(group?.name || '').trim() || `Group ${index + 1}`,
-        color: group?.color || GROUP_COLORS[index % GROUP_COLORS.length],
-        meterIds: groupMeterIds,
-        meterDetails: groupMeterIds.map(id => meterLookup.get(id)).filter(Boolean)
-      };
-    })
-    .filter(group => group.name);
-};
-
-const fetchSavedMeterGroups = async (meters) => {
-  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-  const tenantId = userData?.tenantId;
-  const url = tenantId
-    ? `${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates/energy-meter-groups?tenantId=${tenantId}`
-    : `${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates/energy-meter-groups`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Failed to fetch saved energy meter groups');
-  }
-  const data = await response.json();
-  const groups = Array.isArray(data?.groups) ? data.groups : [];
-  return normalizeMeterGroups(groups, meters);
-};
+// Group helpers (normalizeMeterGroups, createGroupId, GROUP_COLORS) are imported from hooks/useMeterGroups
 
 const SubMeters = () => {
   const location = useLocation();
@@ -856,138 +808,8 @@ const SubMeters = () => {
           const updatedMeter = { ...meter };
           let meterUpdated = false;
 
-          const PARAMETER_SYNONYMS = {
-            ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
-            ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY'],
-            balance: ['3,162', '3,168', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
-            totalKw: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
-            totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
-            vR: ['3,168', '3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R'],
-            vY: ['3,169', '3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE', 'Voltage-Y'],
-            vB: ['3,170', '3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE', 'Voltage-B'],
-            iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current'],
-            iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current'],
-            iB: ['3,173', '3,168', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current'],
-            pf: ['3,174', 'POWER FACTOR', 'PF', 'SYSTEM PF', 'POWER_FACTOR'],
-            dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY'],
-            fixedCharge: ['3,163', 'FIXED CHARGE', 'FIXED_CHARGE', 'CHARGES'],
-            activePower: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW'],
-            reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER'],
-            apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA'],
-            cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
-            freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ'],
-            lowBalanceCut: ['3,164', 'LOW BALANCE', 'BALANCE CUT', 'LOW_BAL', 'LOW_BALANCE_CUT'],
-            overloadTrip: ['3,165', 'OVERLOAD TRIP', 'OL TRIP', 'OVERLOAD_TRIP'],
-            overloadLimitReached: ['3,166', 'OVERLOAD LIMIT', 'OL LIMIT', 'OVERLOAD_WARN'],
-            connectedStatus: ['3,167', 'CONNECTED STATUS', 'RELAY STATUS', 'BREAKER STATUS', 'CONNECTED', 'CONNECTED_STATUS'],
-            forceOff: ['3,168', 'FORCE OFF', 'REMOTE TRIP', 'FORCE_OFF'],
-            meterSrno: ['3,150', 'METER SERIAL', 'SERIAL NUMBER', 'SR NO', 'METER SR', 'METER_NO', 'METERSRNO', 'Meter_Srno'],
-            noOfOverloadCheck: ['3,169', 'OVERLOAD CHECK', 'OL CHECK', 'OVERLOAD_COUNT', 'NOOFOVERLOADCHECK'],
-            ebDgStatus: ['3,170', 'EB DG STATUS', 'EB/DG STATUS', 'SOURCE STATUS', 'EB_DG', 'EBDGSTATUS'],
-            ebTariff: ['3,160', 'EB TARIFF', 'GRID TARIFF', 'EB_RATE', 'EBTARIFF'],
-            dgTariff: ['3,172', 'DG TARIFF', 'GEN RATE', 'DG_RATE', 'DGTARIFF'],
-            ebRLoadSet: ['3,173', 'EB R LOAD', 'EB_R_LOAD', 'EB_R_LIMIT', 'EBRLOADSET'],
-            ebYLoadSet: ['3,174', 'EB Y LOAD', 'EB_Y_LOAD', 'EB_Y_LIMIT', 'EBYLOADSET'],
-            ebBLoadSet: ['3,175', 'EB B LOAD', 'EB_B_LOAD', 'EB_B_LIMIT', 'EBBLOADSET'],
-            dgRLoadSet: ['3,176', 'DG R LOAD', 'DG_R_LOAD', 'DG_R_LIMIT', 'DGRLOADSET'],
-            dgYLoadSet: ['3,177', 'DG Y LOAD', 'DG_Y_LOAD', 'DG_Y_LIMIT', 'DGYLOADSET'],
-            dgBLoadSet: ['3,178', 'DG B LOAD', 'DG_B_LOAD', 'DG_B_LIMIT', 'DGBLOADSET'],
-          };
-
-          const getValueForField = (config, fieldKey) => {
-            if (config && config.enabled !== false && config[fieldKey]) {
-              const fieldVal = config[fieldKey];
-              let cleanKey = fieldVal;
-              let targetModuleId = config.module;
-
-              // Extract moduleId and clean field key from "moduleId::fieldId" format
-              if (typeof fieldVal === 'string' && fieldVal.includes(':')) {
-                const parts = fieldVal.split(':');
-                targetModuleId = parts[0];
-                cleanKey = parts.pop();
-              }
-
-              const stat = stats.find(s => String(s.moduleId) === String(targetModuleId) || String(s.meta?.module_id) === String(targetModuleId));
-              if (stat && stat.meta) {
-                // 1. Try matching cleanKey exactly in meta
-                if (cleanKey && stat.meta[cleanKey] !== undefined) {
-                  return stat.meta[cleanKey];
-                }
-
-                // 2. Try matching fieldVal exactly in meta (raw key)
-                if (stat.meta[fieldVal] !== undefined) {
-                  return stat.meta[fieldVal];
-                }
-
-                // 3. Case-insensitive match of cleanKey
-                if (cleanKey) {
-                  const cleanKeyLower = cleanKey.toLowerCase().trim();
-                  const foundKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === cleanKeyLower);
-                  if (foundKey && stat.meta[foundKey] !== undefined) {
-                    return stat.meta[foundKey];
-                  }
-                }
-
-                // 4. Parse "[CHANGE] LABEL | ActualKey (register)" format
-                if (typeof fieldVal === 'string' && fieldVal.includes('] ')) {
-                  let inner = fieldVal.split('] ')[1];
-                  if (inner) {
-                    // Try "ActualKey" after pipe separator
-                    if (inner.includes(' | ')) {
-                      const afterPipe = inner.split(' | ')[1];
-                      if (afterPipe) {
-                        const actualKey = afterPipe.split(' (')[0].trim();
-                        if (actualKey && stat.meta[actualKey] !== undefined) {
-                          return stat.meta[actualKey];
-                        }
-                        // Case-insensitive
-                        const foundPipeKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === actualKey.toLowerCase().trim());
-                        if (foundPipeKey && stat.meta[foundPipeKey] !== undefined) {
-                          return stat.meta[foundPipeKey];
-                        }
-                      }
-                      // Try the label before pipe
-                      const beforePipe = inner.split(' | ')[0].split(' (')[0].trim();
-                      if (beforePipe && stat.meta[beforePipe] !== undefined) {
-                        return stat.meta[beforePipe];
-                      }
-                      const foundBeforePipeKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === beforePipe.toLowerCase().trim());
-                      if (foundBeforePipeKey && stat.meta[foundBeforePipeKey] !== undefined) {
-                        return stat.meta[foundBeforePipeKey];
-                      }
-                    } else {
-                      // No pipe, try the inner label directly
-                      const innerKey = inner.split(' (')[0].trim();
-                      if (innerKey && stat.meta[innerKey] !== undefined) {
-                        return stat.meta[innerKey];
-                      }
-                      const foundInnerKey = Object.keys(stat.meta).find(k => k.toLowerCase().trim() === innerKey.toLowerCase().trim());
-                      if (foundInnerKey && stat.meta[foundInnerKey] !== undefined) {
-                        return stat.meta[foundInnerKey];
-                      }
-                    }
-                  }
-                }
-
-                // 5. Fallback: Search using PARAMETER_SYNONYMS map (same as MainMeter)
-                const synonyms = PARAMETER_SYNONYMS[fieldKey] || [];
-                for (const sym of synonyms) {
-                  if (stat.meta[sym] !== undefined) {
-                    return stat.meta[sym];
-                  }
-                  // Try normalized matching within stat.meta keys
-                  const matchedKey = Object.keys(stat.meta).find(k =>
-                    k.toUpperCase() === sym.toUpperCase() ||
-                    k.toUpperCase().replace(/[^A-Z0-9]/g, '') === sym.toUpperCase().replace(/[^A-Z0-9]/g, '')
-                  );
-                  if (matchedKey && stat.meta[matchedKey] !== undefined) {
-                    return stat.meta[matchedKey];
-                  }
-                }
-              }
-            }
-            return null;
-          };
+          const getValueForFieldLocal = (config, fieldKey) => getValueForField(config, fieldKey, stats);
+          const getValueForField = getValueForFieldLocal;
 
           const telemetryValues = { ...(meter.telemetryValues || {}) };
           const skipKeys = new Set(['organization', 'client', 'zone', 'subZone', 'building', 'device', 'module', 'enabled', 'mappingId', 'fixedCharge']);
