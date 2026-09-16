@@ -56,8 +56,263 @@ const SCADARadialGauge = ({ value, label, color, percent = 75 }) => {
   );
 };
 
+// ── HELPER FOR SCADA METRIC TILE STATUS STYLING (RED / GREEN / YELLOW / CYAN) ──
+const getMetricTileStyle = (m, svcColor = '#38bdf8', isLightMode = false) => {
+  let status = m?.status;
+
+  if (!status) {
+    const valStr = String(m?.val || '').trim();
+    const labelStr = String(m?.label || '').toLowerCase();
+    
+    if (labelStr.includes('critical') || labelStr.includes('fault') || valStr.toLowerCase().includes('fault') || valStr.toLowerCase().includes('trip') || valStr.toLowerCase().includes('danger')) {
+      status = (valStr === '0' || valStr === '0/0') ? 'green' : 'red';
+    } else if (labelStr.includes('warning') || labelStr.includes('temp') || (valStr.includes('%') && parseInt(valStr) > 75)) {
+      status = 'yellow';
+    } else if (valStr.toLowerCase().includes('on') || valStr.toLowerCase().includes('normal') || valStr.toLowerCase().includes('good') || valStr.toLowerCase().includes('online')) {
+      status = 'green';
+    } else {
+      status = 'green';
+    }
+  }
+
+  if (isLightMode) {
+    switch (status) {
+      case 'red': case 'danger':
+        return { bg: 'rgba(239, 68, 68, 0.08)', border: '1.5px solid rgba(220, 38, 38, 0.35)', text: '#dc2626', iconColor: '#dc2626', shadow: '0 2px 8px rgba(239, 68, 68, 0.1)', dotColor: '#dc2626', badgeBg: 'rgba(239, 68, 68, 0.12)' };
+      case 'yellow': case 'warning':
+        return { bg: 'rgba(217, 119, 6, 0.08)', border: '1.5px solid rgba(217, 119, 6, 0.35)', text: '#b45309', iconColor: '#d97706', shadow: '0 2px 8px rgba(245, 158, 11, 0.1)', dotColor: '#d97706', badgeBg: 'rgba(245, 158, 11, 0.12)' };
+      case 'cyan': case 'info':
+        return { bg: 'rgba(6, 182, 212, 0.08)', border: '1.5px solid rgba(8, 145, 178, 0.35)', text: '#0891b2', iconColor: '#0891b2', shadow: '0 2px 8px rgba(6, 182, 212, 0.1)', dotColor: '#0891b2', badgeBg: 'rgba(6, 182, 212, 0.12)' };
+      case 'green': case 'success': default:
+        return { bg: 'rgba(16, 185, 129, 0.08)', border: '1.5px solid rgba(5, 150, 105, 0.35)', text: '#059669', iconColor: '#059669', shadow: '0 2px 8px rgba(16, 185, 129, 0.1)', dotColor: '#059669', badgeBg: 'rgba(16, 185, 129, 0.12)' };
+    }
+  }
+
+  switch (status) {
+    case 'red':
+    case 'danger':
+      return {
+        bg: 'rgba(239, 68, 68, 0.16)',
+        border: '1.5px solid rgba(239, 68, 68, 0.6)',
+        text: '#f87171',
+        iconColor: '#ef4444',
+        shadow: '0 0 14px rgba(239, 68, 68, 0.3)',
+        dotColor: '#ef4444',
+        badgeBg: 'rgba(239, 68, 68, 0.25)'
+      };
+    case 'yellow':
+    case 'warning':
+      return {
+        bg: 'rgba(245, 158, 11, 0.16)',
+        border: '1.5px solid rgba(245, 158, 11, 0.6)',
+        text: '#fbbf24',
+        iconColor: '#f59e0b',
+        shadow: '0 0 14px rgba(245, 158, 11, 0.3)',
+        dotColor: '#f59e0b',
+        badgeBg: 'rgba(245, 158, 11, 0.25)'
+      };
+    case 'cyan':
+    case 'info':
+      return {
+        bg: 'rgba(6, 182, 212, 0.16)',
+        border: '1.5px solid rgba(6, 182, 212, 0.6)',
+        text: '#38bdf8',
+        iconColor: '#06b6d4',
+        shadow: '0 0 14px rgba(6, 182, 212, 0.3)',
+        dotColor: '#06b6d4',
+        badgeBg: 'rgba(6, 182, 212, 0.25)'
+      };
+    case 'green':
+    case 'success':
+    default:
+      return {
+        bg: 'rgba(16, 185, 129, 0.16)',
+        border: '1.5px solid rgba(16, 185, 129, 0.6)',
+        text: '#34d399',
+        iconColor: '#10b981',
+        shadow: '0 0 14px rgba(16, 185, 129, 0.3)',
+        dotColor: '#10b981',
+        badgeBg: 'rgba(16, 185, 129, 0.25)'
+      };
+  }
+};
+
+// ── SCADA CORE DESIGN VARIANTS ──────────────────────────────────────────────
+const CORE_DESIGNS = [
+  { id: 'cyber', label: '⬡ Cyber Reactor' },
+  { id: 'neon', label: '◎ Neon Pulse' },
+  { id: 'quantum', label: '⟐ Quantum Arc' },
+  { id: 'holo', label: '⬢ Hologram Grid' },
+];
+
+// ── SCADA CORE HUB RENDERER (MULTIPLE DESIGNS) ─────────────────────────────
+const ScadaCoreHub = ({ designId, cx, cy, onClick }) => {
+  const hubSize = 210;
+  const bodySize = 155;
+  const bodyOffset = (hubSize - bodySize) / 2;
+
+  // ─ Design: Cyber Reactor (default) ─
+  if (designId === 'cyber') {
+    return (
+      <div
+        className="position-absolute d-flex align-items-center justify-content-center cursor-pointer text-center scada-core-outer-wrap"
+        onClick={onClick}
+        title="Click to inspect active SCADA core detail"
+        style={{ left: `${cx}px`, top: `${cy}px`, transform: 'translate(-50%, -50%)', width: `${hubSize}px`, height: `${hubSize}px`, zIndex: 10 }}
+      >
+        <svg className="position-absolute" width={hubSize} height={hubSize} viewBox="0 0 210 210" style={{ animation: 'dashboardSpin 25s linear infinite', top: 0, left: 0 }}>
+          <defs>
+            <linearGradient id="arcGrad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#38bdf8" stopOpacity="0.9" /><stop offset="100%" stopColor="#a855f7" stopOpacity="0.6" /></linearGradient>
+            <linearGradient id="arcGrad2" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#10b981" stopOpacity="0.8" /><stop offset="100%" stopColor="#06b6d4" stopOpacity="0.5" /></linearGradient>
+          </defs>
+          <circle cx="105" cy="105" r="100" fill="none" stroke="url(#arcGrad1)" strokeWidth="2" strokeDasharray="80 77" strokeLinecap="round" opacity="0.85" />
+          <circle cx="105" cy="105" r="100" fill="none" stroke="url(#arcGrad2)" strokeWidth="1.5" strokeDasharray="50 107" strokeLinecap="round" opacity="0.6" transform="rotate(45 105 105)" />
+        </svg>
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '190px', height: '190px', top: '10px', left: '10px', border: '1.5px dashed rgba(56, 189, 248, 0.3)', animation: 'dashboardSpin 18s linear infinite reverse' }} />
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '175px', height: '175px', top: '17.5px', left: '17.5px', border: '1px solid rgba(168, 85, 247, 0.35)', boxShadow: '0 0 15px rgba(168, 85, 247, 0.15)', animation: 'dashboardSpin 14s linear infinite' }} />
+        <div className="position-absolute rounded-circle d-flex flex-column align-items-center justify-content-center scada-core-reactor-hub" style={{ width: `${bodySize}px`, height: `${bodySize}px`, top: `${bodyOffset}px`, left: `${bodyOffset}px`, background: 'radial-gradient(circle at 40% 35%, rgba(20, 40, 80, 0.95) 0%, rgba(3, 7, 18, 0.98) 100%)', border: '1.5px solid rgba(56, 189, 248, 0.5)', boxShadow: '0 0 60px rgba(56, 189, 248, 0.3), 0 0 30px rgba(168, 85, 247, 0.15), inset 0 0 40px rgba(56, 189, 248, 0.12), inset 0 -20px 40px rgba(168, 85, 247, 0.08)', backdropFilter: 'blur(16px)' }}>
+          <div className="position-absolute inset-0 rounded-circle pointer-events-none overflow-hidden" style={{ opacity: 0.06, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2338bdf8' fill-opacity='1'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`, backgroundSize: '20px 34px' }} />
+          <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '125px', height: '125px', top: '15px', left: '15px', border: '1px solid rgba(56, 189, 248, 0.12)', boxShadow: 'inset 0 0 20px rgba(56, 189, 248, 0.08)' }} />
+          <div className="position-relative mb-1" style={{ zIndex: 2 }}>
+            <div className="rounded-circle d-flex align-items-center justify-content-center mx-auto orbital-core-pulse" style={{ width: '42px', height: '42px', background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(168, 85, 247, 0.15) 100%)', border: '1px solid rgba(56, 189, 248, 0.35)', boxShadow: '0 0 20px rgba(56, 189, 248, 0.25)' }}>
+              <Cpu size={22} style={{ color: '#38bdf8', filter: 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.8))' }} />
+            </div>
+          </div>
+          <span className="scada-core-title fw-black font-monospace tracking-wider uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.12em', zIndex: 2, position: 'relative' }}>SCADA CORE</span>
+          <div className="d-flex align-items-center gap-1 mt-0.5" style={{ zIndex: 2, position: 'relative' }}>
+            <span className="rounded-circle d-inline-block status-dot-pulse" style={{ width: '5px', height: '5px', backgroundColor: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+            <span className="scada-core-status font-monospace fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.05em' }}>99.8% ONLINE</span>
+          </div>
+          <span className="scada-core-load font-monospace" style={{ fontSize: '0.58rem', letterSpacing: '0.04em', zIndex: 2, position: 'relative', marginTop: '2px' }}>470 kW | CAD</span>
+        </div>
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '220px', height: '220px', top: '-5px', left: '-5px', background: 'radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%)', animation: 'orbitalCorePulse 4s ease-in-out infinite', zIndex: -1 }} />
+      </div>
+    );
+  }
+
+  // ─ Design: Neon Pulse ─
+  if (designId === 'neon') {
+    return (
+      <div
+        className="position-absolute d-flex align-items-center justify-content-center cursor-pointer text-center scada-core-outer-wrap"
+        onClick={onClick}
+        title="Click to inspect active SCADA core detail"
+        style={{ left: `${cx}px`, top: `${cy}px`, transform: 'translate(-50%, -50%)', width: `${hubSize}px`, height: `${hubSize}px`, zIndex: 10 }}
+      >
+        {/* Neon triple ring pulsing */}
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '208px', height: '208px', top: '1px', left: '1px', border: '2px solid #ec4899', boxShadow: '0 0 20px rgba(236, 72, 153, 0.4), inset 0 0 20px rgba(236, 72, 153, 0.1)', animation: 'orbitalCorePulse 3s ease-in-out infinite' }} />
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '190px', height: '190px', top: '10px', left: '10px', border: '1.5px solid rgba(168, 85, 247, 0.6)', boxShadow: '0 0 16px rgba(168, 85, 247, 0.3)', animation: 'dashboardSpin 20s linear infinite' }} />
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '175px', height: '175px', top: '17.5px', left: '17.5px', border: '1px dashed rgba(236, 72, 153, 0.3)', animation: 'dashboardSpin 15s linear infinite reverse' }} />
+        <div className="position-absolute rounded-circle d-flex flex-column align-items-center justify-content-center scada-core-reactor-hub" style={{ width: `${bodySize}px`, height: `${bodySize}px`, top: `${bodyOffset}px`, left: `${bodyOffset}px`, background: 'radial-gradient(circle at 50% 40%, rgba(60, 20, 60, 0.95) 0%, rgba(10, 2, 18, 0.98) 100%)', border: '2px solid rgba(236, 72, 153, 0.55)', boxShadow: '0 0 50px rgba(236, 72, 153, 0.25), 0 0 25px rgba(168, 85, 247, 0.2), inset 0 0 35px rgba(236, 72, 153, 0.1)', backdropFilter: 'blur(14px)' }}>
+          <div className="position-relative mb-1" style={{ zIndex: 2 }}>
+            <div className="rounded-circle d-flex align-items-center justify-content-center mx-auto orbital-core-pulse" style={{ width: '44px', height: '44px', background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(168, 85, 247, 0.2) 100%)', border: '1.5px solid rgba(236, 72, 153, 0.5)', boxShadow: '0 0 25px rgba(236, 72, 153, 0.35)' }}>
+              <Cpu size={22} style={{ color: '#f472b6', filter: 'drop-shadow(0 0 8px rgba(236, 72, 153, 0.9))' }} />
+            </div>
+          </div>
+          <span className="scada-core-title fw-black font-monospace tracking-wider uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.12em', zIndex: 2, position: 'relative' }}>SCADA CORE</span>
+          <div className="d-flex align-items-center gap-1 mt-0.5" style={{ zIndex: 2, position: 'relative' }}>
+            <span className="rounded-circle d-inline-block status-dot-pulse" style={{ width: '5px', height: '5px', backgroundColor: '#f472b6', boxShadow: '0 0 8px #ec4899' }} />
+            <span className="scada-core-status font-monospace fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.05em' }}>99.8% ONLINE</span>
+          </div>
+          <span className="scada-core-load font-monospace" style={{ fontSize: '0.58rem', letterSpacing: '0.04em', zIndex: 2, position: 'relative', marginTop: '2px' }}>470 kW | CAD</span>
+        </div>
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '225px', height: '225px', top: '-7.5px', left: '-7.5px', background: 'radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, transparent 65%)', animation: 'orbitalCorePulse 3.5s ease-in-out infinite', zIndex: -1 }} />
+      </div>
+    );
+  }
+
+  // ─ Design: Quantum Arc ─
+  if (designId === 'quantum') {
+    return (
+      <div
+        className="position-absolute d-flex align-items-center justify-content-center cursor-pointer text-center scada-core-outer-wrap"
+        onClick={onClick}
+        title="Click to inspect active SCADA core detail"
+        style={{ left: `${cx}px`, top: `${cy}px`, transform: 'translate(-50%, -50%)', width: `${hubSize}px`, height: `${hubSize}px`, zIndex: 10 }}
+      >
+        {/* Quantum rotating concentric arcs */}
+        <svg className="position-absolute" width={hubSize} height={hubSize} viewBox="0 0 210 210" style={{ top: 0, left: 0 }}>
+          <defs>
+            <linearGradient id="qGrad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#10b981" stopOpacity="0.9" /><stop offset="100%" stopColor="#06b6d4" stopOpacity="0.7" /></linearGradient>
+            <linearGradient id="qGrad2" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stopColor="#22d3ee" stopOpacity="0.8" /><stop offset="100%" stopColor="#34d399" stopOpacity="0.5" /></linearGradient>
+          </defs>
+          <circle cx="105" cy="105" r="100" fill="none" stroke="url(#qGrad1)" strokeWidth="2.5" strokeDasharray="30 25 60 42" strokeLinecap="round" style={{ animation: 'dashboardSpin 20s linear infinite' }} />
+          <circle cx="105" cy="105" r="92" fill="none" stroke="url(#qGrad2)" strokeWidth="1.5" strokeDasharray="45 35 20 57" strokeLinecap="round" style={{ animation: 'dashboardSpin 28s linear infinite reverse' }} />
+          <circle cx="105" cy="105" r="83" fill="none" stroke="rgba(16, 185, 129, 0.2)" strokeWidth="1" strokeDasharray="8 8" />
+          {/* Tick marks around outer ring */}
+          {Array.from({ length: 36 }).map((_, i) => {
+            const a = (i * 10 * Math.PI) / 180;
+            const r1 = 100, r2 = i % 3 === 0 ? 96 : 98;
+            return <line key={i} x1={105 + r1 * Math.cos(a)} y1={105 + r1 * Math.sin(a)} x2={105 + r2 * Math.cos(a)} y2={105 + r2 * Math.sin(a)} stroke="rgba(16, 185, 129, 0.4)" strokeWidth={i % 3 === 0 ? '1.5' : '0.8'} />;
+          })}
+        </svg>
+        <div className="position-absolute rounded-circle d-flex flex-column align-items-center justify-content-center scada-core-reactor-hub" style={{ width: `${bodySize}px`, height: `${bodySize}px`, top: `${bodyOffset}px`, left: `${bodyOffset}px`, background: 'radial-gradient(circle at 45% 40%, rgba(10, 45, 40, 0.95) 0%, rgba(2, 10, 8, 0.98) 100%)', border: '1.5px solid rgba(16, 185, 129, 0.5)', boxShadow: '0 0 50px rgba(16, 185, 129, 0.25), 0 0 25px rgba(6, 182, 212, 0.15), inset 0 0 35px rgba(16, 185, 129, 0.1)', backdropFilter: 'blur(14px)' }}>
+          <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '130px', height: '130px', top: '12.5px', left: '12.5px', border: '1px solid rgba(16, 185, 129, 0.15)', boxShadow: 'inset 0 0 18px rgba(16, 185, 129, 0.06)' }} />
+          <div className="position-relative mb-1" style={{ zIndex: 2 }}>
+            <div className="rounded-circle d-flex align-items-center justify-content-center mx-auto orbital-core-pulse" style={{ width: '42px', height: '42px', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 182, 212, 0.15) 100%)', border: '1px solid rgba(16, 185, 129, 0.4)', boxShadow: '0 0 18px rgba(16, 185, 129, 0.3)' }}>
+              <Cpu size={22} style={{ color: '#34d399', filter: 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.8))' }} />
+            </div>
+          </div>
+          <span className="scada-core-title fw-black font-monospace tracking-wider uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.12em', zIndex: 2, position: 'relative' }}>SCADA CORE</span>
+          <div className="d-flex align-items-center gap-1 mt-0.5" style={{ zIndex: 2, position: 'relative' }}>
+            <span className="rounded-circle d-inline-block status-dot-pulse" style={{ width: '5px', height: '5px', backgroundColor: '#34d399', boxShadow: '0 0 8px #10b981' }} />
+            <span className="scada-core-status font-monospace fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.05em' }}>99.8% ONLINE</span>
+          </div>
+          <span className="scada-core-load font-monospace" style={{ fontSize: '0.58rem', letterSpacing: '0.04em', zIndex: 2, position: 'relative', marginTop: '2px' }}>470 kW | CAD</span>
+        </div>
+        <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '220px', height: '220px', top: '-5px', left: '-5px', background: 'radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%)', animation: 'orbitalCorePulse 4s ease-in-out infinite', zIndex: -1 }} />
+      </div>
+    );
+  }
+
+  // ─ Design: Hologram Grid ─
+  return (
+    <div
+      className="position-absolute d-flex align-items-center justify-content-center cursor-pointer text-center scada-core-outer-wrap"
+      onClick={onClick}
+      title="Click to inspect active SCADA core detail"
+      style={{ left: `${cx}px`, top: `${cy}px`, transform: 'translate(-50%, -50%)', width: `${hubSize}px`, height: `${hubSize}px`, zIndex: 10 }}
+    >
+      {/* Hologram concentric dotted rings */}
+      <svg className="position-absolute" width={hubSize} height={hubSize} viewBox="0 0 210 210" style={{ top: 0, left: 0, animation: 'dashboardSpin 30s linear infinite' }}>
+        <circle cx="105" cy="105" r="100" fill="none" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3 5" />
+        <circle cx="105" cy="105" r="95" fill="none" stroke="rgba(168, 85, 247, 0.25)" strokeWidth="0.8" strokeDasharray="2 6" />
+        {/* Holographic crosshair lines */}
+        <line x1="105" y1="2" x2="105" y2="30" stroke="rgba(56, 189, 248, 0.3)" strokeWidth="0.8" />
+        <line x1="105" y1="180" x2="105" y2="208" stroke="rgba(56, 189, 248, 0.3)" strokeWidth="0.8" />
+        <line x1="2" y1="105" x2="30" y2="105" stroke="rgba(56, 189, 248, 0.3)" strokeWidth="0.8" />
+        <line x1="180" y1="105" x2="208" y2="105" stroke="rgba(56, 189, 248, 0.3)" strokeWidth="0.8" />
+        {/* Small diamond markers at cardinal points */}
+        {[0, 90, 180, 270].map(deg => {
+          const rad = (deg * Math.PI) / 180;
+          const x = 105 + 100 * Math.cos(rad);
+          const y = 105 + 100 * Math.sin(rad);
+          return <circle key={deg} cx={x} cy={y} r="3" fill="rgba(56, 189, 248, 0.6)" />;
+        })}
+      </svg>
+      <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '185px', height: '185px', top: '12.5px', left: '12.5px', border: '1px solid rgba(56, 189, 248, 0.2)', animation: 'dashboardSpin 22s linear infinite reverse' }} />
+      <div className="position-absolute rounded-circle d-flex flex-column align-items-center justify-content-center scada-core-reactor-hub" style={{ width: `${bodySize}px`, height: `${bodySize}px`, top: `${bodyOffset}px`, left: `${bodyOffset}px`, background: 'radial-gradient(circle at 50% 50%, rgba(15, 25, 50, 0.96) 0%, rgba(2, 6, 14, 0.98) 100%)', border: '1.5px solid rgba(56, 189, 248, 0.4)', boxShadow: '0 0 45px rgba(56, 189, 248, 0.2), 0 0 20px rgba(168, 85, 247, 0.1), inset 0 0 30px rgba(56, 189, 248, 0.08)', backdropFilter: 'blur(12px)' }}>
+        {/* Grid overlay */}
+        <div className="position-absolute inset-0 rounded-circle pointer-events-none overflow-hidden" style={{ opacity: 0.04, backgroundImage: 'linear-gradient(rgba(56,189,248,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.4) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+        <div className="position-relative mb-1" style={{ zIndex: 2 }}>
+          <div className="d-flex align-items-center justify-content-center mx-auto orbital-core-pulse" style={{ width: '44px', height: '44px', background: 'rgba(56, 189, 248, 0.08)', border: '1.5px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', transform: 'rotate(45deg)', boxShadow: '0 0 18px rgba(56, 189, 248, 0.2)' }}>
+            <Cpu size={20} style={{ color: '#38bdf8', filter: 'drop-shadow(0 0 5px rgba(56, 189, 248, 0.7))', transform: 'rotate(-45deg)' }} />
+          </div>
+        </div>
+        <span className="scada-core-title fw-black font-monospace tracking-wider uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.12em', zIndex: 2, position: 'relative' }}>SCADA CORE</span>
+        <div className="d-flex align-items-center gap-1 mt-0.5" style={{ zIndex: 2, position: 'relative' }}>
+          <span className="rounded-circle d-inline-block status-dot-pulse" style={{ width: '5px', height: '5px', backgroundColor: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+          <span className="scada-core-status font-monospace fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.05em' }}>99.8% ONLINE</span>
+        </div>
+        <span className="scada-core-load font-monospace" style={{ fontSize: '0.58rem', letterSpacing: '0.04em', zIndex: 2, position: 'relative', marginTop: '2px' }}>470 kW | CAD</span>
+      </div>
+      <div className="position-absolute rounded-circle pointer-events-none" style={{ width: '220px', height: '220px', top: '-5px', left: '-5px', background: 'radial-gradient(circle, rgba(56, 189, 248, 0.06) 0%, transparent 65%)', animation: 'orbitalCorePulse 5s ease-in-out infinite', zIndex: -1 }} />
+    </div>
+  );
+};
+
 // ── FUTURISTIC ORBITAL SCADA RADAR WHEEL COMPONENT (GPU HARDWARE ACCELERATED) ──
-const FuturisticOrbitalSCADA = ({ services = [], navigate }) => {
+const FuturisticOrbitalSCADA = ({ services = [], navigate, coreDesign = 'cyber' }) => {
   const [isRotating, setIsRotating] = useState(true);
   const [speedMode, setSpeedMode] = useState('normal'); // 'slow', 'normal', 'fast'
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -176,51 +431,8 @@ const FuturisticOrbitalSCADA = ({ services = [], navigate }) => {
             <circle cx={cx} cy={cy} r={radius * 0.35} stroke="rgba(56, 189, 248, 0.18)" strokeWidth="1.5" fill="none" />
           </svg>
 
-          {/* CENTER REACTOR SCADA CORE HUB (DEAD CENTER AT cx=460, cy=360) */}
-          <div
-            className="position-absolute d-flex flex-column align-items-center justify-content-center cursor-pointer shadow-2xl rounded-circle text-center scada-core-reactor-hub"
-            onClick={() => setSelectedSvcModal(activeSvc)}
-            title="Click to inspect active SCADA core detail"
-            style={{
-              left: `${cx}px`,
-              top: `${cy}px`,
-              transform: 'translate(-50%, -50%)',
-              width: '165px',
-              height: '165px',
-              zIndex: 10,
-              background: 'radial-gradient(circle, #0c182e 0%, #030712 100%)',
-              border: '2px solid #38bdf8',
-              boxShadow: '0 0 50px rgba(56, 189, 248, 0.45), inset 0 0 25px rgba(56, 189, 248, 0.25)',
-            }}
-          >
-            <div
-              className="position-absolute inset-0 rounded-circle pointer-events-none"
-              style={{
-                border: '2px dashed #0284c7',
-                animation: 'dashboardSpin 18s linear infinite',
-                margin: '-7px'
-              }}
-            />
-            <div
-              className="position-absolute inset-0 rounded-circle pointer-events-none"
-              style={{
-                border: '1.5px solid rgba(168, 85, 247, 0.45)',
-                animation: 'dashboardSpin 12s linear infinite reverse',
-                margin: '-14px'
-              }}
-            />
-
-            <Cpu size={36} className="text-cyan-400 mb-1 orbital-core-pulse" />
-            <span className="fw-black font-monospace tracking-wider text-white uppercase" style={{ fontSize: '0.84rem' }}>
-              SCADA CORE
-            </span>
-            <span className="text-emerald-400 font-monospace fw-bold" style={{ fontSize: '0.66rem' }}>
-              ● 99.8% ONLINE
-            </span>
-            <span className="text-slate-400 font-monospace" style={{ fontSize: '0.60rem' }}>
-              420 kW LOAD
-            </span>
-          </div>
+          {/* CENTER REACTOR SCADA CORE HUB (DYNAMIC DESIGN) */}
+          <ScadaCoreHub designId={coreDesign} cx={cx} cy={cy} onClick={() => setSelectedSvcModal(activeSvc)} />
 
           {/* GPU HARDWARE ACCELERATED ROTATING RING CONTAINER (ZER0 RE-RENDERS) */}
           <div
@@ -427,7 +639,7 @@ const FuturisticOrbitalSCADA = ({ services = [], navigate }) => {
       </div>
 
       <div className="text-center font-monospace text-slate-400 mt-1" style={{ fontSize: '0.68rem' }}>
-        ★ GPU-Accelerated SCADA Core — 350px wide orbit radius — Click any card to inspect system telemetry
+        ★ GPU-Accelerated SCADA Core — Click any card to inspect system telemetry
       </div>
 
       {/* ── SYSTEM INFORMATION DETAIL MODAL OVERLAY ── */}
@@ -589,29 +801,48 @@ const FuturisticOrbitalSCADA = ({ services = [], navigate }) => {
 
                     {/* Metrics Grid */}
                     <div className="row g-2 mb-3">
-                      {selectedSvcModal.metrics?.map((m, mIdx) => (
-                        <div key={mIdx} className="col-6">
-                          <div
-                            className="p-2.5 rounded-3 border text-start d-flex align-items-center gap-2.5"
-                            style={{
-                              backgroundColor: 'var(--scada-card-hover, rgba(30, 41, 59, 0.5))',
-                              borderColor: 'var(--scada-border, rgba(255,255,255,0.08))'
-                            }}
-                          >
-                            <div className="p-2 rounded-2 flex-shrink-0" style={{ backgroundColor: `${selectedSvcModal.color}20`, color: selectedSvcModal.color }}>
-                              {m.icon}
-                            </div>
-                            <div className="text-truncate">
-                              <div className="text-secondary font-monospace text-uppercase text-truncate" style={{ fontSize: '0.62rem' }}>
-                                {m.label}
+                      {selectedSvcModal.metrics?.map((m, mIdx) => {
+                        const tileStyle = getMetricTileStyle(m, selectedSvcModal.color);
+                        return (
+                          <div key={mIdx} className="col-6">
+                            <div
+                              className="p-2.5 rounded-3 text-start d-flex align-items-center gap-2.5 position-relative overflow-hidden metric-scada-tile"
+                              style={{
+                                background: tileStyle.bg,
+                                border: tileStyle.border,
+                                boxShadow: tileStyle.shadow,
+                                backdropFilter: 'blur(8px)',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => {
+                                setSelectedSvcModal(null);
+                                navigate(selectedSvcModal.route);
+                              }}
+                            >
+                              <div className="p-2 rounded-2 flex-shrink-0 d-flex align-items-center justify-content-center" style={{ backgroundColor: tileStyle.badgeBg, color: tileStyle.text }}>
+                                {m.icon}
                               </div>
-                              <div className="fw-black font-monospace text-truncate" style={{ fontSize: '0.90rem', color: 'var(--scada-text, #ffffff)' }}>
-                                {m.val}
+                              <div className="text-truncate flex-grow-1">
+                                <div className="text-slate-300 font-monospace text-uppercase text-truncate" style={{ fontSize: '0.62rem' }}>
+                                  {m.label}
+                                </div>
+                                <div className="fw-black font-monospace text-truncate" style={{ fontSize: '0.94rem', color: tileStyle.text, textShadow: `0 0 8px ${tileStyle.dotColor}40` }}>
+                                  {m.val}
+                                </div>
                               </div>
+                              <div
+                                className="rounded-circle status-dot-pulse ms-auto flex-shrink-0"
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  backgroundColor: tileStyle.dotColor,
+                                  boxShadow: `0 0 10px ${tileStyle.dotColor}`
+                                }}
+                              />
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
 
                       {/* Extra Diagnostic Parameters */}
                       <div className="col-6">
@@ -735,6 +966,7 @@ const FuturisticOrbitalSCADA = ({ services = [], navigate }) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
+  const isLightMode = document.body.classList.contains('light-mode');
 
   // ── ACTIVE ROLE & PERMISSIONS ────────────────────────────────────────────
   const [activeRole, setActiveRole] = useState(() => {
@@ -766,6 +998,15 @@ const Dashboard = () => {
   // ── FILTER STATES FOR HIERARCHY ─────────────────────────────────────────
   const [selectedOrgId, setSelectedOrgId] = useState('ALL');
   const [selectedHzoneId, setSelectedHzoneId] = useState('ALL');
+
+  // ── CORE DESIGN SELECTOR (PERSISTED IN LOCALSTORAGE) ────────────────────
+  const [coreDesign, setCoreDesign] = useState(() => {
+    return localStorage.getItem('scada_core_design') || 'cyber';
+  });
+  const handleDesignChange = useCallback((designId) => {
+    setCoreDesign(designId);
+    localStorage.setItem('scada_core_design', designId);
+  }, []);
 
   // ── LIVE AUTO-UPDATING SMART METER TELEMETRY & AUTO-CYCLE ────────────────
   const [meterPageIndex, setMeterPageIndex] = useState(1); // 0: Voltage, 1: Current, 2: Power, 3: Energy
@@ -897,9 +1138,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/energy-metering/report' },
       ],
       metrics: [
-        { label: 'Total Cons.', val: '1,245 kWh', icon: <Zap size={14} className="text-amber-400" /> },
-        { label: 'Today', val: '320 kWh', icon: <BarChart3 size={14} className="text-amber-400" /> },
-        { label: 'Cost', val: '₹ 1,980', icon: <CreditCard size={14} className="text-emerald-400" /> }
+        { label: 'Total Cons.', val: '1,245 kWh', icon: <Zap size={13} />, status: 'green' },
+        { label: 'Today', val: '320 kWh', icon: <BarChart3 size={13} />, status: 'yellow' },
+        { label: 'Cost', val: '₹ 1,980', icon: <CreditCard size={13} />, status: 'green' },
+        { label: 'P. Factor', val: '0.98 PF', icon: <Activity size={13} />, status: 'cyan' }
       ]
     },
     {
@@ -922,9 +1164,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/hvac/report' },
       ],
       metrics: [
-        { label: 'Fan Status', val: 'ON (48Hz)', icon: <Fan size={14} className="text-cyan-400" /> },
-        { label: 'Return Temp', val: '28.0 °C', icon: <Thermometer size={14} className="text-sky-400" /> },
-        { label: 'Water Flow', val: '450 LPM', icon: <Droplets size={14} className="text-cyan-400" /> }
+        { label: 'Fan Status', val: 'ON (48Hz)', icon: <Fan size={13} />, status: 'green' },
+        { label: 'Return Temp', val: '28.0 °C', icon: <Thermometer size={13} />, status: 'green' },
+        { label: 'Supply Temp', val: '22.5 °C', icon: <ThermometerSun size={13} />, status: 'cyan' },
+        { label: 'Water Flow', val: '450 LPM', icon: <Droplets size={13} />, status: 'cyan' }
       ]
     },
     {
@@ -945,9 +1188,10 @@ const Dashboard = () => {
         { name: 'DG Set-3', route: '/dg-set/dg3' },
       ],
       metrics: [
-        { label: 'DG-1', val: 'ON (Auto)', icon: <Power size={14} className="text-amber-400" /> },
-        { label: 'Load', val: '68%', icon: <BarChart3 size={14} className="text-amber-400" /> },
-        { label: 'Fuel Level', val: '78%', icon: <Zap size={14} className="text-amber-400" /> }
+        { label: 'DG-1 Status', val: 'ON (Auto)', icon: <Power size={13} />, status: 'green' },
+        { label: 'Active Load', val: '320 kW', icon: <BarChart3 size={13} />, status: 'yellow' },
+        { label: 'Fuel Level', val: '78%', icon: <Zap size={13} />, status: 'green' },
+        { label: 'Frequency', val: '50.1 Hz', icon: <Activity size={13} />, status: 'cyan' }
       ]
     },
     {
@@ -969,9 +1213,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/motors/report' },
       ],
       metrics: [
-        { label: 'Total Lifts', val: '4', icon: <Activity size={14} className="text-sky-400" /> },
-        { label: 'Running', val: '3', icon: <CheckCircle2 size={14} className="text-emerald-400" /> },
-        { label: 'Fault', val: '0', icon: <AlertCircle size={14} className="text-emerald-400" /> }
+        { label: 'Pumps Run', val: '3 / 4', icon: <CheckCircle2 size={13} />, status: 'green' },
+        { label: 'Pressure', val: '4.2 bar', icon: <Gauge size={13} />, status: 'cyan' },
+        { label: 'Power Draw', val: '45 kW', icon: <Zap size={13} />, status: 'yellow' },
+        { label: 'Fault Status', val: '0 Faults', icon: <AlertCircle size={13} />, status: 'green' }
       ]
     },
     {
@@ -993,9 +1238,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/hvac/report' },
       ],
       metrics: [
-        { label: 'Chiller', val: '2/2 ON', icon: <Fan size={14} className="text-cyan-400" /> },
-        { label: 'COP Rate', val: '5.8', icon: <TrendingUp size={14} className="text-emerald-400" /> },
-        { label: 'Total Load', val: '486 kW', icon: <BarChart3 size={14} className="text-cyan-400" /> }
+        { label: 'Chiller Unit', val: '2/2 ON', icon: <Fan size={13} />, status: 'green' },
+        { label: 'CHW Temp', val: '6.5 °C', icon: <Thermometer size={13} />, status: 'green' },
+        { label: 'COP Rating', val: '5.8 COP', icon: <TrendingUp size={13} />, status: 'green' },
+        { label: 'Plant Load', val: '486 kW', icon: <BarChart3 size={13} />, status: 'yellow' }
       ]
     },
     {
@@ -1017,9 +1263,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/hvac/report' },
       ],
       metrics: [
-        { label: 'Supply Air', val: '16.0 °C', icon: <Thermometer size={14} className="text-cyan-400" /> },
-        { label: 'Return Air', val: '24.2 °C', icon: <ThermometerSun size={14} className="text-sky-400" /> },
-        { label: 'Airflow', val: '12.5k CFM', icon: <Wind size={14} className="text-teal-400" /> }
+        { label: 'Supply Air', val: '16.0 °C', icon: <Thermometer size={13} />, status: 'green' },
+        { label: 'Return Air', val: '24.2 °C', icon: <ThermometerSun size={13} />, status: 'yellow' },
+        { label: 'Airflow', val: '12.5k CFM', icon: <Wind size={13} />, status: 'cyan' },
+        { label: 'Duct Press.', val: '240 Pa', icon: <Gauge size={13} />, status: 'cyan' }
       ]
     },
     {
@@ -1039,9 +1286,10 @@ const Dashboard = () => {
         { name: 'UG Tank', route: '/water-management/ug-pump' },
       ],
       metrics: [
-        { label: 'UG Tank', val: '72%', icon: <Droplets size={14} className="text-cyan-400" /> },
-        { label: 'OHT Tank', val: '64%', icon: <Droplets size={14} className="text-cyan-400" /> },
-        { label: 'Flow Rate', val: '12.5 m³/h', icon: <RefreshCw size={14} className="text-teal-400" /> }
+        { label: 'UG Tank', val: '72%', icon: <Droplets size={13} />, status: 'green' },
+        { label: 'OHT Tank', val: '64%', icon: <Droplets size={13} />, status: 'yellow' },
+        { label: 'Flow Rate', val: '12.5 m³/h', icon: <RefreshCw size={13} />, status: 'cyan' },
+        { label: 'Booster', val: 'ON', icon: <Power size={13} />, status: 'green' }
       ]
     },
     {
@@ -1063,9 +1311,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/transformer/report' },
       ],
       metrics: [
-        { label: 'Primary', val: '11 kV', icon: <Zap size={14} className="text-purple-400" /> },
-        { label: 'Oil Temp', val: '42.5°C', icon: <ThermometerSun size={14} className="text-amber-400" /> },
-        { label: 'Load', val: '78%', icon: <BarChart3 size={14} className="text-purple-400" /> }
+        { label: 'Primary', val: '11.0 kV', icon: <Zap size={13} />, status: 'green' },
+        { label: 'Active Load', val: '78%', icon: <BarChart3 size={13} />, status: 'yellow' },
+        { label: 'Oil Temp', val: '42.5 °C', icon: <ThermometerSun size={13} />, status: 'yellow' },
+        { label: 'Oil Level', val: '95%', icon: <CheckCircle2 size={13} />, status: 'green' }
       ]
     },
     {
@@ -1087,9 +1336,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/fire-pumps/report' },
       ],
       metrics: [
-        { label: 'Fire Pump', val: 'ON', icon: <Flame size={14} className="text-red-400" /> },
-        { label: 'Jockey Pump', val: 'ON', icon: <Activity size={14} className="text-red-400" /> },
-        { label: 'Pressure', val: '8.5 bar', icon: <Gauge size={14} className="text-rose-400" /> }
+        { label: 'Fire Pump', val: 'AUTO', icon: <Flame size={13} />, status: 'green' },
+        { label: 'Jockey Pump', val: 'ON', icon: <Activity size={13} />, status: 'green' },
+        { label: 'Pressure', val: '8.5 bar', icon: <Gauge size={13} />, status: 'cyan' },
+        { label: 'Panel Alarms', val: '0 Alarms', icon: <ShieldCheck size={13} />, status: 'green' }
       ]
     },
     {
@@ -1113,9 +1363,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/lt-panel/report' },
       ],
       metrics: [
-        { label: 'Main Incomer', val: 'ON', icon: <Power size={14} className="text-emerald-400" /> },
-        { label: 'Total Load', val: '320 kW', icon: <BarChart3 size={14} className="text-emerald-400" /> },
-        { label: 'PF', val: '0.96', icon: <Zap size={14} className="text-teal-400" /> }
+        { label: 'Incomer ACB', val: 'CLOSED', icon: <Power size={13} />, status: 'green' },
+        { label: 'Total Load', val: '320 kW', icon: <BarChart3 size={13} />, status: 'yellow' },
+        { label: 'Power Factor', val: '0.96 PF', icon: <Zap size={13} />, status: 'green' },
+        { label: 'Busbar Temp', val: '38.5 °C', icon: <Thermometer size={13} />, status: 'green' }
       ]
     },
     {
@@ -1133,9 +1384,10 @@ const Dashboard = () => {
         { name: 'Overview', route: '/VRV/overview' },
       ],
       metrics: [
-        { label: 'CHW Temp', val: '6.5°C', icon: <Snowflake size={14} className="text-teal-400" /> },
-        { label: 'RHW Temp', val: '11.8°C', icon: <ThermometerSun size={14} className="text-amber-400" /> },
-        { label: 'Flow', val: '85 m³/h', icon: <Wind size={14} className="text-teal-400" /> }
+        { label: 'Room Temp', val: '22.0 °C', icon: <Thermometer size={13} />, status: 'green' },
+        { label: 'CHW Temp', val: '6.5 °C', icon: <Snowflake size={13} />, status: 'green' },
+        { label: 'RHW Temp', val: '11.8 °C', icon: <ThermometerSun size={13} />, status: 'yellow' },
+        { label: 'Coolant Flow', val: '85 m³/h', icon: <Wind size={13} />, status: 'cyan' }
       ]
     },
     {
@@ -1155,9 +1407,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/aqi-sensor/report' },
       ],
       metrics: [
-        { label: 'Temperature', val: '24.5°C', icon: <Thermometer size={14} className="text-emerald-400" /> },
-        { label: 'Humidity', val: '56%', icon: <Droplets size={14} className="text-cyan-400" /> },
-        { label: 'CO₂', val: '620 ppm', icon: <Leaf size={14} className="text-emerald-400" /> }
+        { label: 'Air Quality', val: 'AQI 24', icon: <Gauge size={13} />, status: 'green' },
+        { label: 'Temperature', val: '24.5 °C', icon: <Thermometer size={13} />, status: 'green' },
+        { label: 'Humidity', val: '56%', icon: <Droplets size={13} />, status: 'yellow' },
+        { label: 'CO₂ Level', val: '620 ppm', icon: <Leaf size={13} />, status: 'green' }
       ]
     },
     {
@@ -1177,9 +1430,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/daily-dpr/overview' },
       ],
       metrics: [
-        { label: 'Load', val: '35%', icon: <BarChart3 size={14} className="text-cyan-400" /> },
-        { label: 'Battery', val: '92%', icon: <BatteryCharging size={14} className="text-emerald-400" /> },
-        { label: 'Runtime', val: '1h 45m', icon: <Clock size={14} className="text-cyan-400" /> }
+        { label: 'UPS Load', val: '35%', icon: <BarChart3 size={13} />, status: 'green' },
+        { label: 'Battery', val: '92%', icon: <BatteryCharging size={13} />, status: 'green' },
+        { label: 'Runtime', val: '1h 45m', icon: <Clock size={13} />, status: 'cyan' },
+        { label: 'Grid Input', val: '230 V', icon: <Zap size={13} />, status: 'green' }
       ]
     },
     {
@@ -1202,9 +1456,10 @@ const Dashboard = () => {
         { name: 'PDF Report', route: '/alarm-system/report' },
       ],
       metrics: [
-        { label: 'Critical', val: '0', icon: <AlertCircle size={14} className="text-emerald-400" /> },
-        { label: 'Warnings', val: '2', icon: <AlertTriangle size={14} className="text-amber-400" /> },
-        { label: 'Status', val: 'Normal', icon: <CheckCircle2 size={14} className="text-emerald-400" /> }
+        { label: 'Critical', val: '0 Active', icon: <AlertCircle size={13} />, status: 'green' },
+        { label: 'Warnings', val: '2 Active', icon: <AlertTriangle size={13} />, status: 'yellow' },
+        { label: 'Health', val: '99.8%', icon: <TrendingUp size={13} />, status: 'green' },
+        { label: 'Monitoring', val: 'ACTIVE', icon: <CheckCircle2 size={13} />, status: 'cyan' }
       ]
     }
   ];
@@ -1245,8 +1500,34 @@ const Dashboard = () => {
     <div className="reference-scada-dashboard p-3">
 
 
+      {/* ── CORE DESIGN SELECTOR ─────────────────────────────────── */}
+      <div className="d-flex align-items-center justify-content-end mb-2 px-1 gap-2">
+        <span className="font-monospace fw-bold text-secondary" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+          <Sliders size={12} className="me-1" />CORE DESIGN:
+        </span>
+        <div className="d-flex gap-1.5">
+          {CORE_DESIGNS.map(d => (
+            <button
+              key={d.id}
+              onClick={() => handleDesignChange(d.id)}
+              className={`btn btn-sm rounded-pill px-2.5 py-1 font-monospace fw-bold d-flex align-items-center gap-1 core-design-select ${coreDesign === d.id ? 'active' : ''}`}
+              style={{
+                fontSize: '0.64rem',
+                backgroundColor: coreDesign === d.id ? 'rgba(56, 189, 248, 0.2)' : 'rgba(15, 23, 42, 0.6)',
+                color: coreDesign === d.id ? '#38bdf8' : '#94a3b8',
+                border: coreDesign === d.id ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                transition: 'all 0.2s ease',
+                boxShadow: coreDesign === d.id ? '0 0 12px rgba(56, 189, 248, 0.2)' : 'none',
+              }}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── FUTURISTIC ORBITAL SCADA RADAR CORE WHEEL ─────────────── */}
-      <FuturisticOrbitalSCADA services={visibleServices} navigate={navigate} />
+      <FuturisticOrbitalSCADA services={visibleServices} navigate={navigate} coreDesign={coreDesign} />
 
       {/* ── 3-COLUMN SCADA CARDS GRID ───── */}
       <Row className="g-3">
@@ -1445,7 +1726,7 @@ const Dashboard = () => {
 
               {/* Interactive Sub-menu Navigation Pills Bar Under Image */}
               {svc.submenus && svc.submenus.length > 0 && (
-                <div className="px-3 py-2 border-bottom card-submenu-bar d-flex align-items-center flex-wrap" style={{ gap: '6px' }}>
+                <div className="px-3 py-2 border-bottom card-submenu-bar d-flex align-items-center flex-wrap" style={{ gap: '6px', backgroundColor: 'rgba(15, 23, 42, 0.4)' }}>
                   {svc.submenus.map((sub, sIdx) => (
                     <button
                       key={sIdx}
@@ -1453,45 +1734,87 @@ const Dashboard = () => {
                         e.stopPropagation();
                         navigate(sub.route);
                       }}
-                      className="submenu-chip-btn rounded-2 transition-all border d-inline-flex align-items-center cursor-pointer"
+                      className="submenu-chip-btn rounded-pill transition-all border d-inline-flex align-items-center cursor-pointer font-monospace"
                       style={{
-                        borderColor: `${svc.color}45`,
+                        backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                        borderColor: `${svc.color}50`,
+                        color: '#e2e8f0',
                         fontSize: '0.67rem',
                         fontWeight: 600,
-                        padding: '3px 8px',
+                        padding: '3px 10px',
                         lineHeight: 1.25,
-                        margin: '2px 2px'
+                        margin: '2px 2px',
+                        boxShadow: `0 0 6px ${svc.color}15`
                       }}
                     >
-                      <span className="dot-indicator flex-shrink-0" style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: svc.color, marginRight: '4px' }}></span>
+                      <span className="dot-indicator flex-shrink-0 status-dot-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: svc.color, marginRight: '6px' }}></span>
                       {sub.name}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* Card Bottom Strip: Left 3 Metric Pills with Colored Icons + Right Circular Radial Gauge */}
+              {/* Card Bottom Strip: Left 4 SCADA Telemetry Status Tiles in 2x2 Compact Grid + Right Circular Radial Gauge */}
               <Card.Body className="p-3 pt-2.5 d-flex align-items-center justify-content-between flex-grow-1">
-                {/* Left: 3 Metric Items Grid */}
-                <div className="flex-grow-1 row g-1.5 align-items-center me-1">
-                  {svc.metrics.map((m, idx) => (
-                    <div key={idx} className="col-4">
-                      <div
-                        className="p-2 rounded-2 metric-box-glass border d-flex flex-column align-items-center justify-content-center text-center"
-                        style={{ borderColor: `${svc.color}35` }}
-                      >
-                        <div className="d-flex align-items-center justify-content-center gap-1.5 text-truncate mb-1 w-100">
-                          <span className="flex-shrink-0 d-inline-flex align-items-center justify-content-center" style={{ color: svc.color }}>{m.icon}</span>
-                          <small className="metric-box-label text-truncate uppercase fw-bold mb-0">
-                            {m.label}
-                          </small>
+                {/* Left: 4 Compact SCADA Status Tiles Grid */}
+                <div className="flex-grow-1 row g-2 align-items-center me-2">
+                  {svc.metrics.map((m, idx) => {
+                    const tileStyle = getMetricTileStyle(m, svc.color, isLightMode);
+                    return (
+                      <div key={idx} className="col-6">
+                        <div
+                          className="px-2 py-1.5 rounded-2 transition-all d-flex align-items-center justify-content-between position-relative overflow-hidden metric-scada-tile"
+                          style={{
+                            background: tileStyle.bg,
+                            border: tileStyle.border,
+                            boxShadow: tileStyle.shadow,
+                            backdropFilter: 'blur(8px)',
+                            minHeight: '34px',
+                            cursor: 'pointer'
+                          }}
+                          title={`${m.label}: ${m.val} (Click to open ${svc.title})`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(svc.route);
+                          }}
+                        >
+                          {/* Left: Icon & Label */}
+                          <div className="d-flex align-items-center gap-1.5 text-truncate me-1" style={{ maxWidth: '62%' }}>
+                            <span className="flex-shrink-0 d-inline-flex align-items-center justify-content-center" style={{ color: tileStyle.iconColor }}>
+                              {m.icon}
+                            </span>
+                            <span className="metric-tile-label text-truncate uppercase fw-bold font-monospace" style={{ fontSize: '0.62rem', letterSpacing: '0.01em' }}>
+                              {m.label}
+                            </span>
+                          </div>
+
+                          {/* Right: Value & Pulsing Status LED */}
+                          <div className="d-flex align-items-center gap-1 flex-shrink-0 ms-auto">
+                            <span
+                              className="metric-tile-value fw-black font-monospace text-truncate"
+                              style={{
+                                color: tileStyle.text,
+                                fontSize: '0.78rem',
+                                letterSpacing: '0.01em',
+                                textShadow: isLightMode ? 'none' : `0 0 8px ${tileStyle.dotColor}40`
+                              }}
+                            >
+                              {m.val}
+                            </span>
+                            <span
+                              className="rounded-circle status-dot-pulse flex-shrink-0"
+                              style={{
+                                width: '5px',
+                                height: '5px',
+                                backgroundColor: tileStyle.dotColor,
+                                boxShadow: isLightMode ? `0 0 3px ${tileStyle.dotColor}` : `0 0 6px ${tileStyle.dotColor}`
+                              }}
+                            />
+                          </div>
                         </div>
-                        <span className="metric-box-val fw-black font-monospace text-truncate d-block w-100">
-                          {m.val}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Right: Circular Radial Gauge Dial */}
@@ -1510,6 +1833,91 @@ const Dashboard = () => {
       {/* ── HIGH-TECH INLINE STYLES (PREMIUM SCADA DESIGN) ── */}
       <style dangerouslySetInnerHTML={{
         __html: `
+        .metric-scada-tile {
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .metric-scada-tile:hover {
+          transform: translateY(-2.5px) scale(1.02) !important;
+          filter: brightness(1.2) !important;
+        }
+
+        /* Metric Tile Text Defaults (Dark Mode) */
+        .metric-tile-label {
+          color: #cbd5e1;
+        }
+        .metric-tile-value {
+          font-weight: 900 !important;
+        }
+
+        /* Metric Tile Light Mode Overrides */
+        body.light-mode .metric-tile-label {
+          color: #334155 !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .metric-tile-value {
+          text-shadow: none !important;
+          font-weight: 900 !important;
+        }
+        body.light-mode .metric-scada-tile {
+          backdrop-filter: none !important;
+        }
+        body.light-mode .metric-scada-tile:hover {
+          filter: brightness(0.97) !important;
+          transform: translateY(-2px) scale(1.01) !important;
+        }
+
+        /* Gauge Text Light Mode */
+        body.light-mode .gauge-value-text {
+          color: #0f172a !important;
+          font-weight: 900 !important;
+        }
+        body.light-mode .gauge-label-text {
+          color: #334155 !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .gauge-track-circle {
+          stroke: #cbd5e1 !important;
+        }
+
+        /* SCADA Core Text Dark Mode Defaults */
+        .scada-core-title {
+          color: #ffffff;
+          text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+        .scada-core-status {
+          color: #34d399;
+        }
+        .scada-core-load {
+          color: #94a3b8;
+        }
+
+        /* Core Design Selector Buttons */
+        .core-design-select {
+          transition: all 0.2s ease !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+        }
+        .core-design-select:hover {
+          background-color: rgba(56, 189, 248, 0.12) !important;
+          color: #38bdf8 !important;
+          border-color: rgba(56, 189, 248, 0.35) !important;
+        }
+        body.light-mode .core-design-select {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #475569 !important;
+        }
+        body.light-mode .core-design-select.active {
+          background-color: rgba(2, 132, 199, 0.12) !important;
+          border-color: #0284c7 !important;
+          color: #0284c7 !important;
+          box-shadow: 0 0 10px rgba(2, 132, 199, 0.15) !important;
+        }
+        body.light-mode .core-design-select:hover {
+          background-color: rgba(2, 132, 199, 0.08) !important;
+          color: #0284c7 !important;
+        }
+
         @keyframes dashboardSpin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
@@ -1657,19 +2065,51 @@ const Dashboard = () => {
         }
 
         body.light-mode .scada-core-reactor-hub {
-          background: radial-gradient(circle, #ffffff 0%, #e2e8f0 100%) !important;
-          border: 3px solid #0284c7 !important;
-          box-shadow: 0 0 50px rgba(2, 132, 199, 0.5), inset 0 0 25px rgba(2, 132, 199, 0.22) !important;
+          background: radial-gradient(circle at 40% 35%, #ffffff 0%, #e8ecf2 100%) !important;
+          border: 2px solid #0284c7 !important;
+          box-shadow: 0 0 40px rgba(2, 132, 199, 0.3), 0 8px 24px rgba(15, 23, 42, 0.1), inset 0 0 20px rgba(2, 132, 199, 0.08) !important;
         }
 
-        body.light-mode .scada-core-reactor-hub .text-white {
+        body.light-mode .scada-core-reactor-hub .text-white,
+        body.light-mode .scada-core-title {
           color: #0f172a !important;
-          text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+          text-shadow: none !important;
+        }
+
+        body.light-mode .scada-core-status {
+          color: #059669 !important;
+        }
+
+        body.light-mode .scada-core-load {
+          color: #475569 !important;
+          font-weight: 600 !important;
         }
 
         body.light-mode .scada-core-reactor-hub .text-slate-400 {
           color: #334155 !important;
           font-weight: 700 !important;
+        }
+
+        body.light-mode .scada-core-outer-wrap svg circle,
+        body.light-mode .scada-core-outer-wrap svg line {
+          opacity: 0.9 !important;
+        }
+
+        body.light-mode .scada-core-outer-wrap .rounded-circle[style*="dashed"] {
+          border-color: rgba(2, 132, 199, 0.35) !important;
+        }
+
+        body.light-mode .scada-core-outer-wrap .rounded-circle[style*="solid"] {
+          border-color: rgba(2, 132, 199, 0.25) !important;
+          box-shadow: 0 0 10px rgba(2, 132, 199, 0.1) !important;
+        }
+
+        /* Design Selector Dropdown in Light Mode */
+        body.light-mode .core-design-select {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
         }
 
         body.light-mode .scada-radar-ring-svg circle {
