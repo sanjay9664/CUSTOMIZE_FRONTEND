@@ -3,8 +3,19 @@ import { Row, Col, Card, Badge, Table, Button, Form } from 'react-bootstrap';
 import { Zap, Activity, ShieldCheck, HelpCircle, ChevronLeft, ChevronRight, Play, Pause, Settings, RefreshCw, Info, AlertTriangle, Cpu, Sliders, ShieldAlert, Coins, Clock, Gauge, Flame, Lock } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import PdfButton from '../../components/PdfButton';
+import PageContextBanner from '../../components/PageContextBanner';
+import { useSiteStore } from '../../context/SiteContext';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
 import { io } from 'socket.io-client';
+import {
+  PARAMETER_SYNONYMS,
+  getValueForField as getValueForFieldUtil,
+  parseLimit,
+  getThresholdStatus,
+  polarToCartesian,
+  describeArc,
+  formatNumber
+} from './utils/energyTelemetry';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -44,120 +55,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const PARAMETER_SYNONYMS = {
-  ebKwh: ['3,151', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
-  ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY'],
-  balance: ['3,162', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
-  totalKw: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
-  totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
-  vR: ['3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE'],
-  vY: ['3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE'],
-  vB: ['3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE'],
-  iR: ['3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT'],
-  iY: ['3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT'],
-  iB: ['3,168', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT'],
-  pf: ['3,174', 'POWER FACTOR', 'PF', 'SYSTEM PF', 'POWER_FACTOR'],
-  dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY'],
-  lowBalanceCut: ['LOW BALANCE', 'BALANCE CUT', 'LOW_BAL', 'LOW_BALANCE_CUT'],
-  overloadTrip: ['OVERLOAD TRIP', 'OL TRIP', 'OVERLOAD_TRIP', 'OVERLOAD TRIP STATUS'],
-  overloadLimitReached: ['OVERLOAD LIMIT', 'OL LIMIT', 'OVERLOAD_WARN', 'OVERLOAD LIMIT REACHED'],
-  connectedStatus: ['CONNECTED STATUS', 'RELAY STATUS', 'BREAKER STATUS', 'CONNECTED', 'CONNECTED_STATUS'],
-  forceOff: ['FORCE OFF', 'REMOTE TRIP', 'FORCE_OFF', 'FORCE_OFF_STATUS'],
-  meterSrno: ['3,150', 'METER SERIAL', 'SERIAL NUMBER', 'SR NO', 'METER SR', 'METER_NO', 'METERSRNO'],
-  noOfOverloadCheck: ['OVERLOAD CHECK', 'OL CHECK', 'OVERLOAD_COUNT', 'NOOFOVERLOADCHECK'],
-  ebDgStatus: ['EB DG STATUS', 'EB/DG STATUS', 'SOURCE STATUS', 'EB_DG', 'EBDGSTATUS'],
-  ebTariff: ['3,160', 'EB TARIFF', 'GRID TARIFF', 'EB_RATE', 'EBTARIFF'],
-  dgTariff: ['DG TARIFF', 'GEN RATE', 'DG_RATE', 'DGTARIFF'],
-  ebRLoadSet: ['EB R LOAD', 'EB_R_LOAD', 'EB_R_LIMIT', 'EBRLOADSET'],
-  ebYLoadSet: ['EB Y LOAD', 'EB_Y_LOAD', 'EB_Y_LIMIT', 'EBYLOADSET'],
-  ebBLoadSet: ['EB B LOAD', 'EB_B_LOAD', 'EB_B_LIMIT', 'EBBLOADSET'],
-  dgRLoadSet: ['DG R LOAD', 'DG_R_LOAD', 'DG_R_LIMIT', 'DGRLOADSET'],
-  dgYLoadSet: ['DG Y LOAD', 'DG_Y_LOAD', 'DG_Y_LIMIT', 'DGYLOADSET'],
-  dgBLoadSet: ['DG B LOAD', 'DG_B_LOAD', 'DG_B_LIMIT', 'DGBLOADSET'],
-  activePower: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
-  reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER'],
-  apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
-  cumulativekWh: ['3,151', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
-  freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ'],
-  vLLAvg: ['AVG VOLTAGE L-L', 'V_LL_AVG', 'AVG VLL', 'VLL AVG'],
-  vLNAvg: ['AVG VOLTAGE L-N', 'V_LN_AVG', 'AVG VLN', 'VLN AVG'],
-  iAvg: ['AVG CURRENT', 'I_AVG', 'IAVG'],
-  kvaAvg: ['POWER KVA (AVG)', 'KVA_AVG', 'KVA AVG'],
-  kvarAvg: ['POWER KVAR (AVG)', 'KVAR_AVG', 'KVAR AVG'],
-  pfAvg: ['AVG PF', 'PF_AVG', 'PFAVG'],
-  vRY: ['VOLTAGE R-Y', 'V_RY', 'VRY'],
-  vYB: ['VOLTAGE Y-B', 'V_YB', 'VYB'],
-  vBR: ['VOLTAGE B-R', 'V_BR', 'VBR'],
-  pfR: ['PF-R', 'PF_R', 'PFR'],
-  pfY: ['PF-Y', 'PF_Y', 'PFY'],
-  pfB: ['PF-B', 'PF_B', 'PFB'],
-  loadHrs: ['LOAD HRS', 'LOAD_HRS'],
-  loadMin: ['LOAD MIN', 'LOAD_MIN'],
-  noLoadHrs: ['NO LOAD HRS', 'NO_LOAD_HRS'],
-  noLoadMin: ['NO LOAD MIN', 'NO_LOAD_MIN'],
-  loadPct: ['LOAD %', 'LOAD_PCT', 'LOAD PCT']
-};
-
-const parseLimit = (val) => {
-  if (val === '' || val === undefined || val === null) return null;
-  const num = Number(val);
-  return isNaN(num) ? null : num;
-};
-
-const getThresholdStatus = (value, limitObj) => {
-  if (!limitObj) return 'default';
-
-  const low = parseLimit(limitObj.low);
-  const normalMin = parseLimit(limitObj.normalMin);
-  const normalMax = parseLimit(limitObj.normalMax);
-  const high = parseLimit(limitObj.high);
-
-  // If no limits are configured at all
-  if (low === null && normalMin === null && normalMax === null && high === null) {
-    return 'default';
-  }
-
-  // Check Alert conditions first
-  if (low !== null && value <= low) return 'alert';
-  if (high !== null && value >= high) return 'alert';
-
-  // Check Normal conditions
-  const hasNormalMin = normalMin !== null;
-  const hasNormalMax = normalMax !== null;
-
-  if (hasNormalMin && hasNormalMax) {
-    if (value >= normalMin && value <= normalMax) return 'normal';
-  } else if (hasNormalMin) {
-    if (value >= normalMin) return 'normal';
-  } else if (hasNormalMax) {
-    if (value <= normalMax) return 'normal';
-  }
-
-  // If it's not Alert and not Normal, but we have limits configured, it's Warning
-  return 'warning';
-};
-
-const polarToCartesian = (centerX, centerY, radius, angleInDegrees) => {
-  const angle = isNaN(angleInDegrees) ? 0 : angleInDegrees;
-  const angleInRadians = (angle * Math.PI) / 180.0;
-  return {
-    x: centerX + radius * Math.cos(angleInRadians),
-    y: centerY + radius * Math.sin(angleInRadians)
-  };
-};
-
-const describeArc = (x, y, radius, startAngle, endAngle) => {
-  if (isNaN(startAngle) || isNaN(endAngle)) {
-    return "M 0 0";
-  }
-  const start = polarToCartesian(x, y, radius, startAngle);
-  const end = polarToCartesian(x, y, radius, endAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-  return [
-    "M", start.x, start.y,
-    "A", radius, radius, 0, largeArcFlag, 1, end.x, end.y
-  ].join(" ");
-};
+// Telemetry synonyms, limit evaluation, and SVG arc geometry are imported from ./utils/energyTelemetry
 
 const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, defaultColor }) => {
   const numericValue = typeof value === 'number' ? value : Number(value) || 0;
@@ -400,6 +298,7 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
 
 const MainMeter = () => {
   const { getOverallStatus } = useDeviceStatus();
+  const { sites, selectedSite, setSelectedSite } = useSiteStore();
   // 1. Live Telemetry Data States
   const [data, setData] = useState({
     // CHANGE
@@ -551,6 +450,64 @@ const MainMeter = () => {
     return !(data.commStatus === 0 || data.commStatus === '0' || data.commStatus === null || data.commStatus === '');
   }, [mainMeterTemplate, getOverallStatus, lastTelemetryAt, data.commStatus, data.vR, data.iR, data.totalKw, data.activePower, data.meterSrno]);
 
+  // Site selector configuration for the context banner
+  const siteSelector = useMemo(() => {
+    const siteOptions = (sites && sites.length > 0)
+      ? sites.map(s => ({
+          value: String(s.id || s._id || s.siteId),
+          label: s.name || s.siteName || s.title || `Site ${s.id}`
+        }))
+      : [
+          { value: 'main-campus', label: 'Main Facility Site' },
+          { value: 'sub-station-1', label: 'Sub-Station 01' },
+          { value: 'data-center', label: 'Data Center Site' }
+        ];
+
+    const currentVal = selectedSite
+      ? String(selectedSite.id || selectedSite._id || selectedSite.siteId)
+      : siteOptions[0]?.value;
+
+    return {
+      value: currentVal,
+      options: siteOptions,
+      onChange: (newId) => {
+        const found = sites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
+        if (found && setSelectedSite) {
+          setSelectedSite(found);
+        }
+      },
+      placeholder: 'Select Site',
+      ariaLabel: 'Select Site'
+    };
+  }, [sites, selectedSite, setSelectedSite]);
+
+  // Device selector configuration for the context banner
+  const deviceSelector = useMemo(() => {
+    const meterOptions = (energyMeters && energyMeters.length > 0)
+      ? energyMeters.map(meter => ({
+          value: String(meter.id),
+          label: meter.name || meter.mapping?.energyMeteringTarget || `Meter ${meter.id}`
+        }))
+      : [
+          { value: 'main-incomer-1', label: 'Main Grid Incomer (EM-01)' },
+          { value: 'main-incomer-2', label: 'Solar DG Incomer (EM-02)' }
+        ];
+
+    const currentVal = (selectedMeterId && meterOptions.some(m => String(m.value) === String(selectedMeterId)))
+      ? String(selectedMeterId)
+      : meterOptions[0]?.value;
+
+    return {
+      value: currentVal,
+      options: meterOptions,
+      onChange: (newId) => {
+        setSelectedMeterId(newId);
+      },
+      placeholder: 'Select Meter Device',
+      ariaLabel: 'Select Meter Device'
+    };
+  }, [energyMeters, selectedMeterId]);
+
   // --- Reset live data, history & page index when the selected meter changes ---
   useEffect(() => {
     setData({
@@ -636,47 +593,7 @@ const MainMeter = () => {
 
       const mapping = currentTemplate.mapping;
 
-      const getValueForField = (config, fieldKey) => {
-        if (config && config.enabled !== false && config[fieldKey]) {
-          const fieldVal = config[fieldKey];
-          let cleanKey = fieldVal;
-          let targetModuleId = config.module;
-
-          if (typeof fieldVal === 'string' && fieldVal.includes(':')) {
-            const parts = fieldVal.split(':');
-            targetModuleId = parts[0];
-            cleanKey = parts.pop();
-          }
-
-          const stat = stats.find(s => String(s.moduleId) === String(targetModuleId) || String(s.meta?.module_id) === String(targetModuleId));
-          if (stat && stat.meta) {
-            // 1. Try matching cleanKey exactly
-            if (stat.meta[cleanKey] !== undefined) {
-              return Number(stat.meta[cleanKey]);
-            }
-            // 2. Try matching fieldVal exactly
-            if (stat.meta[fieldVal] !== undefined) {
-              return Number(stat.meta[fieldVal]);
-            }
-            // 3. Fallback: Search using the robust PARAMETER_SYNONYMS map
-            const synonyms = PARAMETER_SYNONYMS[fieldKey] || [];
-            for (const sym of synonyms) {
-              if (stat.meta[sym] !== undefined) {
-                return Number(stat.meta[sym]);
-              }
-              // Try normalized matching within stat.meta keys
-              const matchedKey = Object.keys(stat.meta).find(k =>
-                k.toUpperCase() === sym.toUpperCase() ||
-                k.toUpperCase().replace(/[^A-Z0-9]/g, '') === sym.toUpperCase().replace(/[^A-Z0-9]/g, '')
-              );
-              if (matchedKey && stat.meta[matchedKey] !== undefined) {
-                return Number(stat.meta[matchedKey]);
-              }
-            }
-          }
-        }
-        return null;
-      };
+      const getValueForField = (config, fieldKey) => getValueForFieldUtil(config, fieldKey, stats);
 
       setData(prev => {
         const newData = { ...prev };
@@ -968,42 +885,30 @@ const MainMeter = () => {
 
   return (
     <div className="fade-in">
-      {/* HEADER SECTION */}
-      <div className="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <h2 className="mb-1 text-white fw-bold d-flex align-items-center gap-2 flex-wrap">
-            <Zap className="text-warning text-shrink-0" size={26} /> {mainMeterTemplate ? mainMeterTemplate.name : 'Main Grid Incomer Meter'}
-          </h2>
-          <p className="text-secondary fs-7 mb-0">High-fidelity smart grid visualizer, phase parameters, and historical grid diagnostics.</p>
-        </div>
-        <div className="d-flex flex-wrap align-items-center gap-2 gap-md-3">
-          {energyMeters.length > 0 && (
-            <Form.Select
-              size="sm"
-              className="bg-dark text-info border-info border-opacity-25 shadow-none"
-              value={selectedMeterId}
-              onChange={(e) => setSelectedMeterId(e.target.value)}
-              style={{ width: 'auto', minWidth: '220px' }}
-            >
-              {energyMeters.map(meter => (
-                <option key={meter.id} value={meter.id} className="bg-dark text-white">
-                  {meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'}
-                </option>
-              ))}
-            </Form.Select>
-          )}
-          {(() => {
-            const isOnline = isMeterOnline;
-            return (
-              <Badge bg={!isOnline ? "secondary" : "success"} className={`px-3 py-2 bg-opacity-10 text-${!isOnline ? 'secondary' : 'success'} border border-${!isOnline ? 'secondary' : 'success'} border-opacity-20 d-flex align-items-center gap-2 rounded-pill`}>
-                {isOnline && <span className="pulse-dot-green"></span>}
-                {!isOnline ? 'Offline' : 'Online'}
-              </Badge>
-            );
-          })()}
-          <PdfButton />
-        </div>
-      </div>
+      <PageContextBanner
+        title={mainMeterTemplate ? mainMeterTemplate.name : 'Main Grid Incomer Meter'}
+        icon={<Zap className="text-warning" size={22} />}
+        status={isMeterOnline ? 'Online' : 'Offline'}
+        siteSelector={siteSelector}
+        deviceSelector={deviceSelector}
+        metadata={[
+          {
+            icon: <Clock size={15} />,
+            label: 'Realtime - last 1 day'
+          }
+        ]}
+        actions={[
+          <PdfButton
+            key="pdf-export"
+            label=""
+            title="Download Custom PDF Report"
+            variant="custom"
+            className="context-banner-action-btn p-1 border-0"
+          />
+        ]}
+        enableFullscreen={true}
+        variant="teal"
+      />
 
       <Row className="g-4 mb-4">
         {/* LEFT COLUMN: INTERACTIVE DIGITAL TWIN OF THE SUN STAR METER */}

@@ -3,8 +3,11 @@
  * Synchronized with backend DeviceCategory enum and docs/Device-template.MD
  */
 
+
+
 export const DEVICE_CATEGORIES = [
-  'ENERGY_METER',
+  'MAIN_ENERGY_METER',
+  'SUB_ENERGY_METER',
   'UG_TANK',
   'AG_TANK',
   'PUMP',
@@ -29,8 +32,12 @@ export const DEVICE_CATEGORIES = [
   'OTHER'
 ];
 
+
+
 export const CATEGORY_LABELS = {
-  ENERGY_METER: 'Energy Meter',
+  MAIN_ENERGY_METER: 'Main Energy Meter',
+  SUB_ENERGY_METER: 'Sub-Energy Meter',
+  ENERGY_METER: 'Sub-Energy Meter', // fallback for any legacy device records
   UG_TANK: 'Underground (UG) Tank',
   AG_TANK: 'Above Ground (AG) Tank',
   PUMP: 'Pump',
@@ -282,9 +289,9 @@ export const DEVICE_TEMPLATES = {
     ]
   },
 
-  ENERGY_METERING: {
-    id: 'ENERGY_METERING',
-    label: 'Energy Metering',
+  SUB_ENERGY_METER: {
+    id: 'SUB_ENERGY_METER',
+    label: 'Sub-Energy Meter',
     parameters: [
       { name: 'Meter Status', required: true },
       { name: 'Voltage', required: true },
@@ -319,6 +326,55 @@ export const DEVICE_TEMPLATES = {
       { name: 'Energy Cost', required: false },
       { name: 'Energy Trend', required: false },
       { name: 'Carbon Emission', required: false }
+    ]
+  },
+
+  MAIN_ENERGY_METER: {
+    id: 'MAIN_ENERGY_METER',
+    label: 'Main Energy Meter',
+    parameters: [
+      { name: 'EP', required: false },
+      { name: 'Eq', required: false },
+      { name: 'PF', required: false },
+      { name: 'S', required: false },
+      { name: 'R-Phase Voltage', required: false },
+      { name: 'Y-Phase Voltage', required: false },
+      { name: 'B-Phase Voltage', required: false },
+      { name: 'R-Current', required: false },
+      { name: 'Y-Current', required: false },
+      { name: 'B-Current', required: false },
+      { name: 'EB KVAH', required: false },
+      { name: 'EB KWH', required: false },
+      { name: 'Balance', required: false },
+      { name: 'Total KW', required: false },
+      { name: 'Power Factor', required: false },
+      { name: 'Total KVA', required: false },
+      { name: 'DG KWH', required: false },
+      { name: 'Reactive Power', required: false },
+      { name: 'Frequency', required: false },
+      { name: 'Avg Voltage L-L', required: false },
+      { name: 'Avg Voltage L-N', required: false },
+      { name: 'Avg Current', required: false },
+      { name: 'Power KVA (AVG)', required: false },
+      { name: 'Power KVAR (AVG)', required: false },
+      { name: 'Avg PF', required: false },
+      { name: 'Voltage R-Y', required: false },
+      { name: 'Voltage Y-B', required: false },
+      { name: 'Voltage B-R', required: false },
+      { name: 'PF-R', required: false },
+      { name: 'PF-Y', required: false },
+      { name: 'PF-B', required: false },
+      { name: 'Load Hrs', required: false },
+      { name: 'Load Min', required: false },
+      { name: 'No Load Hrs', required: false },
+      { name: 'No Load Min', required: false },
+      { name: 'Load %', required: false },
+      { name: 'Meter Target', required: false },
+      { name: 'EB Tariff', required: false },
+      { name: 'DG Tariff', required: false },
+      { name: 'R-Phase Load', required: false },
+      { name: 'Y-Phase Load', required: false },
+      { name: 'B-Phase Load', required: false }
     ]
   },
 
@@ -614,6 +670,10 @@ export const DEVICE_TEMPLATES = {
   }
 };
 
+DEVICE_TEMPLATES.MAIN_METER = DEVICE_TEMPLATES.MAIN_ENERGY_METER;
+DEVICE_TEMPLATES.SUB_METER = DEVICE_TEMPLATES.SUB_ENERGY_METER;
+DEVICE_TEMPLATES.ENERGY_METERING = DEVICE_TEMPLATES.SUB_ENERGY_METER;
+
 /**
  * Maps any backend DeviceCategory to its corresponding template.
  * Also handles category strings with underscores or spaces, or custom entries.
@@ -624,9 +684,19 @@ export const getTemplateForCategory = (category) => {
   const key = String(category).trim().toUpperCase();
 
   switch (key) {
+    case 'MAIN_ENERGY_METER':
+    case 'MAIN_METER':
+    case 'MAIN_ENERGY_METERING':
+    case 'ENERGY_METER_MAIN':
+      return DEVICE_TEMPLATES.MAIN_ENERGY_METER;
+
+    case 'SUB_ENERGY_METER':
+    case 'SUB_METER':
+    case 'SUB_ENERGY_METERING':
+    case 'ENERGY_METER_SUB':
     case 'ENERGY_METER':
     case 'ENERGY_METERING':
-      return DEVICE_TEMPLATES.ENERGY_METERING;
+      return DEVICE_TEMPLATES.SUB_ENERGY_METER;
 
     case 'UG_TANK':
     case 'UGTANK':

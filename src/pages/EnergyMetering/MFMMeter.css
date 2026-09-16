@@ -1,4 +1,4 @@
-        }
+        
         .text-orange {
           color: #f97316 !important;
         }
@@ -338,4 +338,39 @@
           border: 1px solid #e2e8f0 !important;
           color: #0f172a !important;
           box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        }
+
+        /* TABULAR NUMBERS & TELEMETRY STABILITY */
+        .font-monospace,
+        .param-value,
+        .mfm-lcd-value,
+        .telemetry-card-glow span {
+          font-variant-numeric: tabular-nums !important;
+        }
+
+        /* SCADA SKELETON LOADER */
+        .scada-skeleton {
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 75%);
+          background-size: 200% 100%;
+          animation: scada-shimmer 1.8s infinite;
+          border-radius: 8px;
+        }
+
+        @keyframes scada-shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+
+        /* RESPONSIVE SCADA CARD UTILITIES */
+        @media (max-width: 768px) {
+          .energy-overview-page,
+          .energy-reports-page {
+            padding: 12px 8px !important;
+          }
+          .scada-stat-card {
+            margin-bottom: 8px;
+          }
+          .mfm-polycarbonate-case {
+            max-width: 100% !important;
+          }
         }

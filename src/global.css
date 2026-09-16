@@ -311,8 +311,8 @@ body.light-mode .dropdown-item:hover {
 
 .scada-main-content {
   flex-grow: 1;
-  padding: 1.5rem;
-  margin-top: 60px;
+  padding: 0 1.5rem 1.5rem;
+  margin-top: 0;
   transition: margin-left 0.3s ease;
 }
 
@@ -506,8 +506,8 @@ body.light-mode .dropdown-item:hover {
 
 .scada-main-content {
   flex-grow: 1;
-  padding: 1.5rem;
-  margin-top: 60px;
+  padding: 0 1.5rem 1.5rem;
+  margin-top: 0;
   transition: margin-left 0.3s ease;
 }
 
@@ -700,8 +700,8 @@ body.light-mode .dropdown-item:hover {
 
 .scada-main-content {
   flex-grow: 1;
-  padding: 1.5rem;
-  margin-top: 60px;
+  padding: 0 1.5rem 1.5rem;
+  margin-top: 0;
   transition: margin-left 0.3s ease;
 }
 

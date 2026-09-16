@@ -4,6 +4,10 @@ import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, X
 import { Maximize2, X, Zap, Activity, Settings2 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
+import {
+  PARAMETER_SYNONYMS,
+  getValueForField as getValueForFieldUtil
+} from './utils/energyTelemetry';
 
 const VOLTAGE_RANGES = [
   {
@@ -74,30 +78,7 @@ const TIME_FILTERS = [
   { label: 'Yearly', value: 'year' },
 ];
 
-// Synonyms mapping exactly as in MainMeter
-const PARAMETER_SYNONYMS = {
-  ebKvah: ['3,152', '3,153', 'EB KVAH', 'EB_KVAH', 'EB APPARENT ENERGY', 'EB_KVAH_ENERGY'],
-  ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
-  balance: ['3,162', '3,168', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
-  totalKw: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
-  totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
-  vR: ['3,168', '3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE'],
-  vY: ['3,169', '3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE'],
-  vB: ['3,170', '3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE'],
-  vRY: ['VOLTAGE RY', 'V_RY', 'LINE VOLTS (R-Y)'],
-  vYB: ['VOLTAGE YB', 'V_YB', 'LINE VOLTS (Y-B)'],
-  vBR: ['VOLTAGE BR', 'V_BR', 'LINE VOLTS (B-R)'],
-  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT'],
-  iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT'],
-  iB: ['3,173', '3,168', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT'],
-  pf: ['3,174', 'POWER FACTOR', 'PF', 'SYSTEM PF', 'POWER_FACTOR'],
-  dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY'],
-  activePower: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER'],
-  reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER'],
-  apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER'],
-  cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH'],
-  freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ']
-};
+// Parameter synonyms are imported from ./utils/energyTelemetry
 
 const CustomTooltip = ({ active, payload, label, unit }) => {
   if (active && payload && payload.length) {
@@ -599,7 +580,14 @@ const EnergyGraphs = () => {
         setTemplates(mapped);
         localStorage.setItem('scada_templates', JSON.stringify(mapped));
 
-        const meters = mapped.filter(t => t.module === 'Main Meter' || t.category === 'Energy Metering');
+        const isEnergyMeter = (t) =>
+          t.module === 'Main Meter' ||
+          t.module === 'Sub Meters' ||
+          t.category === 'MAIN_ENERGY_METER' ||
+          t.category === 'SUB_ENERGY_METER' ||
+          t.category === 'Energy Metering';
+
+        const meters = mapped.filter(isEnergyMeter);
         if (meters.length > 0) {
           const stored = localStorage.getItem('selected_main_meter_id');
           if (stored && meters.some(m => String(m.id) === String(stored))) {
@@ -619,7 +607,13 @@ const EnergyGraphs = () => {
   }, [selectedMeterId]);
 
   const energyMeters = useMemo(() => {
-    return templates.filter(t => t.module === 'Main Meter' || t.category === 'Energy Metering');
+    return templates.filter(t =>
+      t.module === 'Main Meter' ||
+      t.module === 'Sub Meters' ||
+      t.category === 'MAIN_ENERGY_METER' ||
+      t.category === 'SUB_ENERGY_METER' ||
+      t.category === 'Energy Metering'
+    );
   }, [templates]);
 
   const mainMeterTemplate = useMemo(() => {
@@ -670,35 +664,7 @@ const EnergyGraphs = () => {
 
       const mapping = currentTemplate.mapping;
 
-      const getValueForField = (config, fieldKey) => {
-        if (config && config.enabled !== false && config[fieldKey]) {
-          const fieldVal = config[fieldKey];
-          let cleanKey = fieldVal;
-          let targetModuleId = config.module;
-
-          if (typeof fieldVal === 'string' && fieldVal.includes(':')) {
-            const parts = fieldVal.split(':');
-            targetModuleId = parts[0];
-            cleanKey = parts.pop();
-          }
-
-          const stat = stats.find(s => String(s.moduleId) === String(targetModuleId) || String(s.meta?.module_id) === String(targetModuleId));
-          if (stat && stat.meta) {
-            if (stat.meta[cleanKey] !== undefined) return Number(stat.meta[cleanKey]);
-            if (stat.meta[fieldVal] !== undefined) return Number(stat.meta[fieldVal]);
-            const synonyms = PARAMETER_SYNONYMS[fieldKey] || [];
-            for (const sym of synonyms) {
-              if (stat.meta[sym] !== undefined) return Number(stat.meta[sym]);
-              const matchedKey = Object.keys(stat.meta).find(k =>
-                k.toUpperCase() === sym.toUpperCase() ||
-                k.toUpperCase().replace(/[^A-Z0-9]/g, '') === sym.toUpperCase().replace(/[^A-Z0-9]/g, '')
-              );
-              if (matchedKey && stat.meta[matchedKey] !== undefined) return Number(stat.meta[matchedKey]);
-            }
-          }
-        }
-        return null;
-      };
+      const getValueForField = (config, fieldKey) => getValueForFieldUtil(config, fieldKey, stats);
 
       let vRN = getValueForField(mapping.emChangeConfig, 'vR') ?? getValueForField(mapping.emVoltageConfig, 'vR');
       let vYN = getValueForField(mapping.emChangeConfig, 'vY') ?? getValueForField(mapping.emVoltageConfig, 'vY');
@@ -834,34 +800,23 @@ const EnergyGraphs = () => {
 
   return (
     <div className="fade-in px-2 px-md-4 py-3">
-      <div className="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 p-4 rounded-4" style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.7))', border: '1px solid rgba(56, 189, 248, 0.15)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-        <div>
-          <h2 className="mb-1 text-white fw-bold d-flex align-items-center gap-3 flex-wrap">
-            <div className="p-2 rounded-3" style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56,189,248,0.3)' }}>
-              <Zap className="text-info text-shrink-0" size={28} />
-            </div>
-            Energy Advanced Analytics
-          </h2>
-          <p className="text-secondary fs-7 mb-0 mt-2">Continuous live streaming graphs tracking all parameters flawlessly.</p>
+      {energyMeters.length > 0 && (
+        <div className="d-flex justify-content-end align-items-center mb-3">
+          <Form.Select
+            size="sm"
+            className="bg-dark text-white border-secondary border-opacity-50 shadow-none fw-semibold rounded-3 py-1.5"
+            value={selectedMeterId}
+            onChange={(e) => setSelectedMeterId(e.target.value)}
+            style={{ width: 'auto', minWidth: '220px', fontSize: '0.85rem' }}
+          >
+            {energyMeters.map(meter => (
+              <option key={meter.id} value={meter.id}>
+                {meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'}
+              </option>
+            ))}
+          </Form.Select>
         </div>
-        <div className="d-flex flex-wrap align-items-center gap-2 gap-md-3">
-          {energyMeters.length > 0 && (
-            <Form.Select
-              size="lg"
-              className="bg-dark text-white border-secondary shadow-none fw-bold"
-              value={selectedMeterId}
-              onChange={(e) => setSelectedMeterId(e.target.value)}
-              style={{ width: 'auto', minWidth: '250px', fontSize: '0.95rem' }}
-            >
-              {energyMeters.map(meter => (
-                <option key={meter.id} value={meter.id}>
-                  {meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'}
-                </option>
-              ))}
-            </Form.Select>
-          )}
-        </div>
-      </div>
+      )}
 
       <div className="energy-graphs-container mb-4" style={{ minHeight: '60vh' }}>
         {isSwitching ? (
