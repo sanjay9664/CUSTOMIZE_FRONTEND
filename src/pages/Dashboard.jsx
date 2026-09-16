@@ -312,7 +312,7 @@ const ScadaCoreHub = ({ designId, cx, cy, onClick }) => {
 };
 
 // ── FUTURISTIC ORBITAL SCADA RADAR WHEEL COMPONENT (GPU HARDWARE ACCELERATED) ──
-const FuturisticOrbitalSCADA = ({ services = [], navigate, coreDesign = 'cyber' }) => {
+const FuturisticOrbitalSCADA = ({ services = [], navigate, coreDesign = 'cyber', onDesignChange }) => {
   const [isRotating, setIsRotating] = useState(true);
   const [speedMode, setSpeedMode] = useState('normal'); // 'slow', 'normal', 'fast'
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -391,6 +391,24 @@ const FuturisticOrbitalSCADA = ({ services = [], navigate, coreDesign = 'cyber' 
               </span>
             </div>
           )}
+        </div>
+
+        <div className="core-design-tabs orbital-design-tabs" role="tablist" aria-label="Dashboard design modes">
+          {CORE_DESIGNS.map(d => (
+            <button
+              key={d.id}
+              onClick={() => onDesignChange?.(d.id)}
+              className={`btn btn-sm px-2 py-1 font-monospace fw-bold d-flex align-items-center gap-1 core-design-select ${coreDesign === d.id ? 'active' : ''}`}
+              style={{
+                fontSize: '0.60rem',
+                backgroundColor: coreDesign === d.id ? 'rgba(56, 189, 248, 0.2)' : 'rgba(15, 23, 42, 0.6)',
+                color: coreDesign === d.id ? '#38bdf8' : '#94a3b8',
+                border: coreDesign === d.id ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              {d.label}
+            </button>
+          ))}
         </div>
 
         <div className="d-flex align-items-center gap-2">
@@ -963,6 +981,96 @@ const FuturisticOrbitalSCADA = ({ services = [], navigate, coreDesign = 'cyber' 
   );
 };
 
+// The four selector modes intentionally use distinct composition systems, not just skins.
+const DesignModeShowcase = ({ designId, services = [], navigate }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const active = services[activeIndex] || services[0];
+  const count = services.length;
+
+  useEffect(() => {
+    if (paused || count < 2) return undefined;
+    const timer = setInterval(() => setActiveIndex(index => (index + 1) % count), 2800);
+    return () => clearInterval(timer);
+  }, [paused, count]);
+
+  if (!active) return null;
+  const move = direction => setActiveIndex(index => (index + direction + count) % count);
+  const status = active.metrics?.[0]?.val || active.gaugeVal || 'ONLINE';
+
+  const copy = (
+    <div className="mode-copy" style={{ '--mode-accent': active.color }}>
+      <div className="mode-kicker"><span /> LIVE SYSTEM / {String(active.key || 'CORE').toUpperCase()}</div>
+      <h2>{active.title}</h2>
+      <p>Continuous telemetry, intelligent control and live asset health in one operational view.</p>
+      <div className="mode-metrics">
+        {(active.metrics || []).slice(0, 3).map((metric, index) => (
+          <div className="mode-metric" key={index}>
+            <span>{metric.label}</span><strong>{metric.val}</strong>
+          </div>
+        ))}
+      </div>
+      <button className="mode-open-button" onClick={() => navigate(active.route)}>
+        Open system <ChevronRight size={16} />
+      </button>
+    </div>
+  );
+
+  const image = (
+    <div className="mode-image" style={{ '--mode-accent': active.color }}>
+      <img src={active.image} alt={active.title} />
+      <div className="mode-image-shade" />
+      <div className="mode-image-label"><span className="status-dot-pulse" style={{ background: active.color }} /> {status}</div>
+    </div>
+  );
+
+  const controls = (
+    <div className="mode-controls">
+      <button aria-label="Previous system" title="Previous system" onClick={() => move(-1)}><ChevronLeft size={18} /></button>
+      <button aria-label={paused ? 'Resume slideshow' : 'Pause slideshow'} title={paused ? 'Resume slideshow' : 'Pause slideshow'} onClick={() => setPaused(value => !value)}>{paused ? <Power size={15} /> : <RefreshCw size={15} />}</button>
+      <button aria-label="Next system" title="Next system" onClick={() => move(1)}><ChevronRight size={18} /></button>
+    </div>
+  );
+
+  if (designId === 'cyber') return (
+    <section className="design-showcase cyber-showcase" style={{ '--mode-accent': active.color }}>
+      <div className="mode-progress"><i style={{ width: `${((activeIndex + 1) / count) * 100}%` }} /></div>
+      <div className="cyber-layout">{image}{copy}</div>
+      {controls}
+      <div className="mode-dots">{services.slice(0, 7).map((svc, index) => <button key={svc.key} aria-label={`View ${svc.title}`} onClick={() => setActiveIndex(index)} className={index === activeIndex ? 'active' : ''} style={{ '--dot-color': svc.color }} />)}</div>
+    </section>
+  );
+
+  if (designId === 'neon') return (
+    <section className="design-showcase neon-showcase" style={{ '--mode-accent': active.color }}>
+      <div className="neon-grid"><div className="neon-copy-wrap">{copy}<div className="neon-line"><span>NETWORK HEALTH</span><b>99.98%</b></div></div>{image}</div>
+      {controls}
+      <div className="neon-rail">{services.slice(0, 6).map((svc, index) => <button onClick={() => setActiveIndex(index)} className={index === activeIndex ? 'active' : ''} key={svc.key}><span style={{ background: svc.color }} />{svc.title}</button>)}</div>
+    </section>
+  );
+
+  if (designId === 'quantum') return (
+    <section className="design-showcase quantum-showcase" style={{ '--mode-accent': active.color }}>
+      <div className="quantum-copy">{copy}</div>
+      <div className="hex-field" aria-label="System carousel">
+        {services.slice(0, 9).map((svc, index) => {
+          const offset = index - activeIndex;
+          return <button key={svc.key} onClick={() => setActiveIndex(index)} className={`hex-node ${svc.key === 'energy' ? 'energy-node' : ''} ${index === activeIndex ? 'active' : ''}`} style={{ '--hex-image': `url(${svc.image})`, '--hex-color': svc.color, '--hex-order': offset, '--hex-abs': Math.abs(offset) }} title={svc.title}><span>{svc.icon}</span><em>{svc.title}</em></button>;
+        })}
+      </div>
+      {controls}
+    </section>
+  );
+
+  return (
+    <section className="design-showcase holo-showcase" style={{ '--mode-accent': active.color }}>
+      <div className="holo-stage"><div className="holo-plane" /><div className="holo-object">{image}<div className="holo-orbit"><i /><i /><i /></div></div><div className="holo-side-panel">{copy}</div></div>
+      <div className="holo-service-strip">{services.slice(0, 8).map((svc, index) => <button key={svc.key} onClick={() => setActiveIndex(index)} className={index === activeIndex ? 'active' : ''}><img src={svc.image} alt="" /><span>{svc.title}</span></button>)}</div>
+      {controls}
+    </section>
+  );
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
@@ -1126,6 +1234,7 @@ const Dashboard = () => {
       color: '#eab308',
       status: 'Online',
       isSmartMeter: true,
+      image: '/images/bms_energy_metering_ui_1789023060248.png',
       route: '/energy-metering/main',
       gaugeVal: '1,245',
       gaugeLabel: 'kWh Today',
@@ -1501,16 +1610,19 @@ const Dashboard = () => {
 
 
       {/* ── CORE DESIGN SELECTOR ─────────────────────────────────── */}
-      <div className="d-flex align-items-center justify-content-end mb-2 px-1 gap-2">
-        <span className="font-monospace fw-bold text-secondary" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
-          <Sliders size={12} className="me-1" />CORE DESIGN:
-        </span>
-        <div className="d-flex gap-1.5">
+      {coreDesign !== 'cyber' && <div className="core-design-toolbar mb-3">
+        <div className="core-design-heading">
+          <span className="font-monospace fw-bold text-secondary" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+            <Sliders size={12} className="me-1" />CORE DESIGN
+          </span>
+          <small>Choose an operational view</small>
+        </div>
+        <div className="core-design-tabs" role="tablist" aria-label="Dashboard design modes">
           {CORE_DESIGNS.map(d => (
             <button
               key={d.id}
               onClick={() => handleDesignChange(d.id)}
-              className={`btn btn-sm rounded-pill px-2.5 py-1 font-monospace fw-bold d-flex align-items-center gap-1 core-design-select ${coreDesign === d.id ? 'active' : ''}`}
+              className={`btn btn-sm px-2.5 py-1 font-monospace fw-bold d-flex align-items-center gap-1 core-design-select ${coreDesign === d.id ? 'active' : ''}`}
               style={{
                 fontSize: '0.64rem',
                 backgroundColor: coreDesign === d.id ? 'rgba(56, 189, 248, 0.2)' : 'rgba(15, 23, 42, 0.6)',
@@ -1524,10 +1636,14 @@ const Dashboard = () => {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* ── FUTURISTIC ORBITAL SCADA RADAR CORE WHEEL ─────────────── */}
-      <FuturisticOrbitalSCADA services={visibleServices} navigate={navigate} coreDesign={coreDesign} />
+      {coreDesign === 'cyber' ? (
+        <FuturisticOrbitalSCADA services={visibleServices} navigate={navigate} coreDesign={coreDesign} onDesignChange={handleDesignChange} />
+      ) : (
+        <DesignModeShowcase designId={coreDesign} services={visibleServices} navigate={navigate} />
+      )}
 
       {/* ── 3-COLUMN SCADA CARDS GRID ───── */}
       <Row className="g-3">
@@ -2744,6 +2860,33 @@ const Dashboard = () => {
             height: 360px !important;
           }
         }
+
+        .core-design-toolbar { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; padding:10px 2px; }
+        .core-design-heading { display:flex; align-items:baseline; gap:10px; }
+        .core-design-heading small { color:#64748b; font-size:.72rem; }
+        .core-design-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+        .core-design-select { border-radius:6px !important; }
+        .orbital-design-tabs { position:absolute; left:50%; transform:translateX(-50%); justify-content:center; z-index:12; white-space:nowrap; }
+        .design-showcase { position:relative; overflow:hidden; min-height:410px; margin-bottom:24px; border:1px solid rgba(148,163,184,.18); background:#06101f; color:#e5f3ff; isolation:isolate; box-shadow:0 18px 54px rgba(2,6,23,.25); }
+        .design-showcase::before { content:''; position:absolute; inset:0; pointer-events:none; z-index:-1; background:linear-gradient(115deg,rgba(3,9,21,.96),rgba(3,11,24,.55)); }
+        .mode-progress { position:absolute; top:0; left:0; right:0; height:2px; background:rgba(255,255,255,.1); z-index:5; }.mode-progress i { display:block; height:100%; background:var(--mode-accent); box-shadow:0 0 14px var(--mode-accent); transition:width .55s ease; }
+        .cyber-layout,.neon-grid { display:grid; grid-template-columns:1.15fr .85fr; min-height:410px; }.neon-grid { grid-template-columns:.9fr 1.1fr; }
+        .mode-image { position:relative; overflow:hidden; min-height:410px; }.mode-image img { width:100%; height:100%; object-fit:cover; display:block; transform:scale(1.03); transition:transform .8s ease; }.design-showcase:hover .mode-image img { transform:scale(1.09); }.mode-image-shade { position:absolute; inset:0; background:linear-gradient(90deg,rgba(6,16,31,.08),rgba(6,16,31,.78)); }.mode-image-label { position:absolute; top:24px; left:24px; display:flex; align-items:center; gap:7px; padding:7px 10px; color:#fff; font-size:.67rem; letter-spacing:.08em; background:rgba(2,8,18,.65); border:1px solid rgba(255,255,255,.2); backdrop-filter:blur(10px); }.mode-image-label .status-dot-pulse { width:7px; height:7px; }
+        .mode-copy { align-self:center; padding:50px clamp(28px,5vw,72px); }.mode-kicker { color:var(--mode-accent); letter-spacing:.12em; font-size:.67rem; font-weight:700; }.mode-kicker span { display:inline-block; height:1px; width:26px; margin:0 8px 3px 0; background:var(--mode-accent); }.mode-copy h2 { margin:14px 0 12px; color:#f8fbff; font-size:clamp(1.8rem,3.4vw,3.4rem); letter-spacing:0; font-weight:700; }.mode-copy p { max-width:420px; margin:0 0 24px; color:#9fb2c9; line-height:1.65; }.mode-metrics { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:28px; }.mode-metric { min-width:104px; padding:9px 12px; background:rgba(15,28,48,.68); border-left:2px solid var(--mode-accent); }.mode-metric span { display:block; color:#8292a8; font-size:.61rem; text-transform:uppercase; }.mode-metric strong { display:block; margin-top:3px; font-size:.84rem; color:#f4f9ff; }.mode-open-button { display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--mode-accent); background:color-mix(in srgb,var(--mode-accent) 15%,transparent); color:#fff; font-weight:700; font-size:.78rem; }.mode-open-button:hover { background:var(--mode-accent); color:#06101f; }
+        .mode-controls { position:absolute; right:20px; bottom:20px; display:flex; gap:6px; z-index:6; }.mode-controls button { width:34px; height:34px; display:grid; place-items:center; color:#e7f7ff; border:1px solid rgba(255,255,255,.25); background:rgba(3,10,22,.7); backdrop-filter:blur(10px); }.mode-controls button:hover { border-color:var(--mode-accent); color:var(--mode-accent); }.mode-dots { position:absolute; left:24px; bottom:22px; display:flex; gap:8px; }.mode-dots button { width:18px; height:3px; border:0; background:rgba(255,255,255,.25); }.mode-dots button.active { background:var(--dot-color); box-shadow:0 0 8px var(--dot-color); }
+        .neon-showcase { background:#070817; }.neon-showcase::before { background:radial-gradient(circle at 20% 15%,color-mix(in srgb,var(--mode-accent) 18%,transparent),transparent 34%),linear-gradient(110deg,#080a1c,#100820); }.neon-copy-wrap { display:flex; flex-direction:column; justify-content:center; }.neon-copy-wrap .mode-copy { padding-bottom:24px; }.neon-grid .mode-image-shade { background:linear-gradient(270deg,rgba(8,10,28,.1),rgba(8,10,28,.9)); }.neon-line { display:flex; justify-content:space-between; margin:0 clamp(28px,5vw,72px) 64px; padding-top:12px; border-top:1px solid rgba(255,255,255,.15); color:#94a3b8; font-size:.62rem; letter-spacing:.08em; }.neon-line b { color:var(--mode-accent); }.neon-rail { position:absolute; left:0; bottom:0; display:flex; width:calc(100% - 120px); overflow:auto; border-top:1px solid rgba(255,255,255,.1); }.neon-rail button { padding:12px 16px; border:0; border-right:1px solid rgba(255,255,255,.08); background:transparent; color:#7f8ca3; font-size:.68rem; white-space:nowrap; }.neon-rail button span { display:inline-block; width:6px; height:6px; margin-right:7px; }.neon-rail button.active { color:#fff; background:rgba(255,255,255,.06); }
+        .neon-showcase { min-height:390px; height:390px; }.neon-showcase .neon-grid { min-height:350px; height:350px; }.neon-showcase .mode-image { min-height:350px; height:350px; background:#030814; }.neon-showcase .mode-image img { object-fit:contain; object-position:center; transform:none; }.neon-showcase:hover .mode-image img { transform:scale(1.02); }.neon-showcase .mode-copy { padding-top:28px; padding-bottom:12px; }.neon-showcase .mode-copy h2 { margin:8px 0; font-size:clamp(1.65rem,2.7vw,2.55rem); }.neon-showcase .mode-copy p { margin-bottom:14px; line-height:1.45; }.neon-showcase .mode-metrics { margin-bottom:15px; }.neon-showcase .mode-metric { padding:7px 10px; }.neon-showcase .neon-line { margin-bottom:5px; padding-top:8px; }.neon-showcase .neon-rail { position:relative; width:100%; height:40px; }
+        .quantum-showcase { display:grid; grid-template-columns:.74fr 1.26fr; min-height:460px; background:#07121c; }.quantum-showcase::before { background:radial-gradient(circle at 75% 50%,color-mix(in srgb,var(--mode-accent) 18%,transparent),transparent 32%),linear-gradient(120deg,#07121c,#111022); }.quantum-copy { display:flex; align-items:center; }.hex-field { position:relative; min-height:460px; perspective:900px; }.hex-node { position:absolute; top:50%; left:50%; width:136px; height:154px; padding:0; clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%); border:0; background:var(--hex-image) center/cover; transform:translate(-50%,-50%) translateX(calc(var(--hex-order) * 102px)) translateY(calc((var(--hex-order) * var(--hex-order)) * 9px - 84px)) rotateY(calc(var(--hex-order) * -12deg)) scale(calc(1 - (var(--hex-abs) * .08))); opacity:calc(1 - (var(--hex-abs) * .15)); filter:saturate(.7) brightness(.65); transition:all .65s cubic-bezier(.2,.8,.2,1); }.hex-node::after { content:''; position:absolute; inset:4px; clip-path:inherit; border:1px solid var(--hex-color); }.hex-node span { position:absolute; top:13px; left:14px; color:var(--hex-color); z-index:1; }.hex-node em { position:absolute; bottom:18px; left:8px; right:8px; z-index:1; color:#fff; font-size:.6rem; font-style:normal; text-shadow:0 2px 5px #000; }.hex-node.active { z-index:4; width:205px; height:232px; filter:saturate(1.1) brightness(1.05); opacity:1; box-shadow:0 0 42px color-mix(in srgb,var(--hex-color) 44%,transparent); }.hex-node.active::before { content:''; position:absolute; inset:0; background:linear-gradient(transparent,rgba(2,8,18,.72)); }.hex-node.energy-node { background-size:cover; }.hex-node.energy-node.active { width:222px; height:250px; box-shadow:0 0 0 2px #eab308,0 0 46px rgba(234,179,8,.5); }
+        .holo-showcase { min-height:455px; background:#07121b; }.holo-showcase::before { background:linear-gradient(120deg,#06111b,#121432); }.holo-stage { min-height:405px; display:grid; grid-template-columns:1.25fr .75fr; position:relative; perspective:800px; }.holo-plane { position:absolute; inset:12% 34% 12% 3%; background-image:linear-gradient(rgba(80,210,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(80,210,255,.09) 1px,transparent 1px); background-size:28px 28px; transform:rotateX(58deg) rotateZ(-25deg); transform-origin:center; }.holo-object { display:flex; align-items:center; justify-content:center; position:relative; z-index:2; }.holo-object .mode-image { width:min(430px,72%); min-height:265px; border:1px solid var(--mode-accent); background:#020b17; box-shadow:0 0 38px color-mix(in srgb,var(--mode-accent) 35%,transparent); }.holo-object .mode-image img { object-fit:contain; transform:none; }.holo-object:hover .mode-image img { transform:scale(1.02); }.holo-orbit { position:absolute; width:340px; height:340px; animation:holoSpin 16s linear infinite; }.holo-orbit i { position:absolute; inset:0; border:1px solid var(--mode-accent); border-radius:50%; opacity:.45; }.holo-orbit i:nth-child(2){transform:rotateX(65deg)}.holo-orbit i:nth-child(3){transform:rotateY(65deg)}.holo-side-panel { display:flex; align-items:center; background:rgba(3,10,24,.45); border-left:1px solid rgba(255,255,255,.12); }.holo-side-panel .mode-copy { padding:34px; }.holo-service-strip { position:absolute; left:0; right:0; bottom:0; display:flex; gap:8px; padding:10px 15px; background:rgba(3,9,20,.82); overflow:auto; }.holo-service-strip button { display:flex; align-items:center; gap:7px; min-width:118px; padding:5px; color:#9baec3; background:transparent; border:1px solid transparent; text-align:left; font-size:.62rem; }.holo-service-strip img { width:26px; height:26px; object-fit:cover; clip-path:polygon(25% 0,100% 0,75% 100%,0 100%); }.holo-service-strip button.active { color:#fff; border-color:var(--mode-accent); background:rgba(255,255,255,.06); }
+        body.light-mode .design-showcase, [data-theme="light"] .design-showcase { background:#f8fbff; color:#122033; border-color:#d8e4f0; box-shadow:0 14px 34px rgba(40,68,100,.12); }
+        body.light-mode .design-showcase::before, [data-theme="light"] .design-showcase::before { background:linear-gradient(118deg,#f9fcff 0%,#eef5fb 52%,#f7fbff 100%); }
+        body.light-mode .mode-copy h2, [data-theme="light"] .mode-copy h2 { color:#102a43 !important; }.light-mode .mode-copy p, [data-theme="light"] .mode-copy p { color:#486178; }.light-mode .mode-kicker, [data-theme="light"] .mode-kicker { color:color-mix(in srgb,var(--mode-accent) 80%,#0f172a); }.light-mode .mode-metric, [data-theme="light"] .mode-metric { background:#eef5fb; box-shadow:inset 0 0 0 1px #dce8f3; }.light-mode .mode-metric span, [data-theme="light"] .mode-metric span { color:#58718a; }.light-mode .mode-metric strong, [data-theme="light"] .mode-metric strong { color:#102a43; }.light-mode .mode-open-button, [data-theme="light"] .mode-open-button { color:#102a43; background:#fff; }.light-mode .mode-open-button:hover, [data-theme="light"] .mode-open-button:hover { color:#fff; }.light-mode .mode-image, [data-theme="light"] .mode-image { background:#e8f1f8; box-shadow:inset 0 0 0 1px rgba(148,163,184,.3); }.light-mode .mode-image-shade, [data-theme="light"] .mode-image-shade { background:linear-gradient(90deg,rgba(255,255,255,.02),rgba(238,245,251,.18)); }.light-mode .mode-image-label, [data-theme="light"] .mode-image-label { color:#102a43; background:rgba(255,255,255,.88); border-color:#cbd9e7; }.light-mode .mode-controls button, [data-theme="light"] .mode-controls button { color:#29445f; background:rgba(255,255,255,.9); border-color:#cbd9e7; }.light-mode .mode-controls button:hover, [data-theme="light"] .mode-controls button:hover { color:var(--mode-accent); border-color:var(--mode-accent); }
+        body.light-mode .neon-showcase::before, [data-theme="light"] .neon-showcase::before { background:radial-gradient(circle at 18% 10%,color-mix(in srgb,var(--mode-accent) 12%,transparent),transparent 34%),linear-gradient(110deg,#fbfdff,#eef6fc); }.light-mode .neon-grid .mode-image-shade, [data-theme="light"] .neon-grid .mode-image-shade { background:linear-gradient(270deg,rgba(255,255,255,.03),rgba(238,246,252,.12)); }.light-mode .neon-line, [data-theme="light"] .neon-line { color:#58718a; border-color:#d3e0ec; }.light-mode .neon-rail, [data-theme="light"] .neon-rail { background:#f3f8fc; border-color:#d7e3ef; }.light-mode .neon-rail button, [data-theme="light"] .neon-rail button { color:#486178; border-color:#dce7f1; }.light-mode .neon-rail button.active, [data-theme="light"] .neon-rail button.active { color:#102a43; background:#fff; }
+        body.light-mode .quantum-showcase::before, [data-theme="light"] .quantum-showcase::before { background:radial-gradient(circle at 76% 50%,color-mix(in srgb,var(--mode-accent) 14%,transparent),transparent 38%),linear-gradient(120deg,#f7fbff,#eaf3fa); }.light-mode .hex-node, [data-theme="light"] .hex-node { filter:saturate(.92) brightness(.9); opacity:calc(1 - (var(--hex-abs) * .09)); }.light-mode .hex-node.active, [data-theme="light"] .hex-node.active { filter:saturate(1.08) brightness(1); box-shadow:0 0 0 2px var(--hex-color),0 16px 30px color-mix(in srgb,var(--hex-color) 24%,transparent); }.light-mode .hex-node em, [data-theme="light"] .hex-node em { text-shadow:0 1px 3px #102a43; }
+        body.light-mode .holo-showcase::before, [data-theme="light"] .holo-showcase::before { background:linear-gradient(120deg,#f8fcff,#edf5fb); }.light-mode .holo-plane, [data-theme="light"] .holo-plane { background-image:linear-gradient(rgba(32,109,159,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(32,109,159,.13) 1px,transparent 1px); }.light-mode .holo-side-panel, [data-theme="light"] .holo-side-panel { background:rgba(255,255,255,.55); border-color:#d6e3ee; }.light-mode .holo-service-strip, [data-theme="light"] .holo-service-strip { background:rgba(245,250,254,.94); border-top:1px solid #d6e3ee; }.light-mode .holo-service-strip button, [data-theme="light"] .holo-service-strip button { color:#486178; }.light-mode .holo-service-strip button.active, [data-theme="light"] .holo-service-strip button.active { color:#102a43; background:#fff; }.light-mode .holo-object .mode-image, [data-theme="light"] .holo-object .mode-image { box-shadow:0 12px 28px color-mix(in srgb,var(--mode-accent) 22%,transparent); }
+        @keyframes holoSpin { to { transform:rotateZ(360deg); } }
+        @media (max-width: 860px) { .cyber-layout,.neon-grid,.quantum-showcase,.holo-stage { grid-template-columns:1fr; }.cyber-layout .mode-image,.neon-grid .mode-image { min-height:220px; }.neon-showcase,.neon-showcase .neon-grid,.neon-showcase .mode-image { height:auto; min-height:220px; }.cyber-layout .mode-copy { order:2; }.neon-grid .mode-image { order:1; }.neon-grid .neon-copy-wrap { order:2; }.mode-copy { padding:30px; }.quantum-showcase { min-height:610px; }.hex-field { min-height:300px; }.holo-showcase { min-height:690px; }.holo-stage { min-height:640px; }.holo-plane { inset:8% 10% 42% 8%; }.holo-side-panel { border-left:0; border-top:1px solid rgba(255,255,255,.12); }.holo-object { min-height:340px; }.holo-service-strip { bottom:0; }.neon-line { margin:0 30px 18px; }.neon-rail { width:100%; }.orbital-design-tabs { position:static; transform:none; order:3; width:100%; padding-top:8px; overflow-x:auto; flex-wrap:nowrap; justify-content:flex-start; } }
+        @media (max-width: 500px) { .reference-scada-dashboard { padding:12px !important; }.core-design-toolbar { align-items:flex-start; }.core-design-tabs { width:100%; }.core-design-select { flex:1 1 calc(50% - 6px); justify-content:center; }.mode-copy h2 { font-size:1.8rem; }.mode-metric { flex:1 1 90px; min-width:0; }.mode-controls { right:12px; bottom:12px; }.mode-dots { left:14px; bottom:26px; }.hex-node { width:82px; height:94px; transform:translate(-50%,-50%) translateX(calc(var(--hex-order) * 57px)) translateY(calc((var(--hex-order) * var(--hex-order)) * 6px - 50px)); }.hex-node.active { width:126px; height:144px; }.hex-node em { font-size:.48rem; bottom:14px; }.holo-object .mode-image { width:78%; } }
       `}} />
     </div>
   );
