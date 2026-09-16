@@ -66,8 +66,13 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const { selectedSite, activeSites } = useSiteStore();
   const [dgDevices, setDgDevices] = useState([]);
 
-  // Fetch GENERATOR devices when site changes
+  // Fetch GENERATOR devices only when user is on DG Set route or expanding DG Set menu
+  const isDgSectionOpen = Boolean(openSections['DG Set']);
+  const isDgRoute = location.pathname.startsWith('/dg-set');
+
   useEffect(() => {
+    if (!isDgRoute && !isDgSectionOpen) return;
+
     const fetchDgDevices = async () => {
       // Determine current siteId from selectedSite or first activeSite or localStorage
       let siteId = selectedSite?.id;
@@ -97,7 +102,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       }
     };
     fetchDgDevices();
-  }, [selectedSite?.id, activeSites]);
+  }, [selectedSite?.id, activeSites, isDgRoute, isDgSectionOpen]);
 
   const isExpanded = !collapsed || hoverExpanded;
 
