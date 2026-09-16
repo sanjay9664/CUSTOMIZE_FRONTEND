@@ -36,23 +36,23 @@ body.dark-mode,
 body.light-mode,
 [data-theme="light"] {
   color-scheme: light;
-  --scada-bg: #eef2f6;                 /* Eye-comfort soft slate tone (eliminates harsh white glare) */
-  --scada-sidebar: #f8fafc;            /* Soft off-white sidebar */
-  --scada-card: #ffffff;               /* Clean card container */
-  --scada-card-hover: #f1f5f9;         /* Soft hover highlight */
-  --scada-header: #f8fafc;             /* Soft off-white header */
-  --scada-border: #cbd5e1;             /* Soft subtle border */
-  --scada-border-strong: #94a3b8;      /* Crisp border */
-  --scada-text: #0f172a;               /* Slate 900 - Ultra-crisp, high-contrast dark text */
-  --scada-text-muted: #334155;         /* Slate 700 - Sharp, highly readable secondary text (no faint grey) */
-  --scada-text-subtle: #1e293b;        /* Slate 800 - Crisp subtle text */
+  --scada-bg: #f2f0ea;                 /* Eye-comfort warm ivory slate tone matching user color reference */
+  --scada-sidebar: #f8f7f2;            /* Warm off-white sidebar */
+  --scada-card: #fcfbfa;               /* Warm eye-comfort card surface (eliminates white glare) */
+  --scada-card-hover: #eae7df;         /* Soft warm hover highlight */
+  --scada-header: #f8f7f2;             /* Soft warm header */
+  --scada-border: #dcd8cd;             /* Soft subtle warm border */
+  --scada-border-strong: #a8a396;      /* Crisp warm border */
+  --scada-text: #1c1917;               /* Stone 900 - Ultra-crisp, high-contrast dark text */
+  --scada-text-muted: #44403c;         /* Stone 700 - Sharp, highly readable secondary text */
+  --scada-text-subtle: #292524;        /* Stone 800 - Crisp subtle text */
   --scada-accent: #0284c7;
   --scada-accent-bg: rgba(2, 132, 199, 0.1);
   --scada-input-bg: #ffffff;
-  --scada-input-border: #cbd5e1;
-  --scada-table-head-bg: #e2e8f0;       /* Muted table header */
-  --scada-shadow: 0 3px 10px -2px rgba(15, 23, 42, 0.08), 0 1px 4px -1px rgba(15, 23, 42, 0.04);
-  --scada-glass-bg: rgba(248, 250, 252, 0.94);
+  --scada-input-border: #dcd8cd;
+  --scada-table-head-bg: #edebe4;       /* Eye-comfort table header */
+  --scada-shadow: 0 3px 10px -2px rgba(28, 25, 23, 0.08), 0 1px 4px -1px rgba(28, 25, 23, 0.04);
+  --scada-glass-bg: rgba(248, 247, 242, 0.96);
 
   --status-running: #15803d;
   --status-running-bg: #dcfce7;
@@ -61,7 +61,7 @@ body.light-mode,
   --status-warning: #b45309;
   --status-warning-bg: #fef3c7;
   --status-stopped: #475569;
-  --status-stopped-bg: #e2e8f0;
+  --status-stopped-bg: #edebe4;
 }
 
 *, *::before, *::after,
@@ -164,9 +164,9 @@ p, label, th, td, legend, .form-label, .card-title {
 }
 
 body.light-mode .scada-header {
-  background: #ffffff !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04) !important;
+  background: #f8f7f2 !important;
+  border-bottom: 1px solid #dcd8cd !important;
+  box-shadow: 0 4px 20px -2px rgba(28, 25, 23, 0.04) !important;
 }
 
 @media (max-width: 992px) {
@@ -968,11 +968,11 @@ body.light-mode .scada-glass-card,
 body.light-mode .card,
 body.light-mode .module-card-box,
 body.light-mode .global-settings-card {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #0f172a !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06) !important;
+  background: #fcfbfa !important;
+  background-color: #fcfbfa !important;
+  border: 1px solid #dcd8cd !important;
+  color: #1c1917 !important;
+  box-shadow: 0 1px 4px 0 rgba(28, 25, 23, 0.05) !important;
 }
 
 body.light-mode .bg-dark,
@@ -2796,12 +2796,12 @@ body.light-mode .touch-action-btn {
    GLOBAL LIGHT MODE UNIFIED DESIGN TOKENS & OVERRIDES
    ========================================================================== */
 body.light-mode {
-  --scada-bg: #F1F5F9 !important;
-  --scada-card: #FFFFFF !important;
-  --scada-accent-bg: #F8FAFC !important;
-  --scada-text: #0F172A !important;
-  --scada-text-muted: #64748B !important;
-  --scada-border: #E2E8F0 !important;
+  --scada-bg: #f2f0ea !important;
+  --scada-card: #fcfbfa !important;
+  --scada-accent-bg: #f8f7f2 !important;
+  --scada-text: #1c1917 !important;
+  --scada-text-muted: #44403c !important;
+  --scada-border: #dcd8cd !important;
 }
 
 body.light-mode .scada-glass-card,
@@ -2813,10 +2813,10 @@ body.light-mode .scada-card-surface,
 body.light-mode .bg-dark-card,
 body.light-mode .table-responsive,
 body.light-mode .card {
-  background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  color: #0f172a !important;
-  box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px !important;
+  background-color: #fcfbfa !important;
+  border-color: #dcd8cd !important;
+  color: #1c1917 !important;
+  box-shadow: rgba(28, 25, 23, 0.05) 0px 8px 30px !important;
   border-radius: 16px !important;
 }
 
@@ -2837,17 +2837,17 @@ body.light-mode .scada-glass-card .text-white,
 body.light-mode .scada-card .text-white,
 body.light-mode .reference-scada-card .text-white,
 body.light-mode .quick-stat-card .text-white {
-  color: #0f172a !important;
+  color: #1c1917 !important;
 }
 
 body.light-mode .hud-metric-horizontal {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #0f172a !important;
+  background: #f4f2eb !important;
+  border: 1px solid #dcd8cd !important;
+  color: #1c1917 !important;
 }
 
 body.light-mode .hud-metric-horizontal .hud-label {
-  color: #64748b !important;
+  color: #44403c !important;
 }
 
 body.light-mode .scada-tabs-container {
