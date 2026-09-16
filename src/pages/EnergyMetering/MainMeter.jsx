@@ -4,6 +4,7 @@ import { Zap, Activity, ShieldCheck, HelpCircle, ChevronLeft, ChevronRight, Play
 import StatusBadge from '../../components/StatusBadge';
 import PdfButton from '../../components/PdfButton';
 import PageContextBanner from '../../components/PageContextBanner';
+import { useSiteStore } from '../../context/SiteContext';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
 import { io } from 'socket.io-client';
 import {
@@ -297,6 +298,7 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
 
 const MainMeter = () => {
   const { getOverallStatus } = useDeviceStatus();
+  const { sites, selectedSite, setSelectedSite } = useSiteStore();
   // 1. Live Telemetry Data States
   const [data, setData] = useState({
     // CHANGE
@@ -447,6 +449,64 @@ const MainMeter = () => {
     // Fallback to legacy commStatus
     return !(data.commStatus === 0 || data.commStatus === '0' || data.commStatus === null || data.commStatus === '');
   }, [mainMeterTemplate, getOverallStatus, lastTelemetryAt, data.commStatus, data.vR, data.iR, data.totalKw, data.activePower, data.meterSrno]);
+
+  // Site selector configuration for the context banner
+  const siteSelector = useMemo(() => {
+    const siteOptions = (sites && sites.length > 0)
+      ? sites.map(s => ({
+          value: String(s.id || s._id || s.siteId),
+          label: s.name || s.siteName || s.title || `Site ${s.id}`
+        }))
+      : [
+          { value: 'main-campus', label: 'Main Facility Site' },
+          { value: 'sub-station-1', label: 'Sub-Station 01' },
+          { value: 'data-center', label: 'Data Center Site' }
+        ];
+
+    const currentVal = selectedSite
+      ? String(selectedSite.id || selectedSite._id || selectedSite.siteId)
+      : siteOptions[0]?.value;
+
+    return {
+      value: currentVal,
+      options: siteOptions,
+      onChange: (newId) => {
+        const found = sites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
+        if (found && setSelectedSite) {
+          setSelectedSite(found);
+        }
+      },
+      placeholder: 'Select Site',
+      ariaLabel: 'Select Site'
+    };
+  }, [sites, selectedSite, setSelectedSite]);
+
+  // Device selector configuration for the context banner
+  const deviceSelector = useMemo(() => {
+    const meterOptions = (energyMeters && energyMeters.length > 0)
+      ? energyMeters.map(meter => ({
+          value: String(meter.id),
+          label: meter.name || meter.mapping?.energyMeteringTarget || `Meter ${meter.id}`
+        }))
+      : [
+          { value: 'main-incomer-1', label: 'Main Grid Incomer (EM-01)' },
+          { value: 'main-incomer-2', label: 'Solar DG Incomer (EM-02)' }
+        ];
+
+    const currentVal = (selectedMeterId && meterOptions.some(m => String(m.value) === String(selectedMeterId)))
+      ? String(selectedMeterId)
+      : meterOptions[0]?.value;
+
+    return {
+      value: currentVal,
+      options: meterOptions,
+      onChange: (newId) => {
+        setSelectedMeterId(newId);
+      },
+      placeholder: 'Select Meter Device',
+      ariaLabel: 'Select Meter Device'
+    };
+  }, [energyMeters, selectedMeterId]);
 
   // --- Reset live data, history & page index when the selected meter changes ---
   useEffect(() => {
@@ -827,19 +887,13 @@ const MainMeter = () => {
     <div className="fade-in">
       <PageContextBanner
         title={mainMeterTemplate ? mainMeterTemplate.name : 'Main Grid Incomer Meter'}
-        icon={<Zap className="text-warning" size={18} />}
+        icon={<Zap className="text-warning" size={22} />}
         status={isMeterOnline ? 'Online' : 'Offline'}
-        selector={energyMeters.length > 1 ? {
-          value: selectedMeterId,
-          onChange: (newId) => setSelectedMeterId(newId),
-          options: energyMeters.map(meter => ({
-            value: meter.id,
-            label: meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'
-          }))
-        } : null}
+        siteSelector={siteSelector}
+        deviceSelector={deviceSelector}
         metadata={[
           {
-            icon: <Clock size={14} />,
+            icon: <Clock size={15} />,
             label: 'Realtime - last 1 day'
           }
         ]}

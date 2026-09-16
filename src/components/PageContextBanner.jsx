@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronDown, Maximize2, Minimize2, Building2, Cpu } from 'lucide-react';
 import './PageContextBanner.css';
 
 /**
@@ -8,15 +8,18 @@ import './PageContextBanner.css';
  * Sits directly between the main header and page content.
  * 
  * @param {Object} props
- * @param {string|React.ReactNode} [props.title] - Main title / entity name (e.g. "NodeMCU V2", "Main Grid Incomer Meter")
+ * @param {string|React.ReactNode} [props.title] - Main title / entity name (e.g. "Main Grid Incomer Meter")
  * @param {string|React.ReactNode} [props.subtitle] - Secondary text or badge
- * @param {React.ReactNode} [props.icon] - Leading icon
+ * @param {React.ReactNode} [props.icon] - Leading icon (e.g. <Zap />)
  * @param {string|React.ReactNode|Object} [props.status] - Status string ('online', 'offline', etc.) or custom element
- * @param {Object|React.ReactNode} [props.selector] - Dropdown configuration { value, options: [{value, label}], onChange, placeholder }
+ * @param {Object|React.ReactNode} [props.siteSelector] - Site dropdown { value, options: [{value, label}], onChange, placeholder, icon }
+ * @param {Object|React.ReactNode} [props.deviceSelector] - Device dropdown { value, options: [{value, label}], onChange, placeholder, icon }
+ * @param {Object|React.ReactNode} [props.selector] - Generic dropdown configuration
+ * @param {Array} [props.selectors] - Array of custom selectors
  * @param {Array|React.ReactNode} [props.metadata] - Array of metadata pills [{ icon, label, value }] or custom node
  * @param {Array|React.ReactNode} [props.actions] - Array of action buttons [{ id, icon, label, title, onClick, disabled }] or custom node
  * @param {boolean} [props.enableFullscreen=false] - If true, displays a fullscreen toggle button
- * @param {React.RefObject} [props.fullscreenTargetRef] - Optional element ref to fullscreen (defaults to documentElement)
+ * @param {React.RefObject} [props.fullscreenTargetRef] - Optional element ref to fullscreen
  * @param {'teal'|'scada'|'dark'} [props.variant='teal'] - Visual theme variant
  * @param {React.ReactNode} [props.children] - Additional custom content
  * @param {string} [props.className=''] - Extra CSS classes
@@ -27,7 +30,10 @@ const PageContextBanner = ({
   subtitle,
   icon,
   status,
+  siteSelector,
+  deviceSelector,
   selector,
+  selectors = [],
   metadata = [],
   actions = [],
   enableFullscreen = false,
@@ -115,38 +121,104 @@ const PageContextBanner = ({
     );
   };
 
-  // Render dropdown / selector
-  const renderSelector = () => {
-    if (!selector) return null;
-    if (React.isValidElement(selector)) return selector;
+  // Render single dropdown item with icon & chevron
+  const renderSingleSelector = (sel, defaultIcon, defaultLabel, defaultKey) => {
+    if (!sel) return null;
+    if (React.isValidElement(sel)) return <React.Fragment key={defaultKey}>{sel}</React.Fragment>;
 
-    if (selector.options && Array.isArray(selector.options) && selector.options.length > 0) {
-      return (
-        <div className="context-banner-selector-wrapper">
-          <select
-            value={selector.value}
-            onChange={(e) => selector.onChange?.(e.target.value)}
-            disabled={selector.disabled}
-            className="context-banner-select"
-            aria-label={selector.ariaLabel || 'Select Item'}
-          >
-            {selector.placeholder && (
-              <option value="" disabled>
-                {selector.placeholder}
-              </option>
-            )}
-            {selector.options.map((opt) => (
-              <option key={opt.value} value={opt.value} className="context-banner-option">
-                {opt.label || opt.name || opt.value}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="context-banner-select-arrow" aria-hidden="true" />
-        </div>
+    const {
+      value,
+      options = [],
+      onChange,
+      placeholder,
+      disabled = false,
+      icon: selectorIcon = defaultIcon,
+      label: selectorLabel = defaultLabel,
+      ariaLabel,
+      className: selClass = '',
+      id
+    } = sel;
+
+    if (!Array.isArray(options) || options.length === 0) return null;
+
+    return (
+      <div key={id || defaultKey} className={`context-banner-selector-wrapper ${selClass}`}>
+        {selectorIcon && (
+          <span className="context-banner-selector-icon" aria-hidden="true">
+            {selectorIcon}
+          </span>
+        )}
+        <select
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          disabled={disabled}
+          className={`context-banner-select ${selectorIcon ? 'has-icon' : ''}`}
+          aria-label={ariaLabel || selectorLabel || 'Select option'}
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value} className="context-banner-option">
+              {opt.label || opt.name || opt.value}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={14} className="context-banner-select-arrow" aria-hidden="true" />
+      </div>
+    );
+  };
+
+  // Render all configured selectors (site, device, generic, or array)
+  const renderSelectors = () => {
+    const rendered = [];
+
+    if (siteSelector) {
+      rendered.push(
+        renderSingleSelector(
+          siteSelector,
+          <Building2 size={16} className="text-emerald-300" />,
+          'Site',
+          'site-selector'
+        )
       );
     }
 
-    return null;
+    if (deviceSelector) {
+      rendered.push(
+        renderSingleSelector(
+          deviceSelector,
+          <Cpu size={16} className="text-emerald-300" />,
+          'Device',
+          'device-selector'
+        )
+      );
+    }
+
+    if (!deviceSelector && selector) {
+      rendered.push(
+        renderSingleSelector(
+          selector,
+          <Cpu size={15} className="text-emerald-300" />,
+          'Selector',
+          'main-selector'
+        )
+      );
+    }
+
+    if (Array.isArray(selectors) && selectors.length > 0) {
+      selectors.forEach((s, idx) => {
+        rendered.push(
+          renderSingleSelector(s, null, `Selector ${idx + 1}`, `selector-${idx}`)
+        );
+      });
+    }
+
+    if (rendered.length === 0) return null;
+
+    return <div className="context-banner-selectors-group">{rendered}</div>;
   };
 
   // Render metadata pills (e.g. Realtime - last 1 day)
@@ -232,7 +304,7 @@ const PageContextBanner = ({
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
         )}
       </div>
@@ -241,7 +313,10 @@ const PageContextBanner = ({
 
   const hasLeft = Boolean(title || subtitle || icon || status);
   const hasRight = Boolean(
+    siteSelector ||
+    deviceSelector ||
     selector ||
+    (Array.isArray(selectors) && selectors.length > 0) ||
     (Array.isArray(metadata) ? metadata.length > 0 : Boolean(metadata)) ||
     (Array.isArray(actions) ? actions.length > 0 : Boolean(actions)) ||
     enableFullscreen ||
@@ -258,7 +333,7 @@ const PageContextBanner = ({
         <div className="context-banner-left">
           {icon && <span className="context-banner-icon">{icon}</span>}
           <div className="context-banner-title-group">
-            {title && (typeof title === 'string' ? <h4 className="context-banner-title">{title}</h4> : title)}
+            {title && (typeof title === 'string' ? <h3 className="context-banner-title">{title}</h3> : title)}
             {subtitle && (typeof subtitle === 'string' ? <span className="context-banner-subtitle">{subtitle}</span> : subtitle)}
           </div>
           {renderStatus()}
@@ -267,7 +342,7 @@ const PageContextBanner = ({
 
       {hasRight && (
         <div className="context-banner-right">
-          {renderSelector()}
+          {renderSelectors()}
           {renderMetadata()}
           {renderActions()}
           {children}

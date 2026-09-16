@@ -5,12 +5,12 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  min-height: 44px;
-  padding: 6px 16px;
+  gap: 16px;
+  min-height: 60px;
+  padding: 10px 22px;
   margin-top: 0;
-  margin-bottom: 16px;
-  border-radius: 8px;
+  margin-bottom: 18px;
+  border-radius: 12px;
   transition: all 0.2s ease-in-out;
   box-sizing: border-box;
   font-family: var(--scada-font, 'Inter', sans-serif);
@@ -22,7 +22,7 @@
 .context-banner-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
@@ -36,22 +36,22 @@
 .context-banner-title-group {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 12px;
 }
 
 .context-banner-title {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
   white-space: nowrap;
 }
 
 .context-banner-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  opacity: 0.8;
+  opacity: 0.85;
   white-space: nowrap;
 }
 
@@ -59,76 +59,93 @@
 .context-banner-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
+  gap: 8px;
+  padding: 5px 14px;
   border-radius: 9999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1;
 }
 
 .context-banner-status-dot {
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .status-online {
-  background: rgba(34, 197, 94, 0.16);
+  background: rgba(34, 197, 94, 0.18);
   color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  border: 1px solid rgba(34, 197, 94, 0.4);
 }
 .status-online .context-banner-status-dot {
   background: #22c55e;
-  box-shadow: 0 0 8px #22c55e;
+  box-shadow: 0 0 10px #22c55e;
 }
 
 .status-offline {
-  background: rgba(148, 163, 184, 0.14);
+  background: rgba(148, 163, 184, 0.16);
   color: #cbd5e1;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.3);
 }
 .status-offline .context-banner-status-dot {
   background: #94a3b8;
 }
 
 .status-warning {
-  background: rgba(245, 158, 11, 0.16);
+  background: rgba(245, 158, 11, 0.18);
   color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.4);
 }
 .status-warning .context-banner-status-dot {
   background: #f59e0b;
-  box-shadow: 0 0 8px #f59e0b;
+  box-shadow: 0 0 10px #f59e0b;
 }
 
 .status-fault {
-  background: rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.18);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 .status-fault .context-banner-status-dot {
   background: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
+  box-shadow: 0 0 10px #ef4444;
 }
 
-/* ── Right Side (Selector, Metadata, Actions) ── */
+/* ── Right Side (Selectors, Metadata, Actions) ── */
 .context-banner-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
   margin-left: auto;
 }
 
-/* ── Dropdown / Selector ── */
+/* ── Selectors Group (Site & Device) ── */
+.context-banner-selectors-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .context-banner-selector-wrapper {
   position: relative;
   display: inline-flex;
   align-items: center;
+}
+
+.context-banner-selector-icon {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
 }
 
 .context-banner-select {
@@ -136,25 +153,31 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
-  padding: 5px 28px 5px 12px;
-  font-size: 0.82rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 34px 8px 14px;
+  font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
   outline: none;
   transition: all 0.15s ease-in-out;
-  min-width: 140px;
+  min-width: 165px;
+  height: 40px;
+  line-height: 1.2;
+}
+
+.context-banner-select.has-icon {
+  padding-left: 36px;
 }
 
 .context-banner-select:focus {
   border-color: rgba(56, 189, 248, 0.6);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
 }
 
 .context-banner-select-arrow {
   position: absolute;
-  right: 8px;
+  right: 12px;
   pointer-events: none;
   opacity: 0.85;
 }
@@ -168,29 +191,30 @@
 .context-banner-meta-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .context-banner-meta-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  line-height: 1.2;
+  gap: 9px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.25;
+  height: 40px;
 }
 
 .context-banner-meta-icon {
   display: inline-flex;
   align-items: center;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .context-banner-meta-label {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .context-banner-meta-val {
@@ -201,23 +225,25 @@
 .context-banner-actions-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .context-banner-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
-  padding: 5px 8px;
-  font-size: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
   line-height: 1;
+  height: 40px;
+  min-width: 40px;
 }
 
 .context-banner-action-btn:hover:not(:disabled) {
@@ -234,8 +260,8 @@
 /* 1. Teal Theme (Directly matching user reference image) */
 .page-context-banner.variant-teal {
   background: linear-gradient(90deg, #02382e 0%, #064e3b 50%, #043d32 100%);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  box-shadow: 0 4px 14px -2px rgba(2, 56, 46, 0.5);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  box-shadow: 0 4px 16px -2px rgba(2, 56, 46, 0.55);
   color: #ffffff;
 }
 
@@ -248,14 +274,14 @@
 }
 
 .page-context-banner.variant-teal .context-banner-select {
-  background: rgba(2, 44, 36, 0.7);
-  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(2, 44, 36, 0.75);
+  border-color: rgba(52, 211, 153, 0.4);
   color: #ffffff;
 }
 
 .page-context-banner.variant-teal .context-banner-select:hover {
-  border-color: rgba(52, 211, 153, 0.7);
-  background: rgba(2, 44, 36, 0.9);
+  border-color: rgba(52, 211, 153, 0.8);
+  background: rgba(2, 44, 36, 0.95);
 }
 
 .page-context-banner.variant-teal .context-banner-select-arrow {
@@ -263,22 +289,22 @@
 }
 
 .page-context-banner.variant-teal .context-banner-meta-pill {
-  background: rgba(2, 44, 36, 0.55);
-  border: 1px solid rgba(52, 211, 153, 0.25);
+  background: rgba(2, 44, 36, 0.6);
+  border: 1px solid rgba(52, 211, 153, 0.3);
   color: #d1fae5;
 }
 
 .page-context-banner.variant-teal .context-banner-action-btn {
-  background: rgba(2, 44, 36, 0.6);
-  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(2, 44, 36, 0.65);
+  border-color: rgba(52, 211, 153, 0.4);
   color: #ecfdf5;
 }
 
 .page-context-banner.variant-teal .context-banner-action-btn:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.3);
   border-color: #34d399;
   color: #ffffff;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.35);
 }
 
 .page-context-banner.variant-teal .context-banner-action-btn.is-active {
@@ -289,9 +315,9 @@
 
 /* 2. SCADA Theme (Glassmorphism Navy with Cyan accents) */
 .page-context-banner.variant-scada {
-  background: linear-gradient(90deg, rgba(13, 21, 39, 0.95) 0%, rgba(19, 32, 60, 0.95) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.22);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(90deg, rgba(13, 21, 39, 0.96) 0%, rgba(19, 32, 60, 0.96) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.45);
   color: #f8fafc;
 }
 
@@ -304,13 +330,13 @@
 }
 
 .page-context-banner.variant-scada .context-banner-select {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(56, 189, 248, 0.35);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-scada .context-banner-select:hover {
-  border-color: rgba(56, 189, 248, 0.6);
+  border-color: rgba(56, 189, 248, 0.7);
 }
 
 .page-context-banner.variant-scada .context-banner-select-arrow {
@@ -318,22 +344,22 @@
 }
 
 .page-context-banner.variant-scada .context-banner-meta-pill {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.25);
   color: #bae6fd;
 }
 
 .page-context-banner.variant-scada .context-banner-action-btn {
-  background: rgba(15, 23, 42, 0.7);
-  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(56, 189, 248, 0.35);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-scada .context-banner-action-btn:hover:not(:disabled) {
-  background: rgba(56, 189, 248, 0.15);
+  background: rgba(56, 189, 248, 0.2);
   border-color: #38bdf8;
   color: #ffffff;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
 }
 
 .page-context-banner.variant-scada .context-banner-action-btn.is-active {
@@ -345,31 +371,31 @@
 /* 3. Dark Theme (Neutral Stealth Slate) */
 .page-context-banner.variant-dark {
   background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-dark .context-banner-select {
   background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.18);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-dark .context-banner-meta-pill {
   background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #cbd5e1;
 }
 
 .page-context-banner.variant-dark .context-banner-action-btn {
   background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.18);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-dark .context-banner-action-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
 }
 
@@ -379,7 +405,7 @@ body.light-mode .page-context-banner.variant-scada,
   background: #ffffff;
   border-color: #cbd5e1;
   color: #0f172a;
-  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px -1px rgba(0, 0, 0, 0.08);
 }
 
 body.light-mode .page-context-banner.variant-scada .context-banner-title,
@@ -409,10 +435,10 @@ body.light-mode .page-context-banner.variant-scada .context-banner-action-btn,
 }
 
 /* ── Responsive Rules ── */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .page-context-banner {
-    padding: 8px 12px;
-    gap: 10px;
+    padding: 10px 14px;
+    gap: 12px;
   }
 
   .context-banner-left {
@@ -423,7 +449,13 @@ body.light-mode .page-context-banner.variant-scada .context-banner-action-btn,
   .context-banner-right {
     width: 100%;
     justify-content: flex-start;
-    gap: 8px;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .context-banner-selectors-group {
+    width: 100%;
   }
 
   .context-banner-selector-wrapper {
@@ -438,7 +470,7 @@ body.light-mode .page-context-banner.variant-scada .context-banner-action-btn,
 
 @media (max-width: 480px) {
   .context-banner-title {
-    font-size: 0.88rem;
+    font-size: 1rem;
   }
 
   .context-banner-meta-label {
