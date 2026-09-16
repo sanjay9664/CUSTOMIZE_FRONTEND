@@ -8,10 +8,10 @@ import {
 
 const ALL_MODULES = [
   { key: 'Dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, subItems: [] },
-  { key: 'Transformer', label: 'Transformer', icon: <Zap size={18} />, subItems: ['Overview', 'Transformer-1', 'Transformer-2', 'Load / Temp', 'PDF Report'], configKey: 'showTransformers' },
-  { key: 'LT Panel', label: 'LT Panel', icon: <LayoutDashboard size={18} />, subItems: ['Overview', 'LT Room-1', 'LT Room-2', 'LT Room-3', 'Incoming / Outgoing', 'Breaker Status', 'PDF Report'], configKey: 'showLTPanel' },
-  { key: 'DG Set', label: 'DG Set', icon: <Database size={18} />, subItems: ['Overview', 'DG Set-1', 'DG Set-2', 'DG Set-3'], configKey: 'showDGSet' },
   { key: 'Energy Metering', label: 'Energy Metering', icon: <Zap size={18} />, subItems: ['Overview', 'Main Meter', 'Sub Meters', 'Graphs', 'PDF Report'], configKey: 'showEnergyMetering' },
+  { key: 'DG Set', label: 'DG Set', icon: <Database size={18} />, subItems: ['Overview', 'DG Set-1', 'DG Set-2', 'DG Set-3'], configKey: 'showDGSet' },
+  { key: 'LT Panel', label: 'LT Panel', icon: <LayoutDashboard size={18} />, subItems: ['Overview', 'LT Room-1', 'LT Room-2', 'LT Room-3', 'Incoming / Outgoing', 'Breaker Status', 'PDF Report'], configKey: 'showLTPanel' },
+  { key: 'Transformer', label: 'Transformer', icon: <Zap size={18} />, subItems: ['Overview', 'Transformer-1', 'Transformer-2', 'Load / Temp', 'PDF Report'], configKey: 'showTransformers' },
   { key: 'HVAC', label: 'HVAC', icon: <Thermometer size={18} />, subItems: ['Chiller', 'AHU', 'Cooling Tower', 'PDF Report'], configKey: 'showHVAC' },
   { key: 'VRV', label: 'VRV', icon: <Wind size={18} />, subItems: [] },
   { key: 'AC', label: 'AC', icon: <Wind size={18} />, subItems: ['Overview', 'PDF Report'], configKey: 'showAC' },
