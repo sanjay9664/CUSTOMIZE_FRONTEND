@@ -6,6 +6,7 @@ import PdfButton from '../../components/PdfButton';
 import PageContextBanner from '../../components/PageContextBanner';
 import { useSiteStore } from '../../context/SiteContext';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
+import { useTheme } from '../../context/ThemeContext';
 import { io } from 'socket.io-client';
 import {
   PARAMETER_SYNONYMS,
@@ -58,6 +59,7 @@ class ErrorBoundary extends React.Component {
 // Telemetry synonyms, limit evaluation, and SVG arc geometry are imported from ./utils/energyTelemetry
 
 const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, defaultColor }) => {
+  const { isDark } = useTheme();
   const numericValue = typeof value === 'number' ? value : Number(value) || 0;
   const minVal = isNaN(Number(min)) ? 0 : Number(min);
   const rawMaxVal = isNaN(Number(max)) ? 100 : Number(max);
@@ -162,31 +164,48 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
         stroke={color}
         strokeWidth="6"
         strokeLinecap="butt"
-        style={{ transition: 'stroke 0.5s ease', opacity }}
+        style={{ transition: 'stroke 0.5s ease', opacity: isDark ? opacity : Math.min(1, opacity + 0.15) }}
       />
     );
   };
 
-  // Live value tracking arc
-  const valueArcEnd = Math.max(181, isNaN(angleValue) ? 181 : angleValue);
-  const valueArcPath = valueArcEnd > 181 ? describeArc(50, 50, 36, 180.5, valueArcEnd - 0.5) : null;
-
-  // Tick marks around perimeter
-  const ticks = Array.from({ length: 11 }, (_, i) => {
-    const tickAngle = 180 + i * (180 / 10);
-    const angleRad = (tickAngle * Math.PI) / 180;
-    const isMajor = i % 2 === 0;
-    const r1 = isMajor ? 42 : 43;
-    const r2 = 46;
-    return {
-      x1: 50 + r1 * Math.cos(angleRad), y1: 50 + r1 * Math.sin(angleRad),
-      x2: 50 + r2 * Math.cos(angleRad), y2: 50 + r2 * Math.sin(angleRad),
-      isNearValue: Math.abs(tickAngle - angleValue) < 10,
-      isMajor
-    };
-  });
-
   const safeLabel = (label || 'gauge').replace(/[^a-zA-Z0-9]/g, '');
+
+  // Theme-aware styles for CircularGauge
+  const cardBg = isDark
+    ? 'linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%)'
+    : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)';
+  const cardBorder = isDark ? `1px solid ${defaultColor}30` : '1px solid #e2e8f0';
+  const cardShadow = isDark
+    ? '0 4px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)'
+    : '0 4px 14px rgba(15,23,42,0.06), inset 0 1px 0 #ffffff';
+  
+  const arcTrackStroke = isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0';
+  const capFill = isDark ? '#1e293b' : '#0f172a';
+  const capStroke = isDark ? 'rgba(255,255,255,0.12)' : '#e2e8f0';
+  const valueFill = isDark ? '#f8fafc' : '#0f172a';
+  const unitFill = isDark ? 'rgba(255,255,255,0.45)' : '#64748b';
+  const limitHintColor = isDark ? 'rgba(255,255,255,0.35)' : '#64748b';
+
+  // Badge styles
+  let badgeBg = `${strokeColor}15`;
+  let badgeBorder = `1px solid ${strokeColor}30`;
+  let badgeTextColor = strokeColor;
+  if (!isDark) {
+    if (status === 'alert') {
+      badgeBg = '#fef2f2';
+      badgeBorder = '1px solid #fecaca';
+      badgeTextColor = '#dc2626';
+    } else if (status === 'warning') {
+      badgeBg = '#fffbeb';
+      badgeBorder = '1px solid #fde68a';
+      badgeTextColor = '#d97706';
+    } else {
+      badgeBg = '#ecfdf5';
+      badgeBorder = '1px solid #a7f3d0';
+      badgeTextColor = '#059669';
+    }
+  }
 
   return (
     <div
@@ -194,9 +213,9 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
       style={{
         padding: '16px 12px 12px',
         borderRadius: '16px',
-        border: `1px solid ${defaultColor}30`,
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%)',
-        boxShadow: `0 4px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)`,
+        border: cardBorder,
+        background: cardBg,
+        boxShadow: cardShadow,
         transition: 'all 0.4s ease',
         position: 'relative',
         overflow: 'hidden',
@@ -207,7 +226,7 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
         position: 'absolute', top: 0, left: '15%', right: '15%', height: '2.5px',
         background: `linear-gradient(90deg, transparent, ${defaultColor}, transparent)`,
         borderRadius: '0 0 6px 6px',
-        opacity: 0.6,
+        opacity: isDark ? 0.6 : 0.9,
       }} />
 
       {/* Phase label */}
@@ -225,12 +244,12 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
           <defs>
             <linearGradient id={`ng-${safeLabel}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={defaultColor} />
-              <stop offset="100%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor={isDark ? '#94a3b8' : '#334155'} />
             </linearGradient>
           </defs>
 
           {/* Background track */}
-          <path d={describeArc(50, 48, 38, 180, 360)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" strokeLinecap="round" />
+          <path d={describeArc(50, 48, 38, 180, 360)} fill="none" stroke={arcTrackStroke} strokeWidth="7" strokeLinecap="round" />
 
           {/* Zone segments — softer, thicker */}
           {renderSegment(180, angleLow, '#ef4444')}
@@ -245,23 +264,23 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
             style={{ transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
           >
             <path d="M -1.5 4 L 0 -32 L 1.5 4 Z" fill={`url(#ng-${safeLabel})`}
-              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+              style={{ filter: isDark ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' : 'drop-shadow(0 1px 2px rgba(15,23,42,0.25))' }} />
             <circle cx="0" cy="-30" r="1.8" fill={strokeColor} />
           </g>
 
           {/* Center cap */}
           <g transform="translate(50, 48)">
-            <circle cx="0" cy="0" r="5.5" fill="#1e293b" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+            <circle cx="0" cy="0" r="5.5" fill={capFill} stroke={capStroke} strokeWidth="1" />
             <circle cx="0" cy="0" r="2.5" fill={defaultColor} />
           </g>
 
-          {/* Value — big, white, readable */}
-          <text x="50" y="62" textAnchor="middle" fill="#f8fafc"
+          {/* Value — big, clear, high contrast font */}
+          <text x="50" y="62" textAnchor="middle" fill={valueFill}
             fontFamily="monospace" fontSize="11" fontWeight="900">
             {numericValue.toFixed(1)}
           </text>
-          <text x="50" y="70" textAnchor="middle" fill="rgba(255,255,255,0.4)"
-            fontFamily="monospace" fontSize="5.5">
+          <text x="50" y="70" textAnchor="middle" fill={unitFill}
+            fontFamily="monospace" fontSize="5.5" fontWeight="700">
             {unit}
           </text>
         </svg>
@@ -270,18 +289,18 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
       {/* Status badge */}
       <div style={{
         display: 'inline-flex', alignItems: 'center', gap: '4px',
-        background: `${strokeColor}15`,
-        border: `1px solid ${strokeColor}30`,
+        background: badgeBg,
+        border: badgeBorder,
         borderRadius: '20px',
         padding: '3px 12px',
         marginTop: '4px',
       }}>
-        <span style={{ fontSize: '0.55rem', color: strokeColor, fontWeight: 800, fontFamily: 'monospace' }}>{statusIcon}</span>
-        <span style={{ fontSize: '0.55rem', color: strokeColor, fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{statusText}</span>
+        <span style={{ fontSize: '0.55rem', color: badgeTextColor, fontWeight: 800, fontFamily: 'monospace' }}>{statusIcon}</span>
+        <span style={{ fontSize: '0.55rem', color: badgeTextColor, fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{statusText}</span>
       </div>
 
       {/* Limits — small muted hint */}
-      <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', marginTop: '4px' }}>
+      <div style={{ fontSize: '0.5rem', color: limitHintColor, fontFamily: 'monospace', marginTop: '4px', fontWeight: 600 }}>
         {limits && (parseLimit(limits.low) !== null || parseLimit(limits.high) !== null) ? (
           <>
             {parseLimit(limits.low) !== null && `L: ${parseLimit(limits.low)}`}
@@ -476,7 +495,6 @@ const MainMeter = () => {
           setSelectedSite(found);
         }
       },
-      placeholder: 'Select Site',
       ariaLabel: 'Select Site'
     };
   }, [sites, selectedSite, setSelectedSite]);
@@ -503,7 +521,6 @@ const MainMeter = () => {
       onChange: (newId) => {
         setSelectedMeterId(newId);
       },
-      placeholder: 'Select Meter Device',
       ariaLabel: 'Select Meter Device'
     };
   }, [energyMeters, selectedMeterId]);
@@ -531,8 +548,6 @@ const MainMeter = () => {
     }, 50);
     return () => clearTimeout(t);
   }, [selectedMeterId]);
-
-
 
   const mappedFields = useMemo(() => {
     if (!mainMeterTemplate || !mainMeterTemplate.mapping) return {};
@@ -575,6 +590,8 @@ const MainMeter = () => {
   const isTemplateMapped = useMemo(() => {
     return Object.keys(mappedFields).length > 0;
   }, [mappedFields]);
+
+
 
   // Live Telemetry Sync using Websockets and Polling
   useEffect(() => {
@@ -884,7 +901,7 @@ const MainMeter = () => {
   const activeMode = mfmPages[mfmPageIndex];
 
   return (
-    <div className="fade-in">
+    <div className="fade-in main-meter-workspace">
       <PageContextBanner
         title={mainMeterTemplate ? mainMeterTemplate.name : 'Main Grid Incomer Meter'}
         icon={<Zap className="text-warning" size={22} />}
@@ -907,59 +924,52 @@ const MainMeter = () => {
           />
         ]}
         enableFullscreen={true}
-        variant="teal"
+        variant="scada"
+        className="main-meter-context-banner"
       />
 
-      <Row className="g-4 mb-4">
-        {/* LEFT COLUMN: INTERACTIVE DIGITAL TWIN OF THE SUN STAR METER */}
-        {/* LEFT COLUMN: INTERACTIVE DIGITAL TWIN OF THE SUN STAR METER */}
+      <Row className="g-3 mt-1">
+        {/* LEFT COLUMN: HARDWARE DIGITAL TWIN METER */}
         <Col lg={5} xl={5}>
-          <Card className="scada-glass-card position-relative border h-100 p-3 overflow-hidden d-flex flex-column align-items-center justify-content-center">
-            {/* Holographic grid and wave animation backdrops */}
+          <Card className="scada-glass-card border h-100 p-3 position-relative overflow-hidden">
             <div className="telemetry-wave-visualizer">
-              <svg viewBox="0 0 400 100" className="hud-wave-svg" preserveAspectRatio="none">
-                <path d="M 0,50 Q 50,20 100,50 T 200,50 T 300,50 T 400,50" fill="none" stroke="rgba(6, 182, 212, 0.25)" strokeWidth="1.5" className="wave-line-1" />
-                <path d="M 0,50 Q 50,80 100,50 T 200,50 T 300,50 T 400,50" fill="none" stroke="rgba(245, 158, 11, 0.2)" strokeWidth="1.5" className="wave-line-2" />
-                <path d="M 0,50 Q 50,50 100,50 T 200,50 T 300,50 T 400,50" fill="none" stroke="rgba(239, 68, 68, 0.15)" strokeWidth="1" className="wave-line-3" />
+              <svg className="hud-wave-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
+                <path className="wave-line-1" d="M 0 200 Q 250 50, 500 200 T 1000 200" fill="none" stroke="rgba(6, 182, 212, 0.2)" strokeWidth="2" />
+                <path className="wave-line-2" d="M 0 200 Q 250 350, 500 200 T 1000 200" fill="none" stroke="rgba(245, 158, 11, 0.2)" strokeWidth="2" />
               </svg>
               <div className="grid-overlay"></div>
             </div>
 
-            <div className="w-100 d-flex justify-content-between align-items-center px-2 mb-3" style={{ zIndex: 10 }}>
-              <span className="fs-12 text-secondary uppercase tracking-widest fw-black d-flex align-items-center gap-2">
-                <Cpu size={12} className="text-info animate-pulse" /> Smart Meter Digital Twin
-              </span>
-              <div className="d-flex align-items-center gap-2">
+            <div className="position-relative d-flex flex-column align-items-center justify-content-start h-100" style={{ zIndex: 2 }}>
+              {/* Hardware Title Header */}
+              <div className="w-100 d-flex justify-content-between align-items-center mb-2 px-1">
+                <h6 className="text-secondary uppercase tracking-wider fs-11 fw-bold mb-0 d-flex align-items-center gap-2">
+                  <Cpu size={14} className="text-info" /> Smart Meter Digital Twin
+                </h6>
                 <Button
                   size="sm"
-                  variant={autoCycle ? "outline-info" : "info"}
-                  className="rounded-pill fs-12 px-2 py-0.5"
-                  onClick={() => setAutoCycle(prev => !prev)}
+                  variant={autoCycle ? "outline-info" : "outline-secondary"}
+                  className="py-0 px-2 fs-10 fw-bold rounded-pill"
+                  onClick={() => setAutoCycle(!autoCycle)}
                 >
-                  {autoCycle ? <Pause size={10} className="me-1" /> : <Play size={10} className="me-1" />}
-                  {autoCycle ? "Auto Cycle" : "Paused"}
+                  {autoCycle ? "⏸ Auto Cycle" : "▶ Manual"}
                 </Button>
               </div>
-            </div>
 
-            <div className="d-flex flex-column align-items-center justify-content-center w-100 position-relative gap-3" style={{ zIndex: 5 }}>
-              {/* THE MULTI-FUNCTION METER (MFM) HOUSING */}
-              <div className="mfm-polycarbonate-case shadow-2xl">
-                {/* Bezel Screws */}
+              {/* Physical Digital Twin Hardware Casing */}
+              <div className="mfm-polycarbonate-case my-1">
                 <div className="screw top-left"></div>
                 <div className="screw top-right"></div>
                 <div className="screw bottom-left"></div>
                 <div className="screw bottom-right"></div>
 
                 <div className="mfm-metallic-bezel">
-                  {/* Brand Header */}
-                  <div className="mfm-brand-header d-flex justify-content-between align-items-center mb-2 px-2">
+                  <div className="mfm-brand-header d-flex justify-content-between align-items-center">
                     <span className="mfm-brand-logo">SOCHIOT</span>
-                    <span className="mfm-model-no">APM Series</span>
+                    <span className="mfm-model-no font-monospace">APM Series</span>
                   </div>
 
-                  {/* Grid LCD Screen Window */}
-                  <div className="mfm-lcd-window mb-3">
+                  <div className="mfm-lcd-window">
                     <div className="mfm-lcd-glass">
                       <div className="mfm-lcd-screen">
                         {/* Top status bar */}
@@ -1170,7 +1180,7 @@ const MainMeter = () => {
                     }
 
                     // Format value with unit or prefix (round numerics)
-                    const fmtVal = typeof rawValue === 'number' ? rawValue.toFixed(2) : rawValue;
+                    const fmtVal = rawValue === undefined || rawValue === null || rawValue === '' ? '—' : (typeof rawValue === 'number' ? rawValue.toFixed(2) : rawValue);
                     let val = fmtVal;
                     if (label === 'BALANCE') {
                       val = `₹${fmtVal}`;
@@ -1183,7 +1193,7 @@ const MainMeter = () => {
                 }
 
                 // Default formatting (round numerics)
-                const fmtVal2 = typeof rawValue === 'number' ? rawValue.toFixed(2) : rawValue;
+                const fmtVal2 = rawValue === undefined || rawValue === null || rawValue === '' ? '—' : (typeof rawValue === 'number' ? rawValue.toFixed(2) : rawValue);
                 let val = fmtVal2;
                 if (defaultLabel === 'BALANCE') {
                   val = `₹${fmtVal2}`;
@@ -2169,6 +2179,143 @@ const MainMeter = () => {
           transform: translateY(-4px) scale(1.03);
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
         }
+
+        /* Main meter workspace: calm industrial surfaces with high telemetry legibility. */
+        .main-meter-workspace { --meter-surface: #091221; --meter-panel: #0d1829; --meter-line: rgba(148, 163, 184, .16); }
+        .main-meter-workspace .scada-glass-card { border-radius: 12px; background: linear-gradient(145deg, rgba(10, 20, 37, .98), rgba(5, 11, 22, .98)) !important; border-color: var(--meter-line) !important; box-shadow: 0 14px 34px rgba(2, 8, 23, .30), inset 0 1px 0 rgba(255,255,255,.035); }
+        .main-meter-workspace .scada-glass-card:hover { transform: translateY(-2px); border-color: rgba(34, 211, 238, .34) !important; box-shadow: 0 18px 38px rgba(2, 8, 23, .38), 0 0 0 1px rgba(34,211,238,.05); }
+        .main-meter-workspace .scada-section-box { border-radius: 10px !important; background: rgba(2, 8, 20, .54) !important; border-color: rgba(148,163,184,.12) !important; box-shadow: none; }
+        .main-meter-workspace .scada-section-box > h6 { font-size: .70rem !important; letter-spacing: .08em; }
+        .main-meter-workspace .scada-tabs-container { border-radius: 7px !important; padding: 3px !important; }
+        .main-meter-workspace .scada-tab-btn { letter-spacing: 0; font-size: .68rem !important; min-height: 30px; }
+        .main-meter-workspace .scada-tab-btn.active-tab { background: rgba(34, 211, 238, .13); box-shadow: inset 2px 0 0 #22d3ee; }
+        .main-meter-workspace .parameter-glass-card { min-height: 68px; border-radius: 8px !important; background: linear-gradient(150deg, rgba(21, 33, 52, .86), rgba(10, 17, 29, .92)) !important; border-color: rgba(148,163,184,.13) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+        .main-meter-workspace .parameter-glass-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.06); }
+        .main-meter-workspace .parameter-glass-card h5 { letter-spacing: 0 !important; font-size: 1rem !important; }
+        .main-meter-workspace .hud-metric-horizontal { border-radius: 7px; box-shadow: none; }
+        .main-meter-workspace .telemetry-wave-visualizer { opacity: .72; }
+        .main-meter-workspace .mfm-polycarbonate-case { box-shadow: inset 0 0 30px rgba(255,255,255,.06), 0 20px 42px rgba(0,0,0,.60), 0 0 26px rgba(34,211,238,.18); }
+
+        /* Clean, executive Light Mode theme overrides */
+        body.light-mode .main-meter-workspace,
+        [data-theme="light"] .main-meter-workspace {
+          --meter-surface: #f8fafc;
+          --meter-panel: #ffffff;
+          --meter-line: #e2e8f0;
+          background: #f1f5f9;
+          padding: 8px;
+          border-radius: 16px;
+        }
+
+        body.light-mode .main-meter-workspace .scada-glass-card,
+        [data-theme="light"] .main-meter-workspace .scada-glass-card {
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03) !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-glass-card:hover,
+        [data-theme="light"] .main-meter-workspace .scada-glass-card:hover {
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-section-box,
+        [data-theme="light"] .main-meter-workspace .scada-section-box {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-section-box .bg-dark,
+        [data-theme="light"] .main-meter-workspace .scada-section-box .bg-dark {
+          background: #ffffff !important;
+          border-color: #e2e8f0 !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-section-box > h6,
+        [data-theme="light"] .main-meter-workspace .scada-section-box > h6 {
+          color: #0284c7 !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-tabs-container,
+        [data-theme="light"] .main-meter-workspace .scada-tabs-container {
+          background: #f1f5f9 !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-tab-btn,
+        [data-theme="light"] .main-meter-workspace .scada-tab-btn {
+          color: #64748b !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-tab-btn.active-tab,
+        [data-theme="light"] .main-meter-workspace .scada-tab-btn.active-tab {
+          background: #ffffff !important;
+          color: #0891b2 !important;
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-gauge-card,
+        [data-theme="light"] .main-meter-workspace .scada-gauge-card {
+          background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+        }
+
+        body.light-mode .main-meter-workspace .scada-gauge-card:hover,
+        [data-theme="light"] .main-meter-workspace .scada-gauge-card:hover {
+          transform: translateY(-3px) !important;
+          box-shadow: 0 8px 20px -3px rgba(15, 23, 42, 0.1) !important;
+          border-color: #cbd5e1 !important;
+        }
+
+        body.light-mode .main-meter-workspace .parameter-glass-card,
+        [data-theme="light"] .main-meter-workspace .parameter-glass-card {
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+        }
+
+        body.light-mode .main-meter-workspace .parameter-glass-card:hover,
+        [data-theme="light"] .main-meter-workspace .parameter-glass-card:hover {
+          background: #ffffff !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.08) !important;
+        }
+
+        body.light-mode .main-meter-workspace .parameter-glass-card small,
+        [data-theme="light"] .main-meter-workspace .parameter-glass-card small {
+          color: #64748b !important;
+          font-weight: 700 !important;
+        }
+
+        body.light-mode .main-meter-workspace .parameter-glass-card h5.text-white,
+        [data-theme="light"] .main-meter-workspace .parameter-glass-card h5.text-white {
+          color: #0f172a !important;
+        }
+
+        body.light-mode .main-meter-workspace .hud-metric-horizontal,
+        [data-theme="light"] .main-meter-workspace .hud-metric-horizontal {
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+
+        body.light-mode .main-meter-workspace .hud-metric-horizontal .hud-label,
+        [data-theme="light"] .main-meter-workspace .hud-meter-workspace .hud-label {
+          color: #64748b !important;
+        }
+
+        body.light-mode .main-meter-workspace .telemetry-wave-visualizer,
+        [data-theme="light"] .main-meter-workspace .telemetry-wave-visualizer {
+          opacity: 0.18 !important;
+        }
+
+        body.light-mode .main-meter-workspace .mfm-polycarbonate-case,
+        [data-theme="light"] .main-meter-workspace .mfm-polycarbonate-case {
+          box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(15, 23, 42, 0.1) !important;
+        }
+
+        @media (max-width: 991px) { .main-meter-workspace .parameter-glass-card { min-height: 62px; }.main-meter-workspace .scada-tabs-container { width: 100%; overflow-x: auto; flex-wrap: nowrap; }.main-meter-workspace .scada-tab-btn { white-space: nowrap; flex: 1 0 auto; } }
         @keyframes gaugeAlertPulse {
           0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.2); }
           50% { box-shadow: 0 0 24px rgba(239, 68, 68, 0.45), 0 0 48px rgba(239, 68, 68, 0.15); }

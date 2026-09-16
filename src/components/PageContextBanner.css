@@ -257,11 +257,11 @@
 
 /* ── THEME VARIANTS ── */
 
-/* 1. Teal Theme (Directly matching user reference image) */
+/* 1. Teal/Navy Theme (Executive Deep Sapphire Blue) */
 .page-context-banner.variant-teal {
-  background: linear-gradient(90deg, #02382e 0%, #064e3b 50%, #043d32 100%);
-  border: 1px solid rgba(52, 211, 153, 0.35);
-  box-shadow: 0 4px 16px -2px rgba(2, 56, 46, 0.55);
+  background: linear-gradient(90deg, #0b132b 0%, #1c2541 50%, #0b132b 100%);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  box-shadow: 0 4px 18px -2px rgba(11, 19, 43, 0.75);
   color: #ffffff;
 }
 
@@ -270,59 +270,59 @@
 }
 
 .page-context-banner.variant-teal .context-banner-subtitle {
-  color: #a7f3d0;
+  color: #93c5fd;
 }
 
 .page-context-banner.variant-teal .context-banner-select {
-  background: rgba(2, 44, 36, 0.75);
-  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(59, 130, 246, 0.45);
   color: #ffffff;
 }
 
 .page-context-banner.variant-teal .context-banner-select:hover {
-  border-color: rgba(52, 211, 153, 0.8);
-  background: rgba(2, 44, 36, 0.95);
+  border-color: #60a5fa;
+  background: rgba(30, 41, 59, 0.95);
 }
 
 .page-context-banner.variant-teal .context-banner-select-arrow {
-  color: #a7f3d0;
+  color: #60a5fa;
 }
 
 .page-context-banner.variant-teal .context-banner-meta-pill {
-  background: rgba(2, 44, 36, 0.6);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  color: #d1fae5;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #dbeafe;
 }
 
 .page-context-banner.variant-teal .context-banner-action-btn {
-  background: rgba(2, 44, 36, 0.65);
-  border-color: rgba(52, 211, 153, 0.4);
-  color: #ecfdf5;
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #eff6ff;
 }
 
 .page-context-banner.variant-teal .context-banner-action-btn:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.3);
-  border-color: #34d399;
+  background: rgba(59, 130, 246, 0.3);
+  border-color: #60a5fa;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.35);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
 }
 
 .page-context-banner.variant-teal .context-banner-action-btn.is-active {
-  background: #059669;
-  border-color: #34d399;
+  background: #2563eb;
+  border-color: #60a5fa;
   color: #ffffff;
 }
 
-/* 2. SCADA Theme (Glassmorphism Navy with Cyan accents) */
+/* 2. SCADA Theme (Luxury Royal Cobalt & Midnight Indigo) */
 .page-context-banner.variant-scada {
-  background: linear-gradient(90deg, rgba(13, 21, 39, 0.96) 0%, rgba(19, 32, 60, 0.96) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(90deg, #090d16 0%, #111c38 50%, #090d16 100%);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-scada .context-banner-title {
-  color: #f8fafc;
+  color: #ffffff;
 }
 
 .page-context-banner.variant-scada .context-banner-subtitle {
@@ -330,13 +330,14 @@
 }
 
 .page-context-banner.variant-scada .context-banner-select {
-  background: rgba(15, 23, 42, 0.85);
-  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(96, 165, 250, 0.4);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-scada .context-banner-select:hover {
-  border-color: rgba(56, 189, 248, 0.7);
+  border-color: #38bdf8;
+  background: rgba(30, 41, 59, 0.95);
 }
 
 .page-context-banner.variant-scada .context-banner-select-arrow {
@@ -344,22 +345,22 @@
 }
 
 .page-context-banner.variant-scada .context-banner-meta-pill {
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  color: #bae6fd;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #e0f2fe;
 }
 
 .page-context-banner.variant-scada .context-banner-action-btn {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(96, 165, 250, 0.35);
   color: #f8fafc;
 }
 
 .page-context-banner.variant-scada .context-banner-action-btn:hover:not(:disabled) {
-  background: rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
 }
 
 .page-context-banner.variant-scada .context-banner-action-btn.is-active {
@@ -400,38 +401,92 @@
 }
 
 /* ── Light Mode Adjustments ── */
+body.light-mode .page-context-banner.variant-teal,
+[data-theme="light"] .page-context-banner.variant-teal,
 body.light-mode .page-context-banner.variant-scada,
 [data-theme="light"] .page-context-banner.variant-scada {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #0f172a;
-  box-shadow: 0 2px 10px -1px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(90deg, #f7f6f0 0%, #edebe4 50%, #f7f6f0 100%) !important;
+  border: 1px solid #dcd8cd !important;
+  box-shadow: 0 4px 16px rgba(28, 25, 23, 0.05) !important;
+  color: #1c1917 !important;
 }
 
+body.light-mode .page-context-banner.variant-teal .context-banner-title,
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-title,
 body.light-mode .page-context-banner.variant-scada .context-banner-title,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-title {
-  color: #0f172a;
+  color: #1c1917 !important;
 }
 
+body.light-mode .page-context-banner.variant-teal .context-banner-subtitle,
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-subtitle,
+body.light-mode .page-context-banner.variant-scada .context-banner-subtitle,
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-subtitle {
+  color: #44403c !important;
+}
+
+body.light-mode .page-context-banner.variant-teal .context-banner-select,
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-select,
 body.light-mode .page-context-banner.variant-scada .context-banner-select,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-select {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: #ffffff !important;
+  border-color: #dcd8cd !important;
+  color: #1c1917 !important;
+  box-shadow: 0 1px 3px rgba(28, 25, 23, 0.05) !important;
 }
 
+body.light-mode .page-context-banner.variant-teal .context-banner-select:hover,
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-select:hover,
+body.light-mode .page-context-banner.variant-scada .context-banner-select:hover,
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-select:hover {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15) !important;
+}
+
+body.light-mode .page-context-banner.variant-teal .context-banner-select-arrow,
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-select-arrow,
+body.light-mode .page-context-banner.variant-scada .context-banner-select-arrow,
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-select-arrow {
+  color: #0284c7 !important;
+}
+
+body.light-mode .page-context-banner.variant-teal .context-banner-meta-pill,
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-meta-pill,
 body.light-mode .page-context-banner.variant-scada .context-banner-meta-pill,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-meta-pill {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #334155;
+  background: #ffffff !important;
+  border-color: #dcd8cd !important;
+  color: #1c1917 !important;
 }
 
+body.light-mode .page-context-banner.variant-teal .context-banner-action-btn,
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-action-btn,
 body.light-mode .page-context-banner.variant-scada .context-banner-action-btn,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-action-btn {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: #ffffff !important;
+  border-color: #dcd8cd !important;
+  color: #1c1917 !important;
+}
+
+body.light-mode .page-context-banner.variant-teal .context-banner-action-btn:hover:not(:disabled),
+[data-theme="light"] .page-context-banner.variant-teal .context-banner-action-btn:hover:not(:disabled),
+body.light-mode .page-context-banner.variant-scada .context-banner-action-btn:hover:not(:disabled),
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-action-btn:hover:not(:disabled) {
+  background: #f4f2eb !important;
+  border-color: #0284c7 !important;
+  color: #0369a1 !important;
+}
+
+body.light-mode .context-banner-option,
+[data-theme="light"] .context-banner-option,
+body.light-mode select.context-banner-select option,
+[data-theme="light"] select.context-banner-select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
 }
 
 /* ── Responsive Rules ── */
