@@ -499,21 +499,8 @@ const EnergyMeteringOverview = () => {
 
   return (
     <div className="energy-overview-page p-3 p-md-4">
-      {/* Header bar with View Switcher */}
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
-        <div>
-          <div className="d-flex align-items-center gap-2 mb-1">
-            <h4 className="fw-bold text-white mb-0">Energy Metering Overview</h4>
-            <Badge bg="primary" className="bg-opacity-20 text-primary border border-primary border-opacity-30">
-              Live BMS SCADA
-            </Badge>
-          </div>
-          <small className="text-secondary">
-            Aggregate power consumption, demand loads, feeder health, and group distribution.
-          </small>
-        </div>
-
-        {/* View Switcher Pill */}
+      {/* View Switcher Toolbar */}
+      <div className="d-flex justify-content-end align-items-center mb-3">
         <div className="d-flex align-items-center gap-2 bg-dark bg-opacity-75 p-1 rounded-pill border border-secondary border-opacity-25">
           <button
             type="button"

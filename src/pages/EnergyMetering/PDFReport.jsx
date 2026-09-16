@@ -124,26 +124,6 @@ const EnergyPDFReport = () => {
 
   return (
     <div className="energy-reports-page fade-in p-3 p-md-4">
-      {/* HEADER SECTION */}
-      <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
-        <div>
-          <h4 className="mb-1 text-white fw-bold d-flex align-items-center gap-2">
-            <FileText className="text-info" size={24} /> Energy Metering Reports & Exports
-          </h4>
-          <small className="text-secondary">Generate certified billing statements, historical power logs, and CSV/PDF data exports.</small>
-        </div>
-        <div className="d-flex gap-2">
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={handleDownloadCsv}
-            className="rounded-pill px-3 py-1 text-light border-secondary border-opacity-50 d-flex align-items-center gap-2 fs-12"
-          >
-            <FileSpreadsheet size={14} className="text-success" /> Export CSV
-          </Button>
-          <PdfButton />
-        </div>
-      </div>
 
       {/* FILTER CONTROL CARD */}
       <Card className="scada-card border-0 mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderRadius: '16px' }}>
@@ -239,6 +219,17 @@ const EnergyPDFReport = () => {
                 <ClipboardList className="text-info" size={18} /> Generated Report Ledger
               </h6>
               <small className="text-secondary">Showing {reportData.length} recorded daily consumption intervals.</small>
+            </div>
+            <div className="d-flex gap-2">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={handleDownloadCsv}
+                className="rounded-pill px-3 py-1 text-light border-secondary border-opacity-50 d-flex align-items-center gap-2 fs-12"
+              >
+                <FileSpreadsheet size={14} className="text-success" /> Export CSV
+              </Button>
+              <PdfButton />
             </div>
           </div>
 

@@ -1,0 +1,447 @@
+/* ── PageContextBanner Component Styles ── */
+
+.page-context-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 16px;
+  margin-top: 0;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+  font-family: var(--scada-font, 'Inter', sans-serif);
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Left Side (Title, Icon, Status) ── */
+.context-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.context-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.context-banner-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.context-banner-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.context-banner-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+/* ── Status Pill ── */
+.context-banner-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.context-banner-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-online {
+  background: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+.status-online .context-banner-status-dot {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.status-offline {
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+.status-offline .context-banner-status-dot {
+  background: #94a3b8;
+}
+
+.status-warning {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.status-warning .context-banner-status-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+.status-fault {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.status-fault .context-banner-status-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+/* ── Right Side (Selector, Metadata, Actions) ── */
+.context-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* ── Dropdown / Selector ── */
+.context-banner-selector-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.context-banner-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 5px 28px 5px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease-in-out;
+  min-width: 140px;
+}
+
+.context-banner-select:focus {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.context-banner-select-arrow {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.context-banner-option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+/* ── Metadata Items (e.g. Realtime - last 1 day) ── */
+.context-banner-meta-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.context-banner-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.context-banner-meta-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.9;
+}
+
+.context-banner-meta-label {
+  font-weight: 500;
+}
+
+.context-banner-meta-val {
+  font-weight: 700;
+}
+
+/* ── Actions Buttons ── */
+.context-banner-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-banner-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  line-height: 1;
+}
+
+.context-banner-action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.context-banner-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── THEME VARIANTS ── */
+
+/* 1. Teal Theme (Directly matching user reference image) */
+.page-context-banner.variant-teal {
+  background: linear-gradient(90deg, #02382e 0%, #064e3b 50%, #043d32 100%);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  box-shadow: 0 4px 14px -2px rgba(2, 56, 46, 0.5);
+  color: #ffffff;
+}
+
+.page-context-banner.variant-teal .context-banner-title {
+  color: #ffffff;
+}
+
+.page-context-banner.variant-teal .context-banner-subtitle {
+  color: #a7f3d0;
+}
+
+.page-context-banner.variant-teal .context-banner-select {
+  background: rgba(2, 44, 36, 0.7);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: #ffffff;
+}
+
+.page-context-banner.variant-teal .context-banner-select:hover {
+  border-color: rgba(52, 211, 153, 0.7);
+  background: rgba(2, 44, 36, 0.9);
+}
+
+.page-context-banner.variant-teal .context-banner-select-arrow {
+  color: #a7f3d0;
+}
+
+.page-context-banner.variant-teal .context-banner-meta-pill {
+  background: rgba(2, 44, 36, 0.55);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: #d1fae5;
+}
+
+.page-context-banner.variant-teal .context-banner-action-btn {
+  background: rgba(2, 44, 36, 0.6);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: #ecfdf5;
+}
+
+.page-context-banner.variant-teal .context-banner-action-btn:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+}
+
+.page-context-banner.variant-teal .context-banner-action-btn.is-active {
+  background: #059669;
+  border-color: #34d399;
+  color: #ffffff;
+}
+
+/* 2. SCADA Theme (Glassmorphism Navy with Cyan accents) */
+.page-context-banner.variant-scada {
+  background: linear-gradient(90deg, rgba(13, 21, 39, 0.95) 0%, rgba(19, 32, 60, 0.95) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
+  color: #f8fafc;
+}
+
+.page-context-banner.variant-scada .context-banner-title {
+  color: #f8fafc;
+}
+
+.page-context-banner.variant-scada .context-banner-subtitle {
+  color: #94a3b8;
+}
+
+.page-context-banner.variant-scada .context-banner-select {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #f8fafc;
+}
+
+.page-context-banner.variant-scada .context-banner-select:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+.page-context-banner.variant-scada .context-banner-select-arrow {
+  color: #38bdf8;
+}
+
+.page-context-banner.variant-scada .context-banner-meta-pill {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #bae6fd;
+}
+
+.page-context-banner.variant-scada .context-banner-action-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #f8fafc;
+}
+
+.page-context-banner.variant-scada .context-banner-action-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.page-context-banner.variant-scada .context-banner-action-btn.is-active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+/* 3. Dark Theme (Neutral Stealth Slate) */
+.page-context-banner.variant-dark {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.35);
+  color: #f8fafc;
+}
+
+.page-context-banner.variant-dark .context-banner-select {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+}
+
+.page-context-banner.variant-dark .context-banner-meta-pill {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.page-context-banner.variant-dark .context-banner-action-btn {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+}
+
+.page-context-banner.variant-dark .context-banner-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* ── Light Mode Adjustments ── */
+body.light-mode .page-context-banner.variant-scada,
+[data-theme="light"] .page-context-banner.variant-scada {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .page-context-banner.variant-scada .context-banner-title,
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-title {
+  color: #0f172a;
+}
+
+body.light-mode .page-context-banner.variant-scada .context-banner-select,
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-select {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+body.light-mode .page-context-banner.variant-scada .context-banner-meta-pill,
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-meta-pill {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+body.light-mode .page-context-banner.variant-scada .context-banner-action-btn,
+[data-theme="light"] .page-context-banner.variant-scada .context-banner-action-btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+/* ── Responsive Rules ── */
+@media (max-width: 768px) {
+  .page-context-banner {
+    padding: 8px 12px;
+    gap: 10px;
+  }
+
+  .context-banner-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .context-banner-right {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .context-banner-selector-wrapper {
+    flex-grow: 1;
+  }
+
+  .context-banner-select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .context-banner-title {
+    font-size: 0.88rem;
+  }
+
+  .context-banner-meta-label {
+    display: none;
+  }
+}

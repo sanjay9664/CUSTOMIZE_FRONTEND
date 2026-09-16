@@ -3,6 +3,7 @@ import { Row, Col, Card, Badge, Table, Button, Form } from 'react-bootstrap';
 import { Zap, Activity, ShieldCheck, HelpCircle, ChevronLeft, ChevronRight, Play, Pause, Settings, RefreshCw, Info, AlertTriangle, Cpu, Sliders, ShieldAlert, Coins, Clock, Gauge, Flame, Lock } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import PdfButton from '../../components/PdfButton';
+import PageContextBanner from '../../components/PageContextBanner';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
 import { io } from 'socket.io-client';
 import {
@@ -824,42 +825,36 @@ const MainMeter = () => {
 
   return (
     <div className="fade-in">
-      {/* HEADER SECTION */}
-      <div className="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <h2 className="mb-1 text-white fw-bold d-flex align-items-center gap-2 flex-wrap">
-            <Zap className="text-warning text-shrink-0" size={26} /> {mainMeterTemplate ? mainMeterTemplate.name : 'Main Grid Incomer Meter'}
-          </h2>
-          <p className="text-secondary fs-7 mb-0">High-fidelity smart grid visualizer, phase parameters, and historical grid diagnostics.</p>
-        </div>
-        <div className="d-flex flex-wrap align-items-center gap-2 gap-md-3">
-          {energyMeters.length > 0 && (
-            <Form.Select
-              size="sm"
-              className="bg-dark text-info border-info border-opacity-25 shadow-none"
-              value={selectedMeterId}
-              onChange={(e) => setSelectedMeterId(e.target.value)}
-              style={{ width: 'auto', minWidth: '220px' }}
-            >
-              {energyMeters.map(meter => (
-                <option key={meter.id} value={meter.id} className="bg-dark text-white">
-                  {meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'}
-                </option>
-              ))}
-            </Form.Select>
-          )}
-          {(() => {
-            const isOnline = isMeterOnline;
-            return (
-              <Badge bg={!isOnline ? "secondary" : "success"} className={`px-3 py-2 bg-opacity-10 text-${!isOnline ? 'secondary' : 'success'} border border-${!isOnline ? 'secondary' : 'success'} border-opacity-20 d-flex align-items-center gap-2 rounded-pill`}>
-                {isOnline && <span className="pulse-dot-green"></span>}
-                {!isOnline ? 'Offline' : 'Online'}
-              </Badge>
-            );
-          })()}
-          <PdfButton />
-        </div>
-      </div>
+      <PageContextBanner
+        title={mainMeterTemplate ? mainMeterTemplate.name : 'Main Grid Incomer Meter'}
+        icon={<Zap className="text-warning" size={18} />}
+        status={isMeterOnline ? 'Online' : 'Offline'}
+        selector={energyMeters.length > 1 ? {
+          value: selectedMeterId,
+          onChange: (newId) => setSelectedMeterId(newId),
+          options: energyMeters.map(meter => ({
+            value: meter.id,
+            label: meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'
+          }))
+        } : null}
+        metadata={[
+          {
+            icon: <Clock size={14} />,
+            label: 'Realtime - last 1 day'
+          }
+        ]}
+        actions={[
+          <PdfButton
+            key="pdf-export"
+            label=""
+            title="Download Custom PDF Report"
+            variant="custom"
+            className="context-banner-action-btn p-1 border-0"
+          />
+        ]}
+        enableFullscreen={true}
+        variant="teal"
+      />
 
       <Row className="g-4 mb-4">
         {/* LEFT COLUMN: INTERACTIVE DIGITAL TWIN OF THE SUN STAR METER */}

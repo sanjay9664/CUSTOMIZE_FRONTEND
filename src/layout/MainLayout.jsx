@@ -68,7 +68,8 @@ const MainLayout = ({ children }) => {
         className={`scada-main-content w-100`}
         style={{
           marginLeft: sidebarWidth,
-          paddingTop: isImpersonating ? '104px' : '64px',
+          marginTop: 0,
+          paddingTop: isImpersonating ? '104px' : '68px',
           transition: 'margin-left 0.28s cubic-bezier(0.25, 0.1, 0.25, 1)'
         }}
       >

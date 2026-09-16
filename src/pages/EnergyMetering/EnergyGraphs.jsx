@@ -800,34 +800,23 @@ const EnergyGraphs = () => {
 
   return (
     <div className="fade-in px-2 px-md-4 py-3">
-      <div className="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 p-4 rounded-4" style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.7))', border: '1px solid rgba(56, 189, 248, 0.15)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-        <div>
-          <h2 className="mb-1 text-white fw-bold d-flex align-items-center gap-3 flex-wrap">
-            <div className="p-2 rounded-3" style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56,189,248,0.3)' }}>
-              <Zap className="text-info text-shrink-0" size={28} />
-            </div>
-            Energy Advanced Analytics
-          </h2>
-          <p className="text-secondary fs-7 mb-0 mt-2">Continuous live streaming graphs tracking all parameters flawlessly.</p>
+      {energyMeters.length > 0 && (
+        <div className="d-flex justify-content-end align-items-center mb-3">
+          <Form.Select
+            size="sm"
+            className="bg-dark text-white border-secondary border-opacity-50 shadow-none fw-semibold rounded-3 py-1.5"
+            value={selectedMeterId}
+            onChange={(e) => setSelectedMeterId(e.target.value)}
+            style={{ width: 'auto', minWidth: '220px', fontSize: '0.85rem' }}
+          >
+            {energyMeters.map(meter => (
+              <option key={meter.id} value={meter.id}>
+                {meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'}
+              </option>
+            ))}
+          </Form.Select>
         </div>
-        <div className="d-flex flex-wrap align-items-center gap-2 gap-md-3">
-          {energyMeters.length > 0 && (
-            <Form.Select
-              size="lg"
-              className="bg-dark text-white border-secondary shadow-none fw-bold"
-              value={selectedMeterId}
-              onChange={(e) => setSelectedMeterId(e.target.value)}
-              style={{ width: 'auto', minWidth: '250px', fontSize: '0.95rem' }}
-            >
-              {energyMeters.map(meter => (
-                <option key={meter.id} value={meter.id}>
-                  {meter.name || meter.mapping?.energyMeteringTarget || 'Unnamed Meter'}
-                </option>
-              ))}
-            </Form.Select>
-          )}
-        </div>
-      </div>
+      )}
 
       <div className="energy-graphs-container mb-4" style={{ minHeight: '60vh' }}>
         {isSwitching ? (

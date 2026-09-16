@@ -1040,26 +1040,6 @@ const SubMeters = () => {
 
   return (
     <div className="fade-in">
-      {/* HEADER SECTION */}
-      <div className="page-header d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2 className="mb-1 text-white fw-bold d-flex align-items-center gap-2">
-            <Cpu className="text-info" size={26} /> Facility Sub-Meters Dashboard
-          </h2>
-          <p className="text-secondary fs-7">Granular power metrics, current loading, and status indicators across individual feeds.</p>
-        </div>
-        <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-          {groupSaveStatus && <Badge bg="success" className="px-3 py-2">{groupSaveStatus}</Badge>}
-          <button
-            onClick={() => setShowGroupingSettings(true)}
-            className="btn btn-outline-info rounded-pill px-3 py-2 d-flex align-items-center gap-2"
-            style={{ borderColor: 'rgba(56,189,248,0.35)', color: '#7dd3fc', background: 'rgba(56,189,248,0.08)' }}
-          >
-            <Settings2 size={16} /> MFM Group Settings
-          </button>
-          <PdfButton />
-        </div>
-      </div>
 
       {/* METERS CARD GRID */}
       <Row className="row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-4 justify-content-center">
@@ -1085,9 +1065,22 @@ const SubMeters = () => {
       {/* FILTER TABS & LOAD ANALYSIS */}
       <Card className="scada-card border mt-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', color: 'var(--scada-text)' }}>
         <Card.Body className="p-4">
-          <h5 className="mb-4 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
-            <Activity className="text-info" size={18} /> Sub-Meters Performance Diagnostics
-          </h5>
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h5 className="mb-0 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
+              <Activity className="text-info" size={18} /> Sub-Meters Performance Diagnostics
+            </h5>
+            <div className="d-flex align-items-center gap-2">
+              {groupSaveStatus && <Badge bg="success" className="px-3 py-2">{groupSaveStatus}</Badge>}
+              <button
+                onClick={() => setShowGroupingSettings(true)}
+                className="btn btn-outline-info rounded-pill px-3 py-1.5 d-flex align-items-center gap-2 fs-12"
+                style={{ borderColor: 'rgba(56,189,248,0.35)', color: '#7dd3fc', background: 'rgba(56,189,248,0.08)' }}
+              >
+                <Settings2 size={14} /> MFM Group Settings
+              </button>
+              <PdfButton />
+            </div>
+          </div>
 
           <Tabs defaultActiveKey="all" className="scada-tabs border-bottom border-secondary border-opacity-15 mb-4">
             <Tab eventKey="all" title="ALL FEEDS">
