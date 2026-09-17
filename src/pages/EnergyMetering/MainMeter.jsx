@@ -65,10 +65,8 @@ class ErrorBoundary extends React.Component {
 // Telemetry synonyms, limit evaluation, and SVG arc geometry are imported from ./utils/energyTelemetry
 
 
-const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, defaultColor }) => {
-  const { isDark } = useTheme();
-
 const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, defaultColor, isConfigured = true }) => {
+  const { isDark } = useTheme();
 
   const numericValue = typeof value === 'number' ? value : Number(value) || 0;
   const minVal = isNaN(Number(min)) ? 0 : Number(min);
@@ -224,13 +222,9 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
         padding: '16px 12px 12px',
         borderRadius: '16px',
 
-        border: cardBorder,
+        border: !isConfigured ? (isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e2e8f0') : cardBorder,
         background: cardBg,
         boxShadow: cardShadow,
-
-        border: isConfigured ? `1px solid ${defaultColor}30` : '1px solid rgba(255,255,255,0.06)',
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%)',
-        boxShadow: `0 4px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)`,
 
         transition: 'all 0.4s ease',
         position: 'relative',
@@ -761,13 +755,9 @@ const MainMeter = () => {
         setSelectedMeterId(newId);
         localStorage.setItem('selected_main_meter_id', String(newId));
       },
-
-      ariaLabel: 'Select Meter Device'
-
       placeholder: devicesLoading ? 'Loading devices...' : 'Main meter',
       ariaLabel: 'Select Meter Device',
       disabled: devicesLoading || siteDevices.length === 0
-
     };
   }, [siteDevices, devicesLoading, selectedMeterId]);
 
@@ -1261,15 +1251,6 @@ const MainMeter = () => {
                   </div>
 
 
-                  <div className="mfm-lcd-window">
-                    <div className="mfm-lcd-glass">
-                      <div className="mfm-lcd-screen">
-                        {/* Top status bar */}
-                        <div className="mfm-lcd-top-bar d-flex justify-content-between px-1">
-                          <span className="mfm-lcd-title font-monospace">{activeMode.title}</span>
-                          <span className="mfm-lcd-page-num font-monospace">P0{mfmPageIndex + 1}</span>
-                        </div>
-
                   {/* Grid LCD Screen Window */}
                   <div className="mfm-lcd-window mb-3">
                     <div className={`mfm-lcd-glass ${!isDeviceConfigured ? 'unconfigured-lcd-glass' : ''}`}>
@@ -1295,6 +1276,7 @@ const MainMeter = () => {
                                 <path d="M13 2a6 6 0 0 1 6 6" />
                                 <line x1="1" y1="1" x2="23" y2="23" stroke="#38bdf8" strokeWidth="1.8" />
                               </svg>
+                            </div>
 
 
                             <h5 className="fw-bold text-white mb-2" style={{ fontSize: '1.05rem', letterSpacing: '0.2px' }}>
@@ -2709,3 +2691,4 @@ export default function MainMeterWithErrorBoundary() {
     </ErrorBoundary>
   );
 }
+
