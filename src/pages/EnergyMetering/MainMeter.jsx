@@ -6,7 +6,13 @@ import PdfButton from '../../components/PdfButton';
 import PageContextBanner from '../../components/PageContextBanner';
 import { useSiteStore } from '../../context/SiteContext';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
+
 import { useTheme } from '../../context/ThemeContext';
+
+import { getAuthHeaders, normalizeList } from '../../services/apiClient';
+import { bmsService } from '../../services/bmsService';
+import { getApiUrl } from '../../utils/apiConfig';
+
 import { io } from 'socket.io-client';
 import {
   PARAMETER_SYNONYMS,
@@ -58,8 +64,12 @@ class ErrorBoundary extends React.Component {
 
 // Telemetry synonyms, limit evaluation, and SVG arc geometry are imported from ./utils/energyTelemetry
 
+
 const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, defaultColor }) => {
   const { isDark } = useTheme();
+
+const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, defaultColor, isConfigured = true }) => {
+
   const numericValue = typeof value === 'number' ? value : Number(value) || 0;
   const minVal = isNaN(Number(min)) ? 0 : Number(min);
   const rawMaxVal = isNaN(Number(max)) ? 100 : Number(max);
@@ -213,15 +223,22 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
       style={{
         padding: '16px 12px 12px',
         borderRadius: '16px',
+
         border: cardBorder,
         background: cardBg,
         boxShadow: cardShadow,
+
+        border: isConfigured ? `1px solid ${defaultColor}30` : '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%)',
+        boxShadow: `0 4px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)`,
+
         transition: 'all 0.4s ease',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
       {/* Top accent bar — phase color */}
+
       <div style={{
         position: 'absolute', top: 0, left: '15%', right: '15%', height: '2.5px',
         background: `linear-gradient(90deg, transparent, ${defaultColor}, transparent)`,
@@ -229,9 +246,19 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
         opacity: isDark ? 0.6 : 0.9,
       }} />
 
+      {isConfigured && (
+        <div style={{
+          position: 'absolute', top: 0, left: '15%', right: '15%', height: '2.5px',
+          background: `linear-gradient(90deg, transparent, ${defaultColor}, transparent)`,
+          borderRadius: '0 0 6px 6px',
+          opacity: 0.6,
+        }} />
+      )}
+
+
       {/* Phase label */}
       <span style={{
-        color: defaultColor, fontSize: '0.68rem', fontWeight: 800,
+        color: isConfigured ? defaultColor : '#94a3b8', fontSize: '0.68rem', fontWeight: 800,
         letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px',
         display: 'block',
       }}>
@@ -239,7 +266,7 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
       </span>
 
       {/* Gauge SVG — large and clear */}
-      <div style={{ width: '140px', height: '95px', position: 'relative' }}>
+      <div style={{ width: '140px', height: isConfigured ? '95px' : '80px', position: 'relative' }}>
         <svg width="100%" height="100%" viewBox="0 0 100 72">
           <defs>
             <linearGradient id={`ng-${safeLabel}`} x1="0" y1="0" x2="0" y2="1">
@@ -252,13 +279,14 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
           <path d={describeArc(50, 48, 38, 180, 360)} fill="none" stroke={arcTrackStroke} strokeWidth="7" strokeLinecap="round" />
 
           {/* Zone segments — softer, thicker */}
-          {renderSegment(180, angleLow, '#ef4444')}
-          {renderSegment(angleLow, angleNormalMin, '#f59e0b')}
-          {renderSegment(angleNormalMin, angleNormalMax, '#22c55e')}
-          {renderSegment(angleNormalMax, angleHigh, '#f59e0b')}
-          {renderSegment(angleHigh, 360, '#ef4444')}
+          {isConfigured && renderSegment(180, angleLow, '#ef4444')}
+          {isConfigured && renderSegment(angleLow, angleNormalMin, '#f59e0b')}
+          {isConfigured && renderSegment(angleNormalMin, angleNormalMax, '#22c55e')}
+          {isConfigured && renderSegment(angleNormalMax, angleHigh, '#f59e0b')}
+          {isConfigured && renderSegment(angleHigh, 360, '#ef4444')}
 
           {/* Needle */}
+
           <g
             transform={`translate(50, 48) rotate(${isNaN(angleValue) ? 0 : angleValue - 270})`}
             style={{ transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
@@ -283,10 +311,48 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
             fontFamily="monospace" fontSize="5.5" fontWeight="700">
             {unit}
           </text>
+
+          {isConfigured && (
+            <g
+              transform={`translate(50, 48) rotate(${isNaN(angleValue) ? 0 : angleValue - 270})`}
+              style={{ transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            >
+              <path d="M -1.5 4 L 0 -32 L 1.5 4 Z" fill={`url(#ng-${safeLabel})`}
+                style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+              <circle cx="0" cy="-30" r="1.8" fill={strokeColor} />
+            </g>
+          )}
+
+          {/* Center cap */}
+          <g transform="translate(50, 48)">
+            <circle cx="0" cy="0" r="5.5" fill="#1e293b" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+            <circle cx="0" cy="0" r="2.5" fill={isConfigured ? defaultColor : '#64748b'} />
+          </g>
+
+          {/* Value — big, readable or -- */}
+          {isConfigured ? (
+            <>
+              <text x="50" y="62" textAnchor="middle" fill="#f8fafc"
+                fontFamily="monospace" fontSize="11" fontWeight="900">
+                {numericValue.toFixed(1)}
+              </text>
+              <text x="50" y="70" textAnchor="middle" fill="rgba(255,255,255,0.4)"
+                fontFamily="monospace" fontSize="5.5">
+                {unit}
+              </text>
+            </>
+          ) : (
+            <text x="50" y="60" textAnchor="middle" fill="#64748b"
+              fontFamily="monospace" fontSize="13" fontWeight="800">
+              --
+            </text>
+          )}
+
         </svg>
       </div>
 
       {/* Status badge */}
+
       <div style={{
         display: 'inline-flex', alignItems: 'center', gap: '4px',
         background: badgeBg,
@@ -311,6 +377,36 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
           isVoltage ? 'L: 180  N: 210–250  H: 270' : isCurrent ? `H: ${(maxVal * 0.85).toFixed(0)}${unit}` : ''
         )}
       </div>
+
+      {isConfigured && (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
+          background: `${strokeColor}15`,
+          border: `1px solid ${strokeColor}30`,
+          borderRadius: '20px',
+          padding: '3px 12px',
+          marginTop: '4px',
+        }}>
+          <span style={{ fontSize: '0.55rem', color: strokeColor, fontWeight: 800, fontFamily: 'monospace' }}>{statusIcon}</span>
+          <span style={{ fontSize: '0.55rem', color: strokeColor, fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{statusText}</span>
+        </div>
+      )}
+
+      {/* Limits — small muted hint */}
+      {isConfigured && (
+        <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', marginTop: '4px' }}>
+          {limits && (parseLimit(limits.low) !== null || parseLimit(limits.high) !== null) ? (
+            <>
+              {parseLimit(limits.low) !== null && `L: ${parseLimit(limits.low)}`}
+              {parseLimit(limits.normalMin) !== null && parseLimit(limits.normalMax) !== null && ` N: ${parseLimit(limits.normalMin)}–${parseLimit(limits.normalMax)}`}
+              {parseLimit(limits.high) !== null && ` H: ${parseLimit(limits.high)}`}
+            </>
+          ) : (
+            isVoltage ? 'L: 180  N: 210–250  H: 270' : isCurrent ? `H: ${(maxVal * 0.85).toFixed(0)}${unit}` : ''
+          )}
+        </div>
+      )}
+
     </div>
   );
 };
@@ -318,6 +414,23 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
 const MainMeter = () => {
   const { getOverallStatus } = useDeviceStatus();
   const { sites, selectedSite, setSelectedSite } = useSiteStore();
+
+  // Sites fetched from sites route (http://localhost:3001/api/v1/sites)
+  const [routeSites, setRouteSites] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+    } catch (e) {}
+    return [];
+  });
+  const [selectedSiteId, setSelectedSiteId] = useState(() => {
+    return localStorage.getItem('selected_main_meter_site_id') || '';
+  });
+
+  // Devices fetched from http://localhost:3001/api/v1/devices/ with site_id and category=MAIN_ENERGY_METER
+  const [siteDevices, setSiteDevices] = useState([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+
   // 1. Live Telemetry Data States
   const [data, setData] = useState({
     // CHANGE
@@ -364,56 +477,17 @@ const MainMeter = () => {
   // Ref to the latest fetchStats function so we can call it immediately on template change
   const fetchStatsRef = useRef(null);
 
-  // Load templates on mount & API fetch sync
+  // Load templates on mount from scada_templates if available
   useEffect(() => {
     const saved = localStorage.getItem('scada_templates');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         setTemplates(parsed);
-        const meters = parsed.filter(t => t.module === 'Main Meter' || t.category === 'Energy Metering');
-        if (meters.length > 0) {
-          const stored = localStorage.getItem('selected_main_meter_id');
-          if (stored && meters.some(m => String(m.id) === String(stored))) {
-            setSelectedMeterId(stored);
-          } else {
-            setSelectedMeterId(meters[0].id);
-          }
-        }
       } catch (e) {
         console.error('Failed to parse templates from local storage:', e);
       }
     }
-
-    fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        const mapped = data.map(t => {
-          const hasDef = t.defaultValues && typeof t.defaultValues === 'object' && Object.keys(t.defaultValues).length > 0;
-          const defValues = hasDef ? t.defaultValues : null;
-          const mappingSource = defValues || t.settings?.[0]?.meta || {};
-          return {
-            id: t.id,
-            name: t.name,
-            category: (defValues && defValues.category) || t.category || 'Water Management',
-            module: (defValues && defValues.module) || t.settings?.[0]?.eventKey || 'AG Tank',
-            mapping: mappingSource
-          };
-        });
-        setTemplates(mapped);
-        localStorage.setItem('scada_templates', JSON.stringify(mapped));
-
-        const meters = mapped.filter(t => t.module === 'Main Meter' || t.category === 'Energy Metering');
-        if (meters.length > 0) {
-          const stored = localStorage.getItem('selected_main_meter_id');
-          if (stored && meters.some(m => String(m.id) === String(stored))) {
-            setSelectedMeterId(stored);
-          } else if (!selectedMeterId) {
-            setSelectedMeterId(meters[0].id);
-          }
-        }
-      })
-      .catch(err => console.error('Error fetching templates in MainMeter:', err));
   }, []);
 
   // Save selected meter ID to localStorage when changed
@@ -423,36 +497,200 @@ const MainMeter = () => {
     }
   }, [selectedMeterId]);
 
-  const energyMeters = useMemo(() => {
-    return templates.filter(t => t.module === 'Main Meter' || t.category === 'Energy Metering');
-  }, [templates]);
+  // Fetch sites as per OpenAPI spec (GET /sites)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSitesFromRoute = async () => {
+      try {
+        // OpenAPI 3.0.3: GET /sites
+        const res = await bmsService.getSites().catch(() => null);
+        const list = normalizeList(res, 'sites');
+        if (isMounted && list && list.length > 0) {
+          setRouteSites(list);
+          try {
+            localStorage.setItem('scada_sites_db', JSON.stringify(list));
+          } catch (e) {}
+          return;
+        }
+      } catch (err) {
+        console.warn('bmsService.getSites notice:', err);
+      }
+
+      // Direct proxy route fallback (/sites)
+      try {
+        const proxyUrl = getApiUrl('/sites');
+        const res = await fetch(proxyUrl, { headers: getAuthHeaders() }).catch(() => null);
+        if (res && res.ok) {
+          const json = await res.json();
+          const list = normalizeList(json, 'sites');
+          if (isMounted && list && list.length > 0) {
+            setRouteSites(list);
+            try {
+              localStorage.setItem('scada_sites_db', JSON.stringify(list));
+            } catch (e) {}
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch sites from route:', err);
+      }
+
+      if (isMounted && sites && sites.length > 0) {
+        setRouteSites(sites);
+      }
+    };
+
+    fetchSitesFromRoute();
+    return () => { isMounted = false; };
+  }, [sites]);
+
+  const allSites = useMemo(() => {
+    if (routeSites && routeSites.length > 0) return routeSites;
+    if (sites && sites.length > 0) return sites;
+    return [];
+  }, [routeSites, sites]);
+
+  // Keep selected site synchronized with available sites
+  useEffect(() => {
+    if (allSites.length > 0) {
+      const match = allSites.find(s => String(s.id || s.siteId || s._id) === String(selectedSiteId));
+      if (!match) {
+        const firstId = String(allSites[0].id || allSites[0].siteId || allSites[0]._id);
+        setSelectedSiteId(firstId);
+        localStorage.setItem('selected_main_meter_site_id', firstId);
+        if (setSelectedSite) setSelectedSite(allSites[0]);
+      } else {
+        if (setSelectedSite && selectedSite?.id !== match.id) setSelectedSite(match);
+      }
+    }
+  }, [allSites, selectedSiteId, setSelectedSite, selectedSite]);
+
+  // Single OpenAPI route for main energy meters of the selected site:
+  // GET /api/v1/devices?siteId={siteId}&category=MAIN_ENERGY_METER&include=settings,rules,profile
+  useEffect(() => {
+    if (!selectedSiteId) {
+      setSiteDevices([]);
+      setSelectedMeterId('');
+      return;
+    }
+
+    let isMounted = true;
+    const fetchMainEnergyMeters = async () => {
+      setDevicesLoading(true);
+      try {
+        const queryParams = new URLSearchParams({
+          siteId: String(selectedSiteId),
+          category: 'MAIN_ENERGY_METER',
+          include: 'settings,rules,profile'
+        });
+
+        const url = getApiUrl(`/devices?${queryParams.toString()}`);
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: getAuthHeaders()
+        });
+
+        let items = [];
+        if (res && res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json?.data)) {
+            items = json.data;
+          } else if (Array.isArray(json)) {
+            items = json;
+          }
+        }
+
+        if (isMounted) {
+          setSiteDevices(items);
+          if (items.length > 0) {
+            const currentInList = items.some(d => String(d.id || d.deviceId) === String(selectedMeterId));
+            if (!currentInList) {
+              const firstId = String(items[0].id || items[0].deviceId);
+              setSelectedMeterId(firstId);
+              localStorage.setItem('selected_main_meter_id', firstId);
+            }
+          } else {
+            // Total size zero: clear selected device ID
+            setSelectedMeterId('');
+            localStorage.removeItem('selected_main_meter_id');
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching main energy meters:', err);
+        if (isMounted) {
+          setSiteDevices([]);
+          setSelectedMeterId('');
+        }
+      } finally {
+        if (isMounted) setDevicesLoading(false);
+      }
+    };
+
+    fetchMainEnergyMeters();
+    return () => { isMounted = false; };
+  }, [selectedSiteId]);
 
   const mainMeterTemplate = useMemo(() => {
-    const tpl = selectedMeterId
-      ? templates.find(t => String(t.id) === String(selectedMeterId))
-      : (energyMeters[0] || null);
-    // Keep ref in sync for use inside socket/poll closures
+    if (!siteDevices || siteDevices.length === 0) {
+      mainMeterTemplateRef.current = null;
+      return null;
+    }
+
+    const foundDevice = siteDevices.find(d => String(d.id || d.deviceId) === String(selectedMeterId)) || siteDevices[0];
+    if (!foundDevice) {
+      mainMeterTemplateRef.current = null;
+      return null;
+    }
+
+    const mappingSource = foundDevice.defaultValues || foundDevice.settings?.[0]?.meta || foundDevice.settings || foundDevice.mapping || {};
+    const tpl = {
+      id: foundDevice.id || foundDevice.deviceId,
+      name: foundDevice.name || foundDevice.deviceName || foundDevice.title || 'Main Energy Meter',
+      code: foundDevice.code || foundDevice.hardwareId || '',
+      category: foundDevice.category || 'MAIN_ENERGY_METER',
+      module: foundDevice.module || 'Main Meter',
+      siteId: foundDevice.siteId || selectedSiteId,
+      status: foundDevice.status,
+      isActive: foundDevice.isActive,
+      lastSeenAt: foundDevice.lastSeenAt,
+      sochiotDeviceIds: foundDevice.sochiotDeviceIds || [],
+      mapping: mappingSource,
+      device: foundDevice
+    };
     mainMeterTemplateRef.current = tpl;
     return tpl;
-  }, [templates, selectedMeterId, energyMeters]);
+  }, [siteDevices, selectedMeterId, selectedSiteId]);
 
   const emLimitsConfig = useMemo(() => {
     return mainMeterTemplate?.mapping?.emLimitsConfig || {};
   }, [mainMeterTemplate]);
 
   const isMeterOnline = useMemo(() => {
-    let devId = mainMeterTemplate?.mapping?.deviceId;
+    if (!mainMeterTemplate) return false;
+    let devId = mainMeterTemplate?.mapping?.deviceId || mainMeterTemplate?.device?.id || mainMeterTemplate?.device?.deviceId;
     if (!devId && mainMeterTemplate?.mapping) {
       const anyConfig = Object.values(mainMeterTemplate.mapping).find(cfg => cfg && typeof cfg === 'object' && cfg.device);
       if (anyConfig) devId = anyConfig.device;
     }
-    const gatewayUuid = mainMeterTemplate?.mapping?.gatewayUuid;
+    const gatewayUuid = mainMeterTemplate?.mapping?.gatewayUuid || mainMeterTemplate?.device?.gatewayUuid;
     if (devId) {
       const isOnline = getOverallStatus(devId, gatewayUuid);
       if (isOnline) return true;
 
+      // Direct device status indicator from OpenAPI Device model
+      if (mainMeterTemplate?.device?.status) {
+        const s = String(mainMeterTemplate.device.status).toUpperCase();
+        if (s === 'ONLINE' || s === 'ACTIVE') return true;
+        if (s === 'OFFLINE' || s === 'INACTIVE' || s === 'DISABLED') return false;
+      }
+      if (mainMeterTemplate?.device?.lastSeenAt) {
+        const lastSeenMs = new Date(mainMeterTemplate.device.lastSeenAt).getTime();
+        if (Math.abs(Date.now() - lastSeenMs) < 5 * 60 * 1000) {
+          return true;
+        }
+      }
+
       // Telemetry-based fallback: ONLY if data is FRESH (within 24 hours for robust QA/development).
-      // This prevents stale MongoDB events from making an offline device look ONLINE.
       const FRESHNESS_MS = 24 * 60 * 60 * 1000; // 24 hours
       const isFresh = lastTelemetryAt && (Date.now() - lastTelemetryAt) < FRESHNESS_MS;
       if (isFresh) {
@@ -465,65 +703,73 @@ const MainMeter = () => {
         }
       }
     }
-    // Fallback to legacy commStatus
-    return !(data.commStatus === 0 || data.commStatus === '0' || data.commStatus === null || data.commStatus === '');
-  }, [mainMeterTemplate, getOverallStatus, lastTelemetryAt, data.commStatus, data.vR, data.iR, data.totalKw, data.activePower, data.meterSrno]);
+    return false;
+  }, [mainMeterTemplate, getOverallStatus, lastTelemetryAt, data.vR, data.iR, data.totalKw, data.activePower, data.meterSrno]);
 
   // Site selector configuration for the context banner
   const siteSelector = useMemo(() => {
-    const siteOptions = (sites && sites.length > 0)
-      ? sites.map(s => ({
+    const siteOptions = (allSites && allSites.length > 0)
+      ? allSites.map(s => ({
           value: String(s.id || s._id || s.siteId),
           label: s.name || s.siteName || s.title || `Site ${s.id}`
         }))
       : [
-          { value: 'main-campus', label: 'Main Facility Site' },
-          { value: 'sub-station-1', label: 'Sub-Station 01' },
-          { value: 'data-center', label: 'Data Center Site' }
+          { value: '1', label: 'Main Facility Site' }
         ];
 
-    const currentVal = selectedSite
-      ? String(selectedSite.id || selectedSite._id || selectedSite.siteId)
-      : siteOptions[0]?.value;
+    const currentVal = selectedSiteId || siteOptions[0]?.value;
 
     return {
       value: currentVal,
       options: siteOptions,
       onChange: (newId) => {
-        const found = sites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
+        setSelectedSiteId(newId);
+        localStorage.setItem('selected_main_meter_site_id', String(newId));
+        const found = allSites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
         if (found && setSelectedSite) {
           setSelectedSite(found);
         }
       },
       ariaLabel: 'Select Site'
     };
-  }, [sites, selectedSite, setSelectedSite]);
+  }, [allSites, selectedSiteId, setSelectedSite]);
 
   // Device selector configuration for the context banner
   const deviceSelector = useMemo(() => {
-    const meterOptions = (energyMeters && energyMeters.length > 0)
-      ? energyMeters.map(meter => ({
-          value: String(meter.id),
-          label: meter.name || meter.mapping?.energyMeteringTarget || `Meter ${meter.id}`
-        }))
-      : [
-          { value: 'main-incomer-1', label: 'Main Grid Incomer (EM-01)' },
-          { value: 'main-incomer-2', label: 'Solar DG Incomer (EM-02)' }
-        ];
+    let meterOptions = [];
+
+    if (devicesLoading) {
+      meterOptions = [{ value: '', label: 'Loading devices...' }];
+    } else if (siteDevices && siteDevices.length > 0) {
+      meterOptions = siteDevices.map(d => ({
+        value: String(d.id || d.deviceId),
+        label: d.name || d.deviceName || d.title || d.serialNumber || `Meter (${d.id})`
+      }));
+    } else {
+      meterOptions = [{ value: '', label: 'Main meter' }];
+    }
 
     const currentVal = (selectedMeterId && meterOptions.some(m => String(m.value) === String(selectedMeterId)))
       ? String(selectedMeterId)
-      : meterOptions[0]?.value;
+      : (meterOptions[0]?.value || '');
 
     return {
       value: currentVal,
       options: meterOptions,
       onChange: (newId) => {
+        if (!newId) return;
         setSelectedMeterId(newId);
+        localStorage.setItem('selected_main_meter_id', String(newId));
       },
+
       ariaLabel: 'Select Meter Device'
+
+      placeholder: devicesLoading ? 'Loading devices...' : 'Main meter',
+      ariaLabel: 'Select Meter Device',
+      disabled: devicesLoading || siteDevices.length === 0
+
     };
-  }, [energyMeters, selectedMeterId]);
+  }, [siteDevices, devicesLoading, selectedMeterId]);
 
   // --- Reset live data, history & page index when the selected meter changes ---
   useEffect(() => {
@@ -544,7 +790,7 @@ const MainMeter = () => {
     setMfmPageIndex(0);
     // Immediately poll the new template's modules after a tick (so the ref updates first)
     const t = setTimeout(() => {
-      if (fetchStatsRef.current) fetchStatsRef.current();
+      if (ENABLE_LIVE_TELEMETRY && fetchStatsRef.current) fetchStatsRef.current();
     }, 50);
     return () => clearTimeout(t);
   }, [selectedMeterId]);
@@ -593,8 +839,20 @@ const MainMeter = () => {
 
 
 
+
   // Live Telemetry Sync using Websockets and Polling
+
+  // Control flag: set to false to stop all live data calling as requested
+  const ENABLE_LIVE_TELEMETRY = false;
+
+  // Live Telemetry Sync using Websockets and Polling (stopped when ENABLE_LIVE_TELEMETRY is false)
+
   useEffect(() => {
+    if (!ENABLE_LIVE_TELEMETRY) {
+      fetchStatsRef.current = null;
+      return;
+    }
+
     const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
     const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'], autoConnect: false });
 
@@ -774,6 +1032,36 @@ const MainMeter = () => {
           });
         }
 
+        // OpenAPI Live Device Telemetry query: GET /sites/{siteId}/devices/{deviceId}/live
+        if (selectedSiteId && selectedMeterId) {
+          try {
+            const liveRes = await bmsService.getDeviceLiveTelemetry(selectedSiteId, selectedMeterId).catch(() => null);
+            if (liveRes && (liveRes.data || (typeof liveRes === 'object' && !liveRes.error))) {
+              const liveData = liveRes.data || liveRes;
+              if (liveData && typeof liveData === 'object' && Object.keys(liveData).length > 0) {
+                setData(prev => ({
+                  ...prev,
+                  ...(liveData.vR !== undefined && { vR: Number(liveData.vR) || 0 }),
+                  ...(liveData.vY !== undefined && { vY: Number(liveData.vY) || 0 }),
+                  ...(liveData.vB !== undefined && { vB: Number(liveData.vB) || 0 }),
+                  ...(liveData.iR !== undefined && { iR: Number(liveData.iR) || 0 }),
+                  ...(liveData.iY !== undefined && { iY: Number(liveData.iY) || 0 }),
+                  ...(liveData.iB !== undefined && { iB: Number(liveData.iB) || 0 }),
+                  ...(liveData.totalKw !== undefined && { totalKw: Number(liveData.totalKw) || 0 }),
+                  ...(liveData.activePower !== undefined && { activePower: Number(liveData.activePower) || 0 }),
+                  ...(liveData.pf !== undefined && { pf: Number(liveData.pf) || 0 }),
+                  ...(liveData.freq !== undefined && { freq: Number(liveData.freq) || 0 }),
+                  ...(liveData.ebKwh !== undefined && { ebKwh: Number(liveData.ebKwh) || 0 }),
+                  ...(liveData.ebKvah !== undefined && { ebKvah: Number(liveData.ebKvah) || 0 }),
+                  ...(liveData.dgKwh !== undefined && { dgKwh: Number(liveData.dgKwh) || 0 }),
+                  ...(liveData.balance !== undefined && { balance: Number(liveData.balance) || 0 })
+                }));
+                setLastTelemetryAt(Date.now());
+              }
+            }
+          } catch (e) {}
+        }
+
         const pollList = Array.from(modulesToPoll);
         if (pollList.length === 0) return;
 
@@ -900,12 +1188,14 @@ const MainMeter = () => {
 
   const activeMode = mfmPages[mfmPageIndex];
 
+  const isDeviceConfigured = Boolean(siteDevices && siteDevices.length > 0);
+
   return (
     <div className="fade-in main-meter-workspace">
       <PageContextBanner
-        title={mainMeterTemplate ? mainMeterTemplate.name : 'Main Grid Incomer Meter'}
-        icon={<Zap className="text-warning" size={22} />}
-        status={isMeterOnline ? 'Online' : 'Offline'}
+        title={mainMeterTemplate ? mainMeterTemplate.name : 'Main meter'}
+        icon={<Zap className={isDeviceConfigured ? "text-warning" : "text-secondary"} size={22} />}
+        status={isDeviceConfigured ? (isMeterOnline ? 'ONLINE' : 'OFFLINE') : 'NOT CONFIGURED'}
         siteSelector={siteSelector}
         deviceSelector={deviceSelector}
         metadata={[
@@ -921,6 +1211,7 @@ const MainMeter = () => {
             title="Download Custom PDF Report"
             variant="custom"
             className="context-banner-action-btn p-1 border-0"
+            disabled={!isDeviceConfigured}
           />
         ]}
         enableFullscreen={true}
@@ -969,6 +1260,7 @@ const MainMeter = () => {
                     <span className="mfm-model-no font-monospace">APM Series</span>
                   </div>
 
+
                   <div className="mfm-lcd-window">
                     <div className="mfm-lcd-glass">
                       <div className="mfm-lcd-screen">
@@ -978,27 +1270,72 @@ const MainMeter = () => {
                           <span className="mfm-lcd-page-num font-monospace">P0{mfmPageIndex + 1}</span>
                         </div>
 
-                        {/* LCD Screen Grid Rows */}
-                        <div className="mfm-lcd-grid d-flex flex-column gap-1">
-                          {activeMode.lines.map((line, lIdx) => (
-                            <div key={lIdx} className="mfm-lcd-row d-flex align-items-center justify-content-between px-2 font-monospace">
-                              <div className="mfm-lcd-row-left d-flex align-items-center">
-                                <span className="mfm-lcd-label text-start me-1">{line.label}</span>
-                              </div>
-                              <div className="mfm-lcd-row-right d-flex align-items-baseline justify-content-end">
-                                <span className="mfm-lcd-value text-end fw-black">{line.value}</span>
-                                {line.unit && <span className="mfm-lcd-unit text-start ms-1">{line.unit}</span>}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                  {/* Grid LCD Screen Window */}
+                  <div className="mfm-lcd-window mb-3">
+                    <div className={`mfm-lcd-glass ${!isDeviceConfigured ? 'unconfigured-lcd-glass' : ''}`}>
+                      <div className={`mfm-lcd-screen ${!isDeviceConfigured ? 'unconfigured-lcd-screen' : ''}`}>
+                        {!isDeviceConfigured ? (
+                          <div className="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3 py-4 select-none">
+                            {/* Dashed circular boundary */}
+                            <div 
+                              className="d-flex align-items-center justify-content-center mb-3"
+                              style={{
+                                width: '84px',
+                                height: '84px',
+                                borderRadius: '50%',
+                                border: '1.5px dashed rgba(56, 189, 248, 0.45)',
+                                background: 'rgba(56, 189, 248, 0.03)'
+                              }}
+                            >
+                              <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="7" width="18" height="13" rx="2" />
+                                <line x1="3" y1="11" x2="21" y2="11" />
+                                <line x1="7" y1="15" x2="10" y2="15" />
+                                <path d="M15 4a3 3 0 0 1 3 3" />
+                                <path d="M13 2a6 6 0 0 1 6 6" />
+                                <line x1="1" y1="1" x2="23" y2="23" stroke="#38bdf8" strokeWidth="1.8" />
+                              </svg>
 
-                        {/* Bottom menu bar */}
-                        <div className="mfm-lcd-bottom-bar d-flex justify-content-between px-2 font-monospace mt-1">
-                          {activeMode.footerLabels.map((lbl, idx) => (
-                            <span key={idx} className="mfm-lcd-btn-label">{lbl}</span>
-                          ))}
-                        </div>
+
+                            <h5 className="fw-bold text-white mb-2" style={{ fontSize: '1.05rem', letterSpacing: '0.2px' }}>
+                              No device configured for this site
+                            </h5>
+
+                            <p className="text-secondary mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.45', maxWidth: '240px' }}>
+                              Configure a device to view live telemetry, meter readings and SCADA data.
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Top status bar */}
+                            <div className="mfm-lcd-top-bar d-flex justify-content-between px-1">
+                              <span className="mfm-lcd-title font-monospace">{activeMode.title}</span>
+                              <span className="mfm-lcd-page-num font-monospace">P0{mfmPageIndex + 1}</span>
+                            </div>
+
+                            {/* LCD Screen Grid Rows */}
+                            <div className="mfm-lcd-grid d-flex flex-column gap-1">
+                              {activeMode.lines.map((line, lIdx) => (
+                                <div key={lIdx} className="mfm-lcd-row d-flex align-items-center justify-content-between px-2 font-monospace">
+                                  <div className="mfm-lcd-row-left d-flex align-items-center">
+                                    <span className="mfm-lcd-label text-start me-1">{line.label}</span>
+                                  </div>
+                                  <div className="mfm-lcd-row-right d-flex align-items-baseline justify-content-end">
+                                    <span className="mfm-lcd-value text-end fw-black">{line.value}</span>
+                                    {line.unit && <span className="mfm-lcd-unit text-start ms-1">{line.unit}</span>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Bottom menu bar */}
+                            <div className="mfm-lcd-bottom-bar d-flex justify-content-between px-2 font-monospace mt-1">
+                              {activeMode.footerLabels.map((lbl, idx) => (
+                                <span key={idx} className="mfm-lcd-btn-label">{lbl}</span>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1009,38 +1346,38 @@ const MainMeter = () => {
                       {/* LED Indicators */}
                       <div className="mfm-leds-rack d-flex gap-3 align-items-center">
                         <div className="mfm-led-group">
-                          <div className={`mfm-led-bulb bulb-red ${calBlink ? 'glow-active' : ''}`}></div>
+                          <div className={`mfm-led-bulb bulb-red ${isDeviceConfigured && calBlink ? 'glow-active' : ''}`}></div>
                           <span className="mfm-led-label font-monospace">CAL</span>
                         </div>
                         <div className="mfm-led-group">
-                          <div className="mfm-led-bulb bulb-green glow-active"></div>
+                          <div className={`mfm-led-bulb bulb-green ${isDeviceConfigured && isMeterOnline ? 'glow-active' : ''}`}></div>
                           <span className="mfm-led-label font-monospace">COM</span>
                         </div>
                         <div className="mfm-led-group">
-                          <div className={`mfm-led-bulb bulb-orange ${data.overloadTrip > 0 || data.overloadLimitReached > 0 ? 'glow-active' : ''}`}></div>
+                          <div className={`mfm-led-bulb bulb-orange ${isDeviceConfigured && (data.overloadTrip > 0 || data.overloadLimitReached > 0) ? 'glow-active' : ''}`}></div>
                           <span className="mfm-led-label font-monospace">ALM</span>
                         </div>
                       </div>
 
                       {/* Standards markings — dynamic */}
                       <div className="mfm-spec-labels font-monospace text-secondary text-end">
-                        <div>Sr No: {data.meterSrno > 0 ? data.meterSrno : '—'}</div>
-                        <div>{data.freq > 0 ? `${data.freq.toFixed(1)}Hz` : '—'} · SOCHIOT</div>
+                        <div>Sr No: {isDeviceConfigured && data.meterSrno > 0 ? data.meterSrno : '—'}</div>
+                        <div>{isDeviceConfigured && data.freq > 0 ? `${data.freq.toFixed(1)}Hz` : '—'} · SOCHIOT</div>
                       </div>
                     </div>
 
                     {/* Glossy tact plastic buttons */}
                     <div className="mfm-button-deck d-flex justify-content-between gap-2 px-1 mt-3">
-                      <button className="mfm-tactile-btn prev-btn" onClick={handleSW2} title="Page UP (<)">
+                      <button className="mfm-tactile-btn prev-btn" onClick={handleSW2} disabled={!isDeviceConfigured} title="Page UP (<)">
                         <span className="btn-glyph">&lt;</span>
                       </button>
-                      <button className="mfm-tactile-btn next-btn" onClick={handleSW1} title="Page DOWN (>)">
+                      <button className="mfm-tactile-btn next-btn" onClick={handleSW1} disabled={!isDeviceConfigured} title="Page DOWN (>)">
                         <span className="btn-glyph">&gt;</span>
                       </button>
                       <button className="mfm-tactile-btn menu-btn" disabled title="System Mapping Information">
                         <span className="btn-glyph">⚙</span>
                       </button>
-                      <button className="mfm-tactile-btn enter-btn" onClick={() => { pauseAutoCycleAndResetTimeout(); setAutoCycle(prev => !prev); }} title="Toggle Page Auto-Cycle">
+                      <button className="mfm-tactile-btn enter-btn" onClick={() => { pauseAutoCycleAndResetTimeout(); setAutoCycle(prev => !prev); }} disabled={!isDeviceConfigured} title="Toggle Page Auto-Cycle">
                         <span className="btn-glyph">↵</span>
                       </button>
                     </div>
@@ -1053,37 +1390,37 @@ const MainMeter = () => {
                 <div className="hud-metric-horizontal">
                   <span className="hud-label">METER TARGET</span>
                   <span className="hud-value text-info font-monospace">
-                    {mainMeterTemplate?.mapping?.energyMeteringTarget || mainMeterTemplate?.name || '—'}
+                    {isDeviceConfigured ? (mainMeterTemplate?.mapping?.energyMeteringTarget || mainMeterTemplate?.name || '—') : '--'}
                   </span>
                 </div>
                 <div className="hud-metric-horizontal">
                   <span className="hud-label">EB TARIFF</span>
                   <span className="hud-value text-success font-monospace">
-                    {data.ebTariff > 0 ? `₹${data.ebTariff}/U` : '—'}
+                    {isDeviceConfigured ? (data.ebTariff > 0 ? `₹${data.ebTariff}/U` : '—') : '--'}
                   </span>
                 </div>
                 <div className="hud-metric-horizontal">
                   <span className="hud-label">DG TARIFF</span>
                   <span className="hud-value text-warning font-monospace">
-                    {data.dgTariff > 0 ? `₹${data.dgTariff}/U` : '—'}
+                    {isDeviceConfigured ? (data.dgTariff > 0 ? `₹${data.dgTariff}/U` : '—') : '--'}
                   </span>
                 </div>
                 <div className="hud-metric-horizontal">
                   <span className="hud-label">R-PHASE LOAD</span>
                   <span className="hud-value text-danger font-monospace">
-                    {data.vR}V / {data.iR}A
+                    {isDeviceConfigured ? `${data.vR}V / ${data.iR}A` : '--'}
                   </span>
                 </div>
                 <div className="hud-metric-horizontal">
                   <span className="hud-label">Y-PHASE LOAD</span>
                   <span className="hud-value text-warning font-monospace">
-                    {data.vY}V / {data.iY}A
+                    {isDeviceConfigured ? `${data.vY}V / ${data.iY}A` : '--'}
                   </span>
                 </div>
                 <div className="hud-metric-horizontal">
                   <span className="hud-label">B-PHASE LOAD</span>
                   <span className="hud-value text-primary font-monospace">
-                    {data.vB}V / {data.iB}A
+                    {isDeviceConfigured ? `${data.vB}V / ${data.iB}A` : '--'}
                   </span>
                 </div>
               </div>
@@ -1093,7 +1430,9 @@ const MainMeter = () => {
 
         {/* RIGHT COLUMN: TECHNICAL METRICS, WAVE DIAGRAMS, DIALS */}
         <Col lg={7} xl={7}>
-          <Card className="scada-glass-card border h-100 p-3">
+          <Card 
+            className="scada-glass-card border h-100 p-3"
+          >
             <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3" style={{ zIndex: 5 }}>
               <h5 className="mb-0 fw-black d-flex align-items-center gap-2 uppercase tracking-wide fs-11" style={{ color: 'var(--scada-text)' }}>
                 <Activity className="text-info animate-pulse" size={18} /> SCADA Control Panel
@@ -1134,6 +1473,14 @@ const MainMeter = () => {
               };
 
               const getFieldMetadata = (config, fieldKey, defaultLabel, defaultUnit, rawValue) => {
+                if (!isDeviceConfigured) {
+                  return { label: defaultLabel, val: '--' };
+                }
+
+                if (rawValue === '' || rawValue === null || rawValue === undefined) {
+                  return { label: defaultLabel, val: '—' };
+                }
+
                 if (config && config.enabled !== false && config[fieldKey]) {
                   const fieldVal = config[fieldKey];
                   let cleanKey = fieldVal;
@@ -1244,7 +1591,7 @@ const MainMeter = () => {
                               <div className="d-flex justify-content-between align-items-center mb-3">
                                 <small className="text-secondary fs-11 uppercase fw-bold tracking-wider">Line-to-Neutral Voltages</small>
                                 <Badge bg="info" className="bg-opacity-10 text-info border border-info border-opacity-20 fs-10 font-monospace">
-                                  {data.ebRLoadSet > 0 ? `R-LIMIT: ${data.ebRLoadSet}kW` : 'VOLTAGE — 3Φ'}
+                                  {isDeviceConfigured && data.ebRLoadSet > 0 ? `R-LIMIT: ${data.ebRLoadSet}kW` : 'VOLTAGE — 3Φ'}
                                 </Badge>
                               </div>
                               <Row className="g-2">
@@ -1259,6 +1606,7 @@ const MainMeter = () => {
                                       limits={emLimitsConfig.vR}
                                       defaultColor="#ef4444"
                                       defaultGlowClass={true}
+                                      isConfigured={isDeviceConfigured}
                                     />
                                   </Col>
                                 )}
@@ -1273,6 +1621,7 @@ const MainMeter = () => {
                                       limits={emLimitsConfig.vY}
                                       defaultColor="#f59e0b"
                                       defaultGlowClass={true}
+                                      isConfigured={isDeviceConfigured}
                                     />
                                   </Col>
                                 )}
@@ -1287,6 +1636,7 @@ const MainMeter = () => {
                                       limits={emLimitsConfig.vB}
                                       defaultColor="#06b6d4"
                                       defaultGlowClass={true}
+                                      isConfigured={isDeviceConfigured}
                                     />
                                   </Col>
                                 )}
@@ -1302,7 +1652,7 @@ const MainMeter = () => {
                               <div className="d-flex justify-content-between align-items-center mb-3">
                                 <small className="text-secondary fs-11 uppercase fw-bold tracking-wider">Line Currents</small>
                                 <Badge bg="info" className="bg-opacity-10 text-info border border-info border-opacity-20 fs-10 font-monospace">
-                                  {data.ebRLoadSet > 0 ? `LOAD LIMIT: ${data.ebRLoadSet}kW` : 'CURRENT — 3Φ'}
+                                  {isDeviceConfigured && data.ebRLoadSet > 0 ? `LOAD LIMIT: ${data.ebRLoadSet}kW` : 'CURRENT — 3Φ'}
                                 </Badge>
                               </div>
                               <Row className="g-2">
@@ -1317,6 +1667,7 @@ const MainMeter = () => {
                                       limits={emLimitsConfig.iR}
                                       defaultColor="#ef4444"
                                       defaultGlowClass={true}
+                                      isConfigured={isDeviceConfigured}
                                     />
                                   </Col>
                                 )}
@@ -1331,6 +1682,7 @@ const MainMeter = () => {
                                       limits={emLimitsConfig.iY}
                                       defaultColor="#f59e0b"
                                       defaultGlowClass={true}
+                                      isConfigured={isDeviceConfigured}
                                     />
                                   </Col>
                                 )}
@@ -1345,6 +1697,7 @@ const MainMeter = () => {
                                       limits={emLimitsConfig.iB}
                                       defaultColor="#06b6d4"
                                       defaultGlowClass={true}
+                                      isConfigured={isDeviceConfigured}
                                     />
                                   </Col>
                                 )}
@@ -1395,8 +1748,8 @@ const MainMeter = () => {
                           const { label, val } = getFieldMetadata(item.config, item.key, item.defaultLabel, item.defaultUnit, item.rawValue);
                           const numericValue = typeof item.rawValue === 'number' ? item.rawValue : Number(item.rawValue) || 0;
 
-                          // Get threshold status if limits are configured
-                          const cardStatus = item.limits ? getThresholdStatus(numericValue, item.limits) : 'default';
+                          // Get threshold status if limits are configured and device is configured
+                          const cardStatus = (isDeviceConfigured && item.limits) ? getThresholdStatus(numericValue, item.limits) : 'default';
 
                           // Determine the parameter accent color based on key
                           let accentColor = 'rgba(255, 255, 255, 0.1)';
@@ -1410,50 +1763,51 @@ const MainMeter = () => {
                           else if (item.key === 'pf') accentColor = '#14b8a6';
                           else if (item.key === 'freq') accentColor = '#06b6d4';
 
-                          let borderStyle = {
-                            borderLeft: `4px solid ${accentColor}`,
-                            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                          };
-                          let textClass = item.isImportant ? 'text-warning' : 'text-white';
+                          let borderStyle = !isDeviceConfigured
+                            ? { border: '1px solid rgba(255, 255, 255, 0.05)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }
+                            : { borderLeft: `4px solid ${accentColor}`, transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' };
+                          let textClass = !isDeviceConfigured ? 'text-secondary' : (item.isImportant ? 'text-warning' : 'text-white');
 
-                          if (cardStatus === 'alert') {
-                            borderStyle = {
-                              ...borderStyle,
-                              borderColor: 'rgba(239, 68, 68, 0.4)',
-                              borderLeft: '4px solid #ef4444',
-                              boxShadow: '0 0 12px rgba(239, 68, 68, 0.25)'
-                            };
-                            textClass = 'text-danger';
-                          } else if (cardStatus === 'warning') {
-                            borderStyle = {
-                              ...borderStyle,
-                              borderColor: 'rgba(245, 158, 11, 0.4)',
-                              borderLeft: '4px solid #f59e0b',
-                              boxShadow: '0 0 12px rgba(245, 158, 11, 0.25)'
-                            };
-                            textClass = 'text-warning';
-                          } else if (cardStatus === 'normal') {
-                            borderStyle = {
-                              ...borderStyle,
-                              borderColor: 'rgba(16, 185, 129, 0.4)',
-                              borderLeft: '4px solid #10b981',
-                              boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)'
-                            };
-                            textClass = 'text-success';
+                          if (isDeviceConfigured) {
+                            if (cardStatus === 'alert') {
+                              borderStyle = {
+                                ...borderStyle,
+                                borderColor: 'rgba(239, 68, 68, 0.4)',
+                                borderLeft: '4px solid #ef4444',
+                                boxShadow: '0 0 12px rgba(239, 68, 68, 0.25)'
+                              };
+                              textClass = 'text-danger';
+                            } else if (cardStatus === 'warning') {
+                              borderStyle = {
+                                ...borderStyle,
+                                borderColor: 'rgba(245, 158, 11, 0.4)',
+                                borderLeft: '4px solid #f59e0b',
+                                boxShadow: '0 0 12px rgba(245, 158, 11, 0.25)'
+                              };
+                              textClass = 'text-warning';
+                            } else if (cardStatus === 'normal') {
+                              borderStyle = {
+                                ...borderStyle,
+                                borderColor: 'rgba(16, 185, 129, 0.4)',
+                                borderLeft: '4px solid #10b981',
+                                boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)'
+                              };
+                              textClass = 'text-success';
+                            }
                           }
 
                           return (
                             <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
                               <div
-                                className={`parameter-glass-card p-2.5 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center ${item.isImportant ? 'important-glow-card' : ''}`}
+                                className={`parameter-glass-card p-2.5 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center ${isDeviceConfigured && item.isImportant ? 'important-glow-card' : ''}`}
                                 style={borderStyle}
                               >
-                                <div className="d-flex align-items-center justify-content-center gap-1.5 mb-1 w-100">
+                                <div className="d-flex align-items-center justify-content-center gap-1.5 mb-1 w-100" style={{ opacity: isDeviceConfigured ? 1 : 0.6 }}>
                                   {item.icon}
                                   <small className="text-secondary uppercase fw-bold tracking-wider" style={{ fontSize: '0.68rem' }}>{label}</small>
                                 </div>
                                 <h5 className={`mb-0 fw-bold font-monospace tracking-wide ${textClass}`} style={{ fontSize: '0.95rem' }}>{val}</h5>
-                                {item.limits && (parseLimit(item.limits.low) !== null || parseLimit(item.limits.high) !== null || parseLimit(item.limits.normalMin) !== null || parseLimit(item.limits.normalMax) !== null) && (
+                                {isDeviceConfigured && item.limits && (parseLimit(item.limits.low) !== null || parseLimit(item.limits.high) !== null || parseLimit(item.limits.normalMin) !== null || parseLimit(item.limits.normalMax) !== null) && (
                                   <div className="fs-10 text-secondary font-monospace mt-1 text-center" style={{ opacity: 0.7, fontSize: '0.65rem' }}>
                                     {parseLimit(item.limits.low) !== null && `L: <${item.limits.low}`}
                                     {parseLimit(item.limits.high) !== null && ` H: >${item.limits.high}`}
@@ -1483,7 +1837,7 @@ const MainMeter = () => {
                           { label: 'Force Off', val: data.forceOff, key: 'forceOff', icon: <AlertTriangle size={14} className="text-secondary" /> }
                         ].map((item, idx) => {
                           if (!isFieldVisible(item.key)) return null;
-                          const isActive = Number(item.val) > 0;
+                          const isActive = isDeviceConfigured && Number(item.val) > 0;
                           return (
                             <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
                               <div
@@ -1507,7 +1861,7 @@ const MainMeter = () => {
                                 </div>
                                 <small className={`${isActive ? 'text-white' : 'text-secondary'} d-block uppercase fw-bold mb-0.5`} style={{ fontSize: '0.68rem' }}>{item.label}</small>
                                 <span className={`fw-bold ${isActive ? (item.isConnected ? 'text-success' : 'text-danger') : 'text-secondary'}`} style={{ fontSize: '0.85rem' }}>
-                                  {item.isConnected ? (isActive ? 'CONN' : 'DISC') : (isActive ? 'ACT' : 'INACT')}
+                                  {isDeviceConfigured ? (item.isConnected ? (isActive ? 'CONN' : 'DISC') : (isActive ? 'ACT' : 'INACT')) : '--'}
                                 </span>
                               </div>
                             </Col>
@@ -1538,14 +1892,15 @@ const MainMeter = () => {
                           { label: 'DG B Load Set', val: `${data.dgBLoadSet} kW`, key: 'dgBLoadSet', icon: <Sliders size={13} className="text-primary" /> }
                         ].map((item, idx) => {
                           if (!isFieldVisible(item.key)) return null;
+                          const displayVal = !isDeviceConfigured ? '--' : item.val;
                           return (
                             <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
                               <div className="p-2.5 parameter-glass-card rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
-                                <div className="p-1 bg-dark bg-opacity-40 rounded-3 border border-secondary border-opacity-10 mb-1">
+                                <div className="p-1 bg-dark bg-opacity-40 rounded-3 border border-secondary border-opacity-10 mb-1" style={{ opacity: isDeviceConfigured ? 1 : 0.6 }}>
                                   {item.icon}
                                 </div>
                                 <small className="text-secondary d-block uppercase fw-bold mb-0.5" style={{ fontSize: '0.68rem' }}>{item.label}</small>
-                                <h5 className="mb-0 fw-bold text-white font-monospace" style={{ fontSize: '0.92rem' }}>{item.val}</h5>
+                                <h5 className={`mb-0 fw-bold font-monospace ${!isDeviceConfigured ? 'text-secondary' : 'text-white'}`} style={{ fontSize: '0.92rem' }}>{displayVal}</h5>
                               </div>
                             </Col>
                           );
@@ -1584,9 +1939,9 @@ const MainMeter = () => {
                   <tr>
                     <td colSpan={7} className="py-4 text-center text-secondary font-monospace fs-13">
                       <div className="d-flex flex-column align-items-center gap-2" style={{ opacity: 0.5 }}>
-                        <Activity size={20} className="text-info" />
-                        <span>Waiting for live telemetry from {mainMeterTemplate?.name || 'meter'}...</span>
-                        <small>Data will populate automatically every 4 seconds.</small>
+                        <Activity size={20} className={isDeviceConfigured ? "text-info" : "text-secondary"} />
+                        <span>{isDeviceConfigured ? `Waiting for live telemetry from ${mainMeterTemplate?.name || 'meter'}...` : 'No device configured for this site'}</span>
+                        <small>{isDeviceConfigured ? 'Data will populate automatically every 4 seconds.' : 'Configure a device to view live telemetry and historical logs.'}</small>
                       </div>
                     </td>
                   </tr>
@@ -1951,6 +2306,10 @@ const MainMeter = () => {
           box-shadow: inset 0 0 20px rgba(0,0,0,0.98);
           position: relative;
         }
+        .mfm-lcd-glass.unconfigured-lcd-glass {
+          background: #070c18 !important;
+          box-shadow: inset 0 0 25px rgba(0,0,0,0.98) !important;
+        }
         .mfm-lcd-screen {
           background: #052e16;
           background-image: radial-gradient(rgba(16, 185, 129, 0.15) 1px, transparent 1px);
@@ -1965,7 +2324,12 @@ const MainMeter = () => {
           position: relative;
           overflow: hidden;
         }
-        .mfm-lcd-screen::before {
+        .mfm-lcd-screen.unconfigured-lcd-screen {
+          background: #080d19 !important;
+          background-image: radial-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px) !important;
+          box-shadow: inset 0 0 35px rgba(0,0,0,0.85), 0 0 15px rgba(56, 189, 248, 0.04) !important;
+        }
+        .mfm-lcd-screen:not(.unconfigured-lcd-screen)::before {
           content: '';
           position: absolute;
           top: 0; left: 0; right: 0; bottom: 0;
@@ -2053,21 +2417,27 @@ const MainMeter = () => {
           width: 11px;
           height: 11px;
           border-radius: 50%;
-          background-color: #1e293b;
+          background-color: #1a2234;
           border: 1px solid #0f172a;
           box-shadow: inset 1px 1px 2px rgba(0,0,0,0.8);
           transition: all 0.15s ease;
         }
+        .mfm-led-bulb.bulb-red {
+          background-color: #2b1414;
+        }
         .mfm-led-bulb.bulb-red.glow-active {
           background-color: #ef4444;
           box-shadow: 0 0 12px #ef4444, inset 0 0 2px white;
+        }
+        .mfm-led-bulb.bulb-green {
+          background-color: #12281a;
         }
         .mfm-led-bulb.bulb-green.glow-active {
           background-color: #22c55e;
           box-shadow: 0 0 12px #22c55e, inset 0 0 2px white;
         }
         .mfm-led-bulb.bulb-orange {
-          background-color: #b45309;
+          background-color: #2e1e12;
         }
         .mfm-led-bulb.bulb-orange.glow-active {
           background-color: #f59e0b;

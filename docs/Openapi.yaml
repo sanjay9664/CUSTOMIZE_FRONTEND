@@ -2364,24 +2364,24 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Device'
+                          $ref: '#/components/schemas/DeviceListItem'
 
-  /devices/{deviceId}/events/latest:
+  /devices/{id}:
     get:
       tags: [Devices]
-      summary: Get Latest Device Events Directly
-      description: Retrieves the most recent telemetry event from MongoDB for each module of the device by internal device ID, Sochiot device ID, or BMS device ID, formatted with device settings.
+      summary: Get Device Details Directly
+      description: Retrieves complete detailed information for a single device by its numeric ID or BMS device ID, including full profiles, settings, rules, and hardware links.
       parameters:
-        - name: deviceId
+        - name: id
           in: path
           required: true
           schema:
             type: string
-          description: Internal Device ID, Sochiot Device ID, or BMS Device ID
-          example: "1277"
+          description: Numeric device ID or unique BMS Device ID (e.g. BMS-0001)
+          example: "9"
       responses:
         '200':
-          description: Latest formatted device events per module
+          description: Complete device detail record
           content:
             application/json:
               schema:
@@ -2391,15 +2391,10 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/DeviceLatestEventModule'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                    $ref: '#/components/schemas/Device'
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /devices/{id}:
     patch:
       tags: [Devices]
       summary: Update Device
@@ -2459,6 +2454,39 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+
+  /devices/{deviceId}/events/latest:
+    get:
+      tags: [Devices]
+      summary: Get Latest Device Events Directly
+      description: Retrieves the most recent telemetry event from MongoDB for each module of the device by internal device ID, Sochiot device ID, or BMS device ID, formatted with device settings.
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Internal Device ID, Sochiot Device ID, or BMS Device ID
+          example: "1277"
+      responses:
+        '200':
+          description: Latest formatted device events per module
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceLatestEventModule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /resync-event-stats:
     post:
@@ -3985,6 +4013,8 @@ components:
       type: string
       enum:
         - ENERGY_METER
+        - MAIN_ENERGY_METER
+        - SUB_ENERGY_METER
         - UG_TANK
         - AG_TANK
         - PUMP
@@ -4693,12 +4723,6 @@ components:
           items:
             type: integer
           example: [1231]
-        moduleIds:
-          type: array
-          items:
-            type: integer
-          description: Associated Sochiot module IDs configured for this device
-          example: [4583, 4709]
         templateName:
           type: string
           nullable: true
@@ -4735,6 +4759,104 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeviceRule'
+
+    DeviceListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 10
+        bmsDeviceId:
+          type: string
+          nullable: true
+          example: "BMS-0001"
+        name:
+          type: string
+          example: "EM_LIVEWIZE_178"
+        category:
+          $ref: '#/components/schemas/DeviceCategory'
+        serialNumber:
+          type: string
+          nullable: true
+          example: "9454c5f385e821"
+        description:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+          example: true
+        siteId:
+          type: integer
+          nullable: true
+          example: 7
+        buildingId:
+          type: integer
+          nullable: true
+        areaId:
+          type: integer
+          nullable: true
+        assetId:
+          type: string
+          nullable: true
+        profileId:
+          type: string
+          nullable: true
+        sochiotDeviceIds:
+          type: array
+          items:
+            type: integer
+          example: [1231]
+        installedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        asset:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            assetType:
+              type: string
+            serialNumber:
+              type: string
+              nullable: true
+        building:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        area:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        energyGroup:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
 
     DeviceSummary:
       type: object
@@ -5649,12 +5771,6 @@ components:
           items:
             type: integer
           example: [1231]
-        moduleIds:
-          type: array
-          items:
-            type: integer
-          description: List of Sochiot module IDs configured for this device
-          example: [4583, 4709]
         areaId:
           type: integer
         buildingId:
@@ -5698,34 +5814,17 @@ components:
           type: array
           items:
             type: integer
-        sochiotTemplateId:
-          type: integer
-          nullable: true
-          example: 160
-        moduleIds:
-          type: array
-          items:
-            type: integer
-          description: List of Sochiot module IDs configured for this device
-          example: [4583, 4709]
         areaId:
           type: integer
-          nullable: true
         buildingId:
           type: integer
-          nullable: true
-        floorNo:
-          type: integer
-          nullable: true
-        roomNo:
-          type: integer
-          nullable: true
-        energyGroupId:
-          type: integer
-          nullable: true
         assetId:
           type: string
           example: "ast_cm71"
+        roomNo:
+          type: integer
+        floorNo:
+          type: integer
         templateName:
           type: string
         displayOrder:
@@ -5735,58 +5834,6 @@ components:
         installedAt:
           type: string
           format: date-time
-        template_settings:
-          type: array
-          items:
-            type: object
-            required: [moduleId, sochiotFieldName, displayName, dataType]
-            properties:
-              moduleId:
-                type: integer
-              moduleName:
-                type: string
-              fieldId:
-                type: integer
-                nullable: true
-              sochiotFieldName:
-                type: string
-              displayName:
-                type: string
-              dataType:
-                $ref: '#/components/schemas/FieldDataType'
-              unit:
-                type: string
-                nullable: true
-              warningHigh:
-                type: number
-                nullable: true
-              criticalHigh:
-                type: number
-                nullable: true
-              warningLow:
-                type: number
-                nullable: true
-              criticalLow:
-                type: number
-                nullable: true
-              isCommand:
-                type: boolean
-              commandAlias:
-                type: string
-                nullable: true
-              isReadable:
-                type: boolean
-              isDisplayed:
-                type: boolean
-              graphable:
-                type: boolean
-              displayOrder:
-                type: integer
-              meta:
-                type: object
-                nullable: true
-        rules:
-          type: array
 
     DeviceTemplateRequest:
       type: object
@@ -5802,49 +5849,20 @@ components:
           items:
             type: integer
           example: [1231]
-        sochiotTemplateId:
-          type: integer
-          nullable: true
-          example: 160
-        moduleIds:
-          type: array
-          items:
-            type: integer
-          description: List of unique Sochiot hardware module IDs configured on this device template
-          example: [4583, 4709]
         serialNumber:
           type: string
         profileId:
           type: string
         areaId:
           type: integer
-          nullable: true
         buildingId:
           type: integer
-          nullable: true
-        floorNo:
-          type: integer
-          nullable: true
-        roomNo:
-          type: integer
-          nullable: true
-        energyGroupId:
-          type: integer
-          nullable: true
-        displayOrder:
-          type: integer
-          default: 0
-        isActive:
-          type: boolean
-          default: true
         assetId:
           type: string
           example: "ast_cm71"
         templateName:
           type: string
           example: "EnergyMeter_Template_V1"
-        description:
-          type: string
         template_settings:
           type: array
           items:
@@ -5853,11 +5871,6 @@ components:
             properties:
               moduleId:
                 type: integer
-              moduleName:
-                type: string
-              fieldId:
-                type: integer
-                nullable: true
               sochiotFieldName:
                 type: string
               displayName:
@@ -5866,35 +5879,18 @@ components:
                 $ref: '#/components/schemas/FieldDataType'
               unit:
                 type: string
-                nullable: true
               warningHigh:
                 type: number
-                nullable: true
               criticalHigh:
                 type: number
-                nullable: true
               warningLow:
                 type: number
-                nullable: true
               criticalLow:
                 type: number
-                nullable: true
               isCommand:
-                type: boolean
-              commandAlias:
-                type: string
-                nullable: true
-              isReadable:
-                type: boolean
-              isDisplayed:
                 type: boolean
               graphable:
                 type: boolean
-              displayOrder:
-                type: integer
-              meta:
-                type: object
-                nullable: true
         rules:
           type: array
           items:
@@ -5947,9 +5943,6 @@ components:
                 type: integer
               moduleId:
                 type: integer
-              moduleName:
-                type: string
-                nullable: true
               sochiotFieldName:
                 type: string
               displayName:

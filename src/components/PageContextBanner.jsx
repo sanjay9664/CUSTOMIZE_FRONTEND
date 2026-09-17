@@ -107,6 +107,8 @@ const PageContextBanner = ({
         statusClass = 'status-fault';
       } else if (['warning', 'alert', 'degraded'].includes(lower)) {
         statusClass = 'status-warning';
+      } else if (['not configured', 'not mapped', 'unconfigured'].includes(lower)) {
+        statusClass = 'status-not-configured';
       }
     } else if (typeof status === 'object') {
       statusText = status.text || status.label || '';
