@@ -67,6 +67,60 @@ export const formatCategoryLabel = (category) => {
   return CATEGORY_LABELS[category] || String(category).replace(/_/g, ' ');
 };
 
+export const isCategoryMatch = (deviceCategory, filterCategory) => {
+  if (!filterCategory || filterCategory === 'ALL') return true;
+  if (!deviceCategory) return false;
+
+  const dCat = String(deviceCategory).trim().toUpperCase().replace(/[\s-]+/g, '_');
+  const fCat = String(filterCategory).trim().toUpperCase().replace(/[\s-]+/g, '_');
+
+  if (dCat === fCat) return true;
+
+  // Sub-energy meter aliases (including legacy 'ENERGY_METER' and 'SUB_ENERGY_METER')
+  const subMeterAliases = ['SUB_ENERGY_METER', 'ENERGY_METER', 'SUB_ENERGY_METERS', 'ENERGY_METERS'];
+  if (subMeterAliases.includes(fCat) && subMeterAliases.includes(dCat)) return true;
+
+  // Main energy meter aliases
+  const mainMeterAliases = ['MAIN_ENERGY_METER', 'MAIN_ENERGY_METERS'];
+  if (mainMeterAliases.includes(fCat) && mainMeterAliases.includes(dCat)) return true;
+
+  // Tank aliases
+  const ugTankAliases = ['UG_TANK', 'UNDERGROUND_TANK', 'UNDERGROUND_WATER_TANK'];
+  if (ugTankAliases.includes(fCat) && ugTankAliases.includes(dCat)) return true;
+
+  const agTankAliases = ['AG_TANK', 'ABOVE_GROUND_TANK', 'ABOVE_GROUND_WATER_TANK'];
+  if (agTankAliases.includes(fCat) && agTankAliases.includes(dCat)) return true;
+
+  // Generator aliases
+  const genAliases = ['GENERATOR', 'DG_SET', 'DG', 'DIESEL_GENERATOR'];
+  if (genAliases.includes(fCat) && genAliases.includes(dCat)) return true;
+
+  // Fire pump
+  const firePumpAliases = ['FIRE_PUMP', 'FIRE_PUMP_SYSTEM'];
+  if (firePumpAliases.includes(fCat) && firePumpAliases.includes(dCat)) return true;
+
+  // HVAC aliases
+  const chillerAliases = ['HVAC_CHILLER', 'CHILLER'];
+  if (chillerAliases.includes(fCat) && chillerAliases.includes(dCat)) return true;
+
+  const ahuAliases = ['HVAC_AHU', 'AHU'];
+  if (ahuAliases.includes(fCat) && ahuAliases.includes(dCat)) return true;
+
+  const coolingTowerAliases = ['HVAC_COOLING_TOWER', 'COOLING_TOWER'];
+  if (coolingTowerAliases.includes(fCat) && coolingTowerAliases.includes(dCat)) return true;
+
+  const vrvAliases = ['VRV', 'VRV_SYSTEM', 'VRF'];
+  if (vrvAliases.includes(fCat) && vrvAliases.includes(dCat)) return true;
+
+  const liftAliases = ['LIFT', 'ELEVATOR'];
+  if (liftAliases.includes(fCat) && liftAliases.includes(dCat)) return true;
+
+  const acAliases = ['AC', 'AIR_CONDITIONER'];
+  if (acAliases.includes(fCat) && acAliases.includes(dCat)) return true;
+
+  return false;
+};
+
 export const DEVICE_TEMPLATES = {
   WATER_MANAGEMENT: {
     id: 'WATER_MANAGEMENT',
@@ -296,6 +350,15 @@ export const DEVICE_TEMPLATES = {
       { name: 'Meter Status', required: true },
       { name: 'Voltage', required: true },
       { name: 'Current', required: true },
+      { name: 'R-Phase Voltage', required: false },
+      { name: 'Y-Phase Voltage', required: false },
+      { name: 'B-Phase Voltage', required: false },
+      { name: 'R-Current', required: false },
+      { name: 'Y-Current', required: false },
+      { name: 'B-Current', required: false },
+      { name: 'Voltage R-Y', required: false },
+      { name: 'Voltage Y-B', required: false },
+      { name: 'Voltage B-R', required: false },
       { name: 'Frequency', required: false },
       { name: 'Active Power', required: false },
       { name: 'Reactive Power', required: false },
@@ -317,15 +380,8 @@ export const DEVICE_TEMPLATES = {
       { name: 'kVARh', required: false },
       { name: 'Daily Energy', required: false },
       { name: 'Monthly Energy', required: false },
-      { name: 'Yearly Energy', required: false },
-      { name: 'Main Meter', required: false },
-      { name: 'Sub Meter', required: false },
-      { name: 'Meter-wise Consumption', required: false },
-      { name: 'Area-wise Consumption', required: false },
-      { name: 'Equipment-wise Consumption', required: false },
-      { name: 'Energy Cost', required: false },
-      { name: 'Energy Trend', required: false },
-      { name: 'Carbon Emission', required: false }
+      { name: 'Yearly Energy', required: false }, 
+      { name: 'Energy Cost', required: false }      
     ]
   },
 

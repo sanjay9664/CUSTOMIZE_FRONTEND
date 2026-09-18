@@ -15,6 +15,7 @@ import DeviceInspectorDrawer from './modals/DeviceInspectorDrawer';
 import DeviceDeleteModal from './modals/DeviceDeleteModal';
 import AssetInspectorDrawer from './modals/AssetInspectorDrawer';
 import CommonFilterPopover from '../../components/common/CommonFilterPopover';
+import { formatCategoryLabel, isCategoryMatch } from '../../constants/deviceTemplates';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -231,6 +232,9 @@ const DeviceManagement = ({ embedded = false }) => {
           return la && String(la.assetType || '').toUpperCase() === String(selectedAssetTypeFilter).toUpperCase();
         });
       }
+      if (selectedCategoryFilter !== 'ALL') {
+        itemsToUse = itemsToUse.filter(d => isCategoryMatch(d.category, selectedCategoryFilter));
+      }
 
       setDevices(itemsToUse);
       setTotalRecords(itemsToUse.length === items.length ? total : itemsToUse.length);
@@ -369,10 +373,10 @@ const DeviceManagement = ({ embedded = false }) => {
       },
       {
         id: 'category',
-        label: 'Device profile',
+        label: 'Category',
         options: [
-          { value: 'ALL', label: 'All' },
-          ...DEVICE_CATEGORIES.map(cat => ({ value: cat, label: cat.replace(/_/g, ' ') }))
+          { value: 'ALL', label: 'All Categories' },
+          ...DEVICE_CATEGORIES.map(cat => ({ value: cat, label: formatCategoryLabel(cat) }))
         ]
       },
       {

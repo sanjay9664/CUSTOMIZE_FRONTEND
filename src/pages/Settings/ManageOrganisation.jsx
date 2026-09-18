@@ -335,6 +335,8 @@ const ManageOrganisation = () => {
             setSelectedAssetFilter={org.setSelectedAssetFilter}
             selectedAssetTypeFilter={org.selectedAssetTypeFilter}
             setSelectedAssetTypeFilter={org.setSelectedAssetTypeFilter}
+            selectedCategoryFilter={org.selectedCategoryFilter}
+            setSelectedCategoryFilter={org.setSelectedCategoryFilter}
             filteredDevices={org.filteredDevices}
             handleOpenRecentEvents={org.handleOpenRecentEvents}
             handleGlobalResyncEventStats={org.handleGlobalResyncEventStats}

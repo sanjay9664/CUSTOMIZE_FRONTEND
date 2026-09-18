@@ -2521,6 +2521,65 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /devices/events/latest/batch:
+    post:
+      tags: [Devices]
+      summary: Batch Get Latest Device Events
+      description: |
+        Fetches the latest formatted telemetry for **up to 20 devices** in a single request.
+        Each device is resolved by its `bmsDeviceId` string. Devices already cached in Redis
+        are returned instantly (30-second cache). Per-device errors are isolated — a failed
+        lookup for one device does not affect the rest.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceIds]
+              properties:
+                deviceIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 20
+                  description: List of bmsDeviceId strings (max 20)
+                  example: ["DEV001", "85865132-44f0-4a69-9d67-116a7b2482f6"]
+      responses:
+        '200':
+          description: Batch latest events response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeviceLatestEventsData'
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            deviceId:
+                              type: string
+                              example: "BAD_ID"
+                            error:
+                              type: string
+                              example: "Device with identifier BAD_ID not found"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /resync-event-stats:
     post:
       tags: [Devices]
