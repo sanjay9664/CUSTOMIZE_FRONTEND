@@ -157,13 +157,13 @@ const PageContextBanner = ({
           className={`context-banner-select ${selectorIcon ? 'has-icon' : ''}`}
           aria-label={ariaLabel || selectorLabel || 'Select option'}
         >
-          {placeholder && (
+          {placeholder && !value && !options.some(opt => opt.value === "" || (opt.label || opt.name) === placeholder) && (
             <option value="" disabled>
               {placeholder}
             </option>
           )}
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value} className="context-banner-option">
+          {options.map((opt, idx) => (
+            <option key={opt.value ?? idx} value={opt.value} className="context-banner-option">
               {opt.label || opt.name || opt.value}
             </option>
           ))}

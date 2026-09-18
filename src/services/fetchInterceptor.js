@@ -39,6 +39,11 @@ export const installGlobalFetchInterceptor = () => {
   window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
 
+    // External Sochiot platform APIs manage their own tokens and should never be intercepted with BMS auth
+    if (typeof url === 'string' && (url.includes('sochiot.com') || url.includes('app.sochiot') || url.includes('/sochiot-'))) {
+      return nativeFetch(input, init);
+    }
+
     let currentInit = { ...init };
 
     const hasAuthHeader = Boolean(

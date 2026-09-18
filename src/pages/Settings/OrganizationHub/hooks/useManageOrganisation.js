@@ -6,6 +6,7 @@ import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, File
 import { useSiteStore } from '../../../../context/SiteContext';
 import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
 import { fetchDevicesByDeviceIds, extractDeviceModulesAndFields } from '../../../../services/sochiotLocationService';
+import { getTemplateForCategory } from '../../../../constants/deviceTemplates';
 
 export const API_BASE_URL = getApiUrl();
 
@@ -1161,6 +1162,62 @@ export const useManageOrganisation = () => {
       });
     };
 
+    const mergeWithCategoryTemplate = (savedMappedFields = [], category) => {
+      const tmpl = getTemplateForCategory(category);
+      if (!tmpl || !Array.isArray(tmpl.parameters) || tmpl.parameters.length === 0) {
+        return savedMappedFields || [];
+      }
+
+      const matchedFields = new Set();
+
+      const templateMerged = tmpl.parameters.map(param => {
+        const pName = (param.name || '').trim().toLowerCase();
+        const existing = (savedMappedFields || []).find(s => {
+          const sDisp = (s.displayName || '').trim().toLowerCase();
+          const sSoch = (s.sochiotFieldName || '').trim().toLowerCase();
+          return sDisp === pName || sSoch === pName;
+        });
+
+        if (existing) {
+          matchedFields.add(existing);
+          return {
+            ...existing,
+            displayName: existing.displayName || param.name,
+            required: Boolean(param.required)
+          };
+        }
+
+        return {
+          deviceId: '',
+          deviceName: '',
+          deviceVal: null,
+          moduleId: '',
+          moduleName: '',
+          sochiotFieldName: '',
+          displayName: param.name,
+          required: Boolean(param.required),
+          thresholdValue: '',
+          warningHigh: null,
+          criticalHigh: null,
+          warningLow: null,
+          criticalLow: null,
+          dataType: 'INTEGER',
+          unit: '',
+          isCommand: false,
+          graphable: true
+        };
+      });
+
+      // Append any custom saved fields that didn't match standard template parameters
+      (savedMappedFields || []).forEach(s => {
+        if (!matchedFields.has(s)) {
+          templateMerged.push(s);
+        }
+      });
+
+      return templateMerged;
+    };
+
     const initialSettings = (Array.isArray(d.template_settings) && d.template_settings.length > 0)
       ? d.template_settings
       : (Array.isArray(d.settings) && d.settings.length > 0)
@@ -1172,10 +1229,11 @@ export const useManageOrganisation = () => {
       : [];
 
     const initialDevIds = extractAllDeviceIds(d, initialSettings);
-    if (initialSettings.length > 0 && typeof setDynamicTemplateFields === 'function') {
-      setDynamicTemplateFields(matchSettingsWithSochiotDevices(initialSettings, [], initialDevIds, d));
-    } else if (typeof setDynamicTemplateFields === 'function') {
-      setDynamicTemplateFields([]);
+    if (typeof setDynamicTemplateFields === 'function') {
+      const initialMapped = initialSettings.length > 0
+        ? matchSettingsWithSochiotDevices(initialSettings, [], initialDevIds, d)
+        : [];
+      setDynamicTemplateFields(mergeWithCategoryTemplate(initialMapped, d.category));
     }
 
     setShowRegisterDeviceModal(true);
@@ -1254,9 +1312,9 @@ export const useManageOrganisation = () => {
               }
             }
 
-            if (fullSettings.length > 0 && typeof setDynamicTemplateFields === 'function') {
+            if (typeof setDynamicTemplateFields === 'function') {
               const mappedFields = matchSettingsWithSochiotDevices(fullSettings, sochiotDevs, allDevIds, detail);
-              setDynamicTemplateFields(mappedFields);
+              setDynamicTemplateFields(mergeWithCategoryTemplate(mappedFields, detail.category || d.category));
             }
           }
         }
