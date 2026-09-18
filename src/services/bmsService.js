@@ -97,6 +97,16 @@ export const bmsService = {
   syncSiteDevice: (siteId, deviceId) => apiClient.post(`/sites/${siteId}/devices/${deviceId}/sync`),
   getDeviceLiveTelemetry: (siteId, deviceId) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/live`),
   getDeviceLatestEvents: (siteId, deviceId) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/events/latest`),
+  getDeviceEventsLatest: async (deviceId, siteId) => {
+    try {
+      return await apiClient.get(`/devices/${deviceId}/events/latest`);
+    } catch (err) {
+      if (siteId) {
+        return await apiClient.get(`/sites/${siteId}/devices/${deviceId}/events/latest`);
+      }
+      throw err;
+    }
+  },
 
   // Widgets Service
   getWidgets: (params = {}) => apiClient.get('/widgets', params),
@@ -117,19 +127,22 @@ export const bmsService = {
 export const fetchAndStoreSochiotAccessToken = async () => {
   try {
     const res = await bmsService.getSochiotAccessToken();
-    const token = res?.data?.token || res?.token || (typeof res?.data === 'string' ? res.data : null);
-    if (token) {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('Sochiot-accesstoken', token);
-      }
-      try {
-        const { store } = await import('../store/store.js');
-        const { setSochiotAccessToken } = await import('../store/authSlice.js');
-        if (store?.dispatch && setSochiotAccessToken) {
-          store.dispatch(setSochiotAccessToken(token));
+    const rawToken = res?.data?.token || res?.token || (typeof res?.data === 'string' ? res.data : null);
+    if (rawToken) {
+      const cleanToken = String(rawToken).trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').trim();
+      if (cleanToken) {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('Sochiot-accesstoken', cleanToken);
         }
-      } catch (e) {}
-      return token;
+        try {
+          const { store } = await import('../store/store.js');
+          const { setSochiotAccessToken } = await import('../store/authSlice.js');
+          if (store?.dispatch && setSochiotAccessToken) {
+            store.dispatch(setSochiotAccessToken(cleanToken));
+          }
+        } catch (e) {}
+        return cleanToken;
+      }
     }
   } catch (err) {
     console.warn('Failed to fetch and store Sochiot-accesstoken:', err);

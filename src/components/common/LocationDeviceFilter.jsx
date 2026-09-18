@@ -94,6 +94,7 @@ const LocationDeviceFilter = ({
           onDeviceTreeLoadedRef.current(transformed);
         }
       } else {
+        lastLoadedEntityRef.current = null;
         setDeviceTree([]);
         if (typeof onDeviceTreeLoadedRef.current === 'function') {
           onDeviceTreeLoadedRef.current([]);
@@ -101,6 +102,7 @@ const LocationDeviceFilter = ({
       }
     } catch (err) {
       console.warn('[LocationDeviceFilter] loadEntityHierarchy error:', err);
+      lastLoadedEntityRef.current = null;
       setDeviceTree([]);
       if (typeof onDeviceTreeLoadedRef.current === 'function') {
         onDeviceTreeLoadedRef.current([]);

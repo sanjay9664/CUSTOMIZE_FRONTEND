@@ -185,6 +185,12 @@
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
 }
 
+.context-banner-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
 .context-banner-select-arrow {
   position: absolute;
   right: 12px;
@@ -497,7 +503,7 @@ body.light-mode select.context-banner-select option,
   font-weight: 600 !important;
 }
 
-}
+
 
 /* ── Responsive Rules ── */
 @media (max-width: 992px) {

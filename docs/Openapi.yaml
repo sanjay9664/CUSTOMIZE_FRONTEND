@@ -2459,18 +2459,22 @@ paths:
     get:
       tags: [Devices]
       summary: Get Latest Device Events Directly
-      description: Retrieves the most recent telemetry event from MongoDB for each module of the device by internal device ID, Sochiot device ID, or BMS device ID, formatted with device settings.
+      description: |
+        Retrieves the latest telemetry readings from MongoDB for all unique modules configured on the device.
+        Matches the device by BMS device ID (`bmsDeviceId`), numeric internal ID, or Sochiot device ID.
+        Values are mapped against configured device settings (`DeviceSetting`) with display names, units, data types, and formatted timestamps.
+        Responses are cached in Redis with a 30-second TTL for high-throughput dashboard polling.
       parameters:
         - name: deviceId
           in: path
           required: true
           schema:
             type: string
-          description: Internal Device ID, Sochiot Device ID, or BMS Device ID
-          example: "1277"
+          description: Internal Device ID (integer), Sochiot Device ID (integer), or BMS Device ID (string/CUID/UUID)
+          example: "85865132-44f0-4a69-9d67-116a7b2482f6"
       responses:
         '200':
-          description: Latest formatted device events per module
+          description: Latest formatted device telemetry and module events
           content:
             application/json:
               schema:
@@ -2480,9 +2484,38 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/DeviceLatestEventModule'
+                    $ref: '#/components/schemas/DeviceLatestEventsData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/{deviceId}/latest:
+    get:
+      tags: [Devices]
+      summary: Get Latest Device Events Directly (Alias)
+      description: Alias endpoint for `GET /api/v1/devices/{deviceId}/events/latest`. Retrieves latest formatted telemetry event data cached for 30 seconds.
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Internal Device ID (integer), Sochiot Device ID (integer), or BMS Device ID (string/CUID/UUID)
+          example: "85865132-44f0-4a69-9d67-116a7b2482f6"
+      responses:
+        '200':
+          description: Latest formatted device telemetry and module events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DeviceLatestEventsData'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -2903,7 +2936,11 @@ paths:
     get:
       tags: [Devices]
       summary: Get Latest Device Events Formatted With Settings
-      description: Retrieves the most recent telemetry event from MongoDB for each module of the device, formatted and mapped to device settings.
+      description: |
+        Retrieves the latest telemetry readings from MongoDB for all unique modules of the device within a specific site.
+        Matches the device by BMS device ID (`bmsDeviceId`), numeric internal ID, or Sochiot device ID.
+        Values are mapped against configured device settings (`DeviceSetting`) with display names, units, data types, and formatted timestamps.
+        Responses are cached in Redis with a 30-second TTL.
       parameters:
         - name: siteId
           in: path
@@ -2916,11 +2953,11 @@ paths:
           required: true
           schema:
             type: string
-          description: Internal Device ID, Sochiot Device ID, or BMS Device ID
-          example: "1277"
+          description: Internal Device ID (integer), Sochiot Device ID (integer), or BMS Device ID (string/CUID/UUID)
+          example: "85865132-44f0-4a69-9d67-116a7b2482f6"
       responses:
         '200':
-          description: Latest formatted device events per module
+          description: Latest formatted device telemetry and module events
           content:
             application/json:
               schema:
@@ -2930,9 +2967,44 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/DeviceLatestEventModule'
+                    $ref: '#/components/schemas/DeviceLatestEventsData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sites/{siteId}/devices/{deviceId}/latest:
+    get:
+      tags: [Devices]
+      summary: Get Latest Device Events Formatted With Settings (Alias)
+      description: Alias endpoint for `GET /api/v1/sites/{siteId}/devices/{deviceId}/events/latest`. Retrieves latest formatted telemetry event data cached for 30 seconds.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Internal Device ID (integer), Sochiot Device ID (integer), or BMS Device ID (string/CUID/UUID)
+          example: "85865132-44f0-4a69-9d67-116a7b2482f6"
+      responses:
+        '200':
+          description: Latest formatted device telemetry and module events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DeviceLatestEventsData'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -6216,3 +6288,120 @@ components:
           type: number
         severity:
           $ref: '#/components/schemas/AlarmSeverity'
+
+    DeviceLatestEventsData:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+          example: 142
+        bmsDeviceId:
+          type: string
+          example: "85865132-44f0-4a69-9d67-116a7b2482f6"
+        name:
+          type: string
+          example: "Main Incomer"
+        category:
+          type: string
+          example: "ENERGY_METER"
+        templateName:
+          type: string
+          example: "Schneider EM6400"
+        buildingId:
+          type: integer
+          nullable: true
+          example: 10
+        buildingName:
+          type: string
+          nullable: true
+          example: "Tower A"
+        assetId:
+          type: string
+          nullable: true
+          example: "clz1234567890"
+        assetName:
+          type: string
+          nullable: true
+          example: "Main Electrical Panel"
+        asset:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            assetType:
+              type: string
+        locationId:
+          type: integer
+          nullable: true
+          example: 50
+        lastEventTime:
+          type: integer
+          nullable: true
+          example: 1789643456000
+        lastEventTimeFormatted:
+          type: string
+          nullable: true
+          example: "17 Sep 2026 04:40 pm"
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                nullable: true
+              moduleId:
+                type: integer
+                nullable: true
+              moduleName:
+                type: string
+                nullable: true
+              fieldName:
+                type: string
+                example: "3,184"
+              displayName:
+                type: string
+                example: "Eq"
+              dataType:
+                type: string
+                example: "NUMBER"
+              unit:
+                type: string
+                nullable: true
+                example: "KVAH"
+              currentValue:
+                oneOf:
+                  - type: number
+                  - type: string
+                  - type: boolean
+                nullable: true
+              time:
+                type: integer
+                nullable: true
+                example: 1789643456000
+              timeFormatted:
+                type: string
+                nullable: true
+                example: "17 Sep 2026 04:40 pm"
+        modules:
+          type: array
+          items:
+            type: object
+            properties:
+              moduleId:
+                type: integer
+                example: 4237
+              moduleType:
+                type: string
+                example: "general"
+              lastModuleEvent:
+                type: integer
+                nullable: true
+                example: 1789643456000
+              lastModuleEventTimeFormatted:
+                type: string
+                nullable: true
+                example: "17 Sep 2026 04:40 pm"

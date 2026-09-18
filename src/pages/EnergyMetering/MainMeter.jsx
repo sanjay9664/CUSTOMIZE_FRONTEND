@@ -13,7 +13,6 @@ import { getAuthHeaders, normalizeList } from '../../services/apiClient';
 import { bmsService } from '../../services/bmsService';
 import { getApiUrl } from '../../utils/apiConfig';
 
-import { io } from 'socket.io-client';
 import {
   PARAMETER_SYNONYMS,
   getValueForField as getValueForFieldUtil,
@@ -21,7 +20,8 @@ import {
   getThresholdStatus,
   polarToCartesian,
   describeArc,
-  formatNumber
+  formatNumber,
+  mapLatestEventsToTelemetry
 } from './utils/energyTelemetry';
 
 class ErrorBoundary extends React.Component {
@@ -232,23 +232,14 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
       }}
     >
       {/* Top accent bar — phase color */}
-
-      <div style={{
-        position: 'absolute', top: 0, left: '15%', right: '15%', height: '2.5px',
-        background: `linear-gradient(90deg, transparent, ${defaultColor}, transparent)`,
-        borderRadius: '0 0 6px 6px',
-        opacity: isDark ? 0.6 : 0.9,
-      }} />
-
       {isConfigured && (
         <div style={{
           position: 'absolute', top: 0, left: '15%', right: '15%', height: '2.5px',
           background: `linear-gradient(90deg, transparent, ${defaultColor}, transparent)`,
           borderRadius: '0 0 6px 6px',
-          opacity: 0.6,
+          opacity: isDark ? 0.6 : 0.9,
         }} />
       )}
-
 
       {/* Phase label */}
       <span style={{
@@ -280,115 +271,62 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
           {isConfigured && renderSegment(angleHigh, 360, '#ef4444')}
 
           {/* Needle */}
-
-          <g
-            transform={`translate(50, 48) rotate(${isNaN(angleValue) ? 0 : angleValue - 270})`}
-            style={{ transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-          >
-            <path d="M -1.5 4 L 0 -32 L 1.5 4 Z" fill={`url(#ng-${safeLabel})`}
-              style={{ filter: isDark ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' : 'drop-shadow(0 1px 2px rgba(15,23,42,0.25))' }} />
-            <circle cx="0" cy="-30" r="1.8" fill={strokeColor} />
-          </g>
-
-          {/* Center cap */}
-          <g transform="translate(50, 48)">
-            <circle cx="0" cy="0" r="5.5" fill={capFill} stroke={capStroke} strokeWidth="1" />
-            <circle cx="0" cy="0" r="2.5" fill={defaultColor} />
-          </g>
-
-          {/* Value — big, clear, high contrast font */}
-          <text x="50" y="62" textAnchor="middle" fill={valueFill}
-            fontFamily="monospace" fontSize="11" fontWeight="900">
-            {numericValue.toFixed(1)}
-          </text>
-          <text x="50" y="70" textAnchor="middle" fill={unitFill}
-            fontFamily="monospace" fontSize="5.5" fontWeight="700">
-            {unit}
-          </text>
-
           {isConfigured && (
             <g
               transform={`translate(50, 48) rotate(${isNaN(angleValue) ? 0 : angleValue - 270})`}
               style={{ transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
             >
               <path d="M -1.5 4 L 0 -32 L 1.5 4 Z" fill={`url(#ng-${safeLabel})`}
-                style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+                style={{ filter: isDark ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' : 'drop-shadow(0 1px 2px rgba(15,23,42,0.25))' }} />
               <circle cx="0" cy="-30" r="1.8" fill={strokeColor} />
             </g>
           )}
 
           {/* Center cap */}
           <g transform="translate(50, 48)">
-            <circle cx="0" cy="0" r="5.5" fill="#1e293b" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
-            <circle cx="0" cy="0" r="2.5" fill={isConfigured ? defaultColor : '#64748b'} />
+            <circle cx="0" cy="0" r="5.5" fill={capFill} stroke={capStroke} strokeWidth="1" />
+            <circle cx="0" cy="0" r="2.5" fill={isConfigured ? defaultColor : (isDark ? '#64748b' : '#94a3b8')} />
           </g>
 
           {/* Value — big, readable or -- */}
           {isConfigured ? (
             <>
-              <text x="50" y="62" textAnchor="middle" fill="#f8fafc"
+              <text x="50" y="62" textAnchor="middle" fill={valueFill}
                 fontFamily="monospace" fontSize="11" fontWeight="900">
                 {numericValue.toFixed(1)}
               </text>
-              <text x="50" y="70" textAnchor="middle" fill="rgba(255,255,255,0.4)"
-                fontFamily="monospace" fontSize="5.5">
+              <text x="50" y="70" textAnchor="middle" fill={unitFill}
+                fontFamily="monospace" fontSize="5.5" fontWeight="700">
                 {unit}
               </text>
             </>
           ) : (
-            <text x="50" y="60" textAnchor="middle" fill="#64748b"
+            <text x="50" y="60" textAnchor="middle" fill={isDark ? '#64748b' : '#94a3b8'}
               fontFamily="monospace" fontSize="13" fontWeight="800">
               --
             </text>
           )}
-
         </svg>
       </div>
 
       {/* Status badge */}
-
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: '4px',
-        background: badgeBg,
-        border: badgeBorder,
-        borderRadius: '20px',
-        padding: '3px 12px',
-        marginTop: '4px',
-      }}>
-        <span style={{ fontSize: '0.55rem', color: badgeTextColor, fontWeight: 800, fontFamily: 'monospace' }}>{statusIcon}</span>
-        <span style={{ fontSize: '0.55rem', color: badgeTextColor, fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{statusText}</span>
-      </div>
-
-      {/* Limits — small muted hint */}
-      <div style={{ fontSize: '0.5rem', color: limitHintColor, fontFamily: 'monospace', marginTop: '4px', fontWeight: 600 }}>
-        {limits && (parseLimit(limits.low) !== null || parseLimit(limits.high) !== null) ? (
-          <>
-            {parseLimit(limits.low) !== null && `L: ${parseLimit(limits.low)}`}
-            {parseLimit(limits.normalMin) !== null && parseLimit(limits.normalMax) !== null && ` N: ${parseLimit(limits.normalMin)}–${parseLimit(limits.normalMax)}`}
-            {parseLimit(limits.high) !== null && ` H: ${parseLimit(limits.high)}`}
-          </>
-        ) : (
-          isVoltage ? 'L: 180  N: 210–250  H: 270' : isCurrent ? `H: ${(maxVal * 0.85).toFixed(0)}${unit}` : ''
-        )}
-      </div>
-
       {isConfigured && (
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '4px',
-          background: `${strokeColor}15`,
-          border: `1px solid ${strokeColor}30`,
+          background: badgeBg,
+          border: badgeBorder,
           borderRadius: '20px',
           padding: '3px 12px',
           marginTop: '4px',
         }}>
-          <span style={{ fontSize: '0.55rem', color: strokeColor, fontWeight: 800, fontFamily: 'monospace' }}>{statusIcon}</span>
-          <span style={{ fontSize: '0.55rem', color: strokeColor, fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{statusText}</span>
+          <span style={{ fontSize: '0.55rem', color: badgeTextColor, fontWeight: 800, fontFamily: 'monospace' }}>{statusIcon}</span>
+          <span style={{ fontSize: '0.55rem', color: badgeTextColor, fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{statusText}</span>
         </div>
       )}
 
       {/* Limits — small muted hint */}
       {isConfigured && (
-        <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', marginTop: '4px' }}>
+        <div style={{ fontSize: '0.5rem', color: limitHintColor, fontFamily: 'monospace', marginTop: '4px', fontWeight: 600 }}>
           {limits && (parseLimit(limits.low) !== null || parseLimit(limits.high) !== null) ? (
             <>
               {parseLimit(limits.low) !== null && `L: ${parseLimit(limits.low)}`}
@@ -400,7 +338,6 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
           )}
         </div>
       )}
-
     </div>
   );
 };
@@ -466,10 +403,8 @@ const MainMeter = () => {
   const autoCycleTimer = useRef(null);
   const userInteractionTimeout = useRef(null);
 
-  // Ref so processTelemetry always reads latest template without stale closure
+  // Ref so telemetry always reads latest template without stale closure
   const mainMeterTemplateRef = useRef(null);
-  // Ref to the latest fetchStats function so we can call it immediately on template change
-  const fetchStatsRef = useRef(null);
 
   // Load templates on mount from scada_templates if available
   useEffect(() => {
@@ -730,18 +665,39 @@ const MainMeter = () => {
 
   // Device selector configuration for the context banner
   const deviceSelector = useMemo(() => {
-    let meterOptions = [];
-
     if (devicesLoading) {
-      meterOptions = [{ value: '', label: 'Loading devices...' }];
-    } else if (siteDevices && siteDevices.length > 0) {
-      meterOptions = siteDevices.map(d => ({
-        value: String(d.id || d.deviceId),
-        label: d.name || d.deviceName || d.title || d.serialNumber || `Meter (${d.id})`
-      }));
-    } else {
-      meterOptions = [{ value: '', label: 'Main meter' }];
+      return {
+        value: '',
+        options: [{ value: '', label: 'Loading devices...' }],
+        disabled: true,
+        ariaLabel: 'Loading devices'
+      };
     }
+
+    if (!siteDevices || siteDevices.length === 0) {
+      return {
+        value: '',
+        options: [{ value: '', label: 'No device configured' }],
+        disabled: true,
+        ariaLabel: 'No device configured'
+      };
+    }
+
+    // Deduplicate devices by id
+    const uniqueDevices = [];
+    const seenIds = new Set();
+    for (const d of siteDevices) {
+      const id = String(d.id || d.deviceId || '');
+      if (!id || seenIds.has(id)) continue;
+      seenIds.add(id);
+      const name = d.name || d.deviceName || d.title || d.serialNumber || `Meter (${id})`;
+      uniqueDevices.push({ id, name });
+    }
+
+    const meterOptions = uniqueDevices.map(d => ({
+      value: d.id,
+      label: d.name
+    }));
 
     const currentVal = (selectedMeterId && meterOptions.some(m => String(m.value) === String(selectedMeterId)))
       ? String(selectedMeterId)
@@ -755,9 +711,8 @@ const MainMeter = () => {
         setSelectedMeterId(newId);
         localStorage.setItem('selected_main_meter_id', String(newId));
       },
-      placeholder: devicesLoading ? 'Loading devices...' : 'Main meter',
       ariaLabel: 'Select Meter Device',
-      disabled: devicesLoading || siteDevices.length === 0
+      disabled: false
     };
   }, [siteDevices, devicesLoading, selectedMeterId]);
 
@@ -778,11 +733,6 @@ const MainMeter = () => {
     setLastTelemetryAt(null); // Reset freshness timer so stale data from old meter doesn't bleed over
     setHistoryLog([]);
     setMfmPageIndex(0);
-    // Immediately poll the new template's modules after a tick (so the ref updates first)
-    const t = setTimeout(() => {
-      if (ENABLE_LIVE_TELEMETRY && fetchStatsRef.current) fetchStatsRef.current();
-    }, 50);
-    return () => clearTimeout(t);
   }, [selectedMeterId]);
 
   const mappedFields = useMemo(() => {
@@ -827,255 +777,78 @@ const MainMeter = () => {
     return Object.keys(mappedFields).length > 0;
   }, [mappedFields]);
 
-
-
-
-  // Live Telemetry Sync using Websockets and Polling
-
-  // Control flag: set to false to stop all live data calling as requested
-  const ENABLE_LIVE_TELEMETRY = false;
-
-  // Live Telemetry Sync using Websockets and Polling (stopped when ENABLE_LIVE_TELEMETRY is false)
-
+  // Polling for Latest Device Events: GET /devices/:deviceId/events/latest every 30 seconds
   useEffect(() => {
-    if (!ENABLE_LIVE_TELEMETRY) {
-      fetchStatsRef.current = null;
-      return;
-    }
+    if (!selectedMeterId) return;
 
-    const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
-    const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'], autoConnect: false });
+    let isMounted = true;
+    let isFetching = false;
 
-    socket.on('connect', () => {
-      console.log('MainMeter WebSocket Connected - Listening for Telemetry');
-    });
-
-    const processTelemetry = (stats) => {
-      if (!Array.isArray(stats)) return;
-      // Use ref so we always read the latest template even if the closure is stale
-      const currentTemplate = mainMeterTemplateRef.current;
-      if (!currentTemplate || !currentTemplate.mapping) return;
-
-      const mapping = currentTemplate.mapping;
-
-      const getValueForField = (config, fieldKey) => getValueForFieldUtil(config, fieldKey, stats);
-
-      setData(prev => {
-        const newData = { ...prev };
-        let updated = false;
-
-        // Helper to update field
-        const updateField = (config, key) => {
-          const val = getValueForField(config, key);
-          if (val !== null) {
-            newData[key] = val;
-            updated = true;
-          }
-        };
-
-        // Legacy configs
-        updateField(mapping.emVoltageConfig, 'vR');
-        updateField(mapping.emVoltageConfig, 'vY');
-        updateField(mapping.emVoltageConfig, 'vB');
-        updateField(mapping.emCurrentConfig, 'iR');
-        updateField(mapping.emCurrentConfig, 'iY');
-        updateField(mapping.emCurrentConfig, 'iB');
-        updateField(mapping.emPowerConfig, 'activePower');
-        updateField(mapping.emPowerConfig, 'reactivePower');
-        updateField(mapping.emPowerConfig, 'apparentPower');
-        updateField(mapping.emSystemConfig, 'pf');
-        updateField(mapping.emSystemConfig, 'freq');
-        updateField(mapping.emSystemConfig, 'commStatus');
-        updateField(mapping.emConsumptionConfig, 'cumulativekWh');
-
-        // New emChangeConfig keys
-        const changeFields = ['ebKvah', 'ebKwh', 'balance', 'totalKw', 'vR', 'vY', 'vB', 'iR', 'iY', 'iB', 'pf', 'totalKva', 'dgKwh'];
-        changeFields.forEach(k => updateField(mapping.emChangeConfig, k));
-
-        // New emWarningConfig keys
-        const warningFields = ['lowBalanceCut', 'overloadTrip', 'overloadLimitReached', 'connectedStatus', 'forceOff'];
-        warningFields.forEach(k => updateField(mapping.emWarningConfig, k));
-
-        // New emReadConfig keys
-        const readFields = ['meterSrno', 'noOfOverloadCheck', 'ebDgStatus', 'ebTariff', 'dgTariff', 'ebRLoadSet', 'ebYLoadSet', 'ebBLoadSet', 'dgRLoadSet', 'dgYLoadSet', 'dgBLoadSet'];
-        readFields.forEach(k => updateField(mapping.emReadConfig, k));
-
-        // Telemetry Sanitization & Calibration
-        if (newData.ebTariff > 100 || newData.ebTariff <= 0) {
-          newData.ebTariff = 7.50; // Fallback standard grid tariff rate
-          updated = true;
-        }
-        if (newData.dgTariff > 100 || newData.dgTariff <= 0) {
-          newData.dgTariff = 18.50; // Fallback standard generator tariff rate
-          updated = true;
-        }
-        if (newData.freq > 70 || newData.freq < 45) {
-          // Fluctuating Indian grid frequency (approx 50.02 Hz) to simulate healthy active state
-          newData.freq = 50.0 + Math.sin(Date.now() / 4000) * 0.03;
-          updated = true;
-        }
-
-        return updated ? newData : prev;
-      });
-
-      // Extract the latest MongoDB event timestamp for freshness tracking.
-      // This is the key guard against stale data causing a false-ONLINE status.
-      const allCfgsMM = [
-        mapping.emVoltageConfig, mapping.emCurrentConfig, mapping.emPowerConfig,
-        mapping.emSystemConfig, mapping.emConsumptionConfig, mapping.emChangeConfig,
-        mapping.emWarningConfig, mapping.emReadConfig
-      ];
-      let maxTs = null;
-      allCfgsMM.forEach(cfg => {
-        if (cfg && cfg.enabled !== false && cfg.module) {
-          const matchStat = stats.find(s =>
-            String(s.moduleId) === String(cfg.module) ||
-            String(s.meta?.module_id) === String(cfg.module)
-          );
-          if (matchStat?.meta?.created_at_timestamp) {
-            const raw = matchStat.meta.created_at_timestamp;
-            // Handle both seconds-based and milliseconds-based Unix timestamps
-            const tsMs = raw > 1e12 ? raw : raw * 1000;
-            if (!maxTs || tsMs > maxTs) maxTs = tsMs;
-          }
-        }
-      });
-      if (maxTs) setLastTelemetryAt(maxTs);
-
-      // Append real snapshot to live history ring buffer (cap at 10 entries)
-      setHistoryLog(prev => {
-        const snap = {
-          time: new Date().toLocaleTimeString(),
-          // Extract values directly from the already-resolved stats array
-          vR: getValueForField(mapping.emChangeConfig, 'vR') ?? getValueForField(mapping.emVoltageConfig, 'vR'),
-          vY: getValueForField(mapping.emChangeConfig, 'vY') ?? getValueForField(mapping.emVoltageConfig, 'vY'),
-          vB: getValueForField(mapping.emChangeConfig, 'vB') ?? getValueForField(mapping.emVoltageConfig, 'vB'),
-          iR: getValueForField(mapping.emChangeConfig, 'iR') ?? getValueForField(mapping.emCurrentConfig, 'iR'),
-          iY: getValueForField(mapping.emChangeConfig, 'iY') ?? getValueForField(mapping.emCurrentConfig, 'iY'),
-          iB: getValueForField(mapping.emChangeConfig, 'iB') ?? getValueForField(mapping.emCurrentConfig, 'iB'),
-          totalKw: getValueForField(mapping.emChangeConfig, 'totalKw') ?? getValueForField(mapping.emPowerConfig, 'activePower'),
-          freq: getValueForField(mapping.emChangeConfig, 'freq') ?? getValueForField(mapping.emSystemConfig, 'freq'),
-          pf: getValueForField(mapping.emChangeConfig, 'pf') ?? getValueForField(mapping.emSystemConfig, 'pf'),
-          ebKwh: getValueForField(mapping.emChangeConfig, 'ebKwh') ?? getValueForField(mapping.emReadConfig, 'ebKwh') ?? getValueForField(mapping.emConsumptionConfig, 'cumulativekWh'),
-          dgKwh: getValueForField(mapping.emChangeConfig, 'dgKwh'),
-          ebKvah: getValueForField(mapping.emChangeConfig, 'ebKvah') ?? getValueForField(mapping.emReadConfig, 'ebKvah'),
-          totalKva: getValueForField(mapping.emChangeConfig, 'totalKva') ?? getValueForField(mapping.emPowerConfig, 'apparentPower'),
-          reactivePower: getValueForField(mapping.emPowerConfig, 'reactivePower'),
-          commStatus: (() => { const val = getValueForField(mapping.emSystemConfig, 'commStatus'); return val; })(),
-          connectedStatus: (() => { const val = getValueForField(mapping.emWarningConfig, 'connectedStatus'); return val; })(),
-        };
-        // Only record if at least one field has live data
-        const hasData = snap.vR !== null || snap.iR !== null || snap.totalKw !== null;
-        if (!hasData) return prev;
-        const next = [...prev, snap];
-        return next.length > 50 ? next.slice(next.length - 50) : next;
-      });
-    };
-
-    socket.on('telemetry_update', processTelemetry);
-
-    const fetchStats = async () => {
+    const fetchLatestEvents = async () => {
+      if (isFetching) return;
+      isFetching = true;
       try {
-        const modulesToPoll = new Set();
+        const eventsRes = await bmsService.getDeviceEventsLatest(selectedMeterId, selectedSiteId).catch(() => null);
+        if (!isMounted || !eventsRes) return;
 
-        const extractModuleId = (config, keys) => {
-          if (!config) return null;
-          if (config.module && config.module !== 'ALL') return config.module;
-          for (const k of keys) {
-            if (config[k] && typeof config[k] === 'string' && config[k].includes(':')) {
-              const parts = config[k].split(':');
-              if (parts[0]) return parts[0];
-            }
+        const { updates, lastEventTime } = mapLatestEventsToTelemetry(eventsRes, mainMeterTemplateRef.current?.mapping);
+
+        if (updates && Object.keys(updates).length > 0) {
+          setData(prev => ({
+            ...prev,
+            ...updates
+          }));
+
+          if (lastEventTime) {
+            const tsMs = lastEventTime > 1e12 ? lastEventTime : lastEventTime * 1000;
+            setLastTelemetryAt(tsMs);
+          } else {
+            setLastTelemetryAt(Date.now());
           }
-          return config.module || null;
-        };
 
-        if (mainMeterTemplateRef.current?.mapping) {
-          const mapping = mainMeterTemplateRef.current.mapping;
-          const configFieldsMap = [
-            { config: mapping.emVoltageConfig, fields: ['vR', 'vY', 'vB'] },
-            { config: mapping.emCurrentConfig, fields: ['iR', 'iY', 'iB'] },
-            { config: mapping.emPowerConfig, fields: ['activePower', 'reactivePower', 'apparentPower'] },
-            { config: mapping.emSystemConfig, fields: ['pf', 'freq'] },
-            { config: mapping.emConsumptionConfig, fields: ['cumulativekWh'] },
-            {
-              config: mapping.emChangeConfig,
-              fields: ['ebKvah', 'ebKwh', 'balance', 'totalKw', 'vR', 'vY', 'vB', 'iR', 'iY', 'iB', 'pf', 'totalKva', 'dgKwh']
-            },
-            {
-              config: mapping.emWarningConfig,
-              fields: ['lowBalanceCut', 'overloadTrip', 'overloadLimitReached', 'connectedStatus', 'forceOff']
-            },
-            {
-              config: mapping.emReadConfig,
-              fields: ['meterSrno', 'noOfOverloadCheck', 'ebDgStatus', 'ebTariff', 'dgTariff', 'ebRLoadSet', 'ebYLoadSet', 'ebBLoadSet', 'dgRLoadSet', 'dgYLoadSet', 'dgBLoadSet']
-            }
-          ];
-
-          configFieldsMap.forEach(({ config, fields }) => {
-            if (config && config.enabled !== false) {
-              const modId = extractModuleId(config, fields);
-              if (modId) {
-                modulesToPoll.add(String(modId));
-              }
-            }
+          // Record snapshot into historyLog ring buffer for charts/trends
+          setHistoryLog(prev => {
+            const snap = {
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              vR: updates.vR ?? prev[prev.length - 1]?.vR ?? 0,
+              vY: updates.vY ?? prev[prev.length - 1]?.vY ?? 0,
+              vB: updates.vB ?? prev[prev.length - 1]?.vB ?? 0,
+              iR: updates.iR ?? prev[prev.length - 1]?.iR ?? 0,
+              iY: updates.iY ?? prev[prev.length - 1]?.iY ?? 0,
+              iB: updates.iB ?? prev[prev.length - 1]?.iB ?? 0,
+              totalKw: updates.totalKw ?? prev[prev.length - 1]?.totalKw ?? 0,
+              freq: updates.freq ?? prev[prev.length - 1]?.freq ?? 50,
+              pf: updates.pf ?? prev[prev.length - 1]?.pf ?? 1,
+              ebKwh: updates.ebKwh ?? prev[prev.length - 1]?.ebKwh ?? 0,
+              dgKwh: updates.dgKwh ?? prev[prev.length - 1]?.dgKwh ?? 0,
+              ebKvah: updates.ebKvah ?? prev[prev.length - 1]?.ebKvah ?? 0,
+              totalKva: updates.totalKva ?? prev[prev.length - 1]?.totalKva ?? 0,
+              reactivePower: updates.reactivePower ?? prev[prev.length - 1]?.reactivePower ?? 0,
+              commStatus: updates.commStatus ?? 1,
+              connectedStatus: updates.connectedStatus ?? 1,
+            };
+            const next = [...prev, snap];
+            return next.length > 50 ? next.slice(next.length - 50) : next;
           });
         }
-
-        // OpenAPI Live Device Telemetry query: GET /sites/{siteId}/devices/{deviceId}/live
-        if (selectedSiteId && selectedMeterId) {
-          try {
-            const liveRes = await bmsService.getDeviceLiveTelemetry(selectedSiteId, selectedMeterId).catch(() => null);
-            if (liveRes && (liveRes.data || (typeof liveRes === 'object' && !liveRes.error))) {
-              const liveData = liveRes.data || liveRes;
-              if (liveData && typeof liveData === 'object' && Object.keys(liveData).length > 0) {
-                setData(prev => ({
-                  ...prev,
-                  ...(liveData.vR !== undefined && { vR: Number(liveData.vR) || 0 }),
-                  ...(liveData.vY !== undefined && { vY: Number(liveData.vY) || 0 }),
-                  ...(liveData.vB !== undefined && { vB: Number(liveData.vB) || 0 }),
-                  ...(liveData.iR !== undefined && { iR: Number(liveData.iR) || 0 }),
-                  ...(liveData.iY !== undefined && { iY: Number(liveData.iY) || 0 }),
-                  ...(liveData.iB !== undefined && { iB: Number(liveData.iB) || 0 }),
-                  ...(liveData.totalKw !== undefined && { totalKw: Number(liveData.totalKw) || 0 }),
-                  ...(liveData.activePower !== undefined && { activePower: Number(liveData.activePower) || 0 }),
-                  ...(liveData.pf !== undefined && { pf: Number(liveData.pf) || 0 }),
-                  ...(liveData.freq !== undefined && { freq: Number(liveData.freq) || 0 }),
-                  ...(liveData.ebKwh !== undefined && { ebKwh: Number(liveData.ebKwh) || 0 }),
-                  ...(liveData.ebKvah !== undefined && { ebKvah: Number(liveData.ebKvah) || 0 }),
-                  ...(liveData.dgKwh !== undefined && { dgKwh: Number(liveData.dgKwh) || 0 }),
-                  ...(liveData.balance !== undefined && { balance: Number(liveData.balance) || 0 })
-                }));
-                setLastTelemetryAt(Date.now());
-              }
-            }
-          } catch (e) {}
-        }
-
-        const pollList = Array.from(modulesToPoll);
-        if (pollList.length === 0) return;
-
-        const url = `/api/templates/stats?modules=${pollList.join(',')}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const stats = await res.json();
-          processTelemetry(stats);
-        }
       } catch (err) {
-        console.error('Error fetching main meter stats:', err);
+        console.warn('Error fetching device latest events:', err);
+      } finally {
+        isFetching = false;
       }
     };
 
-    // Store in ref so the selectedMeterId reset effect can trigger an immediate poll
-    fetchStatsRef.current = fetchStats;
-    fetchStats();
-    const pollingInterval = setInterval(fetchStats, 2000);
+    // Immediate initial call on device selection
+    fetchLatestEvents();
+
+    // Recurring poll every 30 seconds
+    const intervalId = setInterval(fetchLatestEvents, 30000);
 
     return () => {
-      socket.disconnect();
-      clearInterval(pollingInterval);
+      isMounted = false;
+      clearInterval(intervalId);
     };
-  }, [mainMeterTemplate]);
+  }, [selectedMeterId, selectedSiteId]);
 
 
   // Cal LED Blinking frequency based on active power load

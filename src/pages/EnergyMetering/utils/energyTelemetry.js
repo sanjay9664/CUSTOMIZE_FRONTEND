@@ -294,3 +294,212 @@ export const formatNumber = (num, decimals = 2) => {
     maximumFractionDigits: decimals
   });
 };
+
+/**
+ * Maps raw events payload from GET /devices/:deviceId/events/latest
+ * to canonical telemetry fields for Main Meter, Sub Meters and Digital Twin displays.
+ */
+export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) => {
+  if (!eventsPayload) return { updates: {}, lastEventTime: null };
+
+  const payload = eventsPayload.data || eventsPayload;
+  const fieldsArray = Array.isArray(payload.fields)
+    ? payload.fields
+    : (Array.isArray(payload) ? payload : null);
+
+  const updates = {};
+  let maxTime = payload.lastEventTime || null;
+
+  if (fieldsArray && fieldsArray.length > 0) {
+    // Build normalized lookup map from PARAMETER_SYNONYMS
+    const synonymMap = new Map();
+    for (const [stateKey, synList] of Object.entries(PARAMETER_SYNONYMS)) {
+      synonymMap.set(stateKey.toLowerCase().replace(/[^a-z0-9]/g, ''), stateKey);
+      for (const syn of synList) {
+        synonymMap.set(String(syn).toLowerCase().replace(/[^a-z0-9]/g, ''), stateKey);
+      }
+    }
+
+    // Explicit common aliases from industrial MFM & OpenAPI spec samples
+    const extraAliases = {
+      eq: 'ebKvah',
+      ep: 'ebKwh',
+      ua: 'vR',
+      ub: 'vY',
+      uc: 'vB',
+      vr: 'vR',
+      vy: 'vY',
+      vb: 'vB',
+      ia: 'iR',
+      ib: 'iY',
+      ic: 'iB',
+      ir: 'iR',
+      iy: 'iY',
+      ib: 'iB',
+      kw: 'totalKw',
+      p: 'totalKw',
+      totalkw: 'totalKw',
+      activepower: 'totalKw',
+      kva: 'totalKva',
+      s: 'totalKva',
+      totalkva: 'totalKva',
+      apparentpower: 'totalKva',
+      kvar: 'reactivePower',
+      q: 'reactivePower',
+      reactivepower: 'reactivePower',
+      pf: 'pf',
+      powerfactor: 'pf',
+      f: 'freq',
+      freq: 'freq',
+      frequency: 'freq',
+      hz: 'freq',
+      bal: 'balance',
+      balance: 'balance',
+      dg: 'dgKwh',
+      dgkwh: 'dgKwh',
+      src: 'ebDgStatus',
+      ebdgtoggle: 'ebDgStatus',
+      ebdgstatus: 'ebDgStatus',
+      ry: 'connectedStatus',
+      relay: 'connectedStatus',
+      connectedstatus: 'connectedStatus',
+      vry: 'vRY',
+      vyb: 'vYB',
+      vbr: 'vBR',
+      vll: 'vLLAvg',
+      vllavg: 'vLLAvg',
+      vln: 'vLNAvg',
+      vlnavg: 'vLNAvg',
+      iavg: 'iAvg',
+      pfavg: 'pfAvg',
+      pfr: 'pfR',
+      pfy: 'pfY',
+      pfb: 'pfB',
+      kvaavg: 'kvaAvg',
+      kvaravg: 'kvarAvg',
+      loadhrs: 'loadHrs',
+      loadmin: 'loadMin',
+      noloadhrs: 'noLoadHrs',
+      noloadmin: 'noLoadMin',
+      loadpct: 'loadPct',
+      ebtariff: 'ebTariff',
+      dgtariff: 'dgTariff',
+      ebrloadset: 'ebRLoadSet',
+      ebyloadset: 'ebYLoadSet',
+      ebbloadset: 'ebBLoadSet',
+      dgrloadset: 'dgRLoadSet',
+      dgyloadset: 'dgYLoadSet',
+      dgbloadset: 'dgBLoadSet',
+      lowbalancecut: 'lowBalanceCut',
+      overloadtrip: 'overloadTrip',
+      overloadlimitreached: 'overloadLimitReached',
+      forceoff: 'forceOff',
+      metersrno: 'meterSrno',
+      noofoverloadcheck: 'noOfOverloadCheck'
+    };
+
+    for (const [alias, key] of Object.entries(extraAliases)) {
+      synonymMap.set(alias.toLowerCase().replace(/[^a-z0-9]/g, ''), key);
+    }
+
+    for (const field of fieldsArray) {
+      if (!field) continue;
+      const rawVal = field.currentValue !== undefined ? field.currentValue : field.value;
+      if (rawVal === undefined || rawVal === null) continue;
+
+      if (field.time && (!maxTime || field.time > maxTime)) {
+        maxTime = field.time;
+      }
+
+      const candidates = [
+        field.displayName,
+        field.fieldName,
+        field.name,
+        field.key,
+        field.label
+      ].filter(Boolean);
+
+      let matchedKey = null;
+
+      // Special unit-based disambiguation for Eq / EP
+      const unitUpper = String(field.unit || '').toUpperCase();
+      const dispUpper = String(field.displayName || '').toUpperCase();
+      if (dispUpper === 'EQ') {
+        if (unitUpper.includes('KVAR')) {
+          matchedKey = 'reactivePower';
+        } else {
+          matchedKey = 'ebKvah';
+        }
+      } else if (dispUpper === 'EP') {
+        matchedKey = 'ebKwh';
+      }
+
+      // Check synonyms
+      if (!matchedKey) {
+        for (const cand of candidates) {
+          const norm = String(cand).toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (synonymMap.has(norm)) {
+            matchedKey = synonymMap.get(norm);
+            break;
+          }
+        }
+      }
+
+      // Check device template mapping configurations
+      if (!matchedKey && templateMapping) {
+        for (const [cfgName, cfgObj] of Object.entries(templateMapping)) {
+          if (!cfgObj || typeof cfgObj !== 'object') continue;
+          for (const [k, v] of Object.entries(cfgObj)) {
+            if (typeof v === 'string') {
+              const cleanV = v.includes(':') ? v.split(':').pop() : v;
+              const matches = candidates.some(c => {
+                const s = String(c).trim();
+                return s === cleanV.trim() || s === v.trim();
+              });
+              if (matches) {
+                matchedKey = k;
+                break;
+              }
+            }
+          }
+          if (matchedKey) break;
+        }
+      }
+
+      if (matchedKey) {
+        const num = Number(rawVal);
+        const parsedVal = (field.dataType === 'NUMBER' || (!isNaN(num) && typeof rawVal !== 'boolean')) ? num : rawVal;
+        updates[matchedKey] = parsedVal;
+
+        // Complementary bidirectional state syncing
+        if (matchedKey === 'totalKw' && updates.activePower === undefined) {
+          updates.activePower = parsedVal;
+        } else if (matchedKey === 'activePower' && updates.totalKw === undefined) {
+          updates.totalKw = parsedVal;
+        }
+
+        if (matchedKey === 'ebKwh' && updates.cumulativekWh === undefined) {
+          updates.cumulativekWh = parsedVal;
+        } else if (matchedKey === 'cumulativekWh' && updates.ebKwh === undefined) {
+          updates.ebKwh = parsedVal;
+        }
+
+        if (matchedKey === 'totalKva' && updates.apparentPower === undefined) {
+          updates.apparentPower = parsedVal;
+        } else if (matchedKey === 'apparentPower' && updates.totalKva === undefined) {
+          updates.totalKva = parsedVal;
+        }
+      }
+    }
+  } else if (payload && typeof payload === 'object') {
+    // Plain object with key-value pairs (fallback)
+    for (const [k, v] of Object.entries(payload)) {
+      if (v !== undefined && v !== null && typeof v !== 'object') {
+        const num = Number(v);
+        updates[k] = isNaN(num) ? v : num;
+      }
+    }
+  }
+
+  return { updates, lastEventTime: maxTime, rawFields: fieldsArray || [] };
+};
