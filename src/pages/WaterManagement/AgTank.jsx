@@ -439,13 +439,18 @@ const AgTank = () => {
   }, [selectedAssetId, selectedSiteId, assets, sites]);
 
   // 4. Sync REAL telemetry & Device Mapping onto UI tanks
-  // Uses: /sites/{siteId}/devices/{deviceId}/events/latest to get module-level events
-  // Matches eventFields displayNames (Tank Level, Valve Status, Water Flow) & module types
   useEffect(() => {
-    if (!selectedDeviceId) {
-      setSelectedDeviceId('ALL');
-      return;
-    }
+    // Reset all tanks to unmapped when site/asset/device changes
+    setAllTanks(prev => prev.map(tank => ({
+      ...tank,
+      isMapped: false,
+      isOnline: false,
+      level: 0,
+      status: 'Stopped',
+      amps: undefined
+    })));
+
+    if (!selectedDeviceId) return;
 
     if (selectedDeviceId === 'ALL') {
       const fetchAllTelemetry = async () => {
@@ -899,7 +904,7 @@ const AgTank = () => {
 
   const { getOverallStatus } = useDeviceStatus();
 
-  // Sync global online/offline status into allTanks state dynamically
+  // Dynamic online/offline status sync for mapped tanks only
   useEffect(() => {
     const saved = localStorage.getItem('scada_templates');
     if (!saved) return;
@@ -908,6 +913,7 @@ const AgTank = () => {
       setAllTanks(prev => {
         let changed = false;
         const next = prev.map(tank => {
+          if (!tank.isMapped) return tank;
           const tankName = `${tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-${tank.localId}`;
           const rawTemplate = templates.find(t => matchesAgTankTemplate(t, tankName, tank.type));
           if (rawTemplate) {
@@ -919,14 +925,9 @@ const AgTank = () => {
             }
             const gatewayUuid = mapping?.gatewayUuid;
             const isOnline = getOverallStatus(deviceId, gatewayUuid);
-            if (tank.isOnline !== isOnline || !tank.isMapped) {
+            if (tank.isOnline !== isOnline) {
               changed = true;
-              return { ...tank, isOnline: true, isMapped: true };
-            }
-          } else {
-            if (tank.isMapped || tank.isOnline) {
-              changed = true;
-              return { ...tank, isMapped: false, isOnline: false };
+              return { ...tank, isOnline };
             }
           }
           return tank;
@@ -952,31 +953,6 @@ const AgTank = () => {
       isMapped: false
     }));
 
-    // Initial Sync from LocalStorage templates
-    const saved = localStorage.getItem('scada_templates');
-    if (saved) {
-      try {
-        const templates = JSON.parse(saved).map(t => ({
-          ...t,
-          mapping: cleanCorruptedMapping(t.mapping)
-        }));
-        return initial.map(tank => {
-          const tankName = `${tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-${tank.localId}`;
-          const rawTemplate = templates.find(t => matchesAgTankTemplate(t, tankName, tank.type));
-          if (rawTemplate) {
-            const mapping = getNormalizedMapping(rawTemplate);
-            return {
-              ...tank,
-              isMapped: true,
-              isOnline: true,
-              minLevel: mapping?.rule1Config?.consequence?.value ? Number(mapping.rule1Config.consequence.value) : tank.minLevel,
-              maxLevel: mapping?.rule2Config?.consequence?.value ? Number(mapping.rule2Config.consequence.value) : tank.maxLevel
-            };
-          }
-          return tank;
-        });
-      } catch (e) { console.error("Initial Tank Sync Error:", e); }
-    }
     return initial;
   });
 
@@ -1408,9 +1384,8 @@ const AgTank = () => {
                 }
               }
 
-              if (newTank.isOnline !== isOnline || !newTank.isMapped) {
+              if (newTank.isOnline !== isOnline && tank.isMapped) {
                 newTank.isOnline = isOnline;
-                newTank.isMapped = true;
                 updated = true;
               }
 
