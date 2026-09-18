@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Row, Col, Card, Button, Form, Badge, Modal, Spinner } from 'react-bootstrap';
-import { Activity, Zap, ShieldCheck, Info, Droplets, ToggleRight, ToggleLeft, Layers, Maximize, Minimize, XCircle, X } from 'lucide-react';
+import { Activity, Zap, ShieldCheck, Info, Droplets, ToggleRight, ToggleLeft, Layers, Maximize, Minimize, XCircle, X, Building2, Cpu } from 'lucide-react';
 import PdfButton from '../../components/PdfButton';
 import { getSochiotDeviceDetails } from '../../services/authService';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
 import { io } from 'socket.io-client';
+import apiClient, { normalizeList } from '../../services/apiClient';
 
 const UgTank = () => {
   const { getOverallStatus } = useDeviceStatus();
@@ -29,6 +30,334 @@ const UgTank = () => {
     });
     return cleaned;
   };
+  // Site, Asset & Device Selector states (3-Level Cascade: Site -> Asset -> Device)
+  const [sites, setSites] = useState([]);
+  const [selectedSiteId, setSelectedSiteId] = useState('');
+  const [selectedSiteName, setSelectedSiteName] = useState('');
+  const [assets, setAssets] = useState([]);
+  const [selectedAssetId, setSelectedAssetId] = useState('');
+  const [selectedAssetName, setSelectedAssetName] = useState('');
+  const [devices, setDevices] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+
+  const isRealSiteName = (name) => {
+    if (!name || typeof name !== 'string') return false;
+    const clean = name.trim().toUpperCase();
+    const invalidNames = new Set(['SELECT SITE / LOCATION', 'SELECT SITE', 'NONE', 'NULL', 'UNDEFINED']);
+    return clean && !invalidNames.has(clean);
+  };
+
+  // 1. Load Sites
+  useEffect(() => {
+    const loadSites = async () => {
+      const siteMap = new Map();
+      try {
+        const res = await apiClient.get('/sites').catch(() => null);
+        const list = normalizeList(res, 'sites');
+        if (Array.isArray(list)) {
+          list.forEach(s => {
+            if (s && (s.id || s.siteId || s.name)) {
+              const id = String(s.id || s.siteId || s._id || s.name);
+              const name = String(s.name || s.label || s.title || id).trim();
+              if (isRealSiteName(name)) siteMap.set(id, { id, name });
+            }
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const scadaSitesDb = localStorage.getItem('scada_sites_db');
+        if (scadaSitesDb) {
+          const parsed = JSON.parse(scadaSitesDb);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(s => {
+              if (s && (s.name || s.label) && isRealSiteName(s.name || s.label)) {
+                const id = String(s.id || s.siteId || s.name);
+                if (!siteMap.has(id)) siteMap.set(id, { id, name: s.name || s.label });
+              }
+            });
+          }
+        }
+      } catch (e) {}
+
+      const siteList = Array.from(siteMap.values());
+      setSites(siteList);
+      if (siteList.length > 0 && !selectedSiteId) {
+        setSelectedSiteId(siteList[0].id);
+        setSelectedSiteName(siteList[0].name);
+      }
+    };
+    loadSites();
+  }, []);
+
+  // 2. Load Assets for selectedSiteId
+  useEffect(() => {
+    if (!selectedSiteId) {
+      setAssets([]);
+      setSelectedAssetId('');
+      return;
+    }
+
+    const loadAssets = async () => {
+      const assetMap = new Map();
+      const currentSite = sites.find(s => String(s.id) === String(selectedSiteId));
+      if (currentSite) setSelectedSiteName(currentSite.name);
+
+      try {
+        const res = await apiClient.get(`/sites/${selectedSiteId}/assets`).catch(() => null) ||
+                          await apiClient.get('/assets', { siteId: String(selectedSiteId) }).catch(() => null);
+        const list = normalizeList(res, 'assets');
+        if (Array.isArray(list)) {
+          list.forEach(a => {
+            if (a && (a.id || a.assetId || a.name)) {
+              const id = String(a.id || a.assetId || a.name);
+              const name = a.name || a.label || a.title || `Asset #${id}`;
+              assetMap.set(id, { id, name });
+            }
+          });
+        }
+      } catch (e) {}
+
+      const assetList = Array.from(assetMap.values());
+      setAssets(assetList);
+      if (assetList.length > 0) {
+        setSelectedAssetId(prev => {
+          if (prev && assetList.some(a => String(a.id) === String(prev))) return prev;
+          return assetList[0].id;
+        });
+      } else {
+        setSelectedAssetId('');
+      }
+    };
+
+    loadAssets();
+  }, [selectedSiteId, sites]);
+
+  // 3. Load Devices for selectedAssetId & selectedSiteId
+  useEffect(() => {
+    if (!selectedSiteId) {
+      setDevices([]);
+      setSelectedDeviceId('');
+      return;
+    }
+
+    const loadDevices = async () => {
+      const devMap = new Map();
+      const currentAsset = assets.find(a => String(a.id) === String(selectedAssetId));
+      if (currentAsset) setSelectedAssetName(currentAsset.name);
+
+      try {
+        const res = await apiClient.get('/devices', {
+          siteId: String(selectedSiteId),
+          category: 'UG_TANK',
+          include: 'settings,rules,profile'
+        }).catch(() => null);
+        const list = normalizeList(res, 'devices');
+        if (Array.isArray(list)) {
+          list.forEach(d => {
+            if (d && (d.id || d.deviceId || d.name)) {
+              const id = String(d.id || d.deviceId || d.name);
+              const name = d.name || d.title || d.deviceName || `Device #${id}`;
+              devMap.set(id, { id, name, template: d });
+            }
+          });
+        }
+      } catch (e) {}
+
+      if (devMap.size === 0) {
+        try {
+          const res = await apiClient.get('/devices', {
+            siteId: String(selectedSiteId),
+            include: 'settings,rules,profile'
+          }).catch(() => null);
+          const list = normalizeList(res, 'devices');
+          if (Array.isArray(list)) {
+            list.forEach(d => {
+              if (d && (d.id || d.deviceId || d.name)) {
+                const id = String(d.id || d.deviceId || d.name);
+                const name = d.name || d.title || d.deviceName || `Device #${id}`;
+                devMap.set(id, { id, name, template: d });
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
+      const devList = Array.from(devMap.values());
+      setDevices(devList);
+      if (devList.length > 0) {
+        setSelectedDeviceId(prev => {
+          if (prev && devList.some(d => String(d.id) === String(prev))) return prev;
+          return devList[0].id;
+        });
+      } else {
+        setSelectedDeviceId('');
+      }
+    };
+
+    loadDevices();
+  }, [selectedAssetId, selectedSiteId, assets, sites]);
+
+  // 4. Sync REAL Telemetry onto UG Tanks & Pumps
+  useEffect(() => {
+    if (!selectedDeviceId) {
+      setTanks(prev => prev.map(t => ({ ...t, isMapped: false, isOnline: false, level: 0 })));
+      setPumps1(prev => prev.map(p => ({ ...p, isMapped: false, isOnline: false })));
+      setPumps2(prev => prev.map(p => ({ ...p, isMapped: false, isOnline: false })));
+      return;
+    }
+
+    const fetchRealTelemetry = async () => {
+      try {
+        let eventsRes = await apiClient.get(`/sites/${selectedSiteId}/devices/${selectedDeviceId}/events/latest`).catch(() => null) ||
+                        await apiClient.get(`/devices/${selectedDeviceId}/events/latest`).catch(() => null);
+
+        const liveData = await apiClient.get(`/sites/${selectedSiteId || 1}/devices/${selectedDeviceId}/live`).catch(() => null) ||
+                         await apiClient.get(`/devices/${selectedDeviceId}`).catch(() => null);
+
+        let realLevel, realPressure, realAmps;
+        let p1Status, p2Status;
+
+        const extractTelemetry = (payload) => {
+          if (!payload) return;
+          const pData = payload?.data ?? payload;
+          const allFields = [];
+          if (Array.isArray(pData?.fields)) allFields.push(...payloadData?.fields || pData.fields);
+          if (Array.isArray(payload?.fields)) allFields.push(...payload.fields);
+
+          const rawList = Array.isArray(pData) ? pData
+            : Array.isArray(payload) ? payload
+            : Array.isArray(pData?.modules) ? pData.modules
+            : [pData];
+
+          rawList.forEach(evt => {
+            if (!evt) return;
+            const mId = String(evt.moduleId ?? evt.module_id ?? evt.module ?? evt.name ?? '').toUpperCase();
+            const fields = Array.isArray(evt.eventFields) ? evt.eventFields : (Array.isArray(evt.fields) ? evt.fields : []);
+
+            fields.forEach(f => allFields.push(f));
+
+            // Module-specific extraction for analog sensors & digital I/O
+            if (mId.includes('ANALOG_INPUT_1') || mId.includes('ADC_1') || mId === '1') {
+              const valField = fields.find(f => String(f.eventFieldName || f.fieldName || '').toLowerCase() === 'value') || fields[0];
+              const val = valField?.fieldCurrentValue ?? valField?.currentValue ?? valField?.value;
+              if (val !== undefined && val !== null && val !== '') {
+                const num = Number(val);
+                if (!isNaN(num) && num > 0.001) realLevel = num;
+              }
+            }
+
+            if (mId.includes('INPUT_1') || mId.includes('DIGITAL_1') || mId.includes('OUTPUT_1')) {
+              const stField = fields.find(f => ['state', 'status', 'value'].includes(String(f.eventFieldName || f.fieldName || '').toLowerCase())) || fields[0];
+              const val = String(stField?.fieldCurrentValue ?? stField?.currentValue ?? stField?.value ?? '').toUpperCase();
+              if (val === 'HIGH' || val === '1' || val === 'OPEN' || val === 'ON' || val === 'RUNNING') {
+                p1Status = 'Running';
+              } else if (val === 'LOW' || val === '0' || val === 'CLOSED' || val === 'OFF') {
+                p1Status = 'Stopped';
+              }
+            }
+
+            if (mId.includes('INPUT_2') || mId.includes('DIGITAL_2') || mId.includes('OUTPUT_2')) {
+              const stField = fields.find(f => ['state', 'status', 'value'].includes(String(f.eventFieldName || f.fieldName || '').toLowerCase())) || fields[0];
+              const val = String(stField?.fieldCurrentValue ?? stField?.currentValue ?? stField?.value ?? '').toUpperCase();
+              if (val === 'HIGH' || val === '1' || val === 'OPEN' || val === 'ON' || val === 'RUNNING') {
+                p2Status = 'Running';
+              } else if (val === 'LOW' || val === '0' || val === 'CLOSED' || val === 'OFF') {
+                p2Status = 'Stopped';
+              }
+            }
+          });
+
+          // 1. Inspect explicit display names (Level, Capacity, Tank, Water)
+          if (realLevel === undefined) {
+            allFields.forEach(f => {
+              const fName = String(f.fieldName || f.eventFieldName || f.name || '').toLowerCase();
+              const fDispName = String(f.displayName || f.eventFieldDisplayName || fName).toLowerCase();
+              const fVal = f.currentValue ?? f.fieldCurrentValue ?? f.value ?? f.fieldcurrentvalue;
+
+              if (fVal !== undefined && fVal !== null && fVal !== '') {
+                if (fDispName.includes('level') || fDispName.includes('capacity') || fDispName.includes('tank') || fDispName.includes('water') || fName.includes('level')) {
+                  if (realLevel === undefined) realLevel = fVal;
+                }
+                if (fDispName.includes('pressure') || fName.includes('pressure')) {
+                  if (realPressure === undefined) realPressure = fVal;
+                }
+                if (fDispName.includes('amps') || fDispName.includes('current') || fDispName.includes('hz')) {
+                  if (realAmps === undefined) realAmps = fVal;
+                }
+              }
+            });
+          }
+
+          // 2. Numeric Level Fallback (prefer values > 0.01 to ignore zeroed noise like ANALOG_INPUT_2: 0.000227)
+          if (realLevel === undefined) {
+            allFields.forEach(f => {
+              const fVal = f.currentValue ?? f.fieldCurrentValue ?? f.value;
+              const num = Number(fVal);
+              if (fVal !== undefined && fVal !== null && !isNaN(num) && num > 0.01 && num <= 100) {
+                if (realLevel === undefined) realLevel = num;
+              }
+            });
+          }
+        };
+
+        extractTelemetry(eventsRes);
+
+        if (liveData && realLevel === undefined) {
+          const t = liveData?.telemetry || liveData?.meta || liveData?.data || liveData || {};
+          realLevel = t.tank_level ?? t.water_level ?? t.level ?? t.value ?? t['Tank Level'] ?? t['Capacity'] ?? t['Water Level'];
+          if (realPressure === undefined) realPressure = t.pressure ?? t.outlet_pressure;
+          if (realAmps === undefined) realAmps = t.amps ?? t.current;
+        }
+
+        let rawLevelNum = Number(realLevel);
+        let numLevel = 0;
+        if (realLevel !== undefined && realLevel !== null && !isNaN(rawLevelNum)) {
+          if (rawLevelNum > 0 && rawLevelNum <= 10) {
+            // 0..10 sensor range (e.g. 8.215m = 82% level)
+            numLevel = Math.round(rawLevelNum * 10);
+          } else if (rawLevelNum > 10 && rawLevelNum <= 100) {
+            numLevel = Math.round(rawLevelNum);
+          } else if (rawLevelNum > 100) {
+            numLevel = 100;
+          }
+        }
+
+        const numPressure = (realPressure !== undefined && realPressure !== null && !isNaN(Number(realPressure))) ? Number(realPressure).toFixed(1) : undefined;
+        const numAmps = (realAmps !== undefined && realAmps !== null && !isNaN(Number(realAmps))) ? Number(realAmps).toFixed(1) : undefined;
+
+        setTanks(prev => prev.map(t => ({
+          ...t,
+          isMapped: true,
+          isOnline: true,
+          level: numLevel
+        })));
+
+        setPumps1(prev => prev.map((p, idx) => ({
+          ...p,
+          isMapped: true,
+          isOnline: true,
+          status: idx === 0 && p1Status ? p1Status : p.status,
+          pressure: numPressure ? Number(numPressure) : p.pressure,
+          amp: numAmps || p.amp
+        })));
+
+        setPumps2(prev => prev.map((p, idx) => ({
+          ...p,
+          isMapped: true,
+          isOnline: true,
+          status: idx === 0 && p2Status ? p2Status : p.status,
+          pressure: numPressure ? Number(numPressure) : p.pressure,
+          amp: numAmps || p.amp
+        })));
+      } catch (e) {}
+    };
+
+    fetchRealTelemetry();
+    const interval = setInterval(fetchRealTelemetry, 3000);
+    return () => clearInterval(interval);
+  }, [selectedDeviceId, selectedSiteId, devices]);
+
   useEffect(() => {
     const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFsChange);
@@ -249,7 +578,7 @@ const UgTank = () => {
             }
 
             if (!isMapped) {
-              if (nextTank.level !== 0) {
+              if (!selectedDeviceId && nextTank.level !== 0) {
                 nextTank.level = 0;
                 updated = true;
               }
@@ -474,63 +803,10 @@ const UgTank = () => {
       if (cached) processTelemetry(JSON.parse(cached));
     } catch (e) { /* ignore cache errors */ }
 
-    // Step 2: HTTP fetch immediately on mount for fresh data (don't wait for WebSocket)
-    const fetchStats = async () => {
-      try {
-                const saved = localStorage.getItem('scada_templates');
-        const templates = saved ? JSON.parse(saved).map(t => ({
-          ...t,
-          mapping: cleanCorruptedMapping(t.mapping)
-        })) : [];
-        const modulesToPoll = new Set();
-        templates.forEach(t => {
-          if (t.mapping) {
-            Object.values(t.mapping).forEach(cfg => {
-              if (cfg && typeof cfg === 'object') {
-                if (cfg.module && cfg.module !== 'ALL') {
-                  modulesToPoll.add(String(cfg.module));
-                }
-                Object.values(cfg).forEach(val => {
-                  if (typeof val === 'string' && val.includes('::')) {
-                    const parts = val.split('::');
-                    if (parts[0]) modulesToPoll.add(String(parts[0]));
-                  }
-                });
-              }
-            });
-          }
-        });
-        const apiBase = (() => {
-          if (typeof window !== 'undefined' && window.process?.env?.REACT_APP_BACKEND_URL) {
-            return window.process.env.REACT_APP_BACKEND_URL.replace(/\/api$/, '');
-          }
-          return '';
-        })();
-        const pollList = Array.from(modulesToPoll);
-        const url = pollList.length > 0 ? `${apiBase}/api/templates/stats?modules=${pollList.join(',')}` : `${apiBase}/api/templates/stats`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const stats = await res.json();
-          // Save to cache for next page visit — instant load next time
-          try { localStorage.setItem('scada_ugtank_telemetry_cache', JSON.stringify(stats)); } catch (e) {}
-          processTelemetry(stats);
-        }
-      } catch (err) {
-        console.error('Error fetching UgTank stats:', err);
-      }
-    };
-
-    fetchStats(); // Immediate on mount
-
-    // Step 3: Keep polling every 2s as backup (regardless of WebSocket state)
-    const pollInterval = setInterval(fetchStats, 2000);
-    // ─────────────────────────────────────────────────────────────────────────
-
     return () => {
       socket.disconnect();
-      clearInterval(pollInterval);
     };
-  }, [getOverallStatus]);
+  }, [getOverallStatus, selectedDeviceId]);
 
   const activePumps = activeStation === 1 ? pumps1 : pumps2;
   const isAnyPumpRunning = useMemo(() => activePumps.some(p => p.status === 'Running'), [activePumps]);
@@ -828,7 +1104,7 @@ const UgTank = () => {
 
   return (
     <div className={`fade-in p-2 ${isFullscreen ? 'fullscreen-scada-page' : ''}`} ref={pageRef}>
-      <div className="page-header d-flex justify-content-between align-items-center mb-4">
+      <div className="page-header d-flex justify-content-between align-items-center mb-3">
         <div>
           <h2 className="mb-0 text-white fw-bold">UG Pump Network{isFullscreen ? ' [ENLARGED]' : ''}</h2>
           <small className="text-secondary fw-bold">STATION MONITORING & CONTROL</small>
@@ -839,6 +1115,87 @@ const UgTank = () => {
             {isFullscreen ? 'NORMAL VIEW' : 'EXPAND VIEW'}
           </Button>
           <PdfButton />
+        </div>
+      </div>
+
+      {/* 3-TIER HIERARCHICAL CASCADED SELECTOR BAR: Site -> Asset -> Device */}
+      <div className="p-3 mb-4 rounded-4 bg-dark bg-opacity-40 border border-white border-opacity-10 shadow-lg">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div className="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
+            {/* 1. Site Selector Dropdown */}
+            <div className="d-flex align-items-center gap-2 bg-dark bg-opacity-80 px-3 py-2 rounded-3 border border-secondary border-opacity-40 shadow-sm">
+              <Building2 size={18} className="text-info" />
+              <Form.Select
+                size="sm"
+                value={selectedSiteId}
+                onChange={(e) => {
+                  setSelectedSiteId(e.target.value);
+                  setSelectedAssetId('');
+                  setSelectedDeviceId('');
+                }}
+                className="bg-transparent text-white border-0 fs-13 fw-bold focus-none shadow-none"
+                style={{ minWidth: 180, cursor: 'pointer', color: '#fff' }}
+              >
+                <option value="" className="bg-dark text-white">Select Site / Location</option>
+                {sites.map(s => (
+                  <option key={s.id} value={String(s.id)} className="bg-dark text-white">
+                    {s.name || s.label || `Site #${s.id}`}
+                  </option>
+                ))}
+              </Form.Select>
+            </div>
+
+            {/* 2. Asset Selector Dropdown */}
+            <div className="d-flex align-items-center gap-2 bg-dark bg-opacity-80 px-3 py-2 rounded-3 border border-warning border-opacity-40 shadow-sm">
+              <Layers size={18} className="text-warning" />
+              <Form.Select
+                size="sm"
+                value={selectedAssetId}
+                onChange={(e) => {
+                  setSelectedAssetId(e.target.value);
+                  setSelectedDeviceId('');
+                }}
+                className="bg-transparent text-warning border-0 fs-13 fw-bold focus-none shadow-none"
+                style={{ minWidth: 200, cursor: 'pointer' }}
+                disabled={!selectedSiteId}
+              >
+                <option value="" className="bg-dark text-white">Select Site Asset</option>
+                {assets.map(a => (
+                  <option key={a.id} value={String(a.id)} className="bg-dark text-warning">
+                    {a.name || a.label || `Asset #${a.id}`}
+                  </option>
+                ))}
+              </Form.Select>
+            </div>
+
+            {/* 3. Device Selector Dropdown */}
+            <div className={`d-flex align-items-center gap-2 bg-dark bg-opacity-80 px-3 py-2 rounded-3 border ${selectedAssetId ? 'border-info border-opacity-60' : 'border-secondary border-opacity-20'} shadow-sm`}>
+              <Cpu size={18} className={selectedAssetId ? "text-success" : "text-muted"} />
+              <Form.Select
+                size="sm"
+                value={selectedDeviceId}
+                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                className="bg-transparent text-info border-0 fw-bold fs-13 focus-none shadow-none"
+                style={{ minWidth: 220, cursor: selectedAssetId ? 'pointer' : 'not-allowed' }}
+                disabled={!selectedAssetId}
+              >
+                <option value="" className="bg-dark text-white">Select Asset Device</option>
+                {devices.map(d => (
+                  <option key={d.id} value={String(d.id)} className="bg-dark text-info">
+                    {d.name || d.label || `Device #${d.id}`}
+                  </option>
+                ))}
+              </Form.Select>
+            </div>
+          </div>
+
+          {/* Live Telemetry Status Badge */}
+          <div className="d-flex align-items-center gap-2 px-3 py-2 rounded-pill bg-dark bg-opacity-60 border border-white border-opacity-10 text-secondary fs-12 fw-bold">
+            <Activity size={16} className={selectedDeviceId ? "text-success pulse-icon" : "text-muted"} />
+            <span className={selectedDeviceId ? "text-success" : "text-muted"}>
+              {selectedDeviceId ? 'Device Active & Mapped' : 'Select Active Asset & Device'}
+            </span>
+          </div>
         </div>
       </div>
 
