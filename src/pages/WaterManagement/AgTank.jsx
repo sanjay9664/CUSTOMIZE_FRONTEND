@@ -427,11 +427,11 @@ const AgTank = () => {
 
       if (devList.length > 0) {
         setSelectedDeviceId(prev => {
-          if (prev && devList.some(d => String(d.id) === String(prev))) return prev;
-          return devList[0].id;
+          if (prev && (prev === 'ALL' || devList.some(d => String(d.id) === String(prev)))) return prev;
+          return 'ALL';
         });
       } else {
-        setSelectedDeviceId('');
+        setSelectedDeviceId('ALL');
       }
     };
 
@@ -443,15 +443,132 @@ const AgTank = () => {
   // Matches eventFields displayNames (Tank Level, Valve Status, Water Flow) & module types
   useEffect(() => {
     if (!selectedDeviceId) {
-      setAllTanks(prev => prev.map(tank => ({
-        ...tank,
-        isMapped: false,
-        isOnline: false,
-        level: 0,
-        status: 'Stopped',
-        amps: undefined
-      })));
+      setSelectedDeviceId('ALL');
       return;
+    }
+
+    if (selectedDeviceId === 'ALL') {
+      const fetchAllTelemetry = async () => {
+        try {
+          const tankTelemetryMap = {};
+          const targetDevs = devices.length > 0 ? devices : [{ id: 1, name: 'TOWER-D-1' }];
+
+          await Promise.all(targetDevs.map(async (dev) => {
+            try {
+              const devId = dev.id;
+              const template = dev.template || {};
+              const devNameStr = String(dev.name || template.name || template.deviceName || '').toUpperCase();
+
+              let eventsRes = await apiClient.get(`/sites/${selectedSiteId}/devices/${devId}/events/latest`).catch(() => null) ||
+                              await apiClient.get(`/devices/${devId}/events/latest`).catch(() => null);
+              const liveData = await apiClient.get(`/sites/${selectedSiteId || 1}/devices/${devId}/live`).catch(() => null) ||
+                               await apiClient.get(`/devices/${devId}`).catch(() => null);
+
+              let realLevel, realValve, realAmps;
+              const payloadData = eventsRes?.data ?? eventsRes;
+              const allFields = [];
+              if (Array.isArray(payloadData?.fields)) allFields.push(...payloadData.fields);
+              if (Array.isArray(eventsRes?.fields)) allFields.push(...eventsRes.fields);
+              const rawList = Array.isArray(payloadData) ? payloadData
+                : Array.isArray(eventsRes) ? eventsRes
+                : Array.isArray(payloadData?.modules) ? payloadData.modules
+                : [payloadData];
+
+              rawList.forEach(evt => {
+                if (!evt) return;
+                if (Array.isArray(evt.eventFields)) allFields.push(...evt.eventFields);
+                if (Array.isArray(evt.fields)) allFields.push(...evt.fields);
+              });
+
+              allFields.forEach(f => {
+                const fName = String(f.fieldName || f.eventFieldName || f.name || '').toLowerCase();
+                const fDispName = String(f.displayName || f.eventFieldDisplayName || fName).toLowerCase();
+                const fVal = f.currentValue ?? f.fieldCurrentValue ?? f.value ?? f.fieldcurrentvalue;
+
+                if (fVal !== undefined && fVal !== null && fVal !== '') {
+                  if (fDispName.includes('level') || fName.includes('level')) {
+                    if (realLevel === undefined) realLevel = fVal;
+                  }
+                  if (fDispName.includes('valve') || fDispName.includes('status') || fName.includes('valve')) {
+                    if (realValve === undefined) realValve = fVal;
+                  }
+                  if (fDispName.includes('flow') || fDispName.includes('amps') || fName.includes('amps')) {
+                    if (realAmps === undefined) realAmps = fVal;
+                  }
+                }
+              });
+
+              if (liveData && realLevel === undefined) {
+                const t = liveData?.telemetry || liveData?.meta || liveData?.data || liveData || {};
+                realLevel = t.tank_level ?? t.water_level ?? t.level ?? t.value ?? t['Tank Level'];
+                if (realValve === undefined) realValve = t.valve_status ?? t.valveStatus ?? t.status;
+                if (realAmps === undefined) realAmps = t.amps ?? t.flow;
+              }
+
+              const numLevel = (realLevel !== undefined && realLevel !== null && !isNaN(Number(realLevel))) ? Math.round(Number(realLevel)) : 0;
+              let valveState = 'CLOSE';
+              if (realValve !== undefined && realValve !== null) {
+                const v = String(realValve).toUpperCase();
+                if (v === 'HIGH' || v === '1' || v === 'OPEN' || v === 'RUNNING' || v === 'ON') valveState = 'OPEN';
+              }
+              const numAmps = (realAmps !== undefined && realAmps !== null && !isNaN(Number(realAmps))) ? Number(realAmps).toFixed(1) : undefined;
+
+              const domTarget = template?.mapping?.agTankRange?.domStart;
+              const flushTarget = template?.mapping?.agTankRange?.flushStart;
+              const domEndTarget = template?.mapping?.agTankRange?.domEnd;
+              const flushEndTarget = template?.mapping?.agTankRange?.flushEnd;
+
+              const hasExplicitTankName = devNameStr.includes('TOWER-D-') || devNameStr.includes('TOWER-F-') || devNameStr.includes('DOM-') || devNameStr.includes('FLUSH-');
+
+              for (let localId = 1; localId <= 24; localId++) {
+                ['DOMESTIC', 'FLUSHING'].forEach(type => {
+                  const tankName = `${type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-${localId}`;
+                  let isMapped = false;
+                  if (domTarget || flushTarget) {
+                    if (type === 'DOMESTIC' && domTarget) {
+                      const s = parseInt((domTarget.match(/\d+/) || [])[0] || '1', 10);
+                      const e = domEndTarget ? parseInt((domEndTarget.match(/\d+/) || [])[0] || String(s), 10) : s;
+                      isMapped = localId >= Math.min(s, e) && localId <= Math.max(s, e);
+                    } else if (type === 'FLUSHING' && flushTarget) {
+                      const s = parseInt((flushTarget.match(/\d+/) || [])[0] || '1', 10);
+                      const e = flushEndTarget ? parseInt((flushEndTarget.match(/\d+/) || [])[0] || String(s), 10) : s;
+                      isMapped = localId >= Math.min(s, e) && localId <= Math.max(s, e);
+                    }
+                  } else if (hasExplicitTankName) {
+                    isMapped = devNameStr.includes(tankName.toUpperCase());
+                  } else {
+                    isMapped = false;
+                  }
+
+                  if (isMapped) {
+                    tankTelemetryMap[tankName] = {
+                      isMapped: true,
+                      isOnline: true,
+                      level: numLevel,
+                      valveStatus: valveState,
+                      status: valveState === 'OPEN' ? 'Running' : 'Stopped',
+                      amps: numAmps
+                    };
+                  }
+                });
+              }
+            } catch (e) {}
+          }));
+
+          setAllTanks(prev => prev.map(tank => {
+            const tankName = `${tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-${tank.localId}`;
+            const tele = tankTelemetryMap[tankName];
+            if (tele) return { ...tank, ...tele };
+            return { ...tank, isMapped: false, isOnline: false, level: 0, status: 'Stopped', amps: undefined };
+          }));
+        } catch (e) {
+          console.warn("Fetch all telemetry notice:", e);
+        }
+      };
+
+      fetchAllTelemetry();
+      const interval = setInterval(fetchAllTelemetry, 3000);
+      return () => clearInterval(interval);
     }
 
     const selectedDev = devices.find(d => String(d.id) === String(selectedDeviceId));
@@ -510,7 +627,6 @@ const AgTank = () => {
 
           const payloadData = eventsPayload?.data ?? eventsPayload;
           
-          // Collect all fields from both direct fields and module fields
           const allFields = [];
           if (Array.isArray(payloadData?.fields)) allFields.push(...payloadData.fields);
           if (Array.isArray(eventsPayload?.fields)) allFields.push(...eventsPayload.fields);
@@ -526,7 +642,6 @@ const AgTank = () => {
             if (Array.isArray(evt.fields)) allFields.push(...evt.fields);
           });
 
-          // 1. Inspect explicit display names (Level, Tank Level, Water Level)
           allFields.forEach(f => {
             const fName = String(f.fieldName || f.eventFieldName || f.name || '').toLowerCase();
             const fDispName = String(f.displayName || f.eventFieldDisplayName || fName).toLowerCase();
@@ -545,7 +660,6 @@ const AgTank = () => {
             }
           });
 
-          // 2. Direct match via levelModuleId from template settings
           if (realLevel === undefined && levelModuleId) {
             allFields.forEach(f => {
               const fName = String(f.fieldName || f.eventFieldName || f.name || '').toLowerCase();
@@ -557,7 +671,6 @@ const AgTank = () => {
             });
           }
 
-          // 3. Fallback to generic analog/input/value fields with numeric values <= 100
           if (realLevel === undefined) {
             allFields.forEach(f => {
               const fName = String(f.fieldName || f.eventFieldName || f.name || '').toLowerCase();
@@ -573,7 +686,6 @@ const AgTank = () => {
             });
           }
 
-          // 4. Any numeric field between 0 and 100
           if (realLevel === undefined) {
             allFields.forEach(f => {
               const fVal = f.currentValue ?? f.fieldCurrentValue ?? f.value;
@@ -587,7 +699,6 @@ const AgTank = () => {
 
         extractFromEvents(eventsRes);
 
-        // Step 5: Fallback - extract from live telemetry flat object
         if (liveData && realLevel === undefined) {
           const t = liveData?.telemetry || liveData?.meta || liveData?.data || liveData || {};
           realLevel = t.tank_level ?? t.water_level ?? t.level ?? t.value ?? t['Tank Level'] ?? t['Water Level'] ?? t['Value'];
@@ -595,10 +706,7 @@ const AgTank = () => {
           if (realAmps === undefined) realAmps = t.amps ?? t.flow ?? t.current ?? t['Water Flow'];
         }
 
-        // Step 6: Convert to display values
         const numLevel = (realLevel !== undefined && realLevel !== null && !isNaN(Number(realLevel))) ? Math.round(Number(realLevel)) : 0;
-        
-        // Valve: LOW/0 = CLOSE, HIGH/1 = OPEN
         let valveState = 'CLOSE';
         if (realValve !== undefined && realValve !== null) {
           const v = String(realValve).toUpperCase();
@@ -633,8 +741,7 @@ const AgTank = () => {
           } else if (hasExplicitTankName) {
             isMapped = devNameStr.includes(tankName.toUpperCase());
           } else {
-            // Default fallback if no explicit target or name given: map ONLY TOWER-D-1
-            isMapped = (tank.type === 'DOMESTIC' && tank.localId === 1);
+            isMapped = false;
           }
 
           if (isMapped) {
@@ -675,7 +782,7 @@ const AgTank = () => {
           } else if (hasExplicitTankName) {
             isMapped = devNameStr.includes(tankName.toUpperCase());
           } else {
-            isMapped = (tank.type === 'DOMESTIC' && tank.localId === 1);
+            isMapped = false;
           }
 
           if (isMapped) {
@@ -779,7 +886,7 @@ const AgTank = () => {
       return devNameStr.includes(tankName.toUpperCase());
     }
 
-    return tankName === 'TOWER-D-1';
+    return false;
   };
 
   useEffect(() => {
@@ -1112,15 +1219,16 @@ const AgTank = () => {
     })));
   }, [domesticCount]);
 
-  // Comprehensive Stats Calculation including Sector Counts
+  // Comprehensive Stats Calculation including Sector Mapped Counts
   const stats = useMemo(() => {
+    const mappedTanks = allTanks.filter(t => t.isMapped);
     const s = {
-      total: { running: 0, fault: 0, warning: 0, healthy: 0, all: totalTanks },
-      domestic: { running: 0, fault: 0, warning: 0, healthy: 0, count: domesticCount },
-      flushing: { running: 0, fault: 0, warning: 0, healthy: 0, count: totalTanks - domesticCount }
+      total: { running: 0, fault: 0, warning: 0, healthy: 0, all: mappedTanks.length },
+      domestic: { running: 0, fault: 0, warning: 0, healthy: 0, count: mappedTanks.filter(t => t.type === 'DOMESTIC').length },
+      flushing: { running: 0, fault: 0, warning: 0, healthy: 0, count: mappedTanks.filter(t => t.type === 'FLUSHING').length }
     };
 
-    allTanks.forEach(t => {
+    mappedTanks.forEach(t => {
       const statusKey = t.status.toLowerCase();
       if (t.status === 'Running') {
         s.total.healthy++;
@@ -1133,16 +1241,17 @@ const AgTank = () => {
     });
 
     return s;
-  }, [allTanks, domesticCount]);
+  }, [allTanks]);
 
   const filteredTanks = allTanks.filter(t => {
+    const isMapped = t.isMapped;
     const matchesSector = sectorFilter === 'ALL' || t.type === sectorFilter;
     const matchesStatus = statusFilter === 'ALL' ||
       (statusFilter === 'RUNNING' && t.status === 'Running') ||
       (statusFilter === 'FAULT' && t.status === 'Fault') ||
       (statusFilter === 'WARNING' && t.status === 'Warning') ||
       (statusFilter === 'ACTIVE' && (t.status === 'Running' || t.status === 'Warning'));
-    return matchesSector && matchesStatus;
+    return isMapped && matchesSector && matchesStatus;
   });
 
   const getTankColor = (type, level, status) => {
@@ -1522,9 +1631,9 @@ const AgTank = () => {
                 style={{ minWidth: 220, cursor: selectedAssetId ? 'pointer' : 'not-allowed' }}
                 disabled={!selectedAssetId}
               >
-                <option value="" className="bg-dark text-white">Select Asset Device</option>
+                <option value="ALL" className="bg-dark text-info fw-bold">ALL (All Mapped Tanks)</option>
                 {devices.map(d => (
-                  <option key={d.id} value={String(d.id)} className="bg-dark text-info">
+                  <option key={d.id} value={String(d.id)} className="bg-dark text-white">
                     {d.name || d.label || `Device #${d.id}`}
                   </option>
                 ))}
@@ -1542,66 +1651,96 @@ const AgTank = () => {
         </div>
       </div>
 
-      <div className={`scada-card ${isFullscreen ? 'p-5' : 'p-4'}`}>
-        <Row className="g-4">
-          {filteredTanks.map((tank) => (
-            <Col key={tank.globalId} xs={6} sm={4} md={isFullscreen ? 4 : 3} lg={isFullscreen ? 2 : 2} className={isFullscreen ? 'col-fs-2' : ''}>
-              <div
-                className={`tank-unit-wrapper p-2 rounded text-center position-relative ${tank.status === 'Stopped' ? 'tank-stopped-outline' : ''} ${isFullscreen ? 'expanded-unit' : ''} ${isTankDisabled(tank) ? 'tank-disabled' : ''}`}
-                onClick={() => handleTankClick(tank)}
-                style={{ cursor: isTankDisabled(tank) ? 'not-allowed' : 'pointer' }}
-              >
-                {isTankDisabled(tank) && <div className="disabled-overlay-text">DISABLED</div>}
-                <div className="tank-assembly-anchor mx-auto position-relative" style={{ width: isFullscreen ? '48px' : '44px' }}>
-                  <div
-                    className={`tank-vessel ${isFullscreen ? 'vessel-large' : ''}`}
-                  >
-                    <div className="tank-fill" style={{ height: `${tank.level}%`, backgroundColor: getTankColor(tank.type, tank.level, tank.status) }}>
-                      <div className="tank-water-wave"></div>
-                    </div>
-                    {/* Visual Threshold Markers */}
-                    <div className="threshold-marker lower" style={{ bottom: `${tank.minLevel}%` }}></div>
-                    <div className="threshold-marker upper" style={{ bottom: `${tank.maxLevel}%` }}></div>
-                  </div>
-                  <div className="valve-connector-pipe"></div>
-                  <div className={`industrial-valve-node ${!tank.isMapped ? 'valve-unmapped' : (!tank.isOnline ? 'valve-offline' : (tank.valveStatus === 'OPEN' ? 'valve-open' : 'valve-closed'))}`}>
-                    {/* Mode Indicator A/M */}
-                    <div className={`valve-mode-pill mode-${tank.valveMode.toLowerCase()} ${(!tank.isMapped || !tank.isOnline) ? 'opacity-25' : ''}`}>
-                      {tank.valveMode === 'AUTO' ? 'A' : tank.valveMode === 'MANUAL' ? 'M' : 'B'}
-                    </div>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path d="M4 6L20 18V6L4 18V6Z"
-                        fill={(!tank.isMapped || !tank.isOnline) ? '#334155' : (tank.valveStatus === 'OPEN' ? '#22c55e' : '#ef4444')}
-                        stroke={(!tank.isMapped || !tank.isOnline) ? '#334155' : (tank.valveStatus === 'OPEN' ? '#22c55e' : '#ef4444')}
-                        strokeWidth="2"
-                        style={{ transition: 'all 0.3s ease', filter: (!tank.isMapped || !tank.isOnline) ? 'none' : (tank.valveStatus === 'OPEN' ? 'drop-shadow(0 0 5px #22c55e)' : 'drop-shadow(0 0 5px #ef4444)') }} />
-                      <rect x="11" y="2" width="2" height="6" fill="#94a3b8" />
-                      <rect x="9" y="2" width="6" height="1" fill="#94a3b8" />
-                    </svg>
-                  </div>
-                  {/* Discharge Flow Animation - Reacts to both Valve and Operation Status */}
-                  {tank.valveStatus === 'OPEN' && tank.status === 'Running' && (
-                    <div className="discharge-manifold-system">
+      {/* MAPPED TANKS HEADER & SECTOR FILTER BUTTONS (ALL / DOMESTIC / FLUSHING) */}
+      <div className="d-flex justify-content-between align-items-center mb-3 p-3 bg-dark bg-opacity-40 rounded-4 border border-white border-opacity-10 shadow-sm flex-wrap gap-3">
+        <div className="d-flex align-items-center gap-2">
+          <LayoutGrid size={20} className="text-info" />
+          <h5 className="text-white fw-bold mb-0">MAPPED TANKS</h5>
+        </div>
 
+        <div className="d-flex align-items-center gap-2">
+         
+          <Button
+            variant={sectorFilter === 'DOMESTIC' ? 'info' : 'outline-secondary'}
+            size="sm"
+            className="fw-bold px-3 py-1 fs-12 border-0 rounded-pill"
+            onClick={() => setSectorFilter('DOMESTIC')}
+          >
+           
+          </Button>
+          <Button
+            variant={sectorFilter === 'FLUSHING' ? 'info' : 'outline-secondary'}
+            size="sm"
+            className="fw-bold px-3 py-1 fs-12 border-0 rounded-pill"
+            onClick={() => setSectorFilter('FLUSHING')}
+          >
+          
+          </Button>
+        </div>
+      </div>
+
+      <div className={`scada-card ${isFullscreen ? 'p-5' : 'p-4'}`}>
+        {filteredTanks.length === 0 ? null : (
+          <Row className="g-4">
+            {filteredTanks.map((tank) => (
+              <Col key={tank.globalId} xs={6} sm={4} md={isFullscreen ? 4 : 3} lg={isFullscreen ? 2 : 2} className={isFullscreen ? 'col-fs-2' : ''}>
+                <div
+                  className={`tank-unit-wrapper p-2 rounded text-center position-relative ${tank.status === 'Stopped' ? 'tank-stopped-outline' : ''} ${isFullscreen ? 'expanded-unit' : ''} ${isTankDisabled(tank) ? 'tank-disabled' : ''}`}
+                  onClick={() => handleTankClick(tank)}
+                  style={{ cursor: isTankDisabled(tank) ? 'not-allowed' : 'pointer' }}
+                >
+                  {isTankDisabled(tank) && <div className="disabled-overlay-text">DISABLED</div>}
+                  <div className="tank-assembly-anchor mx-auto position-relative" style={{ width: isFullscreen ? '48px' : '44px' }}>
+                    <div
+                      className={`tank-vessel ${isFullscreen ? 'vessel-large' : ''}`}
+                    >
+                      <div className="tank-fill" style={{ height: `${tank.level}%`, backgroundColor: getTankColor(tank.type, tank.level, tank.status) }}>
+                        <div className="tank-water-wave"></div>
+                      </div>
+                      {/* Visual Threshold Markers */}
+                      <div className="threshold-marker lower" style={{ bottom: `${tank.minLevel}%` }}></div>
+                      <div className="threshold-marker upper" style={{ bottom: `${tank.maxLevel}%` }}></div>
                     </div>
-                  )}
+                    <div className="valve-connector-pipe"></div>
+                    <div className={`industrial-valve-node ${!tank.isMapped ? 'valve-unmapped' : (!tank.isOnline ? 'valve-offline' : (tank.valveStatus === 'OPEN' ? 'valve-open' : 'valve-closed'))}`}>
+                      {/* Mode Indicator A/M */}
+                      <div className={`valve-mode-pill mode-${tank.valveMode.toLowerCase()} ${(!tank.isMapped || !tank.isOnline) ? 'opacity-25' : ''}`}>
+                        {tank.valveMode === 'AUTO' ? 'A' : tank.valveMode === 'MANUAL' ? 'M' : 'B'}
+                      </div>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 6L20 18V6L4 18V6Z"
+                          fill={(!tank.isMapped || !tank.isOnline) ? '#334155' : (tank.valveStatus === 'OPEN' ? '#22c55e' : '#ef4444')}
+                          stroke={(!tank.isMapped || !tank.isOnline) ? '#334155' : (tank.valveStatus === 'OPEN' ? '#22c55e' : '#ef4444')}
+                          strokeWidth="2"
+                          style={{ transition: 'all 0.3s ease', filter: (!tank.isMapped || !tank.isOnline) ? 'none' : (tank.valveStatus === 'OPEN' ? 'drop-shadow(0 0 5px #22c55e)' : 'drop-shadow(0 0 5px #ef4444)') }} />
+                        <rect x="11" y="2" width="2" height="6" fill="#94a3b8" />
+                        <rect x="9" y="2" width="6" height="1" fill="#94a3b8" />
+                      </svg>
+                    </div>
+                    {/* Discharge Flow Animation - Reacts to both Valve and Operation Status */}
+                    {tank.valveStatus === 'OPEN' && tank.status === 'Running' && (
+                      <div className="discharge-manifold-system">
+
+                      </div>
+                    )}
+                  </div>
+                  <div className={`fw-bold mb-0 mt-1 ${isFullscreen ? 'fs-7' : 'fs-10'} ${!tank.isMapped ? 'text-secondary opacity-50' : (!tank.isOnline ? 'text-danger' : 'text-success')}`}>
+                    {!tank.isMapped ? 'NOT MAPPED' : (tank.isOnline ? 'ONLINE' : 'OFFLINE')}
+                  </div>
+                  <div className={`fw-bold mb-0 ${isFullscreen ? 'fs-7' : 'fs-10'} text-muted`}>{tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-{tank.localId}</div>
+                  <div className={`d-flex justify-content-center gap-2 opacity-75 ${isFullscreen ? 'fs-7' : 'fs-10'}`}>
+                    <span style={{ color: !tank.isMapped ? '#334155' : (!tank.isOnline ? '#475569' : getTankColor(tank.type, tank.level, tank.status)) }}>{!tank.isMapped ? '--' : (!tank.isOnline ? '--' : tank.level)}%</span>
+                    {tank.isOnline && tank.amps !== undefined && (
+                      <span className="text-warning d-flex align-items-center gap-1 fw-bold fs-7">
+                        <Zap size={12} className="pulse-icon" /> {tank.amps}A
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className={`fw-bold mb-0 mt-1 ${isFullscreen ? 'fs-7' : 'fs-10'} ${!tank.isMapped ? 'text-secondary opacity-50' : (!tank.isOnline ? 'text-danger' : 'text-success')}`}>
-                  {!tank.isMapped ? 'NOT MAPPED' : (tank.isOnline ? 'ONLINE' : 'OFFLINE')}
-                </div>
-                <div className={`fw-bold mb-0 ${isFullscreen ? 'fs-7' : 'fs-10'} text-muted`}>{tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-{tank.localId}</div>
-                <div className={`d-flex justify-content-center gap-2 opacity-75 ${isFullscreen ? 'fs-7' : 'fs-10'}`}>
-                  <span style={{ color: !tank.isMapped ? '#334155' : (!tank.isOnline ? '#475569' : getTankColor(tank.type, tank.level, tank.status)) }}>{!tank.isMapped ? '--' : (!tank.isOnline ? '--' : tank.level)}%</span>
-                  {tank.isOnline && tank.amps !== undefined && (
-                    <span className="text-warning d-flex align-items-center gap-1 fw-bold fs-7">
-                      <Zap size={12} className="pulse-icon" /> {tank.amps}A
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Col>
-          ))}
-        </Row>
+              </Col>
+            ))}
+          </Row>
+        )}
       </div>
 
       <style dangerouslySetInnerHTML={{
