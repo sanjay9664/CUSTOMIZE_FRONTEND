@@ -720,6 +720,33 @@ const RegisterDeviceModal = ({
             className={`wizard-step-item ${registerStep === 2 ? 'active' : ''}`}
             onClick={() => {
               if (registerForm.name && registerForm.name.trim()) {
+                const tmpl = getTemplateForCategory(registerForm.category || 'ENERGY_METER');
+                if (tmpl && tmpl.parameters && Array.isArray(dynamicTemplateFields) && dynamicTemplateFields.length > 0) {
+                  const existingNames = new Set(dynamicTemplateFields.map(f => (f.displayName || '').trim().toLowerCase()));
+                  const missingParams = tmpl.parameters.filter(p => !existingNames.has((p.name || '').trim().toLowerCase()));
+                  if (missingParams.length > 0 && typeof setDynamicTemplateFields === 'function') {
+                    const extraFields = missingParams.map(p => ({
+                      displayName: p.name,
+                      required: Boolean(p.required),
+                      deviceId: '',
+                      deviceName: '',
+                      deviceVal: null,
+                      moduleId: '',
+                      moduleName: '',
+                      sochiotFieldName: '',
+                      thresholdValue: '',
+                      warningHigh: null,
+                      criticalHigh: null,
+                      warningLow: null,
+                      criticalLow: null,
+                      dataType: 'INTEGER',
+                      unit: '',
+                      isCommand: false,
+                      graphable: true
+                    }));
+                    setDynamicTemplateFields([...dynamicTemplateFields, ...extraFields]);
+                  }
+                }
                 setRegisterStep(2);
               }
             }}
@@ -813,28 +840,64 @@ const RegisterDeviceModal = ({
                       onChange={(e) => {
                         const newCat = e.target.value;
                         setRegisterForm({ ...registerForm, category: newCat });
-                        if (!editingDevice && newCat) {
+                        if (newCat) {
                           const tmpl = getTemplateForCategory(newCat);
                           if (tmpl && tmpl.parameters) {
-                            setDynamicTemplateFields(tmpl.parameters.map(p => ({
-                              displayName: p.name,
-                              required: Boolean(p.required),
-                              deviceId: '',
-                              deviceName: '',
-                              deviceVal: null,
-                              moduleId: '',
-                              moduleName: '',
-                              sochiotFieldName: '',
-                              thresholdValue: '',
-                              warningHigh: null,
-                              criticalHigh: null,
-                              warningLow: null,
-                              criticalLow: null,
-                              dataType: 'INTEGER',
-                              unit: '',
-                              isCommand: false,
-                              graphable: true
-                            })));
+                            if (!editingDevice) {
+                              setDynamicTemplateFields(tmpl.parameters.map(p => ({
+                                displayName: p.name,
+                                required: Boolean(p.required),
+                                deviceId: '',
+                                deviceName: '',
+                                deviceVal: null,
+                                moduleId: '',
+                                moduleName: '',
+                                sochiotFieldName: '',
+                                thresholdValue: '',
+                                warningHigh: null,
+                                criticalHigh: null,
+                                warningLow: null,
+                                criticalLow: null,
+                                dataType: 'INTEGER',
+                                unit: '',
+                                isCommand: false,
+                                graphable: true
+                              })));
+                            } else {
+                              setDynamicTemplateFields(prev => {
+                                const currentList = Array.isArray(prev) ? prev : [];
+                                const matched = new Set();
+                                const merged = tmpl.parameters.map(param => {
+                                  const pName = (param.name || '').trim().toLowerCase();
+                                  const existing = currentList.find(f => (f.displayName || '').trim().toLowerCase() === pName || (f.sochiotFieldName || '').trim().toLowerCase() === pName);
+                                  if (existing) {
+                                    matched.add(existing);
+                                    return { ...existing, displayName: existing.displayName || param.name, required: Boolean(param.required) };
+                                  }
+                                  return {
+                                    deviceId: '',
+                                    deviceName: '',
+                                    deviceVal: null,
+                                    moduleId: '',
+                                    moduleName: '',
+                                    sochiotFieldName: '',
+                                    displayName: param.name,
+                                    required: Boolean(param.required),
+                                    thresholdValue: '',
+                                    warningHigh: null,
+                                    criticalHigh: null,
+                                    warningLow: null,
+                                    criticalLow: null,
+                                    dataType: 'INTEGER',
+                                    unit: '',
+                                    isCommand: false,
+                                    graphable: true
+                                  };
+                                });
+                                currentList.forEach(f => { if (!matched.has(f)) merged.push(f); });
+                                return merged;
+                              });
+                            }
                           }
                         }
                       }}
@@ -993,7 +1056,7 @@ const RegisterDeviceModal = ({
                   sites={effectiveSites}
                   enableDeviceFilter={false}
                   className="mb-0"
-                  initialLocationValue={registerForm.sochiotLocationId ? `LOCATION-${registerForm.sochiotLocationId}` : null}
+                  initialLocationValue={registerForm.sochiotLocationId ? `LOCATION-${registerForm.sochiotLocationId}` : (registerForm.siteId ? `LOCATION-${registerForm.siteId}` : null)}
                   onSelectLocation={(loc) => {
                     if (loc?.id) {
                       setRegisterForm(prev => ({ ...prev, sochiotLocationId: String(loc.id), sochiotLocationName: loc.name || '' }));
@@ -1035,18 +1098,24 @@ const RegisterDeviceModal = ({
                               size="sm"
                               type="text"
                               value={f.displayName || ''}
-                              readOnly
-                              disabled
+                              readOnly={Boolean(f.required)}
+                              disabled={Boolean(f.required)}
+                              onChange={(e) => {
+                                const copy = [...dynamicTemplateFields];
+                                copy[idx] = { ...copy[idx], displayName: e.target.value, isManualEntry: true };
+                                setDynamicTemplateFields(copy);
+                              }}
+                              placeholder="Parameter Name"
                               className="wizard-input text-slate-100 w-100 text-truncate"
                               style={{
                                 height: 32,
                                 fontSize: 12,
-                                cursor: 'default',
-                                backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                                cursor: f.required ? 'default' : 'text',
+                                backgroundColor: f.required ? 'rgba(15, 23, 42, 0.65)' : 'rgba(30, 41, 59, 0.75)',
                                 opacity: 0.95,
                                 paddingRight: f.required ? 20 : 10
                               }}
-                              title={f.required ? `${f.displayName} *` : f.displayName}
+                              title={f.required ? `${f.displayName} *` : (f.displayName || 'Parameter Name')}
                             />
                             {f.required && (
                               <span
@@ -1354,6 +1423,8 @@ const RegisterDeviceModal = ({
                           moduleName: defaultModuleName,
                           sochiotFieldName: '',
                           displayName: '',
+                          isManualEntry: true,
+                          required: false,
                           thresholdValue: '',
                           warningHigh: null,
                           criticalHigh: null,
@@ -1432,6 +1503,31 @@ const RegisterDeviceModal = ({
                       isCommand: false,
                       graphable: true
                     })));
+                  }
+                } else if (tmpl && tmpl.parameters && Array.isArray(dynamicTemplateFields) && dynamicTemplateFields.length > 0) {
+                  const existingNames = new Set(dynamicTemplateFields.map(f => (f.displayName || '').trim().toLowerCase()));
+                  const missingParams = tmpl.parameters.filter(p => !existingNames.has((p.name || '').trim().toLowerCase()));
+                  if (missingParams.length > 0 && typeof setDynamicTemplateFields === 'function') {
+                    const extraFields = missingParams.map(p => ({
+                      displayName: p.name,
+                      required: Boolean(p.required),
+                      deviceId: '',
+                      deviceName: '',
+                      deviceVal: null,
+                      moduleId: '',
+                      moduleName: '',
+                      sochiotFieldName: '',
+                      thresholdValue: '',
+                      warningHigh: null,
+                      criticalHigh: null,
+                      warningLow: null,
+                      criticalLow: null,
+                      dataType: 'INTEGER',
+                      unit: '',
+                      isCommand: false,
+                      graphable: true
+                    }));
+                    setDynamicTemplateFields([...dynamicTemplateFields, ...extraFields]);
                   }
                 } else if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
                   if (typeof setDynamicTemplateFields === 'function') {

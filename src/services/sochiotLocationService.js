@@ -9,9 +9,10 @@
  * - Standardized error handling via parseApiError
  */
 import { getApiUrl, EXTERNAL_URLS } from '../utils/apiConfig';
-import { getAuthToken } from '../utils/cookieUtils';
+import { getAuthToken, isTokenExpiringSoon } from '../utils/cookieUtils';
 import { AUTH_ENDPOINTS, CONFIG_ENDPOINTS } from '../constants/apiEndpoints';
 import { parseApiError } from '../utils/errorHandler';
+import apiClient from './apiClient';
 
 const SOCHIOT_TOKEN_KEY = 'Sochiot-accesstoken';
 
@@ -26,15 +27,35 @@ const deviceDetailsCache = new Map();
 const pendingDevicePromises = new Map();
 
 /**
+ * Sanitizes a token by stripping quotes and Bearer prefix.
+ */
+export const cleanToken = (raw) => {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  const unquoted = trimmed.replace(/^["']|["']$/g, '');
+  const stripped = unquoted.replace(/^Bearer\s+/i, '').trim();
+  return stripped || null;
+};
+
+/**
  * Retrieves the stored Sochiot access token from memory or localStorage.
+ * Checks for token validity / upcoming expiry (< 60s) before returning.
  */
 export const getStoredSochiotToken = () => {
-  if (inMemoryToken) return inMemoryToken;
-  if (typeof localStorage !== 'undefined') {
-    const stored = localStorage.getItem(SOCHIOT_TOKEN_KEY);
-    if (stored) {
-      inMemoryToken = stored;
-      return stored;
+  let token = inMemoryToken;
+  if (!token && typeof localStorage !== 'undefined') {
+    token = localStorage.getItem(SOCHIOT_TOKEN_KEY);
+  }
+  const cleaned = cleanToken(token);
+  if (cleaned) {
+    if (!isTokenExpiringSoon(cleaned, 60)) {
+      inMemoryToken = cleaned;
+      return cleaned;
+    }
+    // Expired or expiring within 60s -> purge
+    inMemoryToken = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(SOCHIOT_TOKEN_KEY);
     }
   }
   return null;
@@ -59,6 +80,7 @@ export const clearSochiotCache = () => {
 
 /**
  * Fetches and stores the Sochiot Access-token from http://localhost:3001/api/v1/auth/Access-token.
+ * Uses apiClient.get to ensure BMS authentication headers and credentials flow correctly.
  * Deduplicates in-flight calls so multiple callers await the same promise.
  */
 export const fetchSochiotAccessToken = async (forceRefresh = false) => {
@@ -74,29 +96,22 @@ export const fetchSochiotAccessToken = async (forceRefresh = false) => {
 
   pendingTokenPromise = (async () => {
     try {
-      const bmsToken = getAuthToken();
-      const headers = {
-        'Accept': 'application/json',
-        ...(bmsToken ? { 'Authorization': `Bearer ${bmsToken}` } : {})
-      };
-
-      let res = null;
-      try {
-        res = await fetch(getApiUrl(AUTH_ENDPOINTS.SOCHIOT_ACCESS_TOKEN), { headers });
-      } catch (e) {
-        res = await fetch(`http://localhost:3001${AUTH_ENDPOINTS.SOCHIOT_ACCESS_TOKEN}`, { headers });
-      }
-
-      if (res && res.ok) {
-        const json = await res.json();
-        const token = json?.data?.token || json?.token || (typeof json?.data === 'string' ? json.data : null);
-        if (token) {
-          inMemoryToken = token;
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(SOCHIOT_TOKEN_KEY, token);
-          }
-          return token;
+      const res = await apiClient.get('/auth/Access-token');
+      const rawToken = res?.data?.token || res?.token || (typeof res?.data === 'string' ? res.data : null);
+      const token = cleanToken(rawToken);
+      if (token) {
+        inMemoryToken = token;
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(SOCHIOT_TOKEN_KEY, token);
         }
+        try {
+          const { store } = await import('../store/store.js');
+          const { setSochiotAccessToken } = await import('../store/authSlice.js');
+          if (store?.dispatch && setSochiotAccessToken) {
+            store.dispatch(setSochiotAccessToken(token));
+          }
+        } catch (e) {}
+        return token;
       }
     } catch (err) {
       const parsed = parseApiError(err, 'Failed to obtain Sochiot platform access token');
@@ -113,16 +128,69 @@ export const fetchSochiotAccessToken = async (forceRefresh = false) => {
 /**
  * Returns authorization headers for Sochiot platform calls.
  */
-const getSochiotHeaders = async () => {
+export const getSochiotHeaders = async () => {
   let token = getStoredSochiotToken();
   if (!token) {
     token = await fetchSochiotAccessToken();
   }
+  const cleanTok = cleanToken(token);
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    ...(cleanTok ? { 'Authorization': `Bearer ${cleanTok}` } : {})
   };
+};
+
+/**
+ * Executes a fetch to external Sochiot platform API.
+ * Automatically injects the clean Sochiot Bearer token.
+ * If Sochiot responds with 401 Unauthorized or 400 Malformed Token, automatically
+ * flushes the token cache, fetches a new Sochiot access token, and retries the request once.
+ */
+export const fetchWithSochiotAuth = async (url, options = {}, retryCount = 0) => {
+  let token = getStoredSochiotToken();
+  if (!token) {
+    token = await fetchSochiotAccessToken();
+  }
+
+  const cleanTok = cleanToken(token);
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...(cleanTok ? { 'Authorization': `Bearer ${cleanTok}` } : {}),
+    ...(options.headers || {})
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  // If 401 Unauthorized or 400 Bad Request with "Malformed Token"
+  if ((response.status === 401 || response.status === 400) && retryCount === 0) {
+    let isTokenError = response.status === 401;
+    if (response.status === 400) {
+      try {
+        const clone = response.clone();
+        const errJson = await clone.json();
+        const msg = (errJson?.message || errJson?.error || JSON.stringify(errJson)).toLowerCase();
+        if (msg.includes('token') || msg.includes('jwt') || msg.includes('auth')) {
+          isTokenError = true;
+        }
+      } catch (e) {}
+    }
+
+    if (isTokenError) {
+      console.warn(`[SochiotLocationService] Sochiot token rejected (${response.status}) at ${url}. Refreshing token and retrying...`);
+      clearSochiotCache();
+      const freshToken = await fetchSochiotAccessToken(true);
+      if (freshToken) {
+        return fetchWithSochiotAuth(url, options, retryCount + 1);
+      }
+    }
+  }
+
+  return response;
 };
 
 /**
@@ -141,11 +209,10 @@ export const fetchUserLocationHierarchy = async (forceRefresh = false) => {
 
   pendingHierarchyPromise = (async () => {
     try {
-      const headers = await getSochiotHeaders();
       const base = EXTERNAL_URLS.authEngine ? EXTERNAL_URLS.authEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/auth-engine';
       const url = `${base}/user/me`;
 
-      const res = await fetch(url, { headers });
+      const res = await fetchWithSochiotAuth(url);
       if (res.ok) {
         const data = await res.json();
         const payload = data?.data || data;
@@ -184,12 +251,11 @@ export const fetchEntityHierarchy = async (nodeType = 'ROOT', nodeId = 0, forceR
 
   const promise = (async () => {
     try {
-      const headers = await getSochiotHeaders();
       const base = EXTERNAL_URLS.configEngine ? EXTERNAL_URLS.configEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/config-engine';
       const endpoint = CONFIG_ENDPOINTS.ENTITY_HIERARCHY(cleanNodeType, cleanNodeId);
       const url = `${base}${endpoint.replace('/config-engine', '')}`;
 
-      const res = await fetch(url, { headers });
+      const res = await fetchWithSochiotAuth(url);
       if (res.ok) {
         const data = await res.json();
         const payload = data?.data || data;
@@ -228,12 +294,11 @@ export const fetchDeviceDetails = async (deviceId, forceRefresh = false) => {
 
   const promise = (async () => {
     try {
-      const headers = await getSochiotHeaders();
       const base = EXTERNAL_URLS.configEngine ? EXTERNAL_URLS.configEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/config-engine';
       const endpoint = CONFIG_ENDPOINTS.DEVICE_DETAILS ? CONFIG_ENDPOINTS.DEVICE_DETAILS(cleanDeviceId) : `/config-engine/device/${cleanDeviceId}`;
       const url = `${base}${endpoint.replace('/config-engine', '')}`;
 
-      const res = await fetch(url, { headers });
+      const res = await fetchWithSochiotAuth(url);
       if (res.ok) {
         const data = await res.json();
         const payload = data?.data || data;
@@ -285,7 +350,6 @@ export const fetchDevicesByDeviceIds = async (deviceIds, forceRefresh = false) =
   }
 
   try {
-    const headers = await getSochiotHeaders();
     const base = EXTERNAL_URLS.configEngine ? EXTERNAL_URLS.configEngine.replace(/\/+$/, '') : 'https://app.sochiot.com/api/config-engine';
     const endpoint = CONFIG_ENDPOINTS.DEVICES_BY_IDS || '/config-engine/device/get/byDeviceIds';
     const url = `${base}${endpoint.replace('/config-engine', '')}`;
@@ -294,10 +358,9 @@ export const fetchDevicesByDeviceIds = async (deviceIds, forceRefresh = false) =
 
     // Primary: POST with payload { "ids": [...] } as per Sochiot API
     try {
-      const resPost = await fetch(url, {
+      const resPost = await fetchWithSochiotAuth(url, {
         method: 'POST',
         headers: {
-          ...headers,
           'Accept': 'application/json, text/plain, */*',
           'Content-Type': 'application/json'
         },
@@ -308,10 +371,9 @@ export const fetchDevicesByDeviceIds = async (deviceIds, forceRefresh = false) =
         data = json?.list || json?.data || json;
       } else {
         // Fallback: POST with raw array [...]
-        const resArray = await fetch(url, {
+        const resArray = await fetchWithSochiotAuth(url, {
           method: 'POST',
           headers: {
-            ...headers,
             'Accept': 'application/json, text/plain, */*',
             'Content-Type': 'application/json'
           },
