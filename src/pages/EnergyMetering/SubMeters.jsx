@@ -1,17 +1,38 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Row, Col, Card, Badge, Table, Tab, Tabs, Modal, Button, Form } from 'react-bootstrap';
-import { Zap, Activity, Cpu, ShieldCheck, RefreshCcw, Settings2, Plus, Trash2, FolderTree, CheckCircle2, Check } from 'lucide-react';
+import { Row, Col, Card, Badge, Table, Tab, Tabs, Modal, Button, Form, Spinner } from 'react-bootstrap';
+import {
+  Zap,
+  Activity,
+  Cpu,
+  ShieldCheck,
+  RefreshCcw,
+  Settings2,
+  Plus,
+  Trash2,
+  FolderTree,
+  CheckCircle2,
+  Check,
+  Clock,
+  Radio,
+  Layers,
+  AlertCircle
+} from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import PdfButton from '../../components/PdfButton';
+import PageContextBanner from '../../components/PageContextBanner';
+import { useSiteStore } from '../../context/SiteContext';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
 import { useLocation } from 'react-router-dom';
-import { io } from 'socket.io-client';
+import { getAuthHeaders, normalizeList } from '../../services/apiClient';
+import { bmsService } from '../../services/bmsService';
+import { getApiUrl } from '../../utils/apiConfig';
 import './MFMMeter.css';
 
 import {
   PARAMETER_SYNONYMS,
   getValueForField,
-  formatNumber
+  formatNumber,
+  mapLatestEventsToTelemetry
 } from './utils/energyTelemetry';
 import {
   useMeterGroups,
@@ -124,7 +145,7 @@ const MiniMFMMeter = ({ meter, isMapped = true, isOnline, onClick }) => {
       return isNaN(n) ? 0 : n;
     };
     const hasTelemetry = Object.keys(tv).length > 0;
-    const showActive = !isMapped || isOnline || hasTelemetry;
+    const showActive = isOnline || hasTelemetry;
     switch (page) {
       case 0:
         return {
@@ -165,7 +186,7 @@ const MiniMFMMeter = ({ meter, isMapped = true, isOnline, onClick }) => {
 
   const pageData = getPageData();
   const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
-  const showActive = !isMapped || isOnline || hasTelemetry;
+  const showActive = isOnline || hasTelemetry;
 
   return (
     <div className="w-100 d-flex flex-column align-items-center scada-meter-wrapper" onClick={onClick} style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
@@ -229,7 +250,7 @@ const MiniMFMMeter = ({ meter, isMapped = true, isOnline, onClick }) => {
                 <span className="mfm-led-label" style={{ fontSize: '0.5rem', marginTop: '2px' }}>CAL</span>
               </div>
               <div className="d-flex flex-column align-items-center">
-                <div className={`mfm-led-bulb bulb-green ${isOnline && isMapped ? 'glow-active pulse-dot-green' : ''}`} style={{ width: '8px', height: '8px', animation: isOnline && isMapped ? 'pulseGlow 1.8s infinite' : 'none' }}></div>
+                <div className={`mfm-led-bulb bulb-green ${isOnline ? 'glow-active pulse-dot-green' : ''}`} style={{ width: '8px', height: '8px', animation: isOnline ? 'pulseGlow 1.8s infinite' : 'none' }}></div>
                 <span className="mfm-led-label" style={{ fontSize: '0.5rem', marginTop: '2px' }}>COM</span>
               </div>
               <div className="d-flex flex-column align-items-center">
@@ -295,24 +316,31 @@ const MiniMFMMeter = ({ meter, isMapped = true, isOnline, onClick }) => {
   );
 };
 
-const StatBox = ({ label, value, unit, colorClass }) => (
-  <div className="d-flex justify-content-between align-items-center p-2 mb-2 rounded" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
-    <span className="text-secondary fs-13">{label}</span>
-    <div className="d-flex align-items-baseline gap-1">
-      <span className={`fw-bold font-monospace fs-5 ${colorClass}`}>{value}</span>
-      <span className={`fs-12 ${colorClass} opacity-75`}>{unit}</span>
-    </div>
-  </div>
-);
-
-// Group helpers (normalizeMeterGroups, createGroupId, GROUP_COLORS) are imported from hooks/useMeterGroups
-
 const SubMeters = () => {
   const location = useLocation();
   const { getOverallStatus, refreshStatuses } = useDeviceStatus();
+  const { sites, selectedSite, setSelectedSite } = useSiteStore();
+
+  // Sites fetched from sites route (GET /api/v1/sites)
+  const [routeSites, setRouteSites] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+    } catch (e) {}
+    return [];
+  });
+  const [selectedSiteId, setSelectedSiteId] = useState(() => {
+    return localStorage.getItem('selected_sub_meter_site_id') || localStorage.getItem('selected_main_meter_site_id') || '';
+  });
+
+  // Devices state fetched with siteId and category=SUB_ENERGY_METER
+  const [siteDevices, setSiteDevices] = useState([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [isBatchFetching, setIsBatchFetching] = useState(false);
+  const [lastBatchTime, setLastBatchTime] = useState(null);
+
   const [selectedMeter, setSelectedMeter] = useState(null);
   const [meters, setMeters] = useState([]);
-  const [templates, setTemplates] = useState([]);
   const [showGroupingSettings, setShowGroupingSettings] = useState(false);
   const [meterGroups, setMeterGroups] = useState([]);
   const [groupSaveStatus, setGroupSaveStatus] = useState(null);
@@ -321,101 +349,376 @@ const SubMeters = () => {
   const groupsHydratedRef = useRef(false);
   const TELEMETRY_FRESHNESS_MS = 24 * 60 * 60 * 1000;
 
-  const getMeterOnlineStatus = (meterLabel) => {
-    const meter = meters.find(
-      m => String(m.label).trim().toUpperCase() === String(meterLabel).trim().toUpperCase()
-    );
-    const template = getTemplateForMeter(meterLabel);
-    if (template?.mapping) {
-      let devId = template.mapping.deviceId;
-      if (!devId) {
-        const anyConfig = Object.values(template.mapping).find(cfg => cfg && typeof cfg === 'object' && cfg.device);
-        if (anyConfig) devId = anyConfig.device;
+  // Fetch sites as per OpenAPI spec (GET /sites)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSitesFromRoute = async () => {
+      try {
+        const res = await bmsService.getSites().catch(() => null);
+        const list = normalizeList(res, 'sites');
+        if (isMounted && list && list.length > 0) {
+          setRouteSites(list);
+          try {
+            localStorage.setItem('scada_sites_db', JSON.stringify(list));
+          } catch (e) {}
+          return;
+        }
+      } catch (err) {
+        console.warn('bmsService.getSites notice in SubMeters:', err);
       }
-      const gatewayUuid = template.mapping.gatewayUuid;
-      if (devId) {
-        const isOnline = getOverallStatus(devId, gatewayUuid);
-        if (isOnline) return true;
+
+      // Direct proxy route fallback (/sites)
+      try {
+        const proxyUrl = getApiUrl('/sites');
+        const res = await fetch(proxyUrl, { headers: getAuthHeaders() }).catch(() => null);
+        if (res && res.ok) {
+          const json = await res.json();
+          const list = normalizeList(json, 'sites');
+          if (isMounted && list && list.length > 0) {
+            setRouteSites(list);
+            try {
+              localStorage.setItem('scada_sites_db', JSON.stringify(list));
+            } catch (e) {}
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch sites from route in SubMeters:', err);
+      }
+
+      if (isMounted && sites && sites.length > 0) {
+        setRouteSites(sites);
+      }
+    };
+
+    fetchSitesFromRoute();
+    return () => { isMounted = false; };
+  }, [sites]);
+
+  const allSites = useMemo(() => {
+    if (routeSites && routeSites.length > 0) return routeSites;
+    if (sites && sites.length > 0) return sites;
+    return [];
+  }, [routeSites, sites]);
+
+  // Keep selected site synchronized with available sites
+  useEffect(() => {
+    if (allSites.length > 0) {
+      const match = allSites.find(s => String(s.id || s.siteId || s._id) === String(selectedSiteId));
+      if (!match) {
+        const firstId = String(allSites[0].id || allSites[0].siteId || allSites[0]._id);
+        setSelectedSiteId(firstId);
+        localStorage.setItem('selected_sub_meter_site_id', firstId);
+        if (setSelectedSite) setSelectedSite(allSites[0]);
+      } else {
+        if (setSelectedSite && selectedSite?.id !== match.id) setSelectedSite(match);
       }
     }
+  }, [allSites, selectedSiteId, setSelectedSite, selectedSite]);
 
-    // Telemetry fallback is allowed only for fresh readings, otherwise stale data
-    // would incorrectly keep an offline sub-meter marked as online.
-    if (meter) {
-      const lastTelemetryTs = Number(meter.lastTelemetryTimestamp);
-      const isFreshTelemetry =
-        Number.isFinite(lastTelemetryTs) &&
-        lastTelemetryTs > 0 &&
-        Date.now() - lastTelemetryTs < TELEMETRY_FRESHNESS_MS;
+  // Fetch all devices for the selected site using category SUB_ENERGY_METER:
+  // GET /api/v1/devices?siteId={siteId}&category=SUB_ENERGY_METER&include=settings,rules,profile
+  useEffect(() => {
+    if (!selectedSiteId) {
+      setSiteDevices([]);
+      setMeters([]);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchSubEnergyMeters = async () => {
+      setDevicesLoading(true);
+      try {
+        const queryParams = new URLSearchParams({
+          siteId: String(selectedSiteId),
+          category: 'SUB_ENERGY_METER',
+          include: 'settings,rules,profile'
+        });
+
+        const url = getApiUrl(`/devices?${queryParams.toString()}`);
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: getAuthHeaders()
+        });
+
+        let items = [];
+        if (res && res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json?.data)) {
+            items = json.data;
+          } else if (Array.isArray(json)) {
+            items = json;
+          }
+        }
+
+        // Fallback: If 0 items with SUB_ENERGY_METER, check if devices were registered as ENERGY_METER
+        if (items.length === 0) {
+          try {
+            const fbUrl = getApiUrl(`/devices?siteId=${selectedSiteId}&category=ENERGY_METER&include=settings,rules,profile`);
+            const fbRes = await fetch(fbUrl, { headers: getAuthHeaders() });
+            if (fbRes.ok) {
+              const fbJson = await fbRes.json();
+              const fbItems = Array.isArray(fbJson?.data) ? fbJson.data : (Array.isArray(fbJson) ? fbJson : []);
+              if (fbItems.length > 0) {
+                items = fbItems.filter(d => d.category !== 'MAIN_ENERGY_METER');
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (isMounted) {
+          setSiteDevices(items);
+        }
+      } catch (err) {
+        console.warn('Error fetching sub energy meters:', err);
+        if (isMounted) {
+          setSiteDevices([]);
+        }
+      } finally {
+        if (isMounted) setDevicesLoading(false);
+      }
+    };
+
+    fetchSubEnergyMeters();
+    return () => { isMounted = false; };
+  }, [selectedSiteId]);
+
+  // Synchronize siteDevices into the meters state model
+  useEffect(() => {
+    if (!siteDevices || siteDevices.length === 0) {
+      setMeters([]);
+      return;
+    }
+
+    setMeters(prev => {
+      return siteDevices.map((dev, idx) => {
+        const devId = String(dev.id || dev.deviceId || `SM-${idx + 1}`);
+        const bmsDevId = dev.bmsDeviceId || dev.deviceId || devId;
+        const label = dev.name || dev.deviceName || dev.title || dev.hardwareId || `Sub-Meter ${dev.id}`;
+        const mappingSource = dev.defaultValues || dev.settings?.[0]?.meta || dev.settings || dev.mapping || {};
+        const existing = prev.find(m => String(m.id) === devId || String(m.deviceId) === String(dev.deviceId) || String(m.bmsDeviceId) === String(bmsDevId));
+
+        return {
+          id: devId,
+          deviceId: String(dev.id || dev.deviceId),
+          bmsDeviceId: String(bmsDevId),
+          templateId: devId,
+          label: label,
+          type: dev.category || 'Sub-Energy Meter',
+          siteId: dev.siteId || selectedSiteId,
+          status: existing?.status ?? (dev.status || 'Stopped'),
+          isActive: dev.isActive,
+          lastSeenAt: dev.lastSeenAt,
+          mapping: mappingSource,
+          device: dev,
+          load: existing?.load ?? 0.0,
+          voltage: existing?.voltage ?? 0.0,
+          current: existing?.current ?? 0.0,
+          pf: existing?.pf ?? 0.0,
+          freq: existing?.freq ?? 50.0,
+          vR: existing?.vR ?? null,
+          vY: existing?.vY ?? null,
+          vB: existing?.vB ?? null,
+          iR: existing?.iR ?? null,
+          iY: existing?.iY ?? null,
+          iB: existing?.iB ?? null,
+          activePower: existing?.activePower ?? null,
+          reactivePower: existing?.reactivePower ?? null,
+          apparentPower: existing?.apparentPower ?? null,
+          telemetryValues: existing?.telemetryValues ?? {},
+          lastTelemetryTimestamp: existing?.lastTelemetryTimestamp ?? null,
+          moduleEvents: existing?.moduleEvents ?? { change: [], warning: [], read: [] }
+        };
+      });
+    });
+  }, [siteDevices, selectedSiteId]);
+
+  // Batch Latest Events Fetching: POST /api/v1/devices/events/latest/batch
+  const fetchBatchEvents = async () => {
+    if (!siteDevices || siteDevices.length === 0) return;
+    const deviceIds = siteDevices
+      .map(d => String(d.bmsDeviceId || d.deviceId || d.id))
+      .filter(Boolean);
+
+    if (deviceIds.length === 0) return;
+
+    try {
+      setIsBatchFetching(true);
+      const batchRes = await bmsService.getDeviceEventsLatestBatch(deviceIds);
+      const results = batchRes?.data?.results || batchRes?.results || [];
+
+      if (Array.isArray(results) && results.length > 0) {
+        setLastBatchTime(Date.now());
+        setMeters(prevMeters => {
+          return prevMeters.map(meter => {
+            const devIdStr = String(meter.id);
+            const bmsDevIdStr = String(meter.bmsDeviceId || '');
+            const rawDevIdStr = String(meter.deviceId || '');
+
+            const matchResult = results.find(r => {
+              const rDevId = String(r.deviceId || r.bmsDeviceId || r.id || '');
+              return (
+                rDevId === devIdStr ||
+                rDevId === bmsDevIdStr ||
+                rDevId === rawDevIdStr ||
+                (r.deviceName && String(r.deviceName).trim().toUpperCase() === String(meter.label).trim().toUpperCase())
+              );
+            });
+
+            if (!matchResult) return meter;
+
+            const { updates, lastEventTime } = mapLatestEventsToTelemetry(matchResult, meter.mapping);
+            if (!updates || Object.keys(updates).length === 0) return meter;
+
+            const telemetryValues = {
+              ...(meter.telemetryValues || {}),
+              ...updates
+            };
+
+            // Sanitization for tariffs
+            const ebTar = Number(telemetryValues.ebTariff);
+            if (isNaN(ebTar) || ebTar > 100 || ebTar <= 0) {
+              telemetryValues.ebTariff = 7.50;
+            }
+            const dgTar = Number(telemetryValues.dgTariff);
+            if (isNaN(dgTar) || dgTar > 100 || dgTar <= 0) {
+              telemetryValues.dgTariff = 18.50;
+            }
+
+            const updatedMeter = {
+              ...meter,
+              telemetryValues
+            };
+
+            if (lastEventTime) {
+              const tsMs = lastEventTime > 1e12 ? lastEventTime : lastEventTime * 1000;
+              updatedMeter.lastTelemetryTimestamp = tsMs;
+            } else {
+              updatedMeter.lastTelemetryTimestamp = Date.now();
+            }
+
+            // Assign phase voltages and currents
+            if (telemetryValues.vR !== undefined && telemetryValues.vR !== null) updatedMeter.vR = Number(telemetryValues.vR);
+            if (telemetryValues.vY !== undefined && telemetryValues.vY !== null) updatedMeter.vY = Number(telemetryValues.vY);
+            if (telemetryValues.vB !== undefined && telemetryValues.vB !== null) updatedMeter.vB = Number(telemetryValues.vB);
+            if (telemetryValues.iR !== undefined && telemetryValues.iR !== null) updatedMeter.iR = Number(telemetryValues.iR);
+            if (telemetryValues.iY !== undefined && telemetryValues.iY !== null) updatedMeter.iY = Number(telemetryValues.iY);
+            if (telemetryValues.iB !== undefined && telemetryValues.iB !== null) updatedMeter.iB = Number(telemetryValues.iB);
+
+            if (telemetryValues.freq !== undefined && telemetryValues.freq !== null) {
+              const fNum = Number(telemetryValues.freq);
+              if (fNum >= 40 && fNum <= 65) updatedMeter.freq = fNum;
+            }
+
+            if (telemetryValues.activePower !== undefined && telemetryValues.activePower !== null) {
+              updatedMeter.activePower = Number(telemetryValues.activePower);
+            } else if (telemetryValues.totalKw !== undefined && telemetryValues.totalKw !== null) {
+              updatedMeter.activePower = Number(telemetryValues.totalKw);
+            }
+
+            if (telemetryValues.reactivePower !== undefined && telemetryValues.reactivePower !== null) {
+              updatedMeter.reactivePower = Number(telemetryValues.reactivePower);
+            }
+            if (telemetryValues.apparentPower !== undefined && telemetryValues.apparentPower !== null) {
+              updatedMeter.apparentPower = Number(telemetryValues.apparentPower);
+            } else if (telemetryValues.totalKva !== undefined && telemetryValues.totalKva !== null) {
+              updatedMeter.apparentPower = Number(telemetryValues.totalKva);
+            }
+            if (telemetryValues.pf !== undefined && telemetryValues.pf !== null) {
+              updatedMeter.pf = Number(telemetryValues.pf);
+            }
+
+            // Calculate average voltage across phases
+            const phaseVoltages = [updatedMeter.vR, updatedMeter.vY, updatedMeter.vB].filter(v => v !== null && v !== undefined && !isNaN(v) && v > 0);
+            if (phaseVoltages.length > 0) {
+              updatedMeter.voltage = phaseVoltages.reduce((s, v) => s + v, 0) / phaseVoltages.length;
+            } else if (telemetryValues.vLLAvg || telemetryValues.vLNAvg) {
+              updatedMeter.voltage = Number(telemetryValues.vLLAvg || telemetryValues.vLNAvg) || 0.0;
+            }
+
+            // Calculate average current across phases
+            const phaseCurrents = [updatedMeter.iR, updatedMeter.iY, updatedMeter.iB].filter(i => i !== null && i !== undefined && !isNaN(i) && i > 0);
+            if (phaseCurrents.length > 0) {
+              updatedMeter.current = phaseCurrents.reduce((s, i) => s + i, 0) / phaseCurrents.length;
+            } else if (telemetryValues.iAvg) {
+              updatedMeter.current = Number(telemetryValues.iAvg) || 0.0;
+            }
+
+            // Calculate operational load
+            updatedMeter.load = updatedMeter.activePower ?? (telemetryValues.totalKw !== undefined ? Number(telemetryValues.totalKw) : 0.0);
+            updatedMeter.status = updatedMeter.load > 0.05 ? 'Running' : 'Stopped';
+
+            // Build moduleEvents for detail view
+            const moduleEvents = { change: [], warning: [], read: [] };
+            Object.keys(telemetryValues).forEach(k => {
+              const meta = FIELD_LABELS[k] || { label: k, unit: '' };
+              moduleEvents.change.push({ key: k, label: meta.label, value: telemetryValues[k], unit: meta.unit });
+            });
+            updatedMeter.moduleEvents = moduleEvents;
+
+            return updatedMeter;
+          });
+        });
+      }
+    } catch (err) {
+      console.warn('Error fetching sub meters batch latest events:', err);
+    } finally {
+      setIsBatchFetching(false);
+    }
+  };
+
+  // Immediate fetch on site / devices change & 30-second interval polling
+  useEffect(() => {
+    if (!siteDevices || siteDevices.length === 0) return;
+    let isMounted = true;
+
+    fetchBatchEvents();
+    const interval = setInterval(() => {
+      if (isMounted) fetchBatchEvents();
+    }, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [siteDevices]);
+
+  // Online status checker
+  const getMeterOnlineStatus = (meter) => {
+    if (!meter) return false;
+    let devId = meter.deviceId || meter.id || meter.bmsDeviceId;
+    const gatewayUuid = meter.mapping?.gatewayUuid || meter.device?.gatewayUuid;
+    if (devId) {
+      const isOnline = getOverallStatus(devId, gatewayUuid);
+      if (isOnline) return true;
+    }
+    if (meter.device?.status) {
+      const s = String(meter.device.status).toUpperCase();
+      if (s === 'ONLINE' || s === 'ACTIVE') return true;
+      if (s === 'OFFLINE' || s === 'INACTIVE' || s === 'DISABLED') return false;
+    }
+    if (meter.device?.lastSeenAt) {
+      const lastSeenMs = new Date(meter.device.lastSeenAt).getTime();
+      if (Math.abs(Date.now() - lastSeenMs) < 5 * 60 * 1000) return true;
+    }
+
+    // Telemetry freshness fallback (within 24 hours)
+    const lastTelemetryTs = Number(meter.lastTelemetryTimestamp);
+    if (Number.isFinite(lastTelemetryTs) && lastTelemetryTs > 0 && (Date.now() - lastTelemetryTs < TELEMETRY_FRESHNESS_MS)) {
       const hasV = meter.voltage !== undefined && meter.voltage !== null && Number(meter.voltage) > 0;
       const hasI = meter.current !== undefined && meter.current !== null && Number(meter.current) > 0;
       const hasLoad = meter.load !== undefined && meter.load !== null && Number(meter.load) > 0;
       const hasTelemetry = meter.telemetryValues && Object.keys(meter.telemetryValues).length > 0;
-      const hasCommStatus =
-        meter.telemetryValues?.commStatus !== undefined &&
-        meter.telemetryValues?.commStatus !== null &&
-        meter.telemetryValues?.commStatus !== '' &&
-        meter.telemetryValues?.commStatus !== 0 &&
-        meter.telemetryValues?.commStatus !== '0';
-
-      if (isFreshTelemetry && (hasV || hasI || hasLoad || hasTelemetry || hasCommStatus)) {
-        return true;
-      }
-    }
-    return false; // Default offline
-  };
-
-  // Helper to check if a specific meter has an active device mapping (i.e. is mapped)
-  const getMeterMappedStatus = (meterLabel) => {
-    const template = getTemplateForMeter(meterLabel);
-    if (template?.mapping) {
-      let devId = template.mapping.deviceId;
-      if (!devId) {
-        const anyConfig = Object.values(template.mapping).find(cfg => cfg && typeof cfg === 'object' && cfg.device);
-        if (anyConfig) devId = anyConfig.device;
-      }
-      if (devId) return true;
+      if (hasV || hasI || hasLoad || hasTelemetry) return true;
     }
     return false;
   };
 
-  // Sync meters list dynamically with Sub Meters templates
-  useEffect(() => {
-    const subMeterTemplates = templates.filter(t => t.module === 'Sub Meters');
-    if (subMeterTemplates.length > 0) {
-      setMeters(prev => {
-        return subMeterTemplates.map(t => {
-          const label = t.mapping?.energyMeteringTarget || t.name;
-          const meterId = `SM-${t.id}`;
-          const existing = prev.find(m => m.id === meterId || String(m.label).toUpperCase() === String(label).toUpperCase());
-          return {
-            id: meterId,
-            templateId: String(t.id),
-            label: label,
-            type: t.category || 'Sub Meter',
-            load: existing?.load ?? 0.0,
-            voltage: existing?.voltage ?? 0.0,
-            current: existing?.current ?? 0.0,
-            pf: existing?.pf ?? 0.0,
-            status: existing?.status ?? 'Stopped',
-            vR: existing?.vR ?? null,
-            vY: existing?.vY ?? null,
-            vB: existing?.vB ?? null,
-            iR: existing?.iR ?? null,
-            iY: existing?.iY ?? null,
-            iB: existing?.iB ?? null,
-            freq: existing?.freq ?? null,
-            activePower: existing?.activePower ?? null,
-            reactivePower: existing?.reactivePower ?? null,
-            apparentPower: existing?.apparentPower ?? null,
-            moduleEvents: existing?.moduleEvents ?? null,
-            telemetryValues: existing?.telemetryValues ?? null
-          };
-        });
-      });
-    }
-  }, [templates]);
+  const getMeterMappedStatus = (meter) => {
+    return Boolean(meter?.mapping && (meter.mapping.deviceId || Object.keys(meter.mapping).length > 0));
+  };
 
+  // Group hydration
   useEffect(() => {
     let active = true;
 
@@ -438,6 +741,7 @@ const SubMeters = () => {
 
       if (!groupsHydratedRef.current) {
         try {
+          const { fetchSavedMeterGroups } = await import('./hooks/useMeterGroups');
           const backendGroups = await fetchSavedMeterGroups(meters);
           if (!active) return;
           groupsHydratedRef.current = true;
@@ -463,6 +767,7 @@ const SubMeters = () => {
     let active = true;
     const syncGroups = async () => {
       try {
+        const { fetchSavedMeterGroups } = await import('./hooks/useMeterGroups');
         const groups = await fetchSavedMeterGroups(meters);
         if (active) {
           groupsHydratedRef.current = true;
@@ -484,13 +789,6 @@ const SubMeters = () => {
       setShowGroupingSettings(true);
     }
   }, [location.state]);
-
-  // Trigger status refresh when templates state is updated
-  useEffect(() => {
-    if (templates.length > 0 && refreshStatuses) {
-      refreshStatuses();
-    }
-  }, [templates, refreshStatuses]);
 
   // Derive activeMeter dynamically from meters array so it updates in real-time
   const activeMeter = useMemo(() => {
@@ -632,533 +930,258 @@ const SubMeters = () => {
     }
   };
 
-  // Derive activeSections mapped/saved in the template settings
-  const activeSections = useMemo(() => {
-    if (!activeMeter) return null;
-    const template = templates.find(t =>
-      t.module === 'Sub Meters' &&
-      String(t.mapping?.energyMeteringTarget || '').trim().toUpperCase() === String(activeMeter.label || '').trim().toUpperCase()
-    );
-    if (!template || !template.mapping) return null;
-    const mapping = template.mapping;
-
-    const changeFields = [];
-    const warningFields = [];
-    const readFields = [];
-
-    const skipKeys = new Set(['organization', 'client', 'zone', 'subZone', 'building', 'device', 'module', 'enabled', 'mappingId', 'fixedCharge']);
-
-    const extractMapped = (config, targetArray) => {
-      if (!config || config.enabled === false) return;
-      Object.keys(config).forEach(key => {
-        if (!skipKeys.has(key) && config[key] && String(config[key]).trim() !== '') {
-          targetArray.push(key);
-        }
-      });
-    };
-
-    extractMapped(mapping.emChangeConfig, changeFields);
-    extractMapped(mapping.emWarningConfig, warningFields);
-    extractMapped(mapping.emReadConfig, readFields);
-
-    return {
-      change: changeFields,
-      warning: warningFields,
-      read: readFields
-    };
-  }, [templates, activeMeter]);
-
-  const hasAnyMappedField = useMemo(() => {
-    if (!activeSections) return false;
-    return activeSections.change.length > 0 || activeSections.warning.length > 0 || activeSections.read.length > 0;
-  }, [activeSections]);
-
   const formatTelemetryValue = (val) => {
     if (val === null || val === undefined) return '—';
-    return String(val); // Keep exact float/decimals as received
+    return String(val);
   };
 
-  // Load templates on mount & API fetch sync
-  useEffect(() => {
-    const saved = localStorage.getItem('scada_templates');
-    if (saved) {
-      try {
-        setTemplates(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse templates from local storage:', e);
-      }
-    }
+  // Site selector for PageContextBanner
+  const siteSelector = useMemo(() => {
+    const siteOptions = (allSites && allSites.length > 0)
+      ? allSites.map(s => ({
+          value: String(s.id || s._id || s.siteId),
+          label: s.name || s.siteName || s.title || `Site ${s.id}`
+        }))
+      : [
+          { value: '1', label: 'Main Facility Site' }
+        ];
 
-    fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        const mapped = data.map(t => {
-          const hasDef = t.defaultValues && typeof t.defaultValues === 'object' && Object.keys(t.defaultValues).length > 0;
-          const defValues = hasDef ? t.defaultValues : null;
-          const mappingSource = defValues || t.settings?.[0]?.meta || {};
-          return {
-            id: t.id,
-            name: t.name,
-            category: (defValues && defValues.category) || t.category || 'Water Management',
-            module: (defValues && defValues.module) || t.settings?.[0]?.eventKey || 'AG Tank',
-            mapping: mappingSource
-          };
-        });
-        setTemplates(mapped);
-        localStorage.setItem('scada_templates', JSON.stringify(mapped));
-        if (refreshStatuses) refreshStatuses();
-      })
-      .catch(err => console.error('Error fetching templates in SubMeters:', err));
-  }, [refreshStatuses]);
+    const currentVal = selectedSiteId || siteOptions[0]?.value;
 
-  // Helper to find template for a specific meter
-  const getTemplateForMeter = (meterLabel) => {
-    return templates.find(t =>
-      t.module === 'Sub Meters' &&
-      String(t.mapping?.energyMeteringTarget || t.name || '').trim().toUpperCase() === String(meterLabel || '').trim().toUpperCase()
-    );
-  };
-
-  // Helper to check mapped fields for a meter
-  const getMappedFieldsForMeter = (meterLabel) => {
-    const template = getTemplateForMeter(meterLabel);
-    if (!template || !template.mapping) return {};
-    const mapping = template.mapping;
-    const mapped = {};
-
-    // Legacy configs
-    if (mapping.emPowerConfig?.enabled !== false && mapping.emPowerConfig?.module && mapping.emPowerConfig?.activePower) {
-      mapped.load = true;
-    }
-    if (mapping.emVoltageConfig?.enabled !== false && mapping.emVoltageConfig?.module && mapping.emVoltageConfig?.vR) {
-      mapped.voltage = true;
-    }
-    if (mapping.emCurrentConfig?.enabled !== false && mapping.emCurrentConfig?.module && mapping.emCurrentConfig?.iR) {
-      mapped.current = true;
-    }
-    if (mapping.emSystemConfig?.enabled !== false && mapping.emSystemConfig?.module && mapping.emSystemConfig?.pf) {
-      mapped.pf = true;
-    }
-
-    // New emChangeConfig (module event based mapping)
-    if (mapping.emChangeConfig?.enabled !== false && mapping.emChangeConfig?.module) {
-      if (mapping.emChangeConfig.totalKw) mapped.load = true;
-      if (mapping.emChangeConfig.vR) mapped.voltage = true;
-      if (mapping.emChangeConfig.iR) mapped.current = true;
-      if (mapping.emChangeConfig.pf) mapped.pf = true;
-    }
-
-    // emWarningConfig
-    if (mapping.emWarningConfig?.enabled !== false && mapping.emWarningConfig?.module) {
-      if (mapping.emWarningConfig.connectedStatus) mapped.warning = true;
-    }
-
-    // emReadConfig
-    if (mapping.emReadConfig?.enabled !== false && mapping.emReadConfig?.module) {
-      if (mapping.emReadConfig.meterSrno) mapped.read = true;
-    }
-
-    return mapped;
-  };
-
-
-  // Live Telemetry Sync using Websockets and Polling
-  useEffect(() => {
-    const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
-    const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'], autoConnect: false });
-
-    const fetchTemplates = () => {
-      fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates`)
-        .then(res => res.ok ? res.json() : [])
-        .then(data => {
-          const mapped = data.map(t => {
-            const hasDef = t.defaultValues && typeof t.defaultValues === 'object' && Object.keys(t.defaultValues).length > 0;
-            const defValues = hasDef ? t.defaultValues : null;
-            const mappingSource = defValues || t.settings?.[0]?.meta || {};
-            return {
-              id: t.id,
-              name: t.name,
-              category: (defValues && defValues.category) || t.category || 'Water Management',
-              module: (defValues && defValues.module) || t.settings?.[0]?.eventKey || 'AG Tank',
-              mapping: mappingSource
-            };
-          });
-          setTemplates(mapped);
-          localStorage.setItem('scada_templates', JSON.stringify(mapped));
-        })
-        .catch(err => console.error('Error fetching templates in SubMeters:', err));
-    };
-
-    socket.on('connect', () => {
-      console.log('SubMeters WebSocket Connected - Listening for Telemetry');
-    });
-
-    socket.on('templates_updated', fetchTemplates);
-
-    const processTelemetry = (stats) => {
-      if (!Array.isArray(stats)) return;
-
-      setMeters(prev => {
-        let updated = false;
-        const nextMeters = prev.map(meter => {
-          const template = getTemplateForMeter(meter.label);
-          if (!template || !template.mapping) return meter;
-
-          const mapping = template.mapping;
-          const updatedMeter = { ...meter };
-          let meterUpdated = false;
-
-          const getValueForFieldLocal = (config, fieldKey) => getValueForField(config, fieldKey, stats);
-          const getValueForField = getValueForFieldLocal;
-
-          const telemetryValues = { ...(meter.telemetryValues || {}) };
-          const skipKeys = new Set(['organization', 'client', 'zone', 'subZone', 'building', 'device', 'module', 'enabled', 'mappingId', 'fixedCharge']);
-
-          const configsToProcess = [
-            { config: mapping.emVoltageConfig, fields: ['vR', 'vY', 'vB'] },
-            { config: mapping.emCurrentConfig, fields: ['iR', 'iY', 'iB'] },
-            { config: mapping.emPowerConfig, fields: ['activePower', 'reactivePower', 'apparentPower'] },
-            { config: mapping.emSystemConfig, fields: ['pf', 'freq', 'commStatus'] },
-            { config: mapping.emConsumptionConfig, fields: ['cumulativekWh'] },
-            {
-              config: mapping.emChangeConfig,
-              fields: ['ebKvah', 'ebKwh', 'balance', 'totalKw', 'vR', 'vY', 'vB', 'iR', 'iY', 'iB', 'pf', 'totalKva', 'dgKwh']
-            },
-            {
-              config: mapping.emWarningConfig,
-              fields: ['lowBalanceCut', 'overloadTrip', 'overloadLimitReached', 'connectedStatus', 'forceOff']
-            },
-            {
-              config: mapping.emReadConfig,
-              fields: ['meterSrno', 'noOfOverloadCheck', 'ebDgStatus', 'ebTariff', 'dgTariff', 'ebRLoadSet', 'ebYLoadSet', 'ebBLoadSet', 'dgRLoadSet', 'dgYLoadSet', 'dgBLoadSet']
-            }
-          ];
-
-          configsToProcess.forEach(({ config, fields }) => {
-            if (config && config.enabled !== false) {
-              fields.forEach(field => {
-                const val = getValueForField(config, field);
-                if (val !== null) {
-                  telemetryValues[field] = val;
-                }
-              });
-            }
-          });
-
-          // Telemetry Sanitization & Calibration (matching MainMeter logic)
-          const ebTar = Number(telemetryValues.ebTariff);
-          if (isNaN(ebTar) || ebTar > 100 || ebTar <= 0) {
-            telemetryValues.ebTariff = 7.50; // Fallback standard grid tariff rate
-          }
-          const dgTar = Number(telemetryValues.dgTariff);
-          if (isNaN(dgTar) || dgTar > 100 || dgTar <= 0) {
-            telemetryValues.dgTariff = 18.50; // Fallback standard generator tariff rate
-          }
-
-          updatedMeter.telemetryValues = telemetryValues;
-
-          // Extract the latest MongoDB event timestamp for freshness tracking.
-          // This is used by getMeterOnlineStatus to decide if a telemetry fallback is valid.
-          // We must do this here while we still have access to the `stats` array from the API.
-          const allCfgs = [
-            mapping.emVoltageConfig, mapping.emCurrentConfig, mapping.emPowerConfig,
-            mapping.emSystemConfig, mapping.emConsumptionConfig, mapping.emChangeConfig,
-            mapping.emWarningConfig, mapping.emReadConfig
-          ];
-          let latestTs = null;
-          allCfgs.forEach(cfg => {
-            if (cfg && cfg.enabled !== false && cfg.module) {
-              const matchStat = stats.find(s =>
-                String(s.moduleId) === String(cfg.module) ||
-                String(s.meta?.module_id) === String(cfg.module)
-              );
-              if (matchStat?.meta?.created_at_timestamp) {
-                const raw = matchStat.meta.created_at_timestamp;
-                // Handle both seconds and milliseconds timestamps
-                const tsMs = raw > 1e12 ? raw : raw * 1000;
-                if (!latestTs || tsMs > latestTs) latestTs = tsMs;
-              }
-            }
-          });
-          if (latestTs) updatedMeter.lastTelemetryTimestamp = latestTs;
-
-          // Assign individual fields with fallback
-          if (telemetryValues.vR !== undefined && telemetryValues.vR !== null) updatedMeter.vR = Number(telemetryValues.vR);
-          if (telemetryValues.vY !== undefined && telemetryValues.vY !== null) updatedMeter.vY = Number(telemetryValues.vY);
-          if (telemetryValues.vB !== undefined && telemetryValues.vB !== null) updatedMeter.vB = Number(telemetryValues.vB);
-          if (telemetryValues.iR !== undefined && telemetryValues.iR !== null) updatedMeter.iR = Number(telemetryValues.iR);
-          if (telemetryValues.iY !== undefined && telemetryValues.iY !== null) updatedMeter.iY = Number(telemetryValues.iY);
-          if (telemetryValues.iB !== undefined && telemetryValues.iB !== null) updatedMeter.iB = Number(telemetryValues.iB);
-
-          if (telemetryValues.freq !== undefined && telemetryValues.freq !== null) {
-            const fNum = Number(telemetryValues.freq);
-            if (fNum >= 40 && fNum <= 65) {
-              updatedMeter.freq = fNum;
-            }
-          }
-
-          if (telemetryValues.activePower !== undefined && telemetryValues.activePower !== null) updatedMeter.activePower = Number(telemetryValues.activePower);
-          else if (telemetryValues.totalKw !== undefined && telemetryValues.totalKw !== null) updatedMeter.activePower = Number(telemetryValues.totalKw);
-
-          if (telemetryValues.reactivePower !== undefined && telemetryValues.reactivePower !== null) updatedMeter.reactivePower = Number(telemetryValues.reactivePower);
-
-          if (telemetryValues.apparentPower !== undefined && telemetryValues.apparentPower !== null) updatedMeter.apparentPower = Number(telemetryValues.apparentPower);
-          else if (telemetryValues.totalKva !== undefined && telemetryValues.totalKva !== null) updatedMeter.apparentPower = Number(telemetryValues.totalKva);
-
-          if (telemetryValues.pf !== undefined && telemetryValues.pf !== null) updatedMeter.pf = Number(telemetryValues.pf);
-
-          // Calculate average voltage across mapped phases
-          const phaseVoltages = [];
-          if (updatedMeter.vR !== undefined && updatedMeter.vR !== null && !isNaN(updatedMeter.vR)) phaseVoltages.push(updatedMeter.vR);
-          if (updatedMeter.vY !== undefined && updatedMeter.vY !== null && !isNaN(updatedMeter.vY)) phaseVoltages.push(updatedMeter.vY);
-          if (updatedMeter.vB !== undefined && updatedMeter.vB !== null && !isNaN(updatedMeter.vB)) phaseVoltages.push(updatedMeter.vB);
-          if (phaseVoltages.length > 0) {
-            updatedMeter.voltage = phaseVoltages.reduce((sum, v) => sum + v, 0) / phaseVoltages.length;
-          } else {
-            updatedMeter.voltage = 0.0;
-          }
-
-          // Calculate average current across mapped phases
-          const phaseCurrents = [];
-          if (updatedMeter.iR !== undefined && updatedMeter.iR !== null && !isNaN(updatedMeter.iR)) phaseCurrents.push(updatedMeter.iR);
-          if (updatedMeter.iY !== undefined && updatedMeter.iY !== null && !isNaN(updatedMeter.iY)) phaseCurrents.push(updatedMeter.iY);
-          if (updatedMeter.iB !== undefined && updatedMeter.iB !== null && !isNaN(updatedMeter.iB)) phaseCurrents.push(updatedMeter.iB);
-          if (phaseCurrents.length > 0) {
-            updatedMeter.current = phaseCurrents.reduce((sum, i) => sum + i, 0) / phaseCurrents.length;
-          } else {
-            updatedMeter.current = 0.0;
-          }
-
-          // Set overall load and pf
-          updatedMeter.load = updatedMeter.activePower ?? (telemetryValues.totalKw !== undefined ? Number(telemetryValues.totalKw) : 0.0);
-          updatedMeter.pf = updatedMeter.pf ?? 0.0;
-
-          // Backwards compatibility for moduleEvents structure
-          const moduleEvents = { change: [], warning: [], read: [] };
-          const resolveSection = (config, target) => {
-            if (!config || config.enabled === false) return;
-            Object.keys(config).forEach(key => {
-              if (skipKeys.has(key) || !config[key]) return;
-              const val = getValueForField(config, key);
-              const meta = FIELD_LABELS[key] || { label: key, unit: '' };
-              target.push({ key, label: meta.label, value: val, unit: meta.unit });
-            });
-          };
-          resolveSection(mapping.emChangeConfig, moduleEvents.change);
-          resolveSection(mapping.emWarningConfig, moduleEvents.warning);
-          resolveSection(mapping.emReadConfig, moduleEvents.read);
-          updatedMeter.moduleEvents = moduleEvents;
-          meterUpdated = true;
-
-          if (meterUpdated) {
-            updatedMeter.status = updatedMeter.load > 0.05 ? 'Running' : 'Stopped';
-            updated = true;
-          }
-
-          return updatedMeter;
-        });
-
-        return updated ? nextMeters : prev;
-      });
-    };
-
-    socket.on('telemetry_update', processTelemetry);
-
-    const fetchStats = async () => {
-      try {
-        const modulesToPoll = new Set();
-
-        const extractModuleId = (config, keys) => {
-          if (!config) return null;
-          if (config.module && config.module !== 'ALL') return config.module;
-          for (const k of keys) {
-            if (config[k] && typeof config[k] === 'string' && config[k].includes(':')) {
-              const parts = config[k].split(':');
-              if (parts[0]) return parts[0];
-            }
-          }
-          return config.module || null;
-        };
-
-        meters.forEach(meter => {
-          const template = getTemplateForMeter(meter.label);
-          if (template?.mapping) {
-            const mapping = template.mapping;
-            const configFieldsMap = [
-              { config: mapping.emVoltageConfig, fields: ['vR', 'vY', 'vB'] },
-              { config: mapping.emCurrentConfig, fields: ['iR', 'iY', 'iB'] },
-              { config: mapping.emPowerConfig, fields: ['activePower', 'reactivePower', 'apparentPower'] },
-              { config: mapping.emSystemConfig, fields: ['pf', 'freq'] },
-              { config: mapping.emConsumptionConfig, fields: ['cumulativekWh'] },
-              {
-                config: mapping.emChangeConfig,
-                fields: ['ebKvah', 'ebKwh', 'balance', 'totalKw', 'vR', 'vY', 'vB', 'iR', 'iY', 'iB', 'pf', 'totalKva', 'dgKwh']
-              },
-              {
-                config: mapping.emWarningConfig,
-                fields: ['lowBalanceCut', 'overloadTrip', 'overloadLimitReached', 'connectedStatus', 'forceOff']
-              },
-              {
-                config: mapping.emReadConfig,
-                fields: ['meterSrno', 'noOfOverloadCheck', 'ebDgStatus', 'ebTariff', 'dgTariff', 'ebRLoadSet', 'ebYLoadSet', 'ebBLoadSet', 'dgRLoadSet', 'dgYLoadSet', 'dgBLoadSet']
-              }
-            ];
-
-            configFieldsMap.forEach(({ config, fields }) => {
-              if (config && config.enabled !== false) {
-                const modId = extractModuleId(config, fields);
-                if (modId) {
-                  modulesToPoll.add(String(modId));
-                }
-              }
-            });
-          }
-        });
-
-        const pollList = Array.from(modulesToPoll);
-        if (pollList.length === 0) return;
-
-        const url = `${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates/stats?modules=${pollList.join(',')}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const stats = await res.json();
-          processTelemetry(stats);
+    return {
+      value: currentVal,
+      options: siteOptions,
+      onChange: (newId) => {
+        setSelectedSiteId(newId);
+        localStorage.setItem('selected_sub_meter_site_id', String(newId));
+        const found = allSites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
+        if (found && setSelectedSite) {
+          setSelectedSite(found);
         }
-      } catch (err) {
-        console.error('Error fetching sub meters stats:', err);
-      }
+      },
+      ariaLabel: 'Select Site'
     };
+  }, [allSites, selectedSiteId, setSelectedSite]);
 
-    fetchStats();
-    const pollingInterval = setInterval(fetchStats, 2000);
-
-    return () => {
-      socket.disconnect();
-      clearInterval(pollingInterval);
-    };
-  }, [templates, meters.length]);
+  const onlineCount = useMemo(() => {
+    return meters.filter(m => getMeterOnlineStatus(m)).length;
+  }, [meters]);
 
   return (
     <div className="fade-in">
+      <PageContextBanner
+        title="Sub-Energy Meters"
+        icon={<Zap className={meters.length > 0 ? "text-info" : "text-secondary"} size={22} />}
+        status={meters.length > 0 ? (onlineCount > 0 ? `${onlineCount}/${meters.length} ONLINE` : 'OFFLINE') : 'NOT CONFIGURED'}
+        siteSelector={siteSelector}
+        metadata={[
+          {
+            icon: <Layers size={15} />,
+            label: `${meters.length} Sub-Meters`
+          },
+          {
+            icon: <Clock size={15} />,
+            label: 'Polling: 30s batch'
+          }
+        ]}
+        actions={[
+          <Button
+            key="btn-refresh"
+            variant="outline-info"
+            size="sm"
+            className="rounded-pill px-3 py-1 fs-12 d-flex align-items-center gap-1"
+            onClick={fetchBatchEvents}
+            disabled={isBatchFetching || meters.length === 0}
+            title="Fetch latest batch telemetry now"
+          >
+            <RefreshCcw size={13} className={isBatchFetching ? "animate-spin" : ""} />
+            {isBatchFetching ? 'Syncing...' : 'Refresh'}
+          </Button>,
+          <button
+            key="btn-groups"
+            onClick={() => setShowGroupingSettings(true)}
+            className="btn btn-outline-info rounded-pill px-3 py-1 d-flex align-items-center gap-1 fs-12"
+            style={{ borderColor: 'rgba(56,189,248,0.35)', color: '#7dd3fc', background: 'rgba(56,189,248,0.08)' }}
+          >
+            <Settings2 size={13} /> Group Settings
+          </button>,
+          <PdfButton
+            key="btn-pdf"
+            label=""
+            title="Download Sub-Meters PDF Report"
+            variant="custom"
+            className="context-banner-action-btn p-1 border-0"
+            disabled={meters.length === 0}
+          />
+        ]}
+        enableFullscreen={true}
+        variant="scada"
+        className="sub-meters-context-banner mb-3"
+      />
 
-      {/* METERS CARD GRID */}
-      <Row className="row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-4 justify-content-center">
-        {meters.map((meter, index) => {
-          const isMapped = getMeterMappedStatus(meter.label);
-          const isOnline = getMeterOnlineStatus(meter.label);
-          return (
-            <Col key={index} className="d-flex justify-content-center">
-              <MiniMFMMeter
-                meter={meter}
-                isMapped={isMapped}
-                isOnline={isOnline}
-                onClick={() => {
-                  setSelectedMeter(meter);
-                  if (refreshStatuses) refreshStatuses();
-                }}
-              />
-            </Col>
-          );
-        })}
-      </Row>
-
-      {/* FILTER TABS & LOAD ANALYSIS */}
-      <Card className="scada-card border mt-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', color: 'var(--scada-text)' }}>
-        <Card.Body className="p-4">
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-            <h5 className="mb-0 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
-              <Activity className="text-info" size={18} /> Sub-Meters Performance Diagnostics
-            </h5>
-            <div className="d-flex align-items-center gap-2">
-              {groupSaveStatus && <Badge bg="success" className="px-3 py-2">{groupSaveStatus}</Badge>}
-              <button
-                onClick={() => setShowGroupingSettings(true)}
-                className="btn btn-outline-info rounded-pill px-3 py-1.5 d-flex align-items-center gap-2 fs-12"
-                style={{ borderColor: 'rgba(56,189,248,0.35)', color: '#7dd3fc', background: 'rgba(56,189,248,0.08)' }}
+      {devicesLoading ? (
+        <div className="d-flex flex-column align-items-center justify-content-center py-5 my-5">
+          <Spinner animation="border" variant="info" className="mb-3" />
+          <span className="text-secondary fs-13 font-monospace">Loading sub-energy meters for site...</span>
+        </div>
+      ) : meters.length === 0 ? (
+        <Card className="scada-card border my-4 p-5 text-center position-relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.85) 0%, rgba(30,41,59,0.7) 100%)', borderColor: 'rgba(255,255,255,0.08)' }}>
+          <div className="d-flex flex-column align-items-center justify-content-center py-4">
+            <div
+              className="d-flex align-items-center justify-content-center mb-3"
+              style={{
+                width: '76px',
+                height: '76px',
+                borderRadius: '50%',
+                border: '1.5px dashed rgba(56, 189, 248, 0.45)',
+                background: 'rgba(56, 189, 248, 0.05)'
+              }}
+            >
+              <Zap size={36} className="text-info opacity-75" />
+            </div>
+            <h5 className="text-white fw-bold mb-2">No Sub-Energy Meters Configured</h5>
+            <p className="text-secondary mb-4 fs-13" style={{ maxWidth: '480px' }}>
+              No sub-energy meters are mapped for this site. You can register new sub-meters in Device Management / Organization Hub or select a different site from the header.
+            </p>
+            <div className="d-flex gap-2">
+              <Button
+                variant="outline-info"
+                className="rounded-pill px-4 py-2 fs-12 fw-bold d-flex align-items-center gap-2"
+                onClick={() => window.location.reload()}
               >
-                <Settings2 size={14} /> MFM Group Settings
-              </button>
-              <PdfButton />
+                <RefreshCcw size={14} /> Reload Page
+              </Button>
             </div>
           </div>
+        </Card>
+      ) : (
+        <>
+          {/* METERS CARD GRID */}
+          <Row className="row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-4 justify-content-center">
+            {meters.map((meter, index) => {
+              const isMapped = getMeterMappedStatus(meter);
+              const isOnline = getMeterOnlineStatus(meter);
+              return (
+                <Col key={meter.id || index} className="d-flex justify-content-center">
+                  <MiniMFMMeter
+                    meter={meter}
+                    isMapped={isMapped}
+                    isOnline={isOnline}
+                    onClick={() => {
+                      setSelectedMeter(meter);
+                      if (refreshStatuses) refreshStatuses();
+                    }}
+                  />
+                </Col>
+              );
+            })}
+          </Row>
 
-          <Tabs defaultActiveKey="all" className="scada-tabs border-bottom border-secondary border-opacity-15 mb-4">
-            <Tab eventKey="all" title="ALL FEEDS">
-              <div className="table-responsive mt-3">
-                <Table hover borderless className="align-middle scada-table text-white mb-0">
-                  <thead>
-                    <tr className="border-bottom border-secondary border-opacity-15 fs-13 text-secondary text-uppercase tracking-wider">
-                      <th className="py-3">Meter ID</th>
-                      <th className="py-3">Feed Description</th>
-                      <th className="py-3 text-center">Operational Load</th>
-                      <th className="py-3 text-center">Avg. Volts</th>
-                      <th className="py-3 text-center">Phase Amps</th>
-                      <th className="py-3 text-center">cos φ</th>
-                      <th className="py-3 text-end">Health Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {meters.map((meter, idx) => {
-                      const isMapped = getMeterMappedStatus(meter.label);
-                      const isOnline = getMeterOnlineStatus(meter.label);
-                      const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
-                      const showActive = !isMapped || isOnline || hasTelemetry;
-                      const fmtNum = (v, d = 1) => { const n = Number(v); return isNaN(n) ? '0.0' : n.toFixed(d); };
-                      return (
-                        <tr key={idx} className="border-bottom border-secondary border-opacity-5">
-                          <td className="py-3 font-monospace text-info fs-13">{meter.id}</td>
-                          <td className="py-3 text-white fw-bold">{meter.label}</td>
-                          <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
-                          <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
-                          <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.current)} A` : '—'}</td>
-                          <td className="py-3 text-center text-secondary font-monospace">{showActive ? fmtNum(meter.pf, 3) : '—'}</td>
-                          <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? meter.status : 'Offline'} /> : '—'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </Table>
+          {/* FILTER TABS & LOAD ANALYSIS */}
+          <Card className="scada-card border mt-4" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', color: 'var(--scada-text)' }}>
+            <Card.Body className="p-4">
+              <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h5 className="mb-0 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
+                  <Activity className="text-info" size={18} /> Sub-Meters Performance Diagnostics
+                </h5>
+                <div className="d-flex align-items-center gap-2">
+                  {groupSaveStatus && <Badge bg="success" className="px-3 py-2">{groupSaveStatus}</Badge>}
+                  {lastBatchTime && (
+                    <span className="text-muted fs-11 font-monospace me-2">
+                      Synced {new Date(lastBatchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setShowGroupingSettings(true)}
+                    className="btn btn-outline-info rounded-pill px-3 py-1.5 d-flex align-items-center gap-2 fs-12"
+                    style={{ borderColor: 'rgba(56,189,248,0.35)', color: '#7dd3fc', background: 'rgba(56,189,248,0.08)' }}
+                  >
+                    <Settings2 size={14} /> MFM Group Settings
+                  </button>
+                  <PdfButton />
+                </div>
               </div>
-            </Tab>
-            <Tab eventKey="critical" title="CRITICAL LOADS">
-              <div className="table-responsive mt-3">
-                <Table hover borderless className="align-middle scada-table text-white mb-0">
-                  <thead>
-                    <tr className="border-bottom border-secondary border-opacity-15 fs-13 text-secondary text-uppercase tracking-wider">
-                      <th className="py-3">Meter ID</th>
-                      <th className="py-3">Feed Description</th>
-                      <th className="py-3 text-center">Operational Load</th>
-                      <th className="py-3 text-center">Avg. Volts</th>
-                      <th className="py-3 text-center">cos φ</th>
-                      <th className="py-3 text-end">Health Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {meters.filter(m => m.type === 'Server Room' || m.type === 'Utility').map((meter, idx) => {
-                      const isMapped = getMeterMappedStatus(meter.label);
-                      const isOnline = getMeterOnlineStatus(meter.label);
-                      const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
-                      const showActive = !isMapped || isOnline || hasTelemetry;
-                      const fmtNum = (v, d = 1) => { const n = Number(v); return isNaN(n) ? '0.0' : n.toFixed(d); };
-                      return (
-                        <tr key={idx} className="border-bottom border-secondary border-opacity-5">
-                          <td className="py-3 font-monospace text-info fs-13">{meter.id}</td>
-                          <td className="py-3 text-white fw-bold">{meter.label}</td>
-                          <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
-                          <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
-                          <td className="py-3 text-center text-secondary font-monospace">{showActive ? fmtNum(meter.pf, 3) : '—'}</td>
-                          <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? meter.status : 'Offline'} /> : '—'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </Table>
-              </div>
-            </Tab>
-          </Tabs>
-        </Card.Body>
-      </Card>
 
+              <Tabs defaultActiveKey="all" className="scada-tabs border-bottom border-secondary border-opacity-15 mb-4">
+                <Tab eventKey="all" title="ALL FEEDS">
+                  <div className="table-responsive mt-3">
+                    <Table hover borderless className="align-middle scada-table text-white mb-0">
+                      <thead>
+                        <tr className="border-bottom border-secondary border-opacity-15 fs-13 text-secondary text-uppercase tracking-wider">
+                          <th className="py-3">Meter ID</th>
+                          <th className="py-3">Feed Description</th>
+                          <th className="py-3 text-center">Operational Load</th>
+                          <th className="py-3 text-center">Avg. Volts</th>
+                          <th className="py-3 text-center">Phase Amps</th>
+                          <th className="py-3 text-center">cos φ</th>
+                          <th className="py-3 text-end">Health Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {meters.map((meter, idx) => {
+                          const isMapped = getMeterMappedStatus(meter);
+                          const isOnline = getMeterOnlineStatus(meter);
+                          const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
+                          const showActive = isOnline || hasTelemetry;
+                          const fmtNum = (v, d = 1) => { const n = Number(v); return isNaN(n) ? '0.0' : n.toFixed(d); };
+                          return (
+                            <tr key={meter.id || idx} className="border-bottom border-secondary border-opacity-5" onClick={() => setSelectedMeter(meter)}>
+                              <td className="py-3 font-monospace text-info fs-13">{meter.id}</td>
+                              <td className="py-3 text-white fw-bold">{meter.label}</td>
+                              <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
+                              <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
+                              <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.current)} A` : '—'}</td>
+                              <td className="py-3 text-center text-secondary font-monospace">{showActive ? fmtNum(meter.pf, 3) : '—'}</td>
+                              <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? (meter.load > 0.05 ? 'Running' : 'Online') : 'Offline'} /> : '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  </div>
+                </Tab>
+                <Tab eventKey="critical" title="CRITICAL LOADS">
+                  <div className="table-responsive mt-3">
+                    <Table hover borderless className="align-middle scada-table text-white mb-0">
+                      <thead>
+                        <tr className="border-bottom border-secondary border-opacity-15 fs-13 text-secondary text-uppercase tracking-wider">
+                          <th className="py-3">Meter ID</th>
+                          <th className="py-3">Feed Description</th>
+                          <th className="py-3 text-center">Operational Load</th>
+                          <th className="py-3 text-center">Avg. Volts</th>
+                          <th className="py-3 text-center">cos φ</th>
+                          <th className="py-3 text-end">Health Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {meters.filter(m => String(m.type).toLowerCase().includes('server') || String(m.type).toLowerCase().includes('utility') || String(m.label).toLowerCase().includes('server') || String(m.label).toLowerCase().includes('critical')).map((meter, idx) => {
+                          const isMapped = getMeterMappedStatus(meter);
+                          const isOnline = getMeterOnlineStatus(meter);
+                          const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
+                          const showActive = isOnline || hasTelemetry;
+                          const fmtNum = (v, d = 1) => { const n = Number(v); return isNaN(n) ? '0.0' : n.toFixed(d); };
+                          return (
+                            <tr key={meter.id || idx} className="border-bottom border-secondary border-opacity-5" onClick={() => setSelectedMeter(meter)}>
+                              <td className="py-3 font-monospace text-info fs-13">{meter.id}</td>
+                              <td className="py-3 text-white fw-bold">{meter.label}</td>
+                              <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
+                              <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
+                              <td className="py-3 text-center text-secondary font-monospace">{showActive ? fmtNum(meter.pf, 3) : '—'}</td>
+                              <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? (meter.load > 0.05 ? 'Running' : 'Online') : 'Offline'} /> : '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  </div>
+                </Tab>
+              </Tabs>
+            </Card.Body>
+          </Card>
+        </>
+      )}
+
+      {/* MFM GROUP SETTINGS MODAL */}
       <Modal
         show={showGroupingSettings}
         onHide={() => setShowGroupingSettings(false)}
@@ -1177,7 +1200,7 @@ const SubMeters = () => {
             <div>
               <h6 className="text-info fw-bold mb-2">Group your MFM meters from here</h6>
               <p className="text-secondary mb-0" style={{ fontSize: '0.88rem' }}>
-                User yahin se sub meters ko custom groups me daal sakta hai. Save karte hi Energy Metering Overview me grouped values dikh jayengi.
+                Organize sub-meters into custom groups for site analytics and aggregated overview displays.
               </p>
             </div>
             <div className="d-flex gap-2 flex-wrap">
@@ -1197,7 +1220,7 @@ const SubMeters = () => {
                   <span className="grouping-panel-title">Available MFM Meters</span>
                   <Badge bg="dark" className="border border-info border-opacity-25 text-info">{meters.length}</Badge>
                 </div>
-                <div className="d-flex flex-column gap-2">
+                <div className="d-flex flex-column gap-2" style={{ maxHeight: '420px', overflowY: 'auto' }}>
                   {meters.map(meter => {
                     const assignedGroup = meterGroups.find(group => group.meterIds.includes(String(meter.templateId ?? meter.id)));
                     return (
@@ -1225,7 +1248,7 @@ const SubMeters = () => {
             </Col>
 
             <Col lg={8}>
-              <div className="d-flex flex-column gap-3">
+              <div className="d-flex flex-column gap-3" style={{ maxHeight: '420px', overflowY: 'auto' }}>
                 {meterGroups.length === 0 ? (
                   <div className="grouping-panel text-center py-5">
                     <h6 className="text-white mb-2">No groups created yet</h6>
@@ -1343,6 +1366,7 @@ const SubMeters = () => {
         </Modal.Body>
       </Modal>
 
+      {/* SAVE SUCCESS POPUP */}
       <Modal
         show={showSaveSuccessPopup}
         onHide={() => setShowSaveSuccessPopup(false)}
@@ -1364,9 +1388,9 @@ const SubMeters = () => {
       {/* DETAILED DATA MODAL */}
       <Modal show={selectedMeter !== null && activeMeter !== null} onHide={() => setSelectedMeter(null)} size="lg" centered dialogClassName="scada-glass-modal" contentClassName="border-0 text-white">
         {activeMeter && (() => {
-          const isMapped = getMeterMappedStatus(activeMeter.label);
-          const isOnline = getMeterOnlineStatus(activeMeter.label);
-          const showActive = !isMapped || isOnline;
+          const isMapped = getMeterMappedStatus(activeMeter);
+          const isOnline = getMeterOnlineStatus(activeMeter);
+          const showActive = isOnline;
           return (
             <>
               <Modal.Header closeButton closeVariant="white" className="border-bottom border-secondary border-opacity-25 py-3" style={{ background: 'rgba(15, 23, 42, 0.4)', zIndex: 1 }}>
@@ -1380,21 +1404,19 @@ const SubMeters = () => {
                       </span>
                     </div>
                   </div>
-                  {isMapped && (
-                    isOnline ? (
-                      <span className="badge bg-success bg-opacity-10 border border-success border-opacity-25 text-success px-2 py-1 rounded d-flex align-items-center gap-1 fs-12">
-                        <span className="pulse-dot-green"></span> ONLINE
+                  {isOnline ? (
+                    <span className="badge bg-success bg-opacity-10 border border-success border-opacity-25 text-success px-2 py-1 rounded d-flex align-items-center gap-1 fs-12">
+                      <span className="pulse-dot-green"></span> ONLINE
+                    </span>
+                  ) : (
+                    <div className="d-flex flex-column align-items-end gap-1">
+                      <span className="badge bg-danger bg-opacity-10 border border-danger border-opacity-25 text-danger px-2 py-1 rounded d-flex align-items-center gap-1 fs-12">
+                        <span className="pulse-dot-red"></span> OFFLINE
                       </span>
-                    ) : (
-                      <div className="d-flex flex-column align-items-end gap-1">
-                        <span className="badge bg-danger bg-opacity-10 border border-danger border-opacity-25 text-danger px-2 py-1 rounded d-flex align-items-center gap-1 fs-12">
-                          <span className="pulse-dot-red"></span> OFFLINE
-                        </span>
-                        <span className="text-warning opacity-75" style={{ fontSize: '0.55rem', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
-                          ⚠ LAST KNOWN DATA
-                        </span>
-                      </div>
-                    )
+                      <span className="text-warning opacity-75" style={{ fontSize: '0.55rem', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                        ⚠ LAST KNOWN DATA
+                      </span>
+                    </div>
                   )}
                 </Modal.Title>
               </Modal.Header>
@@ -1411,24 +1433,15 @@ const SubMeters = () => {
 
                   return (
                     <Row className="g-3">
-                      {/* Left Column: Change Settings Telemetry */}
                       <Col xs={12}>
                         <div className="p-3 rounded-4 scada-glass-section border-change h-100">
                           <h6 className="text-info glow-text-info uppercase tracking-wider fs-12 mb-3 d-flex align-items-center gap-2 fw-bold">
-                            <Zap size={14} className="animate-pulse" /> Change Settings Telemetry
+                            <Zap size={14} className="animate-pulse" /> Telemetry Breakdown
                           </h6>
                           <Row className="g-2">
                             {ALL_CHANGE_FIELDS.map(key => {
                               const meta = FIELD_LABELS[key] || { label: key, unit: '' };
-                              const isFieldMapped = activeMeter?.moduleEvents?.change?.some(e => e.key === key) ||
-                                                    activeMeter?.moduleEvents?.warning?.some(e => e.key === key) ||
-                                                    activeMeter?.moduleEvents?.read?.some(e => e.key === key);
-                              
-                              // HIDE UNMAPPED FIELDS IF METER IS MAPPED
-                              if (isMapped && !isFieldMapped) return null;
-
-                              const shouldShowValue = !isMapped || isFieldMapped;
-                              const val = shouldShowValue ? (activeMeter?.telemetryValues?.[key] ?? activeMeter?.[key]) : null;
+                              const val = activeMeter?.telemetryValues?.[key] ?? activeMeter?.[key];
                               return (
                                 <Col sm={4} xs={6} key={key} className="mb-2">
                                   <TelemetryCard
@@ -1437,8 +1450,8 @@ const SubMeters = () => {
                                     unit={meta.unit}
                                     colorClass="text-info glow-text-info"
                                     type="change"
-                                    isMapped={!isMapped || isFieldMapped}
-                                    isOnline={!isMapped || isOnline}
+                                    isMapped={true}
+                                    isOnline={isOnline}
                                   />
                                 </Col>
                               );
@@ -1501,17 +1514,6 @@ const SubMeters = () => {
           overflow: hidden;
           position: relative;
         }
-        /* Subtle diagonal scanline overlay for futuristic feel */
-        .scada-glass-modal .modal-content::before {
-          content: "";
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-          background-size: 100% 4px, 6px 100%;
-          z-index: 0;
-          pointer-events: none;
-          opacity: 0.4;
-        }
         @keyframes scada-modal-zoom {
           from { opacity: 0; transform: scale(0.9) translateY(20px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
@@ -1565,14 +1567,6 @@ const SubMeters = () => {
         .telemetry-card-glow.card-hover-change:hover {
           border-color: rgba(14, 165, 233, 0.6) !important;
           box-shadow: 0 4px 15px rgba(14, 165, 233, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05);
-        }
-        .telemetry-card-glow.card-hover-warning:hover {
-          border-color: rgba(245, 158, 11, 0.6) !important;
-          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05);
-        }
-        .telemetry-card-glow.card-hover-read:hover {
-          border-color: rgba(34, 197, 94, 0.6) !important;
-          box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05);
         }
 
         /* Live pulsating indicator dot */

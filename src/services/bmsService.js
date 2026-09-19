@@ -107,6 +107,38 @@ export const bmsService = {
       throw err;
     }
   },
+  getDeviceEventsLatestBatch: async (deviceIds = []) => {
+    if (!Array.isArray(deviceIds) || deviceIds.length === 0) {
+      return { success: true, data: { results: [], errors: [] } };
+    }
+    // Handle batches up to 20 devices per request as per OpenAPI spec
+    if (deviceIds.length <= 20) {
+      return apiClient.post('/devices/events/latest/batch', { deviceIds });
+    }
+    // Chunk requests if > 20
+    const chunks = [];
+    for (let i = 0; i < deviceIds.length; i += 20) {
+      chunks.push(deviceIds.slice(i, i + 20));
+    }
+    const responses = await Promise.all(
+      chunks.map(chunk => apiClient.post('/devices/events/latest/batch', { deviceIds: chunk }).catch(err => ({ success: false, error: err, data: { results: [], errors: [] } })))
+    );
+    const combinedResults = [];
+    const combinedErrors = [];
+    for (const res of responses) {
+      const results = res?.data?.results || res?.results || [];
+      const errors = res?.data?.errors || res?.errors || [];
+      if (Array.isArray(results)) combinedResults.push(...results);
+      if (Array.isArray(errors)) combinedErrors.push(...errors);
+    }
+    return {
+      success: true,
+      data: {
+        results: combinedResults,
+        errors: combinedErrors
+      }
+    };
+  },
 
   // Widgets Service
   getWidgets: (params = {}) => apiClient.get('/widgets', params),

@@ -3,7 +3,7 @@ import { Form, Button, Badge } from 'react-bootstrap';
 import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText, Layers, MapPin, X } from 'lucide-react';
 import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
 import CommonFilterPopover from '../../../../components/common/CommonFilterPopover';
-import { formatCategoryLabel } from '../../../../constants/deviceTemplates';
+import { DEVICE_CATEGORIES, formatCategoryLabel } from '../../../../constants/deviceTemplates';
 
 const DevicesTab = ({
   searchTerm = '',
@@ -22,6 +22,8 @@ const DevicesTab = ({
   setSelectedAssetFilter = () => {},
   selectedAssetTypeFilter = 'ALL',
   setSelectedAssetTypeFilter = () => {},
+  selectedCategoryFilter = 'ALL',
+  setSelectedCategoryFilter = () => {},
   filteredDevices = [],
   handleOpenRecentEvents = () => {},
   handleGlobalResyncEventStats = () => {},
@@ -119,6 +121,17 @@ const DevicesTab = ({
             label: type.replace(/_/g, ' ')
           }))
         ]
+      },
+      {
+        id: 'category',
+        label: 'Category',
+        options: [
+          { value: 'ALL', label: 'All Categories' },
+          ...DEVICE_CATEGORIES.map(cat => ({
+            value: cat,
+            label: formatCategoryLabel(cat)
+          }))
+        ]
       }
     ];
   };
@@ -126,22 +139,25 @@ const DevicesTab = ({
   const tabFilterValues = {
     siteId: selectedSiteFilter,
     assetId: selectedAssetFilter,
-    assetType: selectedAssetTypeFilter
+    assetType: selectedAssetTypeFilter,
+    category: selectedCategoryFilter
   };
 
   const handleApplyTabFilters = (newVals) => {
     if (newVals.siteId !== undefined) setSelectedSiteFilter(newVals.siteId);
     if (newVals.assetId !== undefined) setSelectedAssetFilter(newVals.assetId);
     if (newVals.assetType !== undefined) setSelectedAssetTypeFilter(newVals.assetType);
+    if (newVals.category !== undefined) setSelectedCategoryFilter(newVals.category);
   };
 
   const handleResetTabFilters = () => {
     setSelectedSiteFilter('ALL');
     setSelectedAssetFilter('ALL');
     setSelectedAssetTypeFilter('ALL');
+    setSelectedCategoryFilter('ALL');
   };
 
-  const hasActiveTabFilters = selectedSiteFilter !== 'ALL' || selectedAssetFilter !== 'ALL' || selectedAssetTypeFilter !== 'ALL';
+  const hasActiveTabFilters = selectedSiteFilter !== 'ALL' || selectedAssetFilter !== 'ALL' || selectedAssetTypeFilter !== 'ALL' || selectedCategoryFilter !== 'ALL';
 
   return (
     <div className="d-flex flex-column gap-2 p-0 m-0 mb-0 devices-tab-wrapper">
