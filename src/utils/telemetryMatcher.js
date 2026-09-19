@@ -9,7 +9,7 @@
  */
 export const normalizeDisplayName = (name) => {
   if (!name) return '';
-  return String(name).trim().toLowerCase().replace(/[\s\-_/]+/g, ' ');
+  return String(name).trim().toLowerCase().replace(/[\s\-_/()]+/g, ' ');
 };
 
 /**
