@@ -512,9 +512,19 @@ const AgTank = () => {
 
               const numLevel = (realLevel !== undefined && realLevel !== null && !isNaN(Number(realLevel))) ? Math.round(Number(realLevel)) : 0;
               let valveState = 'CLOSE';
-              if (realValve !== undefined && realValve !== null) {
+              if (realValve !== undefined && realValve !== null && !isNaN(Number(realValve))) {
+                valveState = Number(realValve) >= 50 ? 'OPEN' : 'CLOSE';
+              } else if (realValve !== undefined && realValve !== null) {
                 const v = String(realValve).toUpperCase();
-                if (v === 'HIGH' || v === '1' || v === 'OPEN' || v === 'RUNNING' || v === 'ON') valveState = 'OPEN';
+                if (v === 'HIGH' || v === '1' || v === 'OPEN' || v === 'RUNNING' || v === 'ON') {
+                  valveState = 'OPEN';
+                } else if (v === 'LOW' || v === '0' || v === 'CLOSE' || v === 'STOPPED' || v === 'OFF') {
+                  valveState = 'CLOSE';
+                } else {
+                  valveState = numLevel >= 50 ? 'OPEN' : 'CLOSE';
+                }
+              } else {
+                valveState = numLevel >= 50 ? 'OPEN' : 'CLOSE';
               }
               const numAmps = (realAmps !== undefined && realAmps !== null && !isNaN(Number(realAmps))) ? Number(realAmps).toFixed(1) : undefined;
 
@@ -713,11 +723,19 @@ const AgTank = () => {
 
         const numLevel = (realLevel !== undefined && realLevel !== null && !isNaN(Number(realLevel))) ? Math.round(Number(realLevel)) : 0;
         let valveState = 'CLOSE';
-        if (realValve !== undefined && realValve !== null) {
+        if (realValve !== undefined && realValve !== null && !isNaN(Number(realValve))) {
+          valveState = Number(realValve) >= 50 ? 'OPEN' : 'CLOSE';
+        } else if (realValve !== undefined && realValve !== null) {
           const v = String(realValve).toUpperCase();
           if (v === 'HIGH' || v === '1' || v === 'OPEN' || v === 'RUNNING' || v === 'ON') {
             valveState = 'OPEN';
+          } else if (v === 'LOW' || v === '0' || v === 'CLOSE' || v === 'STOPPED' || v === 'OFF') {
+            valveState = 'CLOSE';
+          } else {
+            valveState = numLevel >= 50 ? 'OPEN' : 'CLOSE';
           }
+        } else {
+          valveState = numLevel >= 50 ? 'OPEN' : 'CLOSE';
         }
         const numAmps = (realAmps !== undefined && realAmps !== null && !isNaN(Number(realAmps))) ? Number(realAmps).toFixed(1) : undefined;
 
@@ -1677,21 +1695,28 @@ const AgTank = () => {
                       <div className="threshold-marker upper" style={{ bottom: `${tank.maxLevel}%` }}></div>
                     </div>
                     <div className="valve-connector-pipe"></div>
-                    <div className={`industrial-valve-node ${!tank.isMapped ? 'valve-unmapped' : (!tank.isOnline ? 'valve-offline' : (tank.valveStatus === 'OPEN' ? 'valve-open' : 'valve-closed'))}`}>
-                      {/* Mode Indicator A/M */}
-                      <div className={`valve-mode-pill mode-${tank.valveMode.toLowerCase()} ${(!tank.isMapped || !tank.isOnline) ? 'opacity-25' : ''}`}>
-                        {tank.valveMode === 'AUTO' ? 'A' : tank.valveMode === 'MANUAL' ? 'M' : 'B'}
-                      </div>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M4 6L20 18V6L4 18V6Z"
-                          fill={(!tank.isMapped || !tank.isOnline) ? '#334155' : (tank.valveStatus === 'OPEN' ? '#22c55e' : '#ef4444')}
-                          stroke={(!tank.isMapped || !tank.isOnline) ? '#334155' : (tank.valveStatus === 'OPEN' ? '#22c55e' : '#ef4444')}
-                          strokeWidth="2"
-                          style={{ transition: 'all 0.3s ease', filter: (!tank.isMapped || !tank.isOnline) ? 'none' : (tank.valveStatus === 'OPEN' ? 'drop-shadow(0 0 5px #22c55e)' : 'drop-shadow(0 0 5px #ef4444)') }} />
-                        <rect x="11" y="2" width="2" height="6" fill="#94a3b8" />
-                        <rect x="9" y="2" width="6" height="1" fill="#94a3b8" />
-                      </svg>
-                    </div>
+                    {(() => {
+                      const valPercent = tank.valvePercent !== undefined ? Number(tank.valvePercent) : Number(tank.level ?? 0);
+                      const isValveGreen = valPercent >= 50;
+                      const valveColor = (!tank.isMapped || !tank.isOnline) ? '#334155' : (isValveGreen ? '#22c55e' : '#ef4444');
+                      return (
+                        <div className={`industrial-valve-node ${!tank.isMapped ? 'valve-unmapped' : (!tank.isOnline ? 'valve-offline' : (isValveGreen ? 'valve-open' : 'valve-closed'))}`}>
+                          {/* Mode Indicator A/M */}
+                          <div className={`valve-mode-pill mode-${tank.valveMode.toLowerCase()} ${(!tank.isMapped || !tank.isOnline) ? 'opacity-25' : ''}`}>
+                            {tank.valveMode === 'AUTO' ? 'A' : tank.valveMode === 'MANUAL' ? 'M' : 'B'}
+                          </div>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 6L20 18V6L4 18V6Z"
+                              fill={valveColor}
+                              stroke={valveColor}
+                              strokeWidth="2"
+                              style={{ transition: 'all 0.3s ease', filter: (!tank.isMapped || !tank.isOnline) ? 'none' : `drop-shadow(0 0 5px ${valveColor})` }} />
+                            <rect x="11" y="2" width="2" height="6" fill="#94a3b8" />
+                            <rect x="9" y="2" width="6" height="1" fill="#94a3b8" />
+                          </svg>
+                        </div>
+                      );
+                    })()}
                     {/* Discharge Flow Animation - Reacts to both Valve and Operation Status */}
                     {tank.valveStatus === 'OPEN' && tank.status === 'Running' && (
                       <div className="discharge-manifold-system">
