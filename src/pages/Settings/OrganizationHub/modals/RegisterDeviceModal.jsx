@@ -136,15 +136,21 @@ const RegisterDeviceModal = ({
         const parsed = extractDeviceModulesAndFields(raw);
         setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed || { modules: [] } }));
 
-        // Auto-select first module if row has no moduleId yet
-        if (rowIdx !== null && parsed?.modules?.length > 0) {
+        // Auto-select first module for rows sharing this device that don't have a moduleId yet
+        if (parsed?.modules?.length > 0) {
+          const firstModId = String(parsed.modules[0].id);
+          const firstModName = parsed.modules[0].label || parsed.modules[0].name || '';
           setDynamicTemplateFields(prev => {
-            const copy = [...prev];
-            if (copy[rowIdx] && !copy[rowIdx].moduleId) {
-              copy[rowIdx].moduleId = String(parsed.modules[0].id);
-              copy[rowIdx].moduleName = parsed.modules[0].label || parsed.modules[0].name || '';
-            }
-            return copy;
+            return prev.map((row, i) => {
+              if ((String(row.deviceId) === cleanId || (rowIdx !== null && i === rowIdx)) && !row.moduleId) {
+                return {
+                  ...row,
+                  moduleId: firstModId,
+                  moduleName: firstModName
+                };
+              }
+              return row;
+            });
           });
         }
       } else {
@@ -191,6 +197,25 @@ const RegisterDeviceModal = ({
             });
             return next;
           });
+
+          // Auto-assign first module for rows that have deviceId but no moduleId yet
+          setDynamicTemplateFields(prev => {
+            return prev.map(row => {
+              const devIdStr = String(row.deviceId);
+              const matchingDev = devs.find(d => String(d.id) === devIdStr);
+              if (matchingDev && !row.moduleId) {
+                const parsed = extractDeviceModulesAndFields(matchingDev);
+                if (parsed?.modules?.length > 0) {
+                  return {
+                    ...row,
+                    moduleId: String(parsed.modules[0].id),
+                    moduleName: parsed.modules[0].label || parsed.modules[0].name || ''
+                  };
+                }
+              }
+              return row;
+            });
+          });
         }
       }).catch(err => {
         console.warn('[RegisterDeviceModal] batch fetchDevicesByDeviceIds notice:', err);
@@ -224,10 +249,14 @@ const RegisterDeviceModal = ({
         return [...prev, dev];
       });
       if (dev.id) {
+        const devIdStr = String(dev.id);
+        const devName = dev.name || `Device #${dev.id}`;
         setDynamicTemplateFields(prev => prev.map(f => ({
           ...f,
-          deviceId: f.deviceId === '101' ? String(dev.id) : f.deviceId
+          deviceId: devIdStr,
+          deviceName: devName
         })));
+        loadDeviceConfig(devIdStr);
       }
     }
   };
@@ -724,15 +753,21 @@ const RegisterDeviceModal = ({
                 if (tmpl && tmpl.parameters && Array.isArray(dynamicTemplateFields) && dynamicTemplateFields.length > 0) {
                   const existingNames = new Set(dynamicTemplateFields.map(f => (f.displayName || '').trim().toLowerCase()));
                   const missingParams = tmpl.parameters.filter(p => !existingNames.has((p.name || '').trim().toLowerCase()));
+                  const defaultDev = dynamicTemplateFields.find(f => f.deviceId && String(f.deviceId).trim() !== '' && String(f.deviceId) !== '101')?.deviceId || '';
+                  const defaultDevName = dynamicTemplateFields.find(f => f.deviceName)?.deviceName || (defaultDev ? `Device #${defaultDev}` : '');
+                  const defaultDevVal = dynamicTemplateFields.find(f => f.deviceVal)?.deviceVal || null;
+                  const defaultModuleId = dynamicTemplateFields.find(f => f.moduleId)?.moduleId || '';
+                  const defaultModuleName = dynamicTemplateFields.find(f => f.moduleName)?.moduleName || '';
+
                   if (missingParams.length > 0 && typeof setDynamicTemplateFields === 'function') {
                     const extraFields = missingParams.map(p => ({
                       displayName: p.name,
                       required: Boolean(p.required),
-                      deviceId: '',
-                      deviceName: '',
-                      deviceVal: null,
-                      moduleId: '',
-                      moduleName: '',
+                      deviceId: defaultDev,
+                      deviceName: defaultDevName,
+                      deviceVal: defaultDevVal,
+                      moduleId: defaultModuleId,
+                      moduleName: defaultModuleName,
                       sochiotFieldName: '',
                       thresholdValue: '',
                       warningHigh: null,
@@ -1136,36 +1171,50 @@ const RegisterDeviceModal = ({
                             value={f.deviceVal || f.deviceId}
                             fallbackLabel={f.deviceName || (f.deviceId && f.deviceId !== '101' ? `Device #${f.deviceId}` : (f.deviceId === '101' ? `101 (${registerForm.name || 'Default'})` : ''))}
                             onChange={(valArray, pathNodes, leafNode) => {
-                              const copy = [...dynamicTemplateFields];
                               if (leafNode) {
                                 const parsed = parseLocationValue(leafNode.value);
                                 const selectedId = String(parsed?.id || leafNode.id);
-                                copy[idx].deviceId = selectedId;
-                                copy[idx].deviceName = leafNode.label;
-                                copy[idx].deviceVal = valArray;
+                                const selectedName = leafNode.label;
                                 const cachedConfig = deviceConfigs[selectedId];
-                                if (cachedConfig?.modules?.length > 0) {
-                                  copy[idx].moduleId = String(cachedConfig.modules[0].id);
-                                  copy[idx].moduleName = cachedConfig.modules[0].label || cachedConfig.modules[0].name || '';
-                                } else {
-                                  copy[idx].moduleId = '';
-                                  copy[idx].moduleName = '';
-                                }
-                                copy[idx].sochiotFieldName = '';
-                                // Preserve existing displayName - only manually editable
-                                copy[idx].isManualEntry = false;
-                                setDynamicTemplateFields(copy);
+                                const defaultModId = cachedConfig?.modules?.length > 0 ? String(cachedConfig.modules[0].id) : '';
+                                const defaultModName = cachedConfig?.modules?.length > 0 ? (cachedConfig.modules[0].label || cachedConfig.modules[0].name || '') : '';
+
+                                setDynamicTemplateFields(prev => {
+                                  return prev.map((row, rIdx) => {
+                                    const nextRow = { ...row };
+                                    nextRow.deviceId = selectedId;
+                                    nextRow.deviceName = selectedName;
+                                    nextRow.deviceVal = valArray;
+                                    if (!nextRow.moduleId && defaultModId) {
+                                      nextRow.moduleId = defaultModId;
+                                      nextRow.moduleName = defaultModName;
+                                    }
+                                    if (rIdx === idx) {
+                                      nextRow.sochiotFieldName = '';
+                                      nextRow.isManualEntry = false;
+                                    }
+                                    return nextRow;
+                                  });
+                                });
                                 loadDeviceConfig(selectedId, idx);
                               } else {
-                                copy[idx].deviceId = '';
-                                copy[idx].deviceName = '';
-                                copy[idx].deviceVal = null;
-                                copy[idx].moduleId = '';
-                                copy[idx].moduleName = '';
-                                copy[idx].sochiotFieldName = '';
-                                // Preserve existing displayName - only manually editable
-                                copy[idx].isManualEntry = false;
-                                setDynamicTemplateFields(copy);
+                                setDynamicTemplateFields(prev => {
+                                  return prev.map((row, rIdx) => {
+                                    if (rIdx === idx) {
+                                      return {
+                                        ...row,
+                                        deviceId: '',
+                                        deviceName: '',
+                                        deviceVal: null,
+                                        moduleId: '',
+                                        moduleName: '',
+                                        sochiotFieldName: '',
+                                        isManualEntry: false
+                                      };
+                                    }
+                                    return row;
+                                  });
+                                });
                               }
                             }}
                             changeOnSelect={true}
@@ -1482,16 +1531,22 @@ const RegisterDeviceModal = ({
                 const isPristine = !dynamicTemplateFields || dynamicTemplateFields.length === 0 ||
                   (dynamicTemplateFields.length === 1 && !dynamicTemplateFields[0].displayName && !dynamicTemplateFields[0].deviceId);
 
+                const defaultDev = (dynamicTemplateFields || []).find(f => f.deviceId && String(f.deviceId).trim() !== '' && String(f.deviceId) !== '101')?.deviceId || (registerForm.sochiotDeviceIds ? String(registerForm.sochiotDeviceIds).split(',')[0].trim() : '');
+                const defaultDevName = (dynamicTemplateFields || []).find(f => f.deviceName)?.deviceName || (defaultDev ? `Device #${defaultDev}` : '');
+                const defaultDevVal = (dynamicTemplateFields || []).find(f => f.deviceVal)?.deviceVal || null;
+                const defaultModuleId = (dynamicTemplateFields || []).find(f => f.moduleId)?.moduleId || '';
+                const defaultModuleName = (dynamicTemplateFields || []).find(f => f.moduleName)?.moduleName || '';
+
                 if (isPristine && tmpl && tmpl.parameters) {
                   if (typeof setDynamicTemplateFields === 'function') {
                     setDynamicTemplateFields(tmpl.parameters.map(p => ({
                       displayName: p.name,
                       required: Boolean(p.required),
-                      deviceId: '',
-                      deviceName: '',
-                      deviceVal: null,
-                      moduleId: '',
-                      moduleName: '',
+                      deviceId: defaultDev,
+                      deviceName: defaultDevName,
+                      deviceVal: defaultDevVal,
+                      moduleId: defaultModuleId,
+                      moduleName: defaultModuleName,
                       sochiotFieldName: '',
                       thresholdValue: '',
                       warningHigh: null,
@@ -1511,11 +1566,11 @@ const RegisterDeviceModal = ({
                     const extraFields = missingParams.map(p => ({
                       displayName: p.name,
                       required: Boolean(p.required),
-                      deviceId: '',
-                      deviceName: '',
-                      deviceVal: null,
-                      moduleId: '',
-                      moduleName: '',
+                      deviceId: defaultDev,
+                      deviceName: defaultDevName,
+                      deviceVal: defaultDevVal,
+                      moduleId: defaultModuleId,
+                      moduleName: defaultModuleName,
                       sochiotFieldName: '',
                       thresholdValue: '',
                       warningHigh: null,
@@ -1532,7 +1587,7 @@ const RegisterDeviceModal = ({
                 } else if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
                   if (typeof setDynamicTemplateFields === 'function') {
                     setDynamicTemplateFields([
-                      { deviceId: '', deviceName: '', deviceVal: null, moduleId: '', sochiotFieldName: '', displayName: '', warningHigh: null, criticalHigh: null, warningLow: null, criticalLow: null }
+                      { deviceId: defaultDev, deviceName: defaultDevName, deviceVal: defaultDevVal, moduleId: defaultModuleId, sochiotFieldName: '', displayName: '', warningHigh: null, criticalHigh: null, warningLow: null, criticalLow: null }
                     ]);
                   }
                 }
@@ -1591,14 +1646,14 @@ const RegisterDeviceModal = ({
                   return;
                 }
 
-                // Filter valid telemetry fields
+                // Filter valid telemetry fields: only create setting body items for rows where event field was chosen!
                 const validFields = (dynamicTemplateFields || []).filter(f => 
-                  f && (f.sochiotFieldName || f.displayName) && f.moduleId
+                  f && f.sochiotFieldName && String(f.sochiotFieldName).trim() !== '' && f.moduleId
                 );
 
                 if (!editingDevice && validFields.length === 0) {
                   if (typeof showToast === 'function') {
-                    showToast('danger', 'Please configure at least one telemetry field with Module ID & Event Field.');
+                    showToast('danger', 'Please configure at least one telemetry field by choosing an Event Field.');
                   }
                   return;
                 }
