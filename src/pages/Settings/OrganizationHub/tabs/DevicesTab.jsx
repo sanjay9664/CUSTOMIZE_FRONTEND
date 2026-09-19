@@ -4,6 +4,7 @@ import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText
 import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
 import CommonFilterPopover from '../../../../components/common/CommonFilterPopover';
 import { DEVICE_CATEGORIES, formatCategoryLabel } from '../../../../constants/deviceTemplates';
+import { useSiteStore } from '../../../../context/SiteContext';
 
 const DevicesTab = ({
   searchTerm = '',
@@ -52,7 +53,10 @@ const DevicesTab = ({
   getAuthHeaders = () => {},
   API_BASE_URL = '/api'
 }) => {
-  const safeSites = Array.isArray(activeSites) ? activeSites : [];
+  const { activeSites: storeActiveSites, sites: storeSites } = useSiteStore();
+  const safeSites = Array.isArray(activeSites) && activeSites.length > 0
+    ? activeSites
+    : (Array.isArray(storeActiveSites) && storeActiveSites.length > 0 ? storeActiveSites : (Array.isArray(storeSites) ? storeSites : []));
   const safeBuildings = Array.isArray(activeBuildings) ? activeBuildings : [];
   const safeAreas = Array.isArray(activeAreas) ? activeAreas : [];
   const safeAssets = Array.isArray(activeAssets) ? activeAssets : [];
@@ -519,6 +523,24 @@ const DevicesTab = ({
                 : (rawIds ? String(rawIds) : '-');
               const isDevActive = d.isActive !== false;
 
+              const matchedSite = safeSites.find(s => s && String(s.id) === String(d.siteId || d.site_id || d.site?.id));
+              const selectedSiteObj = safeSites.find(s => s && String(s.id) === String(selectedSiteFilter));
+              const siteDisplayName = d.siteName 
+                || d.site?.name 
+                || d.site_name 
+                || matchedSite?.name 
+                || (selectedSiteFilter && selectedSiteFilter !== 'ALL' ? selectedSiteObj?.name : null)
+                || d.buildingName
+                || (d.siteId ? `Site #${d.siteId}` : '—');
+
+              const matchedBuilding = safeBuildings.find(b => b && String(b.id) === String(d.buildingId || d.building_id || d.building?.id));
+              const buildingName = (d.buildingName && d.buildingName !== siteDisplayName ? d.buildingName : null) || d.building?.name || matchedBuilding?.name;
+
+              const matchedArea = safeAreas.find(a => a && String(a.id) === String(d.areaId || d.area_id || d.area?.id));
+              const areaName = d.areaName || d.area?.name || matchedArea?.name;
+
+              const subLocation = [buildingName, areaName].filter(Boolean).join(' • ') || (d.floorNo ? `Floor ${d.floorNo}` : '');
+
               return (
                 <tr key={d.id} className="row-hover-effect">
                   <td className="py-3 px-3">
@@ -547,7 +569,7 @@ const DevicesTab = ({
                     </span>
                   </td>
                   <td className="py-3 px-3 font-monospace device-sn-text fw-medium fs-13">
-                    {d.serialNumber || `SN-${d.id}`}
+                    {(d.serialNumber && String(d.serialNumber).trim()) || (d.serial_number && String(d.serial_number).trim()) || (d.sn && String(d.sn).trim()) || '-'}
                   </td>
                   <td className="py-3 px-3 font-monospace device-sochiot-id fw-semibold fs-13">
                     {displayIds}
@@ -558,8 +580,10 @@ const DevicesTab = ({
                         <MapPin size={14} />
                       </div>
                       <div>
-                        <div className="fw-medium text-heading fs-13">{d.buildingName || 'store-1'}</div>
-                        <div className="device-sub-text fs-11">{d.areaName || 'Main Area'}</div>
+                        <div className="fw-medium text-heading fs-13">{siteDisplayName}</div>
+                        {subLocation ? (
+                          <div className="device-sub-text fs-11">{subLocation}</div>
+                        ) : null}
                       </div>
                     </div>
                   </td>

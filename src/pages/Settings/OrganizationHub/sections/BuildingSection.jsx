@@ -12,7 +12,7 @@ const BuildingSection = ({
   handleOpenEditBuilding = () => {},
   handleDeleteBuilding = () => {}
 }) => {
-  const safeSites = Array.isArray(activeSites) ? activeSites : [];
+  const safeSites = Array.isArray(activeSites) && activeSites.length > 0 ? activeSites : (Array.isArray(sites) ? sites : []);
   const safeBuildings = Array.isArray(filteredBuildings) ? filteredBuildings : [];
 
   return (
@@ -72,6 +72,8 @@ const BuildingSection = ({
               </tr>
             ) : safeBuildings.map(b => {
               const isInactive = b.isActive === false || b.deletedAt;
+              const matchedSite = safeSites.find(s => s && String(s.id) === String(b.siteId));
+              const siteDisplayName = b.siteName || matchedSite?.name || (b.siteId ? `Site #${b.siteId}` : '—');
 
               return (
                 <tr key={b.id}>
@@ -87,7 +89,7 @@ const BuildingSection = ({
                   <td className="text-slate-300 font-monospace fs-13">{b.code || `BLD-${b.id}`}</td>
                   <td className="text-slate-300 fs-13">
                     <span className="badge bg-secondary bg-opacity-25 text-info border border-info border-opacity-25">
-                      {b.siteName || '—'}
+                      {siteDisplayName}
                     </span>
                   </td>
                   <td className="text-slate-300 font-monospace fs-13 fw-semibold">
