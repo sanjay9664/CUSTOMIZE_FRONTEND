@@ -88,7 +88,11 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       try {
         const res = await bmsService.getSiteDevices(siteId, { category: 'GENERATOR' });
         const devices = normalizeList(res, 'devices');
-        const generators = devices.filter(d => d.category === 'GENERATOR' && d.isActive !== false);
+        const generators = devices.filter(d => 
+          d.category === 'GENERATOR' && 
+          d.isActive !== false && 
+          (d.isMapped === true || d.mapped === true || d.is_mapped === true)
+        );
         setDgDevices(generators);
         // Cache for Overview page
         try { localStorage.setItem('dg_generator_devices', JSON.stringify(generators)); } catch (e) {}
@@ -97,7 +101,8 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
         // Fallback to cached
         try {
           const cached = JSON.parse(localStorage.getItem('dg_generator_devices') || '[]');
-          if (cached.length > 0) setDgDevices(cached);
+          const mappedCached = cached.filter(d => d.isMapped === true || d.mapped === true || d.is_mapped === true);
+          setDgDevices(mappedCached);
         } catch (e) {}
       }
     };
@@ -166,19 +171,25 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     });
   }, [menuItems, isAdmin, isSuperAdmin, modulesConfig]);
 
-  // When collapsing, close all options. When expanded, auto-open active section.
+  const lastPathnameRef = useRef(null);
+
+  // When collapsing, close all options. When expanded, auto-open active section on route change.
   useEffect(() => {
     if (!isExpanded) {
       setOpenSections({});
+      lastPathnameRef.current = null;
       return;
     }
-    const autoOpen = {};
-    filteredItems.forEach(item => {
-      if (item.subItems?.some(s => location.pathname === s.path)) {
-        autoOpen[item.title] = true;
-      }
-    });
-    setOpenSections(prev => ({ ...prev, ...autoOpen }));
+    if (lastPathnameRef.current !== location.pathname) {
+      lastPathnameRef.current = location.pathname;
+      const autoOpen = {};
+      filteredItems.forEach(item => {
+        if (item.subItems?.some(s => location.pathname === s.path)) {
+          autoOpen[item.title] = true;
+        }
+      });
+      setOpenSections(prev => ({ ...prev, ...autoOpen }));
+    }
   }, [location.pathname, filteredItems, isExpanded]);
 
   // High performance hardware-accelerated hover transition
@@ -323,11 +334,6 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
                     onClick={() => {
                       if (isExpanded) {
                         toggleSection(item.title);
-                      }
-                      // Navigate to first sub-item on title click
-                      if (hasSubs && item.subItems[0]?.path) {
-                        navigate(item.subItems[0].path);
-                        handleNavClick();
                       }
                     }}
                   >

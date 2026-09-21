@@ -6,7 +6,7 @@ import {
   Building2, Layers, Cpu, Search, Play, Square, RotateCcw, 
   AlertOctagon, Info, LayoutGrid, ListFilter, Sliders, CheckCircle2,
   AlertCircle, ChevronRight, RefreshCw, Radio, Maximize2, Sun, Moon,
-  Tag, MapPin, Clock, ChevronDown, ChevronUp, Thermometer
+  Tag, MapPin, Clock, ChevronDown, ChevronUp, Thermometer, Droplets, Calendar
 } from 'lucide-react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
@@ -300,6 +300,7 @@ const SiemensStyleDG = () => {
   };
 
   const [data, setData] = useState(defaultCleanState);
+  const [backendEvents, setBackendEvents] = useState({});
 
   // Live Telemetry Parser Effect
   useEffect(() => {
@@ -316,38 +317,72 @@ const SiemensStyleDG = () => {
         let newData = { ...defaultCleanState };
         let updated = false;
 
-        const eventsList = Array.isArray(eventsRes) ? eventsRes : (eventsRes?.data || eventsRes?.events || []);
+        // Extract fields from eventsRes payload safely (supporting object with .fields, .data.fields, or array)
+        const eventsList = [];
+        const candidateSources = [
+          eventsRes?.fields,
+          eventsRes?.data?.fields,
+          eventsRes?.data?.data?.fields,
+          eventsRes?.events,
+          eventsRes?.data?.events,
+          Array.isArray(eventsRes) ? eventsRes : null,
+          Array.isArray(eventsRes?.data) ? eventsRes.data : null
+        ];
+
+        candidateSources.forEach(src => {
+          if (Array.isArray(src)) {
+            src.forEach(item => {
+              if (item && Array.isArray(item.eventFields)) {
+                eventsList.push(...item.eventFields);
+              } else if (item && (item.eventFieldDisplayName || item.displayName || item.fieldName || item.name)) {
+                eventsList.push(item);
+              }
+            });
+          }
+        });
+
+        const eventsMap = {};
+
         if (Array.isArray(eventsList) && eventsList.length > 0) {
           eventsList.forEach(f => {
-            const dispName = String(f.displayName || f.eventFieldDisplayName || f.fieldName || '').toLowerCase();
-            const val = f.currentValue ?? f.fieldCurrentValue ?? f.value;
+            const rawDispName = String(f.eventFieldDisplayName || f.displayName || f.fieldName || '').trim();
+            const dispName = rawDispName.toLowerCase();
+            const val = f.fieldCurrentValue ?? f.currentValue ?? f.value;
 
             if (val !== undefined && val !== null && !isNaN(Number(val))) {
               const num = Number(val);
               updated = true;
+              if (rawDispName) {
+                eventsMap[rawDispName] = { val: num, unit: f.unit || '' };
+              }
+
               if (dispName.includes('speed') || dispName.includes('rpm')) newData.engine.speed = num;
               else if (dispName.includes('coolant')) newData.engine.coolant = num;
-              else if (dispName.includes('oil pressure')) newData.engine.oilPressure = num;
+              else if (dispName.includes('oil pressure') || dispName.includes('oil')) newData.engine.oilPressure = num;
               else if (dispName.includes('frequency') || dispName.includes('freq')) newData.engine.freq = num;
               else if (dispName.includes('battery')) newData.engine.battery = num;
               else if (dispName.includes('run tim') || dispName.includes('runtime')) newData.engine.runtime = num;
-              else if (dispName.includes('starts')) newData.engine.starts = num;
-              else if (dispName.includes('total watts') || dispName.includes('kw')) newData.power.kw = num;
+              else if (dispName.includes('starts') || dispName.includes('start')) newData.engine.starts = num;
+              else if (dispName.includes('total watts') || dispName.includes('active power') || dispName.includes('kw')) newData.power.kw = num;
               else if (dispName.includes('apparent power') || dispName.includes('kva')) newData.power.kva = num;
               else if (dispName.includes('reactive power') || dispName.includes('kvar')) newData.power.kvar = num;
               else if (dispName.includes('power factor') || dispName.includes('pf')) newData.power.pf = num;
-              else if (dispName.includes('fuel level')) {
+              else if (dispName.includes('fuel level') || dispName.includes('fuel')) {
                 newData.diesel.level = num;
                 newData.diesel.remaining = (newData.diesel.capacity * num) / 100;
               }
-              else if (dispName.includes('l1-l2')) newData.voltage.ry = num;
-              else if (dispName.includes('l2-l3')) newData.voltage.yb = num;
-              else if (dispName.includes('l3-l1')) newData.voltage.br = num;
+              else if (dispName.includes('l1-l2') || dispName.includes('l1 - l2')) newData.voltage.ry = num;
+              else if (dispName.includes('l2-l3') || dispName.includes('l2 - l3')) newData.voltage.yb = num;
+              else if (dispName.includes('l3-l1') || dispName.includes('l3 - l1')) newData.voltage.br = num;
               else if (dispName.includes('l1 current')) newData.current.r = num;
               else if (dispName.includes('l2 current')) newData.current.y = num;
               else if (dispName.includes('l3 current')) newData.current.b = num;
             }
           });
+        }
+
+        if (Object.keys(eventsMap).length > 0) {
+          setBackendEvents(eventsMap);
         }
 
         if (liveData) {
@@ -373,42 +408,76 @@ const SiemensStyleDG = () => {
     };
 
     fetchDeviceTelemetry();
-    const interval = setInterval(fetchDeviceTelemetry, 3000);
-    return () => clearInterval(interval);
   }, [selectedDeviceId, selectedSiteId]);
 
   // Compute live value mapping & mapped status for each of the 35 Parameters
   const mapped35Parameters = useMemo(() => {
     let savedMappings = {};
-    try {
-      const rawTemplates = localStorage.getItem('scada_templates');
-      if (rawTemplates) {
-        const parsed = JSON.parse(rawTemplates);
-        if (Array.isArray(parsed)) {
-          parsed.forEach(t => {
-            if (
-              String(t.id) === String(selectedDeviceId) ||
-              String(t.name || '').toLowerCase().includes(String(activeDeviceDisplayName || '').toLowerCase()) ||
-              (t.category && String(t.category).toUpperCase().includes('GEN')) ||
-              (t.module && String(t.module).toUpperCase().includes('DG')) ||
-              t.module === 'DG Set' || t.module === 'DG'
-            ) {
-              if (t.mapping && typeof t.mapping === 'object') {
-                savedMappings = { ...savedMappings, ...t.mapping };
-              }
-              if (t.defaultValues && typeof t.defaultValues === 'object') {
-                savedMappings = { ...savedMappings, ...t.defaultValues };
+    const keysToInspect = [
+      'scada_templates',
+      'scada_device_mappings',
+      'dg_parameter_mappings',
+      'bms_registered_devices',
+      'scada_devices_db',
+      'tb_devices',
+      'dg_generator_devices'
+    ];
+
+    keysToInspect.forEach(storageKey => {
+      try {
+        const item = localStorage.getItem(storageKey);
+        if (!item) return;
+        const parsed = JSON.parse(item);
+        const list = Array.isArray(parsed) ? parsed : [parsed];
+
+        list.forEach(t => {
+          if (!t) return;
+          const isDG =
+            !selectedDeviceId ||
+            String(t.id) === String(selectedDeviceId) ||
+            String(t.deviceId) === String(selectedDeviceId) ||
+            String(t.name || '').toLowerCase().includes(String(activeDeviceDisplayName || '').toLowerCase()) ||
+            (t.category && String(t.category).toUpperCase().includes('GEN')) ||
+            (t.module && String(t.module).toUpperCase().includes('DG')) ||
+            (t.module && String(t.module).toUpperCase().includes('GEN')) ||
+            t.module === 'DG Set' ||
+            t.type === 'GENERATOR';
+
+          if (isDG) {
+            if (t.mapping && typeof t.mapping === 'object') {
+              savedMappings = { ...savedMappings, ...t.mapping };
+            }
+            if (t.defaultValues && typeof t.defaultValues === 'object') {
+              savedMappings = { ...savedMappings, ...t.defaultValues };
+            }
+            if (t.settings) {
+              const s = Array.isArray(t.settings) ? t.settings[0]?.meta : t.settings;
+              if (s && typeof s === 'object') savedMappings = { ...savedMappings, ...s };
+            }
+            if (t.parameters) {
+              if (Array.isArray(t.parameters)) {
+                t.parameters.forEach(p => {
+                  if (p && p.name) savedMappings[p.name] = p.register || p.field || p.value || 'Mapped';
+                });
+              } else if (typeof t.parameters === 'object') {
+                savedMappings = { ...savedMappings, ...t.parameters };
               }
             }
-          });
-        }
-      }
-    } catch (e) {}
+            Object.keys(t).forEach(k => {
+              if (k !== 'id' && k !== 'name' && k !== 'category' && k !== 'module' && typeof t[k] === 'string' && t[k].trim() !== '') {
+                savedMappings[k] = t[k];
+              }
+            });
+          }
+        });
+      } catch (e) {}
+    });
 
     if (selectedDevObj) {
       if (selectedDevObj.template?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.template.mapping };
       if (selectedDevObj.settings?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.settings.mapping };
       if (selectedDevObj.profile?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.profile.mapping };
+      if (selectedDevObj.raw?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.raw.mapping };
     }
 
     return SYSTEM_35_PARAMS.map(param => {
@@ -416,93 +485,178 @@ const SiemensStyleDG = () => {
       let isMapped = false;
       let mappedField = null;
 
-      switch (param.name) {
-        case 'Battery Voltage':
-          if (data.engine.battery !== null) { liveVal = `${data.engine.battery.toFixed(1)} V`; isMapped = true; }
-          break;
-        case 'Coolant Temperature':
-          if (data.engine.coolant !== null) { liveVal = `${data.engine.coolant.toFixed(1)} °C`; isMapped = true; }
-          break;
-        case 'Oil Pressure':
-          if (data.engine.oilPressure !== null) { liveVal = `${data.engine.oilPressure.toFixed(1)} kPA`; isMapped = true; }
-          break;
-        case 'Engine Speed':
-          if (data.engine.speed !== null) { liveVal = `${data.engine.speed.toFixed(0)} RPM`; isMapped = true; }
-          break;
-        case 'Frequency (R Phase)':
-          if (data.engine.freq !== null) { liveVal = `${data.engine.freq.toFixed(1)} Hz`; isMapped = true; }
-          break;
-        case 'Generator L1-L2 voltage':
-          if (data.voltage.ry !== null) { liveVal = `${data.voltage.ry.toFixed(0)} V`; isMapped = true; }
-          break;
-        case 'Generator L1 current':
-          if (data.current.r !== null) { liveVal = `${data.current.r.toFixed(1)} A`; isMapped = true; }
-          break;
-        case 'Generator L2 current':
-          if (data.current.y !== null) { liveVal = `${data.current.y.toFixed(1)} A`; isMapped = true; }
-          break;
-        case 'Generator L3 current':
-          if (data.current.b !== null) { liveVal = `${data.current.b.toFixed(1)} A`; isMapped = true; }
-          break;
-        case 'Generator average power factor':
-          if (data.power.pf !== null) { liveVal = `${data.power.pf.toFixed(2)} pf`; isMapped = true; }
-          break;
-        case 'Engine Run tim':
-          if (data.engine.runtime !== null) { liveVal = `${data.engine.runtime} RPM/HRS`; isMapped = true; }
-          break;
-        case 'No of start':
-          if (data.engine.starts !== null) { liveVal = `${data.engine.starts}`; isMapped = true; }
-          break;
-        case 'Fuel Level':
-          if (data.diesel.level !== null) { liveVal = `${data.diesel.level.toFixed(0)}%`; isMapped = true; }
-          break;
-        case 'KW Hours':
-          if (data.generation.today !== null) { liveVal = `${data.generation.today} KWH`; isMapped = true; }
-          break;
-        case 'KVA Hours':
-          if (data.generation.kvaHours !== null) { liveVal = `${data.generation.kvaHours} KVAH`; isMapped = true; }
-          break;
-        case 'KVAR Hours':
-          if (data.generation.kvarHours !== null) { liveVal = `${data.generation.kvarHours} kVARH`; isMapped = true; }
-          break;
-        case 'Generator Total Watts':
-          if (data.power.kw !== null) { liveVal = `${data.power.kw.toFixed(1)} KW`; isMapped = true; }
-          break;
-        case 'Generator total VA':
-          if (data.power.kva !== null) { liveVal = `${data.power.kva.toFixed(1)} KVA`; isMapped = true; }
-          break;
-        case 'Generator total Var':
-          if (data.power.kvar !== null) { liveVal = `${data.power.kvar.toFixed(1)} KVAR`; isMapped = true; }
-          break;
-        case 'Generator L-N voltage average':
-          if (data.voltage.rn !== null) { liveVal = `${data.voltage.rn.toFixed(0)} V`; isMapped = true; }
-          break;
-        default:
-          break;
+      // 1. Check direct backend events match
+      const backendEventKeys = Object.keys(backendEvents);
+      if (backendEventKeys.length > 0) {
+        const paramLower = param.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matchedBackendKey = backendEventKeys.find(bk => {
+          const bkLower = bk.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (bkLower === paramLower || bkLower.includes(paramLower) || paramLower.includes(bkLower)) return true;
+          if (paramLower.includes('battery') && bkLower.includes('battery')) return true;
+          if (paramLower.includes('coolant') && bkLower.includes('coolant')) return true;
+          if (paramLower.includes('oil') && bkLower.includes('oil')) return true;
+          if ((paramLower.includes('enginespeed') || paramLower.includes('speed')) && (bkLower.includes('speed') || bkLower.includes('rpm') || bkLower.includes('runningstatus'))) return true;
+          if (paramLower.includes('frequency') && (bkLower.includes('freq') || bkLower.includes('frequency') || bkLower.includes('hz'))) return true;
+          if ((paramLower.includes('engineruntim') || paramLower.includes('runtime')) && (bkLower.includes('runningstatus') || bkLower.includes('runtime') || bkLower.includes('hours'))) return true;
+          if ((paramLower.includes('totalwatts') || paramLower.includes('activepower')) && (bkLower.includes('activepower') || bkLower.includes('totalwatts') || bkLower.includes('kw'))) return true;
+          if ((paramLower.includes('totalva') || paramLower.includes('apparentpower')) && (bkLower.includes('apparentpower') || bkLower.includes('totalva') || bkLower.includes('kva'))) return true;
+          if ((paramLower.includes('totalvar') || paramLower.includes('reactivepower')) && (bkLower.includes('reactivepower') || bkLower.includes('totalvar') || bkLower.includes('kvar'))) return true;
+          if ((paramLower.includes('powerfactor') || paramLower.includes('pf')) && (bkLower.includes('powerfactor') || bkLower.includes('pf'))) return true;
+          if (paramLower.includes('fuellevel') && bkLower.includes('fuel')) return true;
+          if (paramLower.includes('l1current') || paramLower.includes('l2current') || paramLower.includes('l3current')) {
+            if (bkLower.includes('current')) return true;
+          }
+          return false;
+        });
+
+        if (matchedBackendKey) {
+          const entry = backendEvents[matchedBackendKey];
+          isMapped = true;
+          mappedField = matchedBackendKey;
+          const displayUnit = param.unit || entry.unit || '';
+          if (param.name === 'Battery Voltage') liveVal = `${entry.val.toFixed(1)} V`;
+          else if (param.name === 'Coolant Temperature') liveVal = `${entry.val.toFixed(1)} °C`;
+          else if (param.name === 'Engine Speed' || param.name === 'Running Status') liveVal = `${entry.val.toFixed(0)} RPM`;
+          else if (param.name === 'Fuel Level') liveVal = `${entry.val.toFixed(0)}%`;
+          else if (param.name === 'Generator average power factor') liveVal = `${entry.val.toFixed(2)} pf`;
+          else liveVal = `${entry.val} ${displayUnit}`.trim();
+        }
       }
 
-      // Check savedMappings for matching parameter template keys
-      const keys = Object.keys(savedMappings);
-      const matchedKey = keys.find(k => {
-        const lk = k.toLowerCase().trim();
-        const lp = param.name.toLowerCase().trim();
-        return lk === lp || lp.includes(lk) || lk.includes(lp);
-      });
+      // 2. Fallback to state object if backend events matching did not populate
+      if (!isMapped || liveVal === '--') {
+        switch (param.name) {
+          case 'Battery Voltage':
+            if (data.engine.battery !== null) { liveVal = `${data.engine.battery.toFixed(1)} V`; isMapped = true; }
+            break;
+          case 'Coolant Temperature':
+            if (data.engine.coolant !== null) { liveVal = `${data.engine.coolant.toFixed(1)} °C`; isMapped = true; }
+            break;
+          case 'Oil Pressure':
+            if (data.engine.oilPressure !== null) { liveVal = `${data.engine.oilPressure.toFixed(1)} kPA`; isMapped = true; }
+            break;
+          case 'Engine Speed':
+            if (data.engine.speed !== null) { liveVal = `${data.engine.speed.toFixed(0)} RPM`; isMapped = true; }
+            break;
+          case 'Frequency (R Phase)':
+            if (data.engine.freq !== null) { liveVal = `${data.engine.freq.toFixed(1)} Hz`; isMapped = true; }
+            break;
+          case 'Generator L1-L2 voltage':
+            if (data.voltage.ry !== null) { liveVal = `${data.voltage.ry.toFixed(0)} V`; isMapped = true; }
+            break;
+          case 'Generator L1 current':
+            if (data.current.r !== null) { liveVal = `${data.current.r.toFixed(1)} A`; isMapped = true; }
+            break;
+          case 'Generator L2 current':
+            if (data.current.y !== null) { liveVal = `${data.current.y.toFixed(1)} A`; isMapped = true; }
+            break;
+          case 'Generator L3 current':
+            if (data.current.b !== null) { liveVal = `${data.current.b.toFixed(1)} A`; isMapped = true; }
+            break;
+          case 'Generator average power factor':
+            if (data.power.pf !== null) { liveVal = `${data.power.pf.toFixed(2)} pf`; isMapped = true; }
+            break;
+          case 'Engine Run tim':
+            if (data.engine.runtime !== null) { liveVal = `${data.engine.runtime} RPM/HRS`; isMapped = true; }
+            break;
+          case 'No of start':
+            if (data.engine.starts !== null) { liveVal = `${data.engine.starts}`; isMapped = true; }
+            break;
+          case 'Fuel Level':
+            if (data.diesel.level !== null) { liveVal = `${data.diesel.level.toFixed(0)}%`; isMapped = true; }
+            break;
+          case 'KW Hours':
+            if (data.generation.today !== null) { liveVal = `${data.generation.today} KWH`; isMapped = true; }
+            break;
+          case 'KVA Hours':
+            if (data.generation.kvaHours !== null) { liveVal = `${data.generation.kvaHours} KVAH`; isMapped = true; }
+            break;
+          case 'KVAR Hours':
+            if (data.generation.kvarHours !== null) { liveVal = `${data.generation.kvarHours} kVARH`; isMapped = true; }
+            break;
+          case 'Generator Total Watts':
+            if (data.power.kw !== null) { liveVal = `${data.power.kw.toFixed(1)} KW`; isMapped = true; }
+            break;
+          case 'Generator total VA':
+            if (data.power.kva !== null) { liveVal = `${data.power.kva.toFixed(1)} KVA`; isMapped = true; }
+            break;
+          case 'Generator total Var':
+            if (data.power.kvar !== null) { liveVal = `${data.power.kvar.toFixed(1)} KVAR`; isMapped = true; }
+            break;
+          case 'Generator L-N voltage average':
+            if (data.voltage.rn !== null) { liveVal = `${data.voltage.rn.toFixed(0)} V`; isMapped = true; }
+            break;
+          default:
+            break;
+        }
+      }
 
-      if (matchedKey && savedMappings[matchedKey] && savedMappings[matchedKey] !== 'Unmapped' && savedMappings[matchedKey] !== 'NONE' && savedMappings[matchedKey] !== '') {
-        isMapped = true;
-        mappedField = savedMappings[matchedKey];
-        if (liveVal === '--') {
-          const rawVal = typeof mappedField === 'object' ? (mappedField.value || mappedField.currentValue || '--') : String(mappedField);
-          if (rawVal !== '--') {
-            liveVal = rawVal.includes(param.unit || '') ? rawVal : `${rawVal} ${param.unit || ''}`.trim();
+      // 3. Check savedMappings for template key match if still unmapped
+      if (!isMapped) {
+        const mappingKeys = Object.keys(savedMappings);
+        if (mappingKeys.length > 0) {
+          const paramLower = param.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          const matchedKey = mappingKeys.find(k => {
+            if (!k) return false;
+            const val = savedMappings[k];
+            if (!val || val === 'Unmapped' || val === 'NONE' || val === '') return false;
+
+            const keyLower = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            if (keyLower === paramLower || paramLower.includes(keyLower) || keyLower.includes(paramLower)) return true;
+            if (paramLower.includes('battery') && keyLower.includes('battery')) return true;
+            if (paramLower.includes('coolant') && keyLower.includes('coolant')) return true;
+            if (paramLower.includes('oil') && keyLower.includes('oil')) return true;
+            if (paramLower.includes('speed') && keyLower.includes('speed')) return true;
+            if (paramLower.includes('frequency') && (keyLower.includes('freq') || keyLower.includes('hz'))) return true;
+            if (paramLower.includes('l1l2') && (keyLower.includes('l1l2') || keyLower.includes('linevoltage') || keyLower.includes('voltage'))) return true;
+            if (paramLower.includes('l1current') && keyLower.includes('l1')) return true;
+            if (paramLower.includes('l2current') && keyLower.includes('l2')) return true;
+            if (paramLower.includes('l3current') && keyLower.includes('l3')) return true;
+            if (paramLower.includes('powerfactor') && (keyLower.includes('powerfactor') || keyLower.includes('pf'))) return true;
+            if (paramLower.includes('runtime') || paramLower.includes('runtim') || paramLower.includes('hours')) {
+              if (keyLower.includes('runtime') || keyLower.includes('hours') || keyLower.includes('runtim')) return true;
+            }
+            if (paramLower.includes('start') && keyLower.includes('start')) return true;
+            if (paramLower.includes('fuel') && keyLower.includes('fuel')) return true;
+            if (paramLower.includes('kwhours') || paramLower.includes('kwh')) {
+              if (keyLower.includes('kwh') || keyLower.includes('activeenergy')) return true;
+            }
+            if (paramLower.includes('kvahours') || paramLower.includes('kvah')) {
+              if (keyLower.includes('kvah') || keyLower.includes('apparentenergy')) return true;
+            }
+            if (paramLower.includes('kvarhours') || paramLower.includes('kvarh')) {
+              if (keyLower.includes('kvarh') || keyLower.includes('reactiveenergy')) return true;
+            }
+            if (paramLower.includes('totalwatts') || paramLower.includes('activepower')) {
+              if (keyLower.includes('watts') || keyLower.includes('activepower') || keyLower.includes('kw')) return true;
+            }
+            if (paramLower.includes('totalva') || paramLower.includes('apparentpower')) {
+              if (keyLower.includes('va') || keyLower.includes('apparentpower') || keyLower.includes('kva')) return true;
+            }
+            if (paramLower.includes('totalvar') || paramLower.includes('reactivepower')) {
+              if (keyLower.includes('var') || keyLower.includes('reactivepower') || keyLower.includes('kvar')) return true;
+            }
+            return false;
+          });
+
+          if (matchedKey) {
+            isMapped = true;
+            mappedField = savedMappings[matchedKey];
+            if (liveVal === '--') {
+              const rawVal = typeof mappedField === 'object' ? (mappedField.value || mappedField.currentValue || mappedField.register || mappedField.field || '--') : String(mappedField);
+              if (rawVal !== '--' && rawVal !== 'undefined') {
+                liveVal = rawVal.includes(param.unit || '') ? rawVal : `${rawVal} ${param.unit || ''}`.trim();
+              }
+            }
           }
         }
       }
 
       return { ...param, liveVal, isMapped, mappedField };
     });
-  }, [data, selectedDeviceId, selectedDevObj, activeDeviceDisplayName]);
+  }, [data, backendEvents, selectedDeviceId, selectedDevObj, activeDeviceDisplayName]);
 
   // Filtered parameters by search & category
   const filtered35Parameters = useMemo(() => {
@@ -725,10 +879,12 @@ const SiemensStyleDG = () => {
               </div>
 
               <Row className="g-3 align-items-center">
-                <Col xs={5} className="text-center">
-                  {/* REALISTIC DIESEL FUEL TANK WITH FLUID SVG WAVES */}
-                  <div className="dg-realistic-fuel-tank mx-auto">
+                <Col xs={5} className="d-flex justify-content-center">
+                  {/* REALISTIC DIESEL FUEL TANK WITH FLUID SVG WAVES & RISING BUBBLES */}
+                  <div className="dg-realistic-fuel-tank">
                     <div className="dg-tank-sheen"></div>
+                    
+                    {/* ACCURATE TICK MARKS */}
                     <div className="dg-tank-ticks">
                       <span>100%</span>
                       <span>75%</span>
@@ -736,7 +892,16 @@ const SiemensStyleDG = () => {
                       <span>25%</span>
                     </div>
 
+                    {/* LIQUID FILL WITH BUBBLES & WAVE SURFACE */}
                     <div className="dg-fluid-fill" style={{ height: `${data.diesel.level !== null ? Math.min(Math.max(data.diesel.level, 0), 100) : 0}%` }}>
+                      {/* DYNAMIC SURFACE GLOW LINE */}
+                      <div className="dg-fluid-surface-glow"></div>
+                      
+                      {/* BUBBLE ANIMATIONS */}
+                      <div className="dg-bubble b1"></div>
+                      <div className="dg-bubble b2"></div>
+                      <div className="dg-bubble b3"></div>
+
                       {/* DUAL LAYER FLUID WAVE ANIMATION */}
                       <svg className="dg-fluid-wave wave-back" viewBox="0 0 1200 120" preserveAspectRatio="none">
                         <path d="M0,0 C150,90 350,-40 500,60 C650,160 900,10 1200,40 L1200,120 L0,120 Z"></path>
@@ -746,26 +911,38 @@ const SiemensStyleDG = () => {
                       </svg>
                     </div>
 
+                    {/* CENTER GLASS BADGE WITH READABLE NUMBER & LABEL */}
                     <div className="dg-tank-center-badge">
-                      <h4 className="fw-black text-white font-monospace mb-0">{data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '-- %'}</h4>
-                      <small className="text-warning fs-12 fw-bold uppercase tracking-widest">Level %</small>
+                      <div className="dg-tank-val">{data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '-- %'}</div>
+                      <div className="dg-tank-lbl">Level %</div>
                     </div>
                   </div>
                 </Col>
 
                 <Col xs={7}>
-                  <div className="d-flex flex-column gap-2">
-                    <div className="dg-metric-row">
-                      <span className="text-dim fs-12 fw-medium">Remaining Ltrs</span>
-                      <span className="text-warning fs-12 font-monospace fw-bold">{data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '--'}</span>
+                  <div className="d-flex flex-column gap-2.5">
+                    <div className="dg-fuel-tile warning">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="dg-fuel-tile-icon warning"><Droplets size={14} /></div>
+                        <span className="dg-fuel-tile-lbl">Remaining Ltrs</span>
+                      </div>
+                      <span className="dg-fuel-tile-val warning">{data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '--'}</span>
                     </div>
-                    <div className="dg-metric-row">
-                      <span className="text-dim fs-12 fw-medium">Today Used</span>
-                      <span className="text-danger fs-12 font-monospace fw-bold">{data.diesel.spentToday !== null ? `${data.diesel.spentToday.toFixed(1)} L` : '--'}</span>
+
+                    <div className="dg-fuel-tile danger">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="dg-fuel-tile-icon danger"><TrendingDown size={14} /></div>
+                        <span className="dg-fuel-tile-lbl">Today Used</span>
+                      </div>
+                      <span className="dg-fuel-tile-val danger">{data.diesel.spentToday !== null ? `${data.diesel.spentToday.toFixed(1)} L` : '--'}</span>
                     </div>
-                    <div className="dg-metric-row">
-                      <span className="text-dim fs-12 fw-medium">Refill Date</span>
-                      <span className="text-info fs-12 font-monospace fw-bold">{data.diesel.lastFill}</span>
+
+                    <div className="dg-fuel-tile info">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="dg-fuel-tile-icon info"><Calendar size={14} /></div>
+                        <span className="dg-fuel-tile-lbl">Refill Date</span>
+                      </div>
+                      <span className="dg-fuel-tile-val info">{data.diesel.lastFill}</span>
                     </div>
                   </div>
                 </Col>
@@ -1344,42 +1521,44 @@ const SiemensStyleDG = () => {
         body.light-mode .dg-opt,
         [data-theme="light"] .dg-opt { background: #ffffff !important; color: #0f172a !important; }
 
-        /* REALISTIC FLUID DIESEL FUEL TANK WITH WAVE ANIMATIONS */
+        /* REALISTIC FLUID DIESEL FUEL TANK WITH WAVE & BUBBLE ANIMATIONS */
         .dg-realistic-fuel-tank {
-          width: 95px;
-          height: 125px;
-          background: rgba(15, 23, 42, 0.1);
-          border: 2px solid rgba(245, 158, 11, 0.4);
-          border-radius: 16px;
+          width: 110px;
+          height: 165px;
+          background: rgba(15, 23, 42, 0.4);
+          border: 2px solid rgba(245, 158, 11, 0.45);
+          border-radius: 18px;
           position: relative;
           overflow: hidden;
-          box-shadow: inset 0 0 15px rgba(0,0,0,0.4);
+          box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 15px rgba(245, 158, 11, 0.15);
         }
         
         .dg-tank-sheen {
           position: absolute;
           top: 0;
           left: 6px;
-          width: 8px;
+          width: 12px;
           height: 100%;
-          background: linear-gradient(90deg, rgba(255,255,255,0.25) 0%, transparent 100%);
+          background: linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
           z-index: 6;
           pointer-events: none;
         }
 
         .dg-tank-ticks {
           position: absolute;
-          right: 4px;
-          top: 8px;
-          bottom: 8px;
+          right: 5px;
+          top: 10px;
+          bottom: 10px;
           display: flex;
-          flex-column;
+          flex-direction: column;
           justify-content: space-between;
-          font-size: 0.55rem;
+          font-size: 0.52rem;
           font-family: monospace;
-          color: rgba(255,255,255,0.4);
-          z-index: 6;
+          font-weight: 700;
+          color: rgba(255,255,255,0.6);
+          z-index: 8;
           pointer-events: none;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.9);
         }
 
         .dg-fluid-fill {
@@ -1387,8 +1566,51 @@ const SiemensStyleDG = () => {
           bottom: 0;
           left: 0;
           width: 100%;
-          background: linear-gradient(to top, #d97706 0%, #f59e0b 60%, #fbbf24 100%);
+          background: linear-gradient(to top, #b45309 0%, #d97706 40%, #f59e0b 80%, #fbbf24 100%);
           transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .dg-fluid-surface-glow {
+          position: absolute;
+          top: -2px;
+          left: 0;
+          width: 100%;
+          height: 4px;
+          background: rgba(254, 240, 138, 0.9);
+          box-shadow: 0 0 10px #fbbf24, 0 0 20px #f59e0b;
+          z-index: 4;
+        }
+
+        /* BUBBLES IN LIQUID */
+        .dg-bubble {
+          position: absolute;
+          bottom: -10px;
+          background: rgba(255, 255, 255, 0.6);
+          border-radius: 50%;
+          animation: floatBubble 4s infinite ease-in;
+          pointer-events: none;
+          z-index: 3;
+        }
+        .dg-bubble.b1 { left: 20%; width: 5px; height: 5px; animation-duration: 3.2s; animation-delay: 0.5s; }
+        .dg-bubble.b2 { left: 55%; width: 7px; height: 7px; animation-duration: 4.5s; animation-delay: 1.2s; }
+        .dg-bubble.b3 { left: 80%; width: 4px; height: 4px; animation-duration: 3.8s; animation-delay: 2.1s; }
+
+        @keyframes floatBubble {
+          0% { transform: translateY(0) scale(0.8); opacity: 0; }
+          20% { opacity: 0.8; }
+          80% { opacity: 0.8; }
+          100% { transform: translateY(-140px) scale(1.3); opacity: 0; }
+        }
+
+        @keyframes waveMoveBack {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+
+        @keyframes waveMoveFront {
+          0% { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
         }
 
         .dg-fluid-wave {
@@ -1396,44 +1618,106 @@ const SiemensStyleDG = () => {
           top: -12px;
           left: 0;
           width: 200%;
-          height: 20px;
+          height: 22px;
+          z-index: 5;
         }
         .dg-fluid-wave.wave-back {
-          fill: rgba(251, 191, 36, 0.4);
+          fill: rgba(254, 240, 138, 0.45);
+          animation: waveMoveBack 5s linear infinite;
         }
         .dg-fluid-wave.wave-front {
-          fill: rgba(245, 158, 11, 0.6);
+          fill: rgba(245, 158, 11, 0.75);
+          animation: waveMoveFront 3s linear infinite;
         }
-
-        /* HIGH CONTRAST CATEGORY PARAMETER COUNT BADGES */
-        .dg-cat-badge {
-          font-size: 0.72rem !important;
-          font-weight: 800 !important;
-          font-family: monospace;
-          letter-spacing: 0.4px;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        }
-        .dg-cat-badge.success { background: #059669 !important; color: #ffffff !important; border: 1px solid #10b981 !important; }
-        .dg-cat-badge.warning { background: #d97706 !important; color: #ffffff !important; border: 1px solid #f59e0b !important; }
-        .dg-cat-badge.info { background: #0284c7 !important; color: #ffffff !important; border: 1px solid #38bdf8 !important; }
-        .dg-cat-badge.purple { background: #7c3aed !important; color: #ffffff !important; border: 1px solid #a855f7 !important; }
-        .dg-cat-badge.danger { background: #dc2626 !important; color: #ffffff !important; border: 1px solid #ef4444 !important; }
-
-        body.light-mode .dg-cat-badge.success, [data-theme="light"] .dg-cat-badge.success { background: #10b981 !important; color: #ffffff !important; }
-        body.light-mode .dg-cat-badge.warning, [data-theme="light"] .dg-cat-badge.warning { background: #f59e0b !important; color: #ffffff !important; }
-        body.light-mode .dg-cat-badge.info, [data-theme="light"] .dg-cat-badge.info { background: #0284c7 !important; color: #ffffff !important; }
-        body.light-mode .dg-cat-badge.purple, [data-theme="light"] .dg-cat-badge.purple { background: #8b5cf6 !important; color: #ffffff !important; }
-        body.light-mode .dg-cat-badge.danger, [data-theme="light"] .dg-cat-badge.danger { background: #ef4444 !important; color: #ffffff !important; }
 
         .dg-tank-center-badge {
           position: absolute;
-          top: 50%;
-          left: 50%;
+          top: 45%;
+          left: 45%;
           transform: translate(-50%, -50%);
           text-align: center;
-          width: 100%;
-          z-index: 7;
-          text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+          z-index: 10;
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          pointer-events: none;
+        }
+        .dg-tank-val {
+          font-family: monospace;
+          font-size: 1.35rem;
+          font-weight: 900;
+          color: #ffffff;
+          line-height: 1.1;
+          letter-spacing: -0.5px;
+          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.9);
+        }
+        .dg-tank-lbl {
+          font-size: 0.62rem;
+          font-weight: 800;
+          color: #fbbf24;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.9);
+        }
+
+        /* ELEGANT FUEL METRIC TILES */
+        .dg-fuel-tile {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 9px 14px;
+          border-radius: 12px;
+          background: rgba(15, 23, 42, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          transition: all 0.25s ease;
+        }
+        .dg-fuel-tile:hover {
+          transform: translateX(4px);
+          background: rgba(15, 23, 42, 0.8);
+        }
+        .dg-fuel-tile.warning { border-left: 4px solid #f59e0b; }
+        .dg-fuel-tile.danger { border-left: 4px solid #ef4444; }
+        .dg-fuel-tile.info { border-left: 4px solid #06b6d4; }
+
+        .dg-fuel-tile-icon {
+          width: 26px;
+          height: 26px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .dg-fuel-tile-icon.warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .dg-fuel-tile-icon.danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .dg-fuel-tile-icon.info { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
+
+        .dg-fuel-tile-lbl {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #94a3b8;
+        }
+        .dg-fuel-tile-val {
+          font-family: monospace;
+          font-size: 0.95rem;
+          font-weight: 800;
+        }
+        .dg-fuel-tile-val.warning { color: #fbbf24; }
+        .dg-fuel-tile-val.danger { color: #f87171; }
+        .dg-fuel-tile-val.info { color: #38bdf8; }
+
+        body.light-mode .dg-fuel-tile, [data-theme="light"] .dg-fuel-tile {
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+        }
+        body.light-mode .dg-fuel-tile-lbl, [data-theme="light"] .dg-fuel-tile-lbl {
+          color: #475569 !important;
+        }
+        body.light-mode .dg-realistic-fuel-tank, [data-theme="light"] .dg-realistic-fuel-tank {
+          background: #f8fafc !important;
+          border-color: #f59e0b !important;
         }
 
         /* COMPACT PARAM TILES WITH UNMAPPED GRAYOUT */
