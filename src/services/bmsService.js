@@ -150,7 +150,12 @@ export const bmsService = {
   getCommands: (siteId, deviceId, params = {}) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/commands`, params),
 
   // Reports & Telemetry Service
-  getReports: (params = {}) => apiClient.get('/reports', params),
+  getDeviceTelemetrySnapshots: (siteId, deviceId, params = {}) => {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    return apiClient.get(`/sites/${siteId}/devices/${deviceId}/telemetry/snapshots`, cleanParams);
+  },
 
   // Sochiot Platform Token Service
   getSochiotAccessToken: () => apiClient.get('/auth/Access-token')
