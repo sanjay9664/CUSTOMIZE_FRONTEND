@@ -193,40 +193,113 @@ export const DEVICE_TEMPLATES = {
   DG_SET: {
     id: 'DG_SET',
     label: 'DG Set / Generator',
+
     parameters: [
-      { name: 'Running Status', required: true },
-      { name: 'Availability', required: false },
-      { name: 'Load %', required: false },
-      { name: 'Voltage', required: true },
-      { name: 'Current', required: true },
-      { name: 'Frequency', required: true },
-      { name: 'Speed RPM', required: false },
-      { name: 'Active Power', required: false },
-      { name: 'Apparent Power', required: false },
-      { name: 'Reactive Power', required: false },
-      { name: 'Power Factor', required: false },
-      { name: 'Fuel Level', required: false },
-      { name: 'Fuel Consumption', required: false },
-      { name: 'Fuel Rate', required: false },
-      { name: 'Engine Temperature', required: false },
-      { name: 'Coolant Temperature', required: false },
-      { name: 'Oil Pressure', required: false },
-      { name: 'Oil Temperature', required: false },
-      { name: 'Battery Voltage', required: false },
-      { name: 'Engine Hours', required: false },
-      { name: 'Start Count', required: false },
-      { name: 'Runtime', required: false },
-      { name: 'Alternator Temperature', required: false },
-      { name: 'Exhaust Temperature', required: false },
-      { name: 'Phase Voltage', required: false },
-      { name: 'Phase Current', required: false },
-      { name: 'Trip', required: false },
-      { name: 'Overload', required: false },
-      { name: 'Low Fuel', required: false },
-      { name: 'Low Oil Pressure', required: false },
-      { name: 'High Temperature', required: false },
-      { name: 'Battery Low', required: false },
-      { name: 'Emergency Stop', required: false }
+      // =========================
+      // CORE / GENERAL PARAMETERS
+      // =========================
+      { name: 'Running Status (ON / OFF / IDLE)', required: true },
+      { name: 'Availability Status (% / State)', required: false },
+      { name: 'Generator Load Percentage (%)', required: false },
+
+      { name: 'Line Voltage (V Volts)', required: true },
+      { name: 'Phase Current (A Amperes)', required: true },
+      { name: 'Electrical Frequency (Hz Hertz)', required: true },
+      { name: 'Engine Speed (RPM)', required: false },
+
+      { name: 'Active Power (kW Kilowatt)', required: false },
+      { name: 'Apparent Power (kVA Kilovolt-Ampere)', required: false },
+      { name: 'Reactive Power (kVAr Reactive Power)', required: false },
+      { name: 'Power Factor (PF 0.00-1.00)', required: false },
+
+      // =========================
+      // FUEL / ENGINE PARAMETERS
+      // =========================
+      { name: 'Fuel Tank Level (%)', required: false },
+      { name: 'Fuel Consumption (Liters)', required: false },
+      { name: 'Fuel Consumption Rate (L/hr)', required: false },
+
+      { name: 'Engine Temperature (°C)', required: false },
+      { name: 'Coolant Temperature (°C)', required: false },
+      { name: 'Engine Oil Pressure (kPa / Bar)', required: false },
+      { name: 'Engine Oil Temperature (°C)', required: false },
+
+      { name: 'Battery Voltage (V DC)', required: false },
+
+      { name: 'Total Engine Hours (HRS)', required: false },
+      { name: 'Start Count (Number of Starts)', required: false },
+      { name: 'Engine Runtime (Hours)', required: false },
+
+      { name: 'Alternator Temperature (°C)', required: false },
+      { name: 'Exhaust Gas Temperature (°C)', required: false },
+
+      // =========================
+      // ELECTRICAL PARAMETERS
+      // =========================
+      { name: 'Phase-to-Neutral Voltage (V L-N)', required: false },
+      { name: 'Phase Current (A Amperes)', required: false },
+
+      // =========================
+      // PROTECTION / ALARM PARAMETERS
+      // =========================
+      { name: 'Generator Trip Alarm', required: false },
+      { name: 'Generator Overload Alarm', required: false },
+      { name: 'Low Fuel Level Alarm', required: false },
+      { name: 'Low Oil Pressure Warning', required: false },
+      { name: 'High Temperature Alarm', required: false },
+      { name: 'Battery Voltage Low Warning', required: false },
+      { name: 'Emergency Stop Activated', required: false },
+
+      // ==================================================
+      // ADDITIONAL GENERATOR PARAMETERS (EXPANDED DISPLAY NAMES)
+      // ==================================================
+
+      { name: 'Engine Speed (RPM)', required: false },
+      { name: 'Frequency (R Phase - Hz)', required: false },
+
+      { name: 'Line-to-Line Voltage L1-L2 (V)', required: false },
+      { name: 'Phase L1 Current (A L1)', required: false },
+      { name: 'Phase L2 Current (A L2)', required: false },
+      { name: 'Phase L3 Current (A L3)', required: false },
+
+      { name: 'Generator Average Power Factor (PF)', required: false },
+
+      { name: 'Engine Run Time (Total Hours)', required: false },
+      { name: 'Number of Starts (Start Count)', required: false },
+
+      { name: 'Active Energy Consumption (kWh)', required: false },
+      { name: 'Apparent Energy Consumption (kVAh)', required: false },
+      { name: 'Reactive Energy Consumption (kVArh)', required: false },
+
+      { name: 'Total Active Power (kW / Total Watts)', required: false },
+      { name: 'Total Apparent Power (kVA / Total VA)', required: false },
+      { name: 'Total Reactive Power (kVAr / Total Var)', required: false },
+
+      { name: 'Average Voltage Line-to-Neutral (V L-N)', required: false },
+
+      // =========================
+      // GENERATOR FAULT & PROTECTION ALARMS
+      // =========================
+      { name: 'Overvoltage Alarm (High Voltage)', required: false },
+      { name: 'Under-Frequency Alarm (Low Frequency)', required: false },
+      { name: 'Over-Frequency Alarm (High Frequency)', required: false },
+      { name: 'Overcurrent Alarm (High Current)', required: false },
+
+      { name: 'Low Battery Voltage Alarm', required: false },
+      { name: 'High Battery Voltage Alarm', required: false },
+
+      { name: 'Generator kW Overload Alarm', required: false },
+
+      { name: 'Low Oil Pressure Alarm', required: false },
+      { name: 'High Coolant Temperature Alarm', required: false },
+
+      { name: 'Engine Under-Speed Fault Alarm', required: false },
+      { name: 'Engine Over-Speed Fault Alarm', required: false },
+
+      { name: 'Engine Fail to Start Alarm', required: false },
+      { name: 'Engine Fail to Rest/Stop Alarm', required: false },
+
+      { name: 'Undervoltage Alarm (Low Voltage)', required: false }
     ]
   },
 
