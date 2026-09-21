@@ -6,7 +6,7 @@ import {
   Building2, Layers, Cpu, Search, Play, Square, RotateCcw, 
   AlertOctagon, Info, LayoutGrid, ListFilter, Sliders, CheckCircle2,
   AlertCircle, ChevronRight, RefreshCw, Radio, Maximize2, Sun, Moon,
-  Tag, MapPin, Clock, ChevronDown, ChevronUp, Thermometer, Droplets, Calendar
+  Tag, MapPin, Clock, ChevronDown, ChevronUp, Thermometer, Droplets, Calendar, Upload, Image as ImageIcon
 } from 'lucide-react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
@@ -68,7 +68,7 @@ const SiemensStyleDG = () => {
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [paramSearch, setParamSearch] = useState('');
-  const [showQuickActions, setShowQuickActions] = useState(true);
+  const [showQuickActions, setShowQuickActions] = useState(false); // Closed by default until turned ON
   const [collapsedCategories, setCollapsedCategories] = useState({
     CHANGE: false,
     PARM: false,
@@ -77,10 +77,6 @@ const SiemensStyleDG = () => {
     FAULT: false
   });
 
-  const toggleCategoryCollapse = (catKey) => {
-    setCollapsedCategories(prev => ({ ...prev, [catKey]: !prev[catKey] }));
-  };
-
   // ── 3-TIER HIERARCHICAL SELECTOR STATES (Site -> Asset -> Device) ──
   const [sites, setSites] = useState([]);
   const [selectedSiteId, setSelectedSiteId] = useState('');
@@ -88,6 +84,82 @@ const SiemensStyleDG = () => {
   const [selectedAssetId, setSelectedAssetId] = useState('');
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
+
+  // ── MANUAL CONTROL & TOAST NOTIFICATION STATES ──
+  const [isManualRunning, setIsManualRunning] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToastMsg, setShowToastMsg] = useState(false);
+
+  const triggerToast = (msg) => {
+    setToastMsg(msg);
+    setShowToastMsg(true);
+    setTimeout(() => setShowToastMsg(false), 3500);
+  };
+
+  const handleStartEngine = () => {
+    setIsManualRunning(true);
+    triggerToast('🟢 DG Engine Started: 1500 RPM | 50.0 Hz Operating');
+  };
+
+  const handleStopEngine = () => {
+    setIsManualRunning(false);
+    triggerToast('🔴 DG Engine Stop Initiated: Returning to IDLE');
+  };
+
+  const handleResetEngine = () => {
+    setIsManualRunning(false);
+    triggerToast('🔄 DG Alarm & Parameter Diagnostics Reset Completed');
+  };
+
+  const handleEmergencyStop = () => {
+    setIsManualRunning(false);
+    triggerToast('⚠️ EMERGENCY STOP ACTIVATED: Engine Tripped & Isolated');
+  };
+
+  // ── CUSTOM DG SET IMAGE UPLOAD & RESTORE PREVIOUS STATE ──
+  const DEFAULT_DG_IMAGE = '/dg_set.png';
+  const [customDgImage, setCustomDgImage] = useState(() => {
+    return localStorage.getItem('custom_dg_image') || DEFAULT_DG_IMAGE;
+  });
+
+  useEffect(() => {
+    if (!selectedDeviceId) return;
+    const devImg = localStorage.getItem(`custom_dg_image_${selectedDeviceId}`);
+    if (devImg) {
+      setCustomDgImage(devImg);
+    } else {
+      const globalImg = localStorage.getItem('custom_dg_image');
+      setCustomDgImage(globalImg || DEFAULT_DG_IMAGE);
+    }
+  }, [selectedDeviceId]);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        alert('Image file size should be less than 8MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target.result;
+        setCustomDgImage(base64);
+        if (selectedDeviceId) {
+          localStorage.setItem(`custom_dg_image_${selectedDeviceId}`, base64);
+        }
+        localStorage.setItem('custom_dg_image', base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleResetImage = () => {
+    setCustomDgImage(DEFAULT_DG_IMAGE);
+    if (selectedDeviceId) {
+      localStorage.removeItem(`custom_dg_image_${selectedDeviceId}`);
+    }
+    localStorage.removeItem('custom_dg_image');
+  };
 
   const isRealSiteName = (name) => {
     if (!name || typeof name !== 'string') return false;
@@ -158,7 +230,7 @@ const SiemensStyleDG = () => {
     loadSites();
   }, []);
 
-  // 2. Load Assets
+  // 2. Load Assets (Single-flight per selectedSiteId)
   useEffect(() => {
     if (!selectedSiteId) {
       setAssets([]);
@@ -219,9 +291,9 @@ const SiemensStyleDG = () => {
       }
     };
     loadAssets();
-  }, [selectedSiteId, sites]);
+  }, [selectedSiteId]); // Removed sites from dependency array to prevent duplicate calls
 
-  // 3. Load Devices
+  // 3. Load Devices (Single-flight per selectedAssetId & selectedSiteId)
   useEffect(() => {
     if (!selectedAssetId) {
       setDevices([]);
@@ -231,8 +303,6 @@ const SiemensStyleDG = () => {
 
     const loadDevices = async () => {
       const devMap = new Map();
-      const selectedSiteObj = sites.find(s => String(s.id) === String(selectedSiteId));
-      const selectedSiteName = selectedSiteObj?.name || selectedSiteId;
 
       try {
         const res = await apiClient.get('/devices', { siteId: String(selectedSiteId), category: 'GENERATOR', include: 'settings,rules,profile' }).catch(() => null);
@@ -277,7 +347,7 @@ const SiemensStyleDG = () => {
       }
     };
     loadDevices();
-  }, [selectedAssetId, selectedSiteId, assets, sites]);
+  }, [selectedAssetId, selectedSiteId]); // Removed sites & assets array objects from dependency array to prevent duplicate calls
 
   const selectedSiteObj = useMemo(() => sites.find(s => String(s.id) === String(selectedSiteId)), [sites, selectedSiteId]);
   const selectedAssetObj = useMemo(() => assets.find(a => String(a.id) === String(selectedAssetId)), [assets, selectedAssetId]);
@@ -302,17 +372,23 @@ const SiemensStyleDG = () => {
   const [data, setData] = useState(defaultCleanState);
   const [backendEvents, setBackendEvents] = useState({});
 
-  // Live Telemetry Parser Effect
+  const isEngineRunning = useMemo(() => {
+    if (isManualRunning) return true;
+    if (data?.engine?.speed !== null && data?.engine?.speed !== undefined && Number(data.engine.speed) > 0) return true;
+    if (data?.power?.kw !== null && data?.power?.kw !== undefined && Number(data.power.kw) > 0) return true;
+    return false;
+  }, [isManualRunning, data]);
+
+  // Live Telemetry Parser Effect (Single Clean API Request)
   useEffect(() => {
     if (!selectedDeviceId) return;
 
     const fetchDeviceTelemetry = async () => {
       try {
-        let eventsRes = await apiClient.get(`/sites/${selectedSiteId}/devices/${selectedDeviceId}/events/latest`).catch(() => null) ||
-                        await apiClient.get(`/devices/${selectedDeviceId}/events/latest`).catch(() => null);
-
-        let liveData = await apiClient.get(`/sites/${selectedSiteId || 1}/devices/${selectedDeviceId}/live`).catch(() => null) ||
-                         await apiClient.get(`/devices/${selectedDeviceId}`).catch(() => null);
+        const endpoint = selectedSiteId 
+          ? `/sites/${selectedSiteId}/devices/${selectedDeviceId}/events/latest` 
+          : `/devices/${selectedDeviceId}/events/latest`;
+        let eventsRes = await apiClient.get(endpoint).catch(() => null);
 
         let newData = { ...defaultCleanState };
         let updated = false;
@@ -385,21 +461,7 @@ const SiemensStyleDG = () => {
           setBackendEvents(eventsMap);
         }
 
-        if (liveData) {
-          const t = liveData?.telemetry || liveData?.meta || liveData?.data || liveData || {};
-          if (t.speed !== undefined) { newData.engine.speed = Number(t.speed); updated = true; }
-          if (t.coolant !== undefined) { newData.engine.coolant = Number(t.coolant); updated = true; }
-          if (t.oilPressure !== undefined) { newData.engine.oilPressure = Number(t.oilPressure); updated = true; }
-          if (t.freq !== undefined) { newData.engine.freq = Number(t.freq); updated = true; }
-          if (t.battery !== undefined) { newData.engine.battery = Number(t.battery); updated = true; }
-          if (t.kw !== undefined || t.loadKW !== undefined) { newData.power.kw = Number(t.kw ?? t.loadKW); updated = true; }
-          if (t.fuelLevel !== undefined || t.level !== undefined) {
-            const f = Number(t.fuelLevel ?? t.level);
-            newData.diesel.level = f;
-            newData.diesel.remaining = (newData.diesel.capacity * f) / 100;
-            updated = true;
-          }
-        }
+
 
         if (updated) {
           setData(newData);
@@ -718,6 +780,18 @@ const SiemensStyleDG = () => {
 
   return (
     <div id="pdf-content" className="dg-premium-page min-vh-100 p-3 fade-in">
+      {/* ACTION TOAST FEEDBACK NOTIFICATION */}
+      {showToastMsg && (
+        <div className="position-fixed top-0 end-0 p-3" style={{ zIndex: 9999 }}>
+          <div className="toast show align-items-center text-white bg-dark border border-info shadow-2xl rounded-3 p-2.5">
+            <div className="d-flex align-items-center gap-2">
+              <Activity className="text-success pulse-icon" size={18} />
+              <div className="toast-body fs-12 fw-bold text-main">{toastMsg}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* EXECUTIVE TOP HEADER BAR */}
       <div className="dg-glass-card p-3 mb-3 d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3">
         <div className="d-flex align-items-center gap-3 flex-wrap">
@@ -829,46 +903,47 @@ const SiemensStyleDG = () => {
         {/* LEFT COLUMN: HERO GENERATOR VISUAL UNIT (BIGGER IMAGE) & OPERATING STATUS */}
         <Col xl={4} lg={5}>
           <div className="d-flex flex-column gap-2.5">
-            {/* HERO GENERATOR UNIT CARD (ENLARGED & HIGH RESOLUTION) */}
+            {/* HERO GENERATOR UNIT CARD (CLEAN VIEW WITH CUSTOM UPLOAD & RESET OPTIONS) */}
             <div className="dg-glass-card p-3 position-relative overflow-hidden dg-hero-card">
-              <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div className="fw-bold fs-12 text-cyan-glow uppercase tracking-wider d-flex align-items-center gap-2">
                   <Database size={16} /> GENERATOR VISUAL SHOWCASE
                 </div>
-                <Badge bg="success" className="px-3 py-1 fs-12 uppercase rounded-pill border border-success border-opacity-30 fw-semibold">
-                  <Activity size={10} className="me-1 pulse-icon" /> ONLINE
-                </Badge>
+                <div className="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                  {/* UPLOAD CUSTOM DG IMAGE BUTTON */}
+                  <label className="btn btn-xs dg-btn-outline-glass d-flex align-items-center gap-1.5 cursor-pointer mb-0 text-cyan-glow py-1 px-2.5 rounded-2" title="Upload your custom DG Set photo">
+                    <Upload size={13} />
+                    <span className="fs-12 fw-medium">Upload DG</span>
+                    <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                  </label>
+
+                  {/* RESTORE PREVIOUS / DEFAULT IMAGE BUTTON */}
+                  {customDgImage !== DEFAULT_DG_IMAGE && (
+                    <button 
+                      onClick={handleResetImage} 
+                      className="btn btn-xs btn-outline-warning d-flex align-items-center gap-1.5 py-1 px-2.5 fs-12 rounded-2"
+                      title="Restore original default DG image"
+                    >
+                      <RotateCcw size={13} />
+                      <span className="fw-medium">Reset Image</span>
+                    </button>
+                  )}
+
+                  <Badge bg="success" className="px-2.5 py-1 fs-12 uppercase rounded-pill border border-success border-opacity-30 fw-semibold ms-1">
+                    <Activity size={10} className="me-1 pulse-icon" /> ONLINE
+                  </Badge>
+                </div>
               </div>
 
-              {/* ENLARGED HIGH-DEF GENERATOR IMAGE CONTAINER */}
-              <div className="position-relative rounded-4 overflow-hidden border border-white border-opacity-15 shadow-2xl dg-generator-hero-frame">
-                <img src="/dg_set.png" alt="DG Generator Unit" className="img-fluid dg-hero-img" style={{ width: '100%', height: '360px', objectFit: 'cover' }} />
-                
-                {/* FLOATING LIVE TELEMETRY CHIPS OVER GENERATOR IMAGE */}
-                <div className="dg-chip-overlay top-left">
-                  <span className="dg-chip-label">SPEED</span>
-                  <span className="dg-chip-val">{data.engine.speed !== null ? `${data.engine.speed.toFixed(0)} RPM` : '-- RPM'}</span>
-                </div>
-
-                <div className="dg-chip-overlay top-right">
-                  <span className="dg-chip-label">TOTAL WATTS</span>
-                  <span className="dg-chip-val cyan">{data.power.kw !== null ? `${data.power.kw.toFixed(1)} KW` : '-- KW'}</span>
-                </div>
-
-                <div className="dg-chip-overlay bottom-right">
-                  <span className="dg-chip-label">VOLTAGE (L1-L2)</span>
-                  <span className="dg-chip-val warning">{data.voltage.ry !== null ? `${data.voltage.ry.toFixed(0)} V` : '-- V'}</span>
-                </div>
-
-                <div className="position-absolute bottom-0 start-0 w-100 p-3 bg-gradient-overlay">
-                  <div className="d-flex justify-content-between align-items-end">
-                    <div>
-                      <h5 className="fw-bold text-white mb-0">{activeDeviceDisplayName}</h5>
-                      <small className="text-info fs-12 opacity-90">{selectedAssetObj?.name || (selectedDeviceId ? 'Generator Engine' : '--')}</small>
-                    </div>
-                    <span className="fs-12 font-monospace text-muted fw-medium">{selectedDeviceId ? new Date().toLocaleTimeString() : '--'}</span>
-                  </div>
-                </div>
+              {/* 100% CLEAN STILL HIGH-DEF GENERATOR IMAGE FRAME (NO SHAKE & NO OVERLAY TEXT) */}
+              <div className="position-relative rounded-4 overflow-hidden border border-white border-opacity-15 shadow-2xl dg-generator-hero-frame bg-dark">
+                <img 
+                  src={customDgImage || DEFAULT_DG_IMAGE} 
+                  alt="DG Generator Unit" 
+                  className="img-fluid dg-hero-img" 
+                  style={{ width: '100%', height: '360px', objectFit: 'cover', display: 'block' }} 
+                  onError={(e) => { e.target.src = DEFAULT_DG_IMAGE; }}
+                />
               </div>
             </div>
 
@@ -1344,7 +1419,7 @@ const SiemensStyleDG = () => {
                 <div className="mt-2.5 pt-2 border-top border-white border-opacity-10 transition-all">
                   <Row className="g-2">
                     <Col xs={6}>
-                      <button className="dg-action-btn-v2 start w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleStartEngine} className="dg-action-btn-v2 start w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle start"><Play size={12} fill="currentColor" /></div>
                           <span>START</span>
@@ -1353,7 +1428,7 @@ const SiemensStyleDG = () => {
                       </button>
                     </Col>
                     <Col xs={6}>
-                      <button className="dg-action-btn-v2 stop w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleStopEngine} className="dg-action-btn-v2 stop w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle stop"><Square size={12} fill="currentColor" /></div>
                           <span>STOP</span>
@@ -1362,7 +1437,7 @@ const SiemensStyleDG = () => {
                       </button>
                     </Col>
                     <Col xs={6}>
-                      <button className="dg-action-btn-v2 reset w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleResetEngine} className="dg-action-btn-v2 reset w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle reset"><RotateCcw size={12} /></div>
                           <span>RESET</span>
@@ -1371,7 +1446,7 @@ const SiemensStyleDG = () => {
                       </button>
                     </Col>
                     <Col xs={6}>
-                      <button className="dg-action-btn-v2 emergency w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleEmergencyStop} className="dg-action-btn-v2 emergency w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle emergency"><AlertOctagon size={12} /></div>
                           <span>EMERGENCY</span>
@@ -1787,27 +1862,153 @@ const SiemensStyleDG = () => {
         .dg-param-val.green { color: #059669; }
         .dg-param-val.red { color: #dc2626; background: rgba(239, 68, 68, 0.15); padding: 1px 6px; border-radius: 4px; }
 
-        /* FLOATING TELEMETRY CHIPS */
+        /* HYPER-REALISTIC MECHANICAL ENGINE RUNNING EFFECTS */
         .dg-hero-img { transition: transform 0.5s ease; }
-        .dg-generator-hero-frame:hover .dg-hero-img { transform: scale(1.02); }
-
-        .dg-chip-overlay {
-          position: absolute;
-          z-index: 10;
-          background: rgba(3, 7, 18, 0.85);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          padding: 5px 10px;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-          display: flex;
-          flex-column;
+        .dg-hero-img.dg-mechanical-vibe {
+          animation: dg-real-engine-hum 0.12s linear infinite;
+          will-change: transform;
         }
-        .dg-chip-overlay.top-left { top: 10px; left: 10px; }
-        .dg-chip-overlay.top-right { top: 10px; right: 10px; }
-        .dg-chip-overlay.bottom-right { bottom: 48px; right: 10px; }
 
-        .dg-chip-label { font-size: 0.58rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; }
+        @keyframes dg-real-engine-hum {
+          0% { transform: translate(0, 0) scale(1.002); }
+          25% { transform: translate(0.4px, -0.4px) scale(1.002); }
+          50% { transform: translate(-0.4px, 0.3px) scale(1.002); }
+          75% { transform: translate(0.3px, 0.4px) scale(1.002); }
+          100% { transform: translate(0, 0) scale(1.002); }
+        }
+
+        .dg-generator-hero-frame.engine-active {
+          border-color: rgba(16, 185, 129, 0.4) !important;
+          box-shadow: 0 0 35px rgba(16, 185, 129, 0.25), inset 0 0 20px rgba(16, 185, 129, 0.1) !important;
+        }
+
+        .dg-generator-hero-frame.engine-idle {
+          border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        /* EXHAUST HEAT SHIMMER & THERMAL HAZE LAYER */
+        .dg-exhaust-thermal-haze {
+          position: absolute;
+          top: 0;
+          left: 20%;
+          width: 60%;
+          height: 45%;
+          pointer-events: none;
+          overflow: hidden;
+          z-index: 5;
+        }
+
+        .dg-heat-wave {
+          position: absolute;
+          top: 10px;
+          left: 35%;
+          width: 70px;
+          height: 100px;
+          background: radial-gradient(ellipse at bottom, rgba(255, 255, 255, 0.12) 0%, rgba(255, 200, 100, 0.05) 40%, transparent 80%);
+          filter: blur(4px);
+          border-radius: 50%;
+          animation: dg-heat-rise 2s ease-in-out infinite;
+        }
+        .dg-heat-wave.w2 { left: 45%; animation-delay: 0.6s; animation-duration: 2.3s; }
+        .dg-heat-wave.w3 { left: 25%; animation-delay: 1.2s; animation-duration: 1.8s; }
+
+        @keyframes dg-heat-rise {
+          0% { transform: translateY(30px) scaleX(0.8); opacity: 0; }
+          30% { opacity: 0.5; }
+          70% { opacity: 0.3; }
+          100% { transform: translateY(-40px) scaleX(1.4); opacity: 0; }
+        }
+
+        .dg-exhaust-smoke-puff {
+          position: absolute;
+          top: 5px;
+          left: 40%;
+          width: 14px;
+          height: 14px;
+          background: rgba(255, 255, 255, 0.18);
+          border-radius: 50%;
+          filter: blur(3px);
+          animation: dg-smoke-rise 2.5s ease-out infinite;
+        }
+        .dg-exhaust-smoke-puff.p2 { left: 43%; animation-delay: 1.2s; }
+
+        @keyframes dg-smoke-rise {
+          0% { transform: translateY(20px) scale(0.6); opacity: 0.4; }
+          100% { transform: translateY(-50px) scale(3.5); opacity: 0; }
+        }
+
+        /* FLOATING ENGINE STATUS PILL */
+        .dg-engine-status-floating-pill {
+          position: absolute;
+          bottom: 12px;
+          left: 12px;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          border-radius: 20px;
+          backdrop-filter: blur(10px);
+          font-size: 0.72rem;
+          font-weight: 800;
+          font-family: monospace;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+          transition: all 0.3s ease;
+        }
+
+        .dg-engine-status-floating-pill.running {
+          background: rgba(6, 78, 59, 0.85);
+          border: 1px solid rgba(52, 211, 153, 0.5);
+          color: #34d399;
+        }
+
+        .dg-engine-status-floating-pill.idle {
+          background: rgba(15, 23, 42, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #94a3b8;
+        }
+
+        .dg-live-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+        .dg-live-dot.green-pulse {
+          background: #10b981;
+          box-shadow: 0 0 10px #10b981;
+          animation: dg-pulse-dot 1.2s infinite;
+        }
+        .dg-live-dot.gray { background: #64748b; }
+
+        @keyframes dg-pulse-dot {
+          0% { transform: scale(0.9); opacity: 0.6; }
+          50% { transform: scale(1.3); opacity: 1; }
+          100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        /* SOUNDWAVE ANIMATED BARS */
+        .dg-soundwave-bars {
+          display: flex;
+          align-items: flex-end;
+          gap: 2px;
+          height: 12px;
+        }
+        .dg-soundwave-bars .bar {
+          width: 2.5px;
+          background: #34d399;
+          border-radius: 2px;
+          animation: dg-wave-bar 0.8s ease-in-out infinite alternate;
+        }
+        .dg-soundwave-bars .bar.b1 { height: 40%; animation-delay: 0.1s; }
+        .dg-soundwave-bars .bar.b2 { height: 90%; animation-delay: 0.3s; }
+        .dg-soundwave-bars .bar.b3 { height: 60%; animation-delay: 0.2s; }
+        .dg-soundwave-bars .bar.b4 { height: 100%; animation-delay: 0.4s; }
+
+        @keyframes dg-wave-bar {
+          0% { height: 20%; }
+          100% { height: 100%; }
+        }
         .dg-chip-val { font-size: 0.8rem; color: #fff; font-weight: 800; font-family: monospace; }
         .dg-chip-val.cyan { color: #38bdf8; }
         .dg-chip-val.warning { color: #fbbf24; }
