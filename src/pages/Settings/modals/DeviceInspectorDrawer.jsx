@@ -198,7 +198,7 @@ const DeviceInspectorDrawer = ({
             <div className="fs-12 text-muted d-flex align-items-center gap-2 mt-1">
               <span>Site: <strong className="drawer-text-primary">{siteName}</strong></span>
               <span>•</span>
-              <span className="font-monospace text-muted">SN: {device.serialNumber || device.bmsDeviceId || 'N/A'}</span>
+              <span className="font-monospace text-muted">SN: {device.serialNumber || device.serial_number || 'N/A'}</span>
               {(device.serialNumber || device.id) && (
                 <button
                   type="button"
