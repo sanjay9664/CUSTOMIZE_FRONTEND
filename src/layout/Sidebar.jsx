@@ -387,7 +387,7 @@ const STYLES = `
   overflow: hidden;
   will-change: width;
   transform: translateZ(0);
-  transition: width 0.28s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: width 0.22s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 body.light-mode .sb {

@@ -1,0 +1,340 @@
+/* ── Energy Meter Graphs Screen Styles (iSmartAccess BMS / SCADA) ── */
+
+.energy-graphs-workspace {
+  min-height: calc(100vh - 120px);
+  padding: 0 4px 32px 4px;
+}
+
+/* ── Context Banner Adjustments ── */
+.energy-graphs-context-banner {
+  margin-bottom: 16px !important;
+}
+
+/* ── Quick Controls Toolbar ── */
+.energy-graphs-toolbar {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(20, 30, 50, 0.8) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  margin-bottom: 20px;
+}
+
+.energy-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.energy-filter-btn {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.energy-filter-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.energy-filter-btn.active {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(14, 165, 233, 0.2) 100%);
+  color: #38bdf8;
+  border-color: #06b6d4;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+.energy-search-input {
+  background: rgba(15, 23, 42, 0.7) !important;
+  border: 1px solid rgba(148, 163, 184, 0.25) !important;
+  color: #f1f5f9 !important;
+  font-size: 0.82rem !important;
+  border-radius: 8px !important;
+}
+
+.energy-search-input:focus {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2) !important;
+}
+
+.energy-interval-select {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  color: #38bdf8 !important;
+  font-size: 0.82rem !important;
+  font-weight: 600;
+  border-radius: 8px !important;
+}
+
+/* ── SCADA Graph Cards ── */
+.scada-graph-card {
+  background: linear-gradient(145deg, #0d1527 0%, #0b1120 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  contain: content;
+  position: relative;
+}
+
+.scada-graph-card:hover {
+  border-color: rgba(6, 182, 212, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(6, 182, 212, 0.12);
+  transform: translateY(-2px);
+}
+
+.scada-graph-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.scada-graph-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.scada-graph-color-bar {
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.scada-graph-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+}
+
+.scada-graph-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  font-family: monospace;
+}
+
+.scada-graph-unit {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(6, 182, 212, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+/* ── Stats Ribbon Inside Graph Card ── */
+.scada-graph-stats {
+  padding: 8px 16px;
+  background: rgba(11, 17, 32, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.scada-stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 0.78rem;
+}
+
+.scada-stat-label {
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.scada-stat-value {
+  color: #e2e8f0;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+}
+
+/* ── Chart Container ── */
+.scada-graph-body {
+  padding: 16px 12px 12px 8px;
+  position: relative;
+}
+
+/* ── Empty Graph Container Inside Card ── */
+.scada-graph-empty {
+  height: 250px;
+  display: flex;
+  flex-column: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px dashed rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  margin: 8px;
+}
+
+/* ── Page-Level Empty States ── */
+.energy-empty-state-card {
+  background: linear-gradient(145deg, #0f172a 0%, #080d19 100%);
+  border: 1px dashed rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 60px 24px;
+  text-align: center;
+  margin-top: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.energy-empty-state-darkened {
+  opacity: 0.65;
+  filter: grayscale(40%);
+  pointer-events: none;
+}
+
+/* ── Animations ── */
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+  animation: spinSlow 1.2s linear infinite;
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 10px rgba(6, 182, 212, 0.2); }
+  50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.5); }
+  100% { box-shadow: 0 0 10px rgba(6, 182, 212, 0.2); }
+}
+
+.scada-loading-pulse {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+/* ── Custom SCADA Tooltip ── */
+.scada-custom-tooltip {
+  background: rgba(11, 17, 32, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  min-width: 170px;
+}
+
+.scada-tooltip-time {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+}
+
+.scada-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* ── Modal Expanded Card Overrides ── */
+.scada-graph-card-expanded {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.scada-graph-card-expanded:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Modal Selector Controls ── */
+.energy-modal-select {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  padding: 3px 26px 3px 8px !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.energy-modal-select:hover {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.3);
+}
+
+.energy-modal-select:focus {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+}
+
+.energy-modal-select option {
+  background-color: #0b1120;
+  color: #f1f5f9;
+}
+
+/* ── Hardware-Accelerated Fade-in Slide ── */
+.fade-in-slide {
+  animation: scadaFadeInSlide 0.28s cubic-bezier(0.2, 0, 0.2, 1) both;
+  will-change: opacity, transform;
+}
+
+@keyframes scadaFadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Accessibility: Respect Prefers-Reduced-Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .scada-graph-card,
+  .energy-filter-btn,
+  .fade-in-slide,
+  .spin-animation,
+  .scada-loading-pulse {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+

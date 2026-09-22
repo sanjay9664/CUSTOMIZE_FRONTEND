@@ -1353,7 +1353,7 @@ paths:
     post:
       tags: [Telemetry]
       summary: Resync Telemetry Data
-      description: Manual trigger to re-aggregate raw MongoDB events into PostgreSQL rollups for a site.
+      description: Re-aggregates raw MongoDB events into PostgreSQL rollups for a site over a date range. Requires PERM_INST_MANAGE_DEVICE permission.
       parameters:
         - name: siteId
           in: path
@@ -1365,16 +1365,10 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [date]
-              properties:
-                date:
-                  type: string
-                  format: date
-                  example: "2026-07-24"
+              $ref: '#/components/schemas/ResyncTelemetryRequest'
       responses:
         '200':
-          description: Resync process initiated
+          description: Resync process completed
           content:
             application/json:
               schema:
@@ -3985,6 +3979,244 @@ paths:
                     $ref: '#/components/schemas/DeviceCommand'
 
   # ============================================================
+  # H4. TELEMETRY SERVICE
+  # ============================================================
+  /sites/{siteId}/devices/{deviceId}/telemetry/snapshots:
+    get:
+      tags: [Telemetry]
+      summary: Get Device Telemetry Snapshots
+      description: |
+        Retrieves periodic telemetry snapshots (15-min, hourly, daily, monthly) for a device.
+        Supports two query modes:
+        1. **Single Setting Mode:** Supply `settingId` (numeric ID, e.g. 18) OR legacy `fieldKey` (e.g. "4,28F"). Returns a flat object with `snapshots: [...]`.
+        2. **Device-Wide Multi-Setting Mode:** Omit setting parameters to return all active non-command telemetry settings for the device, or supply `settingIds` (comma-separated list, e.g. "15,18,25"). Returns `{ settingsCount, settings: [ { settingId, fieldKey, displayName, unit, isCumulative, snapshots: [...] }, ... ] }`.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 3
+        - name: settingId
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Unique DeviceSetting ID for single setting retrieval (preferred).
+          example: 18
+        - name: fieldKey
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Legacy Sochiot field key for single setting retrieval.
+          example: "4,28F"
+        - name: settingIds
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of setting IDs for multi-setting retrieval (e.g., "15,18,25"). If omitted along with settingId/fieldKey, all active telemetry settings for the device are returned.
+          example: "15,18,25"
+        - name: interval
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SamplingInterval'
+            default: "HOURLY"
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          example: "2026-08-01T00:00:00.000Z"
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          example: "2026-08-10T00:00:00.000Z"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Successfully retrieved telemetry snapshots. Response structure adapts based on query mode.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SingleSettingSnapshotsResponse'
+                  - $ref: '#/components/schemas/DeviceWideTelemetrySnapshotsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sites/{siteId}/devices/{deviceId}/telemetry/resync:
+    post:
+      tags: [Telemetry]
+      summary: Resync Single Device Telemetry
+      description: Re-aggregates raw MongoDB events into PostgreSQL rollups for a single device over a date range. Requires PERM_INST_MANAGE_DEVICE permission.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResyncTelemetryRequest'
+      responses:
+        '200':
+          description: Device telemetry resync completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessageResponse'
+
+  /sites/{siteId}/telemetry/area/{areaId}/summary:
+    get:
+      tags: [Telemetry]
+      summary: Get Area Telemetry Summary
+      description: Retrieves telemetry readings for all active devices in a specific area, enriched with setting IDs on live fields.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: areaId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 5
+      responses:
+        '200':
+          description: Area telemetry summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      areaId:
+                        type: integer
+                        example: 5
+                      devices:
+                        type: array
+                        items:
+                          type: object
+
+  /sites/{siteId}/telemetry/system/{functionalSystem}/summary:
+    get:
+      tags: [Telemetry]
+      summary: Get Functional System Telemetry Summary
+      description: Retrieves telemetry readings for all devices belonging to a functional system (e.g. HVAC, ELECTRICAL), enriched with setting IDs on live fields.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: functionalSystem
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/FunctionalSystem'
+          example: "ELECTRICAL"
+      responses:
+        '200':
+          description: System telemetry summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      functionalSystem:
+                        type: string
+                        example: "ELECTRICAL"
+                      devices:
+                        type: array
+                        items:
+                          type: object
+
+  /sites/{siteId}/telemetry/energy-summary:
+    get:
+      tags: [Telemetry]
+      summary: Get Site Energy Summary
+      description: Computes total energy consumption across configured energy groups for a site, joining cumulative registers by settingId and delta.
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          example: "2026-08-01T00:00:00.000Z"
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          example: "2026-08-10T00:00:00.000Z"
+      responses:
+        '200':
+          description: Energy summary across energy groups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteEnergySummaryResponse'
+
+  # ============================================================
   # I. NOTIFICATION SERVICE
   # ============================================================
   /notifications/send:
@@ -4630,6 +4862,14 @@ components:
           type: boolean
           default: false
           example: false
+        isTelemetry:
+          type: boolean
+          default: true
+          example: true
+        isCumulative:
+          type: boolean
+          default: false
+          example: false
         graphable:
           type: boolean
           default: true
@@ -5113,6 +5353,12 @@ components:
           nullable: true
           example: 200.0
         isCommand:
+          type: boolean
+          example: false
+        isTelemetry:
+          type: boolean
+          example: true
+        isCumulative:
           type: boolean
           example: false
         commandAlias:
@@ -6094,6 +6340,10 @@ components:
                 type: boolean
               isCommand:
                 type: boolean
+              isTelemetry:
+                type: boolean
+              isCumulative:
+                type: boolean
 
     UpdateRuleRequest:
       type: object
@@ -6464,3 +6714,237 @@ components:
                 type: string
                 nullable: true
                 example: "17 Sep 2026 04:40 pm"
+
+    TelemetrySnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1054
+        siteId:
+          type: string
+          example: "1"
+        deviceId:
+          type: string
+          example: "3"
+        settingId:
+          type: integer
+          nullable: true
+          example: 18
+        fieldKey:
+          type: string
+          example: "4,28F"
+        interval:
+          $ref: '#/components/schemas/SamplingInterval'
+        windowStart:
+          type: string
+          format: date-time
+          example: "2026-08-05T06:45:00.000Z"
+        windowEnd:
+          type: string
+          format: date-time
+          example: "2026-08-05T07:00:00.000Z"
+        avgValue:
+          type: number
+          nullable: true
+          example: 415.2
+        minValue:
+          type: number
+          nullable: true
+          example: 410.0
+        maxValue:
+          type: number
+          nullable: true
+          example: 420.5
+        firstValue:
+          type: number
+          nullable: true
+          example: 412.0
+        lastValue:
+          type: number
+          nullable: true
+          example: 418.0
+        delta:
+          type: number
+          nullable: true
+          example: 6.0
+        sumValue:
+          type: number
+          nullable: true
+          example: 2491.2
+        readingCount:
+          type: integer
+          example: 6
+        alarmState:
+          type: string
+          nullable: true
+          example: "NORMAL"
+        alarmCount:
+          type: integer
+          example: 0
+        normalCount:
+          type: integer
+          example: 6
+
+    SingleSettingSnapshotsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            deviceId:
+              type: integer
+              example: 3
+            deviceName:
+              type: string
+              example: "Normal Meter"
+            settingId:
+              type: integer
+              example: 18
+            fieldKey:
+              type: string
+              example: "4,28F"
+            displayName:
+              type: string
+              example: "Max.Dmd-kwh"
+            unit:
+              type: string
+              nullable: true
+              example: "KWH"
+            isCumulative:
+              type: boolean
+              example: true
+            interval:
+              $ref: '#/components/schemas/SamplingInterval'
+            snapshots:
+              type: array
+              items:
+                $ref: '#/components/schemas/TelemetrySnapshot'
+
+    DeviceWideTelemetrySnapshotsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            deviceId:
+              type: integer
+              example: 3
+            deviceName:
+              type: string
+              example: "Normal Meter"
+            interval:
+              $ref: '#/components/schemas/SamplingInterval'
+            period:
+              type: object
+              properties:
+                from:
+                  type: string
+                  format: date-time
+                to:
+                  type: string
+                  format: date-time
+            settingsCount:
+              type: integer
+              example: 12
+            settings:
+              type: array
+              items:
+                type: object
+                properties:
+                  settingId:
+                    type: integer
+                    example: 15
+                  fieldKey:
+                    type: string
+                    example: "4,0F"
+                  displayName:
+                    type: string
+                    example: "Total Active Energy"
+                  unit:
+                    type: string
+                    nullable: true
+                    example: "KWH"
+                  isCumulative:
+                    type: boolean
+                    example: true
+                  snapshots:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TelemetrySnapshot'
+
+    ResyncTelemetryRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+          example: "2026-08-01T00:00:00.000Z"
+        to:
+          type: string
+          format: date-time
+          example: "2026-08-02T00:00:00.000Z"
+        excludeModuleIds:
+          type: array
+          items:
+            type: integer
+          default: []
+        limit:
+          type: integer
+          default: 1000
+
+    SiteEnergySummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            period:
+              type: object
+              properties:
+                from:
+                  type: string
+                  format: date-time
+                to:
+                  type: string
+                  format: date-time
+            grandTotalKwh:
+              type: number
+              example: 14250.75
+            groups:
+              type: array
+              items:
+                type: object
+                properties:
+                  groupId:
+                    type: integer
+                    example: 1
+                  groupName:
+                    type: string
+                    example: "Main Energy Meters"
+                  totalKwh:
+                    type: number
+                    example: 14250.75
+                  devices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        deviceId:
+                          type: integer
+                          example: 3
+                        name:
+                          type: string
+                          example: "Normal Meter"
+                        totalKwh:
+                          type: number
+                          example: 14250.75

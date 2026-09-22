@@ -160,7 +160,7 @@ p, label, th, td, legend, .form-label, .card-title {
   right: 0;
   z-index: 1000;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-  transition: left 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: left 0.22s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 body.light-mode .scada-header {
