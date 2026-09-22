@@ -18,7 +18,8 @@ export const RANGE_PRESETS = [
   { id: 'today', label: 'Today', defaultInterval: 'MIN_15' },
   { id: 'last7d', label: 'Last 7 Days', defaultInterval: 'HOURLY' },
   { id: 'last30d', label: 'Last 30 Days', defaultInterval: 'DAILY' },
-  { id: 'month', label: 'This Month', defaultInterval: 'DAILY' }
+  { id: 'month', label: 'This Month', defaultInterval: 'DAILY' },
+  { id: 'custom', label: 'Custom', defaultInterval: 'DAILY' }
 ];
 
 // Curated SCADA graph palette for distinct, high-visibility telemetry visualizations
@@ -34,6 +35,13 @@ export const GRAPH_PALETTES = [
   { stroke: '#f97316', fill: '#ea580c', name: 'Orange' },
   { stroke: '#ef4444', fill: '#dc2626', name: 'Red' }
 ];
+
+/**
+ * Returns today's calendar date in Indian Standard Time (IST) in 'YYYY-MM-DD' format
+ */
+export const getTodayIstDateString = () => {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+};
 
 /**
  * Parses UTC/GMT timestamps from backend into JavaScript Date object
@@ -72,17 +80,62 @@ export const parseUtcDate = (dateVal) => {
 };
 
 /**
- * Calculates start and end ISO 8601 UTC strings based on range preset
- * Considers Indian Standard Time (IST) calendar boundaries for "Today" and "This Month"
+ * Calculates start and end ISO 8601 UTC strings based on range preset or custom date bounds
+ * Considers Indian Standard Time (IST) calendar boundaries for "Today", "This Month", and "Custom"
  */
-export const calculateDateRange = (presetId) => {
+export const calculateDateRange = (presetId, customStart, customEnd) => {
   const now = new Date();
   let from = new Date();
+  let to = now;
+
+  if (presetId === 'custom') {
+    const todayIst = getTodayIstDateString();
+
+    let startDate = customStart;
+    let endDate = customEnd;
+
+    // Fallback if bounds are not provided
+    if (!startDate) {
+      const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      startDate = d7.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    }
+    if (!endDate) {
+      endDate = todayIst;
+    }
+
+    // Ensure startDate <= endDate; auto-swap if user entered in reverse
+    if (startDate > endDate) {
+      const temp = startDate;
+      startDate = endDate;
+      endDate = temp;
+    }
+
+    // Start of the day in IST (00:00:00.000 IST = UTC+05:30)
+    from = new Date(`${startDate}T00:00:00+05:30`);
+    if (isNaN(from.getTime())) {
+      from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }
+
+    // End of the day in IST (23:59:59.999 IST), or current time 'now' if endDate is today
+    if (endDate === todayIst) {
+      to = now;
+    } else {
+      to = new Date(`${endDate}T23:59:59.999+05:30`);
+      if (isNaN(to.getTime()) || to > now) {
+        to = now;
+      }
+    }
+
+    return {
+      from: from.toISOString(),
+      to: to.toISOString()
+    };
+  }
 
   switch (presetId) {
     case 'today': {
       // Start of day in IST (00:00:00 IST = UTC+05:30)
-      const istDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+      const istDateStr = getTodayIstDateString();
       from = new Date(`${istDateStr}T00:00:00+05:30`);
       break;
     }
@@ -94,7 +147,7 @@ export const calculateDateRange = (presetId) => {
       break;
     case 'month': {
       // Start of month in IST (00:00:00 IST of 1st day)
-      const istDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const istDateStr = getTodayIstDateString();
       const [year, month] = istDateStr.split('-');
       from = new Date(`${year}-${month}-01T00:00:00+05:30`);
       break;

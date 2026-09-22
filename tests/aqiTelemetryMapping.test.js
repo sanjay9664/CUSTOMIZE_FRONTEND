@@ -13,7 +13,14 @@ import {
   CANONICAL_AQI_METRICS,
   resolveAqiGraphSettings
 } from '../src/pages/AQISensor/utils/aqiTelemetryAdapter.js';
-import { isCumulativeSetting, downsampleForBarChart, formatTimestampLabel } from '../src/utils/scadaGraphUtils.js';
+import {
+  isCumulativeSetting,
+  downsampleForBarChart,
+  formatTimestampLabel,
+  calculateDateRange,
+  RANGE_PRESETS,
+  getTodayIstDateString
+} from '../src/utils/scadaGraphUtils.js';
 
 console.log('--- RUNNING AQI TELEMETRY MAPPING VERIFICATION SUITE ---');
 
@@ -492,4 +499,37 @@ console.log('--- RUNNING AQI TELEMETRY MAPPING VERIFICATION SUITE ---');
   console.log('✔ Test 18 passed: Cached Intl.DateTimeFormat formatters produce accurate IST timestamps');
 }
 
-console.log('\nALL 18 AQI TELEMETRY MAPPING, SHARED GRAPHS & SITE GUARD TESTS PASSED SUCCESSFULLY! 🎉');
+// Test 19: calculateDateRange with 'custom' preset and IST boundaries
+{
+  // 19a: Normal date range (2026-09-10 to 2026-09-15)
+  const range = calculateDateRange('custom', '2026-09-10', '2026-09-15');
+  // 2026-09-10T00:00:00+05:30 in UTC is 2026-09-09T18:30:00.000Z
+  assert.equal(range.from, '2026-09-09T18:30:00.000Z', 'from should be 00:00:00 IST converted to UTC ISO');
+  // 2026-09-15T23:59:59.999+05:30 in UTC is 2026-09-15T18:29:59.999Z
+  assert.equal(range.to, '2026-09-15T18:29:59.999Z', 'to should be 23:59:59.999 IST converted to UTC ISO');
+
+  // 19b: Auto-swap when dates are reversed (startDate > endDate)
+  const swapped = calculateDateRange('custom', '2026-09-15', '2026-09-10');
+  assert.equal(swapped.from, '2026-09-09T18:30:00.000Z', 'Swapped dates should automatically normalize from');
+  assert.equal(swapped.to, '2026-09-15T18:29:59.999Z', 'Swapped dates should automatically normalize to');
+
+  // 19c: Fallback safety when dates are omitted
+  const fallback = calculateDateRange('custom');
+  assert.ok(fallback.from, 'Fallback must produce valid from string');
+  assert.ok(fallback.to, 'Fallback must produce valid to string');
+  assert.ok(new Date(fallback.from).getTime() <= new Date(fallback.to).getTime(), 'from must be <= to in fallback');
+
+  console.log('✔ Test 19 passed: calculateDateRange calculates exact IST calendar boundaries and auto-swaps reversed dates');
+}
+
+// Test 20: RANGE_PRESETS includes 'custom' option
+{
+  const customPreset = RANGE_PRESETS.find(p => p.id === 'custom');
+  assert.ok(customPreset, "RANGE_PRESETS must contain preset with id 'custom'");
+  assert.equal(customPreset.label, 'Custom');
+  assert.ok(customPreset.defaultInterval, 'Custom preset must specify defaultInterval');
+
+  console.log("✔ Test 20 passed: RANGE_PRESETS successfully provides 'Custom' preset option");
+}
+
+console.log('\nALL 20 AQI TELEMETRY MAPPING, SHARED GRAPHS, SITE GUARD & CUSTOM DATE TESTS PASSED SUCCESSFULLY! 🎉');

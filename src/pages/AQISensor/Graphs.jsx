@@ -3,17 +3,13 @@ import { Row, Col, Card, Button, Form, Modal, Spinner, InputGroup } from 'react-
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Activity,
-  Search,
   RefreshCw,
   Sliders,
   Cpu,
   AlertTriangle,
-  Grid,
-  Columns,
   Maximize2,
   X,
   LayoutDashboard,
-  Calendar,
   FileText
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
@@ -28,9 +24,11 @@ import {
   GRAPH_PALETTES,
   parseUtcDate,
   calculateDateRange,
-  formatVal
+  formatVal,
+  getTodayIstDateString
 } from '../../utils/scadaGraphUtils';
 import TelemetryGraphCard from '../../components/graphs/TelemetryGraphCard';
+import ScadaToolbar from '../../components/graphs/ScadaToolbar';
 import { resolveAqiGraphSettings, downsampleSnapsTo30Min } from './utils/aqiTelemetryAdapter';
 import '../EnergyMetering/EnergyGraphs.css';
 import './AQIOverview.css';
@@ -72,6 +70,18 @@ const AQIGraphs = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [gridColumns, setGridColumns] = useState(2); // 1 = wide, 2 = grid
 
+  // Custom Date Range State — pending (input-bound) vs applied (fetch-bound)
+  // Fetch only fires on Apply click; inputs update freely without triggering a request.
+  const _defaultStart = () => {
+    const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  };
+  const [customStartDate, setCustomStartDate] = useState(_defaultStart);
+  const [customEndDate, setCustomEndDate] = useState(getTodayIstDateString);
+  // Applied dates — only updated by Apply button; these drive the telemetry fetch.
+  const [appliedStartDate, setAppliedStartDate] = useState(_defaultStart);
+  const [appliedEndDate, setAppliedEndDate] = useState(getTodayIstDateString);
+
   // Telemetry API state
   const [telemetryData, setTelemetryData] = useState(null);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
@@ -84,6 +94,13 @@ const AQIGraphs = () => {
   const [expandedColorScheme, setExpandedColorScheme] = useState(GRAPH_PALETTES[0]);
   const [modalInterval, setModalInterval] = useState('HOURLY');
   const [modalRangePreset, setModalRangePreset] = useState('last24h');
+  const [modalCustomStartDate, setModalCustomStartDate] = useState(() => {
+    const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  });
+  const [modalCustomEndDate, setModalCustomEndDate] = useState(() => {
+    return getTodayIstDateString();
+  });
   const [modalSnapshots, setModalSnapshots] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState(null);
@@ -215,7 +232,7 @@ const AQIGraphs = () => {
     setTelemetryError(null);
 
     try {
-      const { from, to } = calculateDateRange(rangePreset);
+      const { from, to } = calculateDateRange(rangePreset, appliedStartDate, appliedEndDate);
       // Map MIN_30 to MIN_15 for backend API contract (backend only accepts MIN_15 | HOURLY | DAILY | MONTHLY)
       const backendInterval = activeInterval === 'MIN_30' ? 'MIN_15' : activeInterval;
 
@@ -247,29 +264,28 @@ const AQIGraphs = () => {
         setTelemetryLoading(false);
       }
     }
-  }, [selectedSiteId, selectedDeviceId, activeInterval, rangePreset]);
+  }, [selectedSiteId, selectedDeviceId, activeInterval, rangePreset, appliedStartDate, appliedEndDate]);
 
   // Trigger telemetry fetch on dependencies change
   useEffect(() => {
     fetchTelemetrySnapshots();
   }, [fetchTelemetrySnapshots]);
 
-  // 3. Resolve Graph Settings dynamically using adapter
-  const eligibleSettings = useMemo(() => {
-    if (!selectedDevice) return [];
+  // 3. Telemetry Settings & Card Resolution
+  const graphSettings = useMemo(() => {
     return resolveAqiGraphSettings(selectedDevice, telemetryData, activeInterval);
   }, [selectedDevice, telemetryData, activeInterval]);
 
-  // Filter settings by search query
-  const filteredSettings = useMemo(() => {
-    if (!searchTerm.trim()) return eligibleSettings;
-    const q = searchTerm.toLowerCase().trim();
-    return eligibleSettings.filter(s =>
-      (s.displayName && s.displayName.toLowerCase().includes(q)) ||
-      (s.fieldKey && s.fieldKey.toLowerCase().includes(q)) ||
-      (s.unit && s.unit.toLowerCase().includes(q))
+  // Filtered settings for parameter search filter
+  const filteredGraphSettings = useMemo(() => {
+    if (!searchTerm.trim()) return graphSettings;
+    const query = searchTerm.toLowerCase().trim();
+    return graphSettings.filter(s =>
+      s.displayName.toLowerCase().includes(query) ||
+      (s.fieldKey && s.fieldKey.toLowerCase().includes(query)) ||
+      (s.unit && s.unit.toLowerCase().includes(query))
     );
-  }, [eligibleSettings, searchTerm]);
+  }, [graphSettings, searchTerm]);
 
   // 4. Modal Individual Telemetry Fetch
   const handleOpenExpandModal = useCallback((setting, chartType, colorScheme) => {
@@ -278,9 +294,11 @@ const AQIGraphs = () => {
     setExpandedColorScheme(colorScheme);
     setModalInterval(activeInterval);
     setModalRangePreset(rangePreset);
+    setModalCustomStartDate(customStartDate);
+    setModalCustomEndDate(customEndDate);
     setModalSnapshots(setting.snapshots || []);
     setModalError(null);
-  }, [activeInterval, rangePreset]);
+  }, [activeInterval, rangePreset, customStartDate, customEndDate]);
 
   const handleCloseExpandModal = useCallback(() => {
     setExpandedSetting(null);
@@ -288,14 +306,16 @@ const AQIGraphs = () => {
     setModalError(null);
   }, []);
 
-  const fetchModalSnapshots = useCallback(async (targetInterval, targetRange) => {
+  const fetchModalSnapshots = useCallback(async (targetInterval, targetRange, customStart, customEnd) => {
     if (!selectedSiteId || !selectedDeviceId || !expandedSetting) return;
 
     setModalLoading(true);
     setModalError(null);
 
     try {
-      const { from, to } = calculateDateRange(targetRange);
+      const activeStart = customStart || modalCustomStartDate;
+      const activeEnd = customEnd || modalCustomEndDate;
+      const { from, to } = calculateDateRange(targetRange, activeStart, activeEnd);
       const backendInterval = targetInterval === 'MIN_30' ? 'MIN_15' : targetInterval;
 
       const params = {
@@ -326,7 +346,7 @@ const AQIGraphs = () => {
     } finally {
       setModalLoading(false);
     }
-  }, [selectedSiteId, selectedDeviceId, expandedSetting]);
+  }, [selectedSiteId, selectedDeviceId, expandedSetting, modalCustomStartDate, modalCustomEndDate]);
 
   // Modal setting data combining active setting and latest modal snapshots
   const modalSettingData = useMemo(() => {
@@ -445,97 +465,33 @@ const AQIGraphs = () => {
       />
 
       {/* ── 2. SCADA Control Toolbar ── */}
-      <div className="scada-toolbar-container mb-4">
-        <Row className="g-2 align-items-center justify-content-between">
-          {/* Left: Time Range Presets */}
-          <Col xs={12} lg="auto">
-            <div className="d-flex align-items-center gap-1.5 flex-wrap">
-              <span className="text-secondary fs-8 fw-bold text-uppercase me-1 d-none d-md-inline">
-                Time Window:
-              </span>
-              <div className="btn-group btn-group-sm" role="group" aria-label="Time Range Presets">
-                {RANGE_PRESETS.map(preset => (
-                  <Button
-                    key={preset.id}
-                    variant={rangePreset === preset.id ? 'info' : 'outline-secondary'}
-                    size="sm"
-                    className="py-1 px-2.5 fs-8"
-                    onClick={() => {
-                      if (rangePreset !== preset.id) {
-                        setRangePreset(preset.id);
-                        if (preset.defaultInterval) {
-                          setActiveInterval(preset.defaultInterval);
-                        }
-                      }
-                    }}
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </Col>
-
-          {/* Right: Sampling Intervals, Search, & Layout Switcher */}
-          <Col xs={12} lg="auto">
-            <div className="d-flex align-items-center gap-2 flex-wrap">
-              {/* Sampling Interval Switcher */}
-              <div className="btn-group btn-group-sm" role="group" aria-label="Sampling Interval">
-                {AQI_SAMPLING_INTERVALS.map(intOption => (
-                  <Button
-                    key={intOption.value}
-                    variant={activeInterval === intOption.value ? 'primary' : 'outline-secondary'}
-                    size="sm"
-                    className="py-1 px-2 fs-8"
-                    onClick={() => {
-                      if (activeInterval !== intOption.value) {
-                        setActiveInterval(intOption.value);
-                      }
-                    }}
-                  >
-                    {intOption.label}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Search Filter */}
-              <InputGroup size="sm" style={{ width: '180px' }}>
-                <InputGroup.Text className="bg-dark border-secondary border-opacity-25 text-secondary p-1.5">
-                  <Search size={14} />
-                </InputGroup.Text>
-                <Form.Control
-                  placeholder="Filter parameters..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="bg-dark text-light border-secondary border-opacity-25 fs-8"
-                />
-              </InputGroup>
-
-              {/* Column Layout Switcher */}
-              <div className="btn-group btn-group-sm" role="group" aria-label="Layout Columns">
-                <Button
-                  variant={gridColumns === 2 ? 'info' : 'outline-secondary'}
-                  size="sm"
-                  className="p-1 px-2"
-                  onClick={() => setGridColumns(2)}
-                  title="2-Column Grid View"
-                >
-                  <Grid size={14} />
-                </Button>
-                <Button
-                  variant={gridColumns === 1 ? 'info' : 'outline-secondary'}
-                  size="sm"
-                  className="p-1 px-2"
-                  onClick={() => setGridColumns(1)}
-                  title="1-Column Full Width View"
-                >
-                  <Columns size={14} />
-                </Button>
-              </div>
-            </div>
-          </Col>
-        </Row>
-      </div>
+      <ScadaToolbar
+        rangePresets={RANGE_PRESETS}
+        rangePreset={rangePreset}
+        onRangeChange={(preset) => {
+          if (rangePreset !== preset.id) {
+            setRangePreset(preset.id);
+            if (preset.defaultInterval) setActiveInterval(preset.defaultInterval);
+          }
+        }}
+        customStartDate={customStartDate}
+        customEndDate={customEndDate}
+        onCustomStartChange={setCustomStartDate}
+        onCustomEndChange={setCustomEndDate}
+        onApplyCustom={() => {
+          setAppliedStartDate(customStartDate);
+          setAppliedEndDate(customEndDate);
+        }}
+        intervals={AQI_SAMPLING_INTERVALS}
+        activeInterval={activeInterval}
+        onIntervalChange={setActiveInterval}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        gridColumns={gridColumns}
+        onGridColumnsChange={setGridColumns}
+        loading={telemetryLoading}
+        getTodayIst={getTodayIstDateString}
+      />
 
       {/* ── 3. Differentiated States & Graph Grid ── */}
 
@@ -612,7 +568,7 @@ const AQIGraphs = () => {
       )}
 
       {/* State E: Device has No Configured Telemetry Settings */}
-      {!devicesLoading && selectedDeviceId && !telemetryLoading && !telemetryError && eligibleSettings.length === 0 && (
+      {!devicesLoading && selectedDeviceId && !telemetryLoading && !telemetryError && graphSettings.length === 0 && (
         <Card className="scada-graph-card text-center p-5 mb-4">
           <div className="py-4">
             <Cpu size={40} className="text-secondary opacity-50 mb-3" />
@@ -625,7 +581,7 @@ const AQIGraphs = () => {
       )}
 
       {/* State F: Settings Exist, but Filtered Search Produced No Matches */}
-      {!devicesLoading && selectedDeviceId && !telemetryLoading && !telemetryError && eligibleSettings.length > 0 && filteredSettings.length === 0 && (
+      {!devicesLoading && selectedDeviceId && !telemetryLoading && !telemetryError && graphSettings.length > 0 && filteredGraphSettings.length === 0 && (
         <Card className="scada-graph-card text-center p-4 mb-4">
           <p className="text-secondary fs-8 mb-0">
             No telemetry parameters matched the query &quot;{searchTerm}&quot;.
@@ -634,9 +590,9 @@ const AQIGraphs = () => {
       )}
 
       {/* State G: Render Dynamically Resolved Telemetry Cards */}
-      {!devicesLoading && selectedDeviceId && !telemetryLoading && !telemetryError && filteredSettings.length > 0 && (
+      {!devicesLoading && selectedDeviceId && !telemetryLoading && !telemetryError && filteredGraphSettings.length > 0 && (
         <Row className="g-3 mb-4">
-          {filteredSettings.map((setting, idx) => {
+          {filteredGraphSettings.map((setting, idx) => {
             const cardKey = setting.settingId ? `id_${setting.settingId}` : `key_${setting.fieldKey || idx}`;
             return (
               <Col
@@ -703,13 +659,54 @@ const AQIGraphs = () => {
                       className="py-0.5 px-2 fs-8"
                       onClick={() => {
                         setModalRangePreset(p.id);
-                        fetchModalSnapshots(modalInterval, p.id);
+                        if (p.id !== 'custom') {
+                          fetchModalSnapshots(modalInterval, p.id, modalCustomStartDate, modalCustomEndDate);
+                        }
                       }}
                     >
                       {p.label}
                     </Button>
                   ))}
                 </div>
+
+                {/* Modal Custom Date Range */}
+                {modalRangePreset === 'custom' && (
+                  <div className="d-flex align-items-center gap-1.5 px-2 py-0.5 rounded bg-dark border border-secondary border-opacity-50">
+                    <Calendar size={12} className="text-info flex-shrink-0" />
+                    <span className="text-secondary fs-8">From:</span>
+                    <Form.Control
+                      type="date"
+                      size="sm"
+                      value={modalCustomStartDate}
+                      max={modalCustomEndDate || getTodayIstDateString()}
+                      onChange={(e) => setModalCustomStartDate(e.target.value)}
+                      className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
+                      style={{ width: '120px', height: '22px' }}
+                    />
+                    <span className="text-secondary fs-8">To:</span>
+                    <Form.Control
+                      type="date"
+                      size="sm"
+                      value={modalCustomEndDate}
+                      min={modalCustomStartDate}
+                      max={getTodayIstDateString()}
+                      onChange={(e) => setModalCustomEndDate(e.target.value)}
+                      className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
+                      style={{ width: '120px', height: '22px' }}
+                    />
+                    <Button
+                      variant="info"
+                      size="sm"
+                      className="py-0 px-1.5 fs-8 text-white"
+                      style={{ height: '22px' }}
+                      onClick={() => fetchModalSnapshots(modalInterval, 'custom', modalCustomStartDate, modalCustomEndDate)}
+                      disabled={modalLoading || !modalCustomStartDate || !modalCustomEndDate}
+                      title="Apply custom date range"
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                )}
 
                 <div className="btn-group btn-group-sm" role="group" aria-label="Modal Interval">
                   {AQI_SAMPLING_INTERVALS.map(intOpt => (

@@ -17,15 +17,11 @@ import {
   Zap,
   Activity,
   Clock,
-  Search,
-  Maximize2,
   X,
   RefreshCw,
   Sliders,
   Cpu,
-  AlertTriangle,
-  Grid,
-  Columns
+  AlertTriangle
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';
@@ -47,9 +43,11 @@ import {
   formatTimestampLabel,
   formatTooltipWindow,
   formatVal,
-  isCumulativeSetting
+  isCumulativeSetting,
+  getTodayIstDateString
 } from '../../utils/scadaGraphUtils';
 import TelemetryGraphCard, { ScadaTooltip } from '../../components/graphs/TelemetryGraphCard';
+import ScadaToolbar from '../../components/graphs/ScadaToolbar';
 
 
 /**
@@ -78,6 +76,18 @@ const EnergyGraphs = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [gridColumns, setGridColumns] = useState(2); // 1 = wide, 2 = grid
 
+  // Custom Date Range state — pending (input-bound) vs applied (fetch-bound)
+  // Inputs update freely; fetch only fires when Apply is clicked.
+  const _defaultStart = () => {
+    const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  };
+  const [customStartDate, setCustomStartDate] = useState(_defaultStart);
+  const [customEndDate, setCustomEndDate] = useState(getTodayIstDateString);
+  // Applied dates — only updated by Apply button; these drive the telemetry fetch.
+  const [appliedStartDate, setAppliedStartDate] = useState(_defaultStart);
+  const [appliedEndDate, setAppliedEndDate] = useState(getTodayIstDateString);
+
   // Telemetry API state
   const [telemetryData, setTelemetryData] = useState(null);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
@@ -96,6 +106,13 @@ const EnergyGraphs = () => {
   // Dedicated modal controls state (independent of main page)
   const [modalInterval, setModalInterval] = useState('HOURLY');
   const [modalRangePreset, setModalRangePreset] = useState('last24h');
+  const [modalCustomStartDate, setModalCustomStartDate] = useState(() => {
+    const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  });
+  const [modalCustomEndDate, setModalCustomEndDate] = useState(() => {
+    return getTodayIstDateString();
+  });
   const [modalSnapshots, setModalSnapshots] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState(null);
@@ -324,7 +341,7 @@ const EnergyGraphs = () => {
     setTelemetryError(null);
 
     try {
-      const { from, to } = calculateDateRange(targetRange);
+      const { from, to } = calculateDateRange(targetRange, appliedStartDate, appliedEndDate);
       const params = {
         interval: targetInterval,
         from,
@@ -354,7 +371,7 @@ const EnergyGraphs = () => {
         setIsBackgroundFetching(false);
       }
     }
-  }, [selectedSiteId, selectedDeviceId, activeInterval, rangePreset]);
+  }, [selectedSiteId, selectedDeviceId, activeInterval, rangePreset, appliedStartDate, appliedEndDate]);
 
   // Trigger telemetry fetch on site, device, interval, or rangePreset changes
   useEffect(() => {
@@ -383,14 +400,16 @@ const EnergyGraphs = () => {
 
   // 3b. Individual fetch for a single setting (event) using settingId
   // Only the selected event data changes without refreshing the whole page
-  const fetchIndividualSettingSnapshots = useCallback(async (targetSetting, targetInterval, targetRange) => {
+  const fetchIndividualSettingSnapshots = useCallback(async (targetSetting, targetInterval, targetRange, customStart, customEnd) => {
     if (!selectedSiteId || !selectedDeviceId || !targetSetting) return;
 
     setModalLoading(true);
     setModalError(null);
 
     try {
-      const { from, to } = calculateDateRange(targetRange);
+      const activeStart = customStart || modalCustomStartDate;
+      const activeEnd = customEnd || modalCustomEndDate;
+      const { from, to } = calculateDateRange(targetRange, activeStart, activeEnd);
       const params = {
         interval: targetInterval,
         from,
@@ -633,9 +652,11 @@ const EnergyGraphs = () => {
     setExpandedColorScheme(color);
     setModalInterval(initialInterval);
     setModalRangePreset(initialRange);
+    setModalCustomStartDate(customStartDate);
+    setModalCustomEndDate(customEndDate);
     setModalSnapshots(initialSnaps);
     setModalError(null);
-  }, [settingOverrides, activeInterval, rangePreset]);
+  }, [settingOverrides, activeInterval, rangePreset, customStartDate, customEndDate]);
 
   const handleCloseExpandModal = useCallback(() => {
     setExpandedSetting(null);
@@ -651,8 +672,9 @@ const EnergyGraphs = () => {
     if (p?.defaultInterval) {
       setModalInterval(newInterval);
     }
-    if (activeExpandedSetting) {
-      fetchIndividualSettingSnapshots(activeExpandedSetting, newInterval, newPreset);
+    // For 'custom', don't fetch immediately — wait for the Apply button click
+    if (newPreset !== 'custom' && activeExpandedSetting) {
+      fetchIndividualSettingSnapshots(activeExpandedSetting, newInterval, newPreset, modalCustomStartDate, modalCustomEndDate);
     }
   };
 
@@ -660,7 +682,7 @@ const EnergyGraphs = () => {
   const handleModalIntervalChange = (newInterval) => {
     setModalInterval(newInterval);
     if (activeExpandedSetting) {
-      fetchIndividualSettingSnapshots(activeExpandedSetting, newInterval, modalRangePreset);
+      fetchIndividualSettingSnapshots(activeExpandedSetting, newInterval, modalRangePreset, modalCustomStartDate, modalCustomEndDate);
     }
   };
 
@@ -712,83 +734,28 @@ const EnergyGraphs = () => {
 
       {/* ── 2. Filter & Controls Toolbar ── */}
       {isDeviceConfigured && (
-        <div className="energy-graphs-toolbar d-flex flex-wrap align-items-center justify-content-between gap-3">
-          {/* Left: Range Presets */}
-          <div className="energy-toolbar-group">
-            <span className="text-secondary fs-8 fw-bold uppercase tracking-wider me-1">Range:</span>
-            {RANGE_PRESETS.map(preset => (
-              <button
-                key={preset.id}
-                type="button"
-                className={`energy-filter-btn ${rangePreset === preset.id ? 'active' : ''}`}
-                onClick={() => handleRangeChange(preset)}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Middle: Sampling Interval Buttons */}
-          <div className="energy-toolbar-group">
-            <span className="text-secondary fs-8 fw-bold uppercase tracking-wider me-1">Interval:</span>
-            {SAMPLING_INTERVALS.map(int => (
-              <button
-                key={int.value}
-                type="button"
-                className={`energy-filter-btn ${activeInterval === int.value ? 'active' : ''}`}
-                onClick={() => handleIntervalChange(int.value)}
-              >
-                {int.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Right: Quick Search Filter & Layout Toggle */}
-          <div className="energy-toolbar-group ms-auto">
-            <div style={{ width: '220px' }}>
-              <InputGroup size="sm">
-                <InputGroup.Text className="bg-dark border-secondary border-opacity-25 text-secondary pe-1">
-                  <Search size={14} />
-                </InputGroup.Text>
-                <Form.Control
-                  placeholder="Filter parameters..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="energy-search-input"
-                />
-                {searchTerm && (
-                  <Button
-                    variant="dark"
-                    className="border-secondary border-opacity-25 text-secondary p-1"
-                    onClick={() => setSearchTerm('')}
-                  >
-                    <X size={14} />
-                  </Button>
-                )}
-              </InputGroup>
-            </div>
-
-            {/* Grid Columns Toggle */}
-            <div className="btn-group btn-group-sm ms-1" role="group" aria-label="Layout Grid Toggle">
-              <Button
-                variant={gridColumns === 2 ? 'info' : 'outline-secondary'}
-                className="py-1 px-2"
-                onClick={() => setGridColumns(2)}
-                title="2-Column Grid"
-              >
-                <Grid size={15} />
-              </Button>
-              <Button
-                variant={gridColumns === 1 ? 'info' : 'outline-secondary'}
-                className="py-1 px-2"
-                onClick={() => setGridColumns(1)}
-                title="1-Column Full Width"
-              >
-                <Columns size={15} />
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ScadaToolbar
+          rangePresets={RANGE_PRESETS}
+          rangePreset={rangePreset}
+          onRangeChange={handleRangeChange}
+          customStartDate={customStartDate}
+          customEndDate={customEndDate}
+          onCustomStartChange={setCustomStartDate}
+          onCustomEndChange={setCustomEndDate}
+          onApplyCustom={() => {
+            setAppliedStartDate(customStartDate);
+            setAppliedEndDate(customEndDate);
+          }}
+          intervals={SAMPLING_INTERVALS}
+          activeInterval={activeInterval}
+          onIntervalChange={handleIntervalChange}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          gridColumns={gridColumns}
+          onGridColumnsChange={setGridColumns}
+          loading={telemetryLoading}
+          getTodayIst={getTodayIstDateString}
+        />
       )}
 
       {/* ── 3. Main Content / Empty & Error State Handling ── */}
@@ -943,6 +910,49 @@ const EnergyGraphs = () => {
                       <option key={p.id} value={p.id}>{p.label}</option>
                     ))}
                   </Form.Select>
+
+                  {/* Modal Custom Date Range Selector */}
+                  {modalRangePreset === 'custom' && (
+                    <div className="d-flex align-items-center gap-1.5 ms-2 px-2 py-0.5 rounded bg-dark border border-secondary border-opacity-50">
+                      <Calendar size={12} className="text-info flex-shrink-0" />
+                      <span className="text-secondary fs-8">From:</span>
+                      <Form.Control
+                        type="date"
+                        size="sm"
+                        value={modalCustomStartDate}
+                        max={modalCustomEndDate || getTodayIstDateString()}
+                        onChange={(e) => setModalCustomStartDate(e.target.value)}
+                        className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
+                        style={{ width: '120px', height: '22px' }}
+                      />
+                      <span className="text-secondary fs-8">To:</span>
+                      <Form.Control
+                        type="date"
+                        size="sm"
+                        value={modalCustomEndDate}
+                        min={modalCustomStartDate}
+                        max={getTodayIstDateString()}
+                        onChange={(e) => setModalCustomEndDate(e.target.value)}
+                        className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
+                        style={{ width: '120px', height: '22px' }}
+                      />
+                      <Button
+                        variant="info"
+                        size="sm"
+                        className="py-0 px-1.5 fs-8 text-white"
+                        style={{ height: '22px' }}
+                        onClick={() => {
+                          if (activeExpandedSetting) {
+                            fetchIndividualSettingSnapshots(activeExpandedSetting, modalInterval, 'custom', modalCustomStartDate, modalCustomEndDate);
+                          }
+                        }}
+                        disabled={modalLoading || !modalCustomStartDate || !modalCustomEndDate}
+                        title="Apply custom date range"
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Interactive Time-Interval Selector for this individual event */}
