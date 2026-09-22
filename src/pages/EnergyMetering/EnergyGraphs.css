@@ -82,7 +82,8 @@
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  transition: all 0.25s ease;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  contain: content;
   position: relative;
 }
 
@@ -304,6 +305,36 @@
 .energy-modal-select option {
   background-color: #0b1120;
   color: #f1f5f9;
+}
+
+/* ── Hardware-Accelerated Fade-in Slide ── */
+.fade-in-slide {
+  animation: scadaFadeInSlide 0.28s cubic-bezier(0.2, 0, 0.2, 1) both;
+  will-change: opacity, transform;
+}
+
+@keyframes scadaFadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Accessibility: Respect Prefers-Reduced-Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .scada-graph-card,
+  .energy-filter-btn,
+  .fade-in-slide,
+  .spin-animation,
+  .scada-loading-pulse {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 

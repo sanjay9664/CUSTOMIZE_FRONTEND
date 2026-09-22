@@ -70,7 +70,7 @@ const MainLayout = ({ children }) => {
           marginLeft: sidebarWidth,
           marginTop: 0,
           paddingTop: isImpersonating ? '104px' : '68px',
-          transition: 'margin-left 0.28s cubic-bezier(0.25, 0.1, 0.25, 1)'
+          transition: 'margin-left 0.22s cubic-bezier(0.25, 0.1, 0.25, 1)'
         }}
       >
         {isImpersonating && (
@@ -80,7 +80,7 @@ const MainLayout = ({ children }) => {
               left: sidebarWidth,
               right: 0,
               height: '40px',
-              transition: 'left 0.28s cubic-bezier(0.25, 0.1, 0.25, 1)'
+              transition: 'left 0.22s cubic-bezier(0.25, 0.1, 0.25, 1)'
             }}
           >
             <div className="d-flex align-items-center gap-2">

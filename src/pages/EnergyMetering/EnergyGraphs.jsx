@@ -266,7 +266,7 @@ const ScadaTooltip = ({ active, payload, unit, isCumulative, color }) => {
 /**
  * Individual Telemetry Graph Card
  */
-const TelemetryGraphCard = ({
+const TelemetryGraphCard = React.memo(({
   setting,
   interval,
   rangePreset,
@@ -376,7 +376,7 @@ const TelemetryGraphCard = ({
     const ChartComp = activeChartType === 'bar' ? BarChart : (activeChartType === 'line' ? LineChart : AreaChart);
 
     return (
-      <ResponsiveContainer width="100%" height={chartHeight}>
+      <ResponsiveContainer width="100%" height={chartHeight} debounce={150}>
         <ChartComp data={chartData} margin={{ top: 12, right: 16, left: -10, bottom: 4 }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -417,7 +417,7 @@ const TelemetryGraphCard = ({
               radius={[3, 3, 0, 0]}
               maxBarSize={40}
               isAnimationActive={true}
-              animationDuration={800}
+              animationDuration={350}
             />
           )}
           {activeChartType === 'line' && (
@@ -430,7 +430,7 @@ const TelemetryGraphCard = ({
               dot={false}
               activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
               isAnimationActive={true}
-              animationDuration={800}
+              animationDuration={350}
             />
           )}
           {activeChartType === 'area' && (
@@ -445,7 +445,7 @@ const TelemetryGraphCard = ({
               dot={false}
               activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
               isAnimationActive={true}
-              animationDuration={800}
+              animationDuration={350}
             />
           )}
         </ChartComp>
@@ -566,7 +566,9 @@ const TelemetryGraphCard = ({
       </div>
     </Card>
   );
-};
+});
+
+TelemetryGraphCard.displayName = 'TelemetryGraphCard';
 
 /**
  * Main EnergyGraphs Component
@@ -810,8 +812,14 @@ const EnergyGraphs = () => {
     return false;
   }, [selectedDevice, getOverallStatus]);
 
+  // Keep telemetryData in a ref so fetchTelemetrySnapshots does not re-create on data update
+  const telemetryDataRef = useRef(telemetryData);
+  useEffect(() => {
+    telemetryDataRef.current = telemetryData;
+  }, [telemetryData]);
+
   // 3a. Device-Wide Telemetry Snapshots Fetch (Page level)
-  const fetchTelemetrySnapshots = useCallback(async () => {
+  const fetchTelemetrySnapshots = useCallback(async (customInterval, customRange) => {
     if (!selectedSiteId || !selectedDeviceId) {
       setTelemetryData(null);
       setTelemetryLoading(false);
@@ -822,8 +830,11 @@ const EnergyGraphs = () => {
     requestIdRef.current += 1;
     const currentRequestId = requestIdRef.current;
 
-    // If initial load, show full loading. If range change, do background refresh without wiping existing cards
-    if (!telemetryData) {
+    const targetInterval = (customInterval && typeof customInterval === 'string') ? customInterval : activeInterval;
+    const targetRange = (customRange && typeof customRange === 'string') ? customRange : rangePreset;
+
+    // If initial load, show full loading. If range/interval change, do background refresh without wiping existing cards
+    if (!telemetryDataRef.current) {
       setTelemetryLoading(true);
     } else {
       setIsBackgroundFetching(true);
@@ -831,9 +842,9 @@ const EnergyGraphs = () => {
     setTelemetryError(null);
 
     try {
-      const { from, to } = calculateDateRange(rangePreset);
+      const { from, to } = calculateDateRange(targetRange);
       const params = {
-        interval: activeInterval,
+        interval: targetInterval,
         from,
         to,
         limit: 1000
@@ -861,12 +872,32 @@ const EnergyGraphs = () => {
         setIsBackgroundFetching(false);
       }
     }
-  }, [selectedSiteId, selectedDeviceId, activeInterval, rangePreset, telemetryData]);
+  }, [selectedSiteId, selectedDeviceId, activeInterval, rangePreset]);
 
-  // Trigger telemetry fetch on site or device changes
+  // Trigger telemetry fetch on site, device, interval, or rangePreset changes
   useEffect(() => {
     fetchTelemetrySnapshots();
-  }, [selectedSiteId, selectedDeviceId]);
+  }, [fetchTelemetrySnapshots]);
+
+  // Handlers for toolbar range and interval clicks
+  const handleRangeChange = (preset) => {
+    if (rangePreset === preset.id && (!preset.defaultInterval || activeInterval === preset.defaultInterval)) {
+      fetchTelemetrySnapshots();
+      return;
+    }
+    setRangePreset(preset.id);
+    if (preset.defaultInterval) {
+      setActiveInterval(preset.defaultInterval);
+    }
+  };
+
+  const handleIntervalChange = (newInterval) => {
+    if (activeInterval === newInterval) {
+      fetchTelemetrySnapshots();
+      return;
+    }
+    setActiveInterval(newInterval);
+  };
 
   // 3b. Individual fetch for a single setting (event) using settingId
   // Only the selected event data changes without refreshing the whole page
@@ -1105,8 +1136,8 @@ const EnergyGraphs = () => {
     return SAMPLING_INTERVALS.find(i => i.value === activeInterval)?.label || activeInterval;
   }, [activeInterval]);
 
-  // Handle expand graph modal
-  const handleOpenExpandModal = (setting, type, color) => {
+  // Handle expand graph modal with stable callback reference
+  const handleOpenExpandModal = useCallback((setting, type, color) => {
     const key = setting.settingId ? `id:${setting.settingId}` : (setting.fieldKey ? `key:${setting.fieldKey}` : `name:${setting.displayName}`);
     const override = settingOverrides[key];
     const initialInterval = override?.interval || activeInterval;
@@ -1121,13 +1152,13 @@ const EnergyGraphs = () => {
     setModalRangePreset(initialRange);
     setModalSnapshots(initialSnaps);
     setModalError(null);
-  };
+  }, [settingOverrides, activeInterval, rangePreset]);
 
-  const handleCloseExpandModal = () => {
+  const handleCloseExpandModal = useCallback(() => {
     setExpandedSetting(null);
     setExpandedSettingKey(null);
     setModalError(null);
-  };
+  }, []);
 
   // Modal Range Selector change: individual fetch by settingId
   const handleModalRangeChange = (newPreset) => {
@@ -1207,12 +1238,7 @@ const EnergyGraphs = () => {
                 key={preset.id}
                 type="button"
                 className={`energy-filter-btn ${rangePreset === preset.id ? 'active' : ''}`}
-                onClick={() => {
-                  setRangePreset(preset.id);
-                  if (preset.defaultInterval) {
-                    setActiveInterval(preset.defaultInterval);
-                  }
-                }}
+                onClick={() => handleRangeChange(preset)}
               >
                 {preset.label}
               </button>
@@ -1227,7 +1253,7 @@ const EnergyGraphs = () => {
                 key={int.value}
                 type="button"
                 className={`energy-filter-btn ${activeInterval === int.value ? 'active' : ''}`}
-                onClick={() => setActiveInterval(int.value)}
+                onClick={() => handleIntervalChange(int.value)}
               >
                 {int.label}
               </button>
