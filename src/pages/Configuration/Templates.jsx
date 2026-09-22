@@ -2148,7 +2148,7 @@ const ConfigTemplates = () => {
     'Daily DPR': ['Data Aggregation', 'Daily Logs'],
     'Energy Metering': ['Overview', 'Main Meter', 'Sub Meters'],
     'VRV': ['Overview', 'Control Panel', 'Schedule', 'Human Sensor'],
-    'AQI Sensor': ['Overview', 'Temp & Humidity'],
+    'AQI Sensor': ['Overview', 'Graphs', 'Reports'],
     'HVAC': ['Chiller', 'AHU', 'Cooling Tower']
   };
 

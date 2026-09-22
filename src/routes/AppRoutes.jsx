@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Each screen is downloaded only after its route is opened.
 const Dashboard = lazy(() => import('../pages/Dashboard'));
@@ -38,6 +38,8 @@ const VRVSchedule = lazy(() => import('../pages/VRV/Schedule'));
 const VRVHumanSensor = lazy(() => import('../pages/VRV/HumanSensor'));
 const VRVTempHumidity = lazy(() => import('../pages/VRV/TempHumidity'));
 const AQIOverview = lazy(() => import('../pages/AQISensor/Overview'));
+const AQIGraphs = lazy(() => import('../pages/AQISensor/Graphs'));
+const AQIReports = lazy(() => import('../pages/AQISensor/Reports'));
 const Chiller = lazy(() => import('../pages/HVAC/Chiller'));
 const AHU = lazy(() => import('../pages/HVAC/AHU'));
 const CoolingTower = lazy(() => import('../pages/HVAC/CoolingTower'));
@@ -49,6 +51,12 @@ const HeaderPressure = lazy(() => import('../pages/FirePumps/HeaderPressure'));
 const JockeyMain = lazy(() => import('../pages/FirePumps/JockeyMain'));
 const HelpFeedback = lazy(() => import('../pages/Help/Feedback'));
 const PolicyCondition = lazy(() => import('../pages/Help/PolicyCondition'));
+
+// Query-preserving redirect helper for legacy routes
+const QueryPreservingRedirect = ({ to }) => {
+  const location = useLocation();
+  return <Navigate to={`${to}${location.search}${location.hash}`} replace />;
+};
 
 // Fallback for other routes until customized
 const PlaceholderPage = ({ title }) => (
@@ -223,7 +231,10 @@ const AppRoutes = () => {
       
       {/* AQI Sensor */}
       <Route path="/aqi-sensor/overview" element={<AQIOverview />} />
-      <Route path="/aqi-sensor/temp-humidity" element={<VRVTempHumidity />} />
+      <Route path="/aqi-sensor/graphs" element={<AQIGraphs />} />
+      <Route path="/aqi-sensor/reports" element={<AQIReports />} />
+      <Route path="/aqi-sensor/temp-humidity" element={<QueryPreservingRedirect to="/aqi-sensor/graphs" />} />
+      <Route path="/aqi-sensor/report" element={<QueryPreservingRedirect to="/aqi-sensor/reports" />} />
 
       {/* HVAC */}
       <Route path="/hvac/chiller" element={<Chiller />} />

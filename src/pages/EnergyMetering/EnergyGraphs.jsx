@@ -35,540 +35,22 @@ import { bmsService } from '../../services/bmsService';
 import { getApiUrl } from '../../utils/apiConfig';
 import { getAuthHeaders, normalizeList } from '../../services/apiClient';
 import { MAIN_METER_FIELDS_METADATA } from './utils/energyTelemetry';
+import { normalizeKey } from './utils/energyTelemetryAdapter';
 import './EnergyGraphs.css';
 
-// Sampling intervals supported by OpenAPI endpoint
-const SAMPLING_INTERVALS = [
-  { label: '15-Min', value: 'MIN_15' },
-  { label: 'Hourly', value: 'HOURLY' },
-  { label: 'Daily', value: 'DAILY' },
-  { label: 'Monthly', value: 'MONTHLY' }
-];
+import {
+  SAMPLING_INTERVALS,
+  RANGE_PRESETS,
+  GRAPH_PALETTES,
+  parseUtcDate,
+  calculateDateRange,
+  formatTimestampLabel,
+  formatTooltipWindow,
+  formatVal,
+  isCumulativeSetting
+} from '../../utils/scadaGraphUtils';
+import TelemetryGraphCard, { ScadaTooltip } from '../../components/graphs/TelemetryGraphCard';
 
-// Time range presets
-const RANGE_PRESETS = [
-  { id: 'last24h', label: 'Last 24 Hours', defaultInterval: 'HOURLY' },
-  { id: 'today', label: 'Today', defaultInterval: 'MIN_15' },
-  { id: 'last7d', label: 'Last 7 Days', defaultInterval: 'HOURLY' },
-  { id: 'last30d', label: 'Last 30 Days', defaultInterval: 'DAILY' },
-  { id: 'month', label: 'This Month', defaultInterval: 'DAILY' }
-];
-
-// Curated SCADA graph palette for distinct, high-visibility telemetry visualizations
-const GRAPH_PALETTES = [
-  { stroke: '#06b6d4', fill: '#0891b2', name: 'Cyan' },
-  { stroke: '#10b981', fill: '#059669', name: 'Emerald' },
-  { stroke: '#38bdf8', fill: '#0284c7', name: 'Sky' },
-  { stroke: '#f59e0b', fill: '#d97706', name: 'Amber' },
-  { stroke: '#8b5cf6', fill: '#7c3aed', name: 'Purple' },
-  { stroke: '#ec4899', fill: '#db2777', name: 'Pink' },
-  { stroke: '#6366f1', fill: '#4f46e5', name: 'Indigo' },
-  { stroke: '#14b8a6', fill: '#0d9488', name: 'Teal' },
-  { stroke: '#f97316', fill: '#ea580c', name: 'Orange' },
-  { stroke: '#ef4444', fill: '#dc2626', name: 'Red' }
-];
-
-/**
- * Parses UTC/GMT timestamps from backend into JavaScript Date object
- * Guaranteed to interpret GMT/UTC timestamps properly
- */
-const parseUtcDate = (dateVal) => {
-  if (!dateVal) return null;
-  if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
-
-  if (typeof dateVal === 'number') {
-    const ms = dateVal < 1e11 ? dateVal * 1000 : dateVal;
-    return new Date(ms);
-  }
-
-  let str = String(dateVal).trim();
-  if (!str) return null;
-
-  if (/^\d{10,13}$/.test(str)) {
-    const num = Number(str);
-    const ms = num < 1e11 ? num * 1000 : num;
-    return new Date(ms);
-  }
-
-  // Normalize "YYYY-MM-DD HH:mm:ss" to "YYYY-MM-DDTHH:mm:ss"
-  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}/.test(str)) {
-    str = str.replace(' ', 'T');
-  }
-
-  // If missing timezone indicator, append 'Z' so it is treated as UTC/GMT
-  if (!str.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(str)) {
-    str += 'Z';
-  }
-
-  const d = new Date(str);
-  return isNaN(d.getTime()) ? null : d;
-};
-
-/**
- * Calculates start and end ISO 8601 UTC strings based on range preset
- * Considers Indian Standard Time (IST) calendar boundaries for "Today" and "This Month"
- */
-const calculateDateRange = (presetId) => {
-  const now = new Date();
-  let from = new Date();
-
-  switch (presetId) {
-    case 'today': {
-      // Start of day in IST (00:00:00 IST = UTC+05:30)
-      const istDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
-      from = new Date(`${istDateStr}T00:00:00+05:30`);
-      break;
-    }
-    case 'last7d':
-      from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      break;
-    case 'last30d':
-      from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      break;
-    case 'month': {
-      // Start of month in IST (00:00:00 IST of 1st day)
-      const istDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-      const [year, month] = istDateStr.split('-');
-      from = new Date(`${year}-${month}-01T00:00:00+05:30`);
-      break;
-    }
-    case 'last24h':
-    default:
-      from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      break;
-  }
-
-  return {
-    from: from.toISOString(),
-    to: now.toISOString()
-  };
-};
-
-/**
- * Formats snapshot timestamps to Indian Standard Time (IST, UTC+05:30)
- */
-const formatTimestampLabel = (dateStr, interval, rangePreset) => {
-  if (!dateStr) return '';
-  const date = parseUtcDate(dateStr);
-  if (!date) return String(dateStr);
-
-  const istOptions = { timeZone: 'Asia/Kolkata' };
-
-  switch (interval) {
-    case 'MIN_15':
-      return date.toLocaleTimeString('en-IN', { ...istOptions, hour: '2-digit', minute: '2-digit', hour12: false });
-    case 'HOURLY':
-      if (rangePreset === 'last7d' || rangePreset === 'last30d') {
-        const day = date.toLocaleDateString('en-IN', { ...istOptions, month: 'short', day: 'numeric' });
-        const time = date.toLocaleTimeString('en-IN', { ...istOptions, hour: '2-digit', minute: '2-digit', hour12: false });
-        return `${day} ${time}`;
-      }
-      return date.toLocaleTimeString('en-IN', { ...istOptions, hour: '2-digit', minute: '2-digit', hour12: false });
-    case 'DAILY':
-      return date.toLocaleDateString('en-IN', { ...istOptions, month: 'short', day: 'numeric' });
-    case 'MONTHLY':
-      return date.toLocaleDateString('en-IN', { ...istOptions, month: 'short', year: 'numeric' });
-    default:
-      return date.toLocaleTimeString('en-IN', { ...istOptions, hour: '2-digit', minute: '2-digit', hour12: false });
-  }
-};
-
-/**
- * Formats full timestamp range in Indian Standard Time (IST) for custom tooltip
- */
-const formatTooltipWindow = (startStr, endStr) => {
-  if (!startStr) return '';
-  const startDate = parseUtcDate(startStr);
-  if (!startDate) return String(startStr);
-
-  const istOptions = { timeZone: 'Asia/Kolkata' };
-  const startDay = startDate.toLocaleDateString('en-IN', { ...istOptions, month: 'short', day: 'numeric' });
-  const startTime = startDate.toLocaleTimeString('en-IN', { ...istOptions, hour: '2-digit', minute: '2-digit', hour12: false });
-  const startFmt = `${startDay}, ${startTime}`;
-
-  if (!endStr) return `${startFmt} IST`;
-  const endDate = parseUtcDate(endStr);
-  if (!endDate) return `${startFmt} – ${endStr} IST`;
-
-  const endDay = endDate.toLocaleDateString('en-IN', { ...istOptions, month: 'short', day: 'numeric' });
-  const endTime = endDate.toLocaleTimeString('en-IN', { ...istOptions, hour: '2-digit', minute: '2-digit', hour12: false });
-
-  if (startDay === endDay) {
-    return `${startDay}, ${startTime} – ${endTime} IST`;
-  }
-  return `${startFmt} – ${endDay}, ${endTime} IST`;
-};
-
-/**
- * Format numeric value cleanly with max decimals
- */
-const formatVal = (val, maxDecimals = 2) => {
-  if (val === null || val === undefined || isNaN(Number(val))) return '—';
-  const num = Number(val);
-  return Number.isInteger(num) ? num.toString() : num.toFixed(maxDecimals);
-};
-
-/**
- * Determines whether a setting is cumulative (energy consumption)
- */
-const isCumulativeSetting = (setting) => {
-  if (setting.isCumulative === true) return true;
-  const unit = String(setting.unit || '').toUpperCase();
-  if (unit === 'KWH' || unit === 'KVAH' || unit === 'KVARH') return true;
-  const name = String(setting.displayName || setting.name || '').toUpperCase();
-  return name.includes('ENERGY') || name.includes('CONSUMPTION') || name.includes('CUMULATIVE') || name.includes('KWH') || name.includes('KVAH');
-};
-
-/**
- * Custom SCADA Glassmorphic Tooltip (with IST Time Window)
- */
-const ScadaTooltip = ({ active, payload, unit, isCumulative, color }) => {
-  if (!active || !payload || !payload.length) return null;
-  const pt = payload[0]?.payload;
-  if (!pt) return null;
-
-  return (
-    <div className="scada-custom-tooltip">
-      <div className="scada-tooltip-time">
-        {formatTooltipWindow(pt.rawStart, pt.rawEnd)}
-      </div>
-      <div className="scada-tooltip-row mb-1" style={{ color: color || '#38bdf8' }}>
-        <span>{isCumulative ? 'Delta (Consumption)' : 'Average Value'}:</span>
-        <span className="ms-2 font-monospace">{formatVal(pt.plotValue)} {unit || ''}</span>
-      </div>
-      {pt.lastValue !== null && pt.lastValue !== undefined && (
-        <div className="d-flex justify-content-between text-secondary fs-8 mb-0.5">
-          <span>Last Reading:</span>
-          <span className="text-light ms-2 font-monospace">{formatVal(pt.lastValue)} {unit || ''}</span>
-        </div>
-      )}
-      {pt.minValue !== null && pt.minValue !== undefined && pt.maxValue !== null && pt.maxValue !== undefined && (
-        <div className="d-flex justify-content-between text-secondary fs-8 mb-0.5">
-          <span>Min / Max:</span>
-          <span className="text-light ms-2 font-monospace">{formatVal(pt.minValue)} / {formatVal(pt.maxValue)}</span>
-        </div>
-      )}
-      {pt.readingCount !== null && pt.readingCount !== undefined && (
-        <div className="d-flex justify-content-between text-secondary fs-8">
-          <span>Readings:</span>
-          <span className="text-info ms-2 font-monospace">{pt.readingCount}</span>
-        </div>
-      )}
-      {pt.alarmState && pt.alarmState !== 'NORMAL' && (
-        <div className="mt-1 pt-1 border-top border-secondary border-opacity-25 text-warning fs-8 fw-bold">
-          Status: {pt.alarmState}
-        </div>
-      )}
-    </div>
-  );
-};
-
-/**
- * Individual Telemetry Graph Card
- */
-const TelemetryGraphCard = React.memo(({
-  setting,
-  interval,
-  rangePreset,
-  colorScheme,
-  onExpand,
-  initialChartType = null,
-  isExpanded = false,
-  height = 250
-}) => {
-  const isCumulative = useMemo(() => isCumulativeSetting(setting), [setting]);
-  const defaultChartType = isCumulative ? 'bar' : 'area';
-  const [chartType, setChartType] = useState(initialChartType || defaultChartType);
-
-  // In expanded modal mode, the parent modal controls chartType directly
-  const activeChartType = isExpanded ? (initialChartType || defaultChartType) : chartType;
-
-  // Transform raw snapshots into recharts data points
-  const { chartData, stats } = useMemo(() => {
-    const rawSnapshots = setting.snapshots || [];
-    if (!Array.isArray(rawSnapshots) || rawSnapshots.length === 0) {
-      return { chartData: [], stats: null };
-    }
-
-    // Sort snapshots chronologically ascending by windowStart
-    const sorted = [...rawSnapshots].sort((a, b) => {
-      const timeA = (parseUtcDate(a.windowStart || a.time) || new Date(0)).getTime();
-      const timeB = (parseUtcDate(b.windowStart || b.time) || new Date(0)).getTime();
-      return timeA - timeB;
-    });
-
-    let min = Infinity;
-    let max = -Infinity;
-    let sum = 0;
-    let validCount = 0;
-    let cumulativeSum = 0;
-
-    const data = sorted.map((snap) => {
-      // For cumulative energy, use delta (consumption in period), fallback to sumValue, lastValue, or avgValue
-      // For continuous analog signals (voltage, current, etc.), use avgValue, fallback to lastValue
-      let val = null;
-      if (isCumulative) {
-        val = snap.delta !== null && snap.delta !== undefined
-          ? Number(snap.delta)
-          : (snap.sumValue !== null && snap.sumValue !== undefined
-              ? Number(snap.sumValue)
-              : (snap.lastValue !== null && snap.lastValue !== undefined ? Number(snap.lastValue) : Number(snap.avgValue)));
-      } else {
-        val = snap.avgValue !== null && snap.avgValue !== undefined
-          ? Number(snap.avgValue)
-          : (snap.lastValue !== null && snap.lastValue !== undefined
-              ? Number(snap.lastValue)
-              : Number(snap.firstValue));
-      }
-
-      if (val !== null && !isNaN(val)) {
-        if (val < min) min = val;
-        if (val > max) max = val;
-        sum += val;
-        validCount += 1;
-        cumulativeSum += val;
-      }
-
-      return {
-        time: formatTimestampLabel(snap.windowStart, interval, rangePreset),
-        plotValue: val !== null && !isNaN(val) ? Number(val.toFixed(3)) : null,
-        rawStart: snap.windowStart,
-        rawEnd: snap.windowEnd,
-        avgValue: snap.avgValue,
-        minValue: snap.minValue,
-        maxValue: snap.maxValue,
-        lastValue: snap.lastValue,
-        firstValue: snap.firstValue,
-        delta: snap.delta,
-        readingCount: snap.readingCount,
-        alarmState: snap.alarmState
-      };
-    });
-
-    const lastPoint = data[data.length - 1];
-    const computedStats = validCount > 0 ? {
-      latest: lastPoint?.plotValue,
-      min: min !== Infinity ? min : null,
-      max: max !== -Infinity ? max : null,
-      avg: validCount > 0 ? sum / validCount : null,
-      totalDelta: isCumulative ? cumulativeSum : null
-    } : null;
-
-    return { chartData: data, stats: computedStats };
-  }, [setting.snapshots, interval, rangePreset, isCumulative]);
-
-  const hasData = chartData.length > 0;
-  const gradientId = `grad_${(setting.settingId || setting.fieldKey || 'card').toString().replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-  const renderChart = (chartHeight) => {
-    if (!hasData) {
-      return (
-        <div className="scada-graph-empty" style={{ height: `${chartHeight}px` }}>
-          <Activity size={32} className="text-secondary opacity-40 mb-2" />
-          <h6 className="text-secondary fs-7 fw-bold mb-1">No telemetry data available</h6>
-          <span className="text-secondary opacity-60 fs-8">
-            No snapshots recorded for this setting in the selected interval.
-          </span>
-        </div>
-      );
-    }
-
-    const ChartComp = activeChartType === 'bar' ? BarChart : (activeChartType === 'line' ? LineChart : AreaChart);
-
-    return (
-      <ResponsiveContainer width="100%" height={chartHeight} debounce={150}>
-        <ChartComp data={chartData} margin={{ top: 12, right: 16, left: -10, bottom: 4 }}>
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={colorScheme.stroke} stopOpacity={0.65} />
-              <stop offset="95%" stopColor={colorScheme.stroke} stopOpacity={0.04} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
-          <XAxis
-            dataKey="time"
-            stroke="#94a3b8"
-            fontSize={11}
-            tickLine={{ stroke: '#475569' }}
-            axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
-            tick={{ fill: '#94a3b8' }}
-            dy={6}
-            minTickGap={25}
-          />
-          <YAxis
-            stroke="#94a3b8"
-            fontSize={11}
-            tickLine={{ stroke: '#475569' }}
-            axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
-            tick={{ fill: '#94a3b8' }}
-            dx={-4}
-            width={55}
-            domain={['auto', 'auto']}
-          />
-          <Tooltip
-            content={<ScadaTooltip unit={setting.unit} isCumulative={isCumulative} color={colorScheme.stroke} />}
-            cursor={activeChartType === 'bar' ? { fill: 'rgba(255, 255, 255, 0.04)' } : { stroke: colorScheme.stroke, strokeWidth: 1, strokeDasharray: '3 3' }}
-          />
-          {activeChartType === 'bar' && (
-            <Bar
-              dataKey="plotValue"
-              name={setting.displayName}
-              fill={colorScheme.stroke}
-              radius={[3, 3, 0, 0]}
-              maxBarSize={40}
-              isAnimationActive={true}
-              animationDuration={350}
-            />
-          )}
-          {activeChartType === 'line' && (
-            <Line
-              type="monotone"
-              dataKey="plotValue"
-              name={setting.displayName}
-              stroke={colorScheme.stroke}
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
-              isAnimationActive={true}
-              animationDuration={350}
-            />
-          )}
-          {activeChartType === 'area' && (
-            <Area
-              type="monotone"
-              dataKey="plotValue"
-              name={setting.displayName}
-              stroke={colorScheme.stroke}
-              strokeWidth={2}
-              fill={`url(#${gradientId})`}
-              fillOpacity={1}
-              dot={false}
-              activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
-              isAnimationActive={true}
-              animationDuration={350}
-            />
-          )}
-        </ChartComp>
-      </ResponsiveContainer>
-    );
-  };
-
-  return (
-    <Card className={`scada-graph-card h-100 ${isExpanded ? 'scada-graph-card-expanded' : ''}`}>
-      {/* Top accent line (only in card mode) */}
-      {!isExpanded && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: '2.5px',
-          background: `linear-gradient(90deg, transparent, ${colorScheme.stroke}, transparent)`,
-          opacity: 0.85
-        }} />
-      )}
-
-      {/* Card Header (only rendered in regular card mode; omitted in modal to eliminate duplicate heading bar) */}
-      {!isExpanded && (
-        <div className="scada-graph-header">
-          <div className="scada-graph-title-group">
-            <div className="scada-graph-color-bar" style={{ background: colorScheme.stroke, boxShadow: `0 0 8px ${colorScheme.stroke}88` }} />
-            <div className="d-flex flex-column">
-              <h5 className="scada-graph-title" title={setting.displayName}>
-                {setting.displayName}
-              </h5>
-              <div className="d-flex align-items-center gap-1.5 mt-0.5">
-                {setting.fieldKey && (
-                  <span className="scada-graph-tag">{setting.fieldKey}</span>
-                )}
-                {setting.unit && (
-                  <span className="scada-graph-unit">{setting.unit}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Action Controls */}
-          <div className="d-flex align-items-center gap-1.5">
-            <div className="btn-group btn-group-sm" role="group" aria-label="Chart Type Switcher">
-              <Button
-                variant={chartType === 'area' ? 'info' : 'outline-secondary'}
-                size="sm"
-                className="py-0.5 px-2 fs-8"
-                onClick={() => setChartType('area')}
-                title="Area Chart"
-              >
-                Area
-              </Button>
-              <Button
-                variant={chartType === 'line' ? 'info' : 'outline-secondary'}
-                size="sm"
-                className="py-0.5 px-2 fs-8"
-                onClick={() => setChartType('line')}
-                title="Line Chart"
-              >
-                Line
-              </Button>
-              <Button
-                variant={chartType === 'bar' ? 'info' : 'outline-secondary'}
-                size="sm"
-                className="py-0.5 px-2 fs-8"
-                onClick={() => setChartType('bar')}
-                title="Bar Chart"
-              >
-                Bar
-              </Button>
-            </div>
-
-            {onExpand && (
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                className="p-1 border-0 text-info hover-glow ms-1"
-                onClick={() => onExpand(setting, chartType, colorScheme)}
-                title="Expand Graph"
-                disabled={!hasData}
-              >
-                <Maximize2 size={15} />
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Stats Ribbon */}
-      {stats && (
-        <div className="scada-graph-stats">
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Latest:</span>
-            <span className="scada-stat-value text-info">{formatVal(stats.latest)}</span>
-          </div>
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Min:</span>
-            <span className="scada-stat-value">{formatVal(stats.min)}</span>
-          </div>
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Max:</span>
-            <span className="scada-stat-value">{formatVal(stats.max)}</span>
-          </div>
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Avg:</span>
-            <span className="scada-stat-value">{formatVal(stats.avg)}</span>
-          </div>
-          {isCumulative && stats.totalDelta !== null && (
-            <div className="scada-stat-item ms-auto">
-              <span className="scada-stat-label text-warning">Total Delta:</span>
-              <span className="scada-stat-value text-warning">{formatVal(stats.totalDelta)} {setting.unit || ''}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Graph Body */}
-      <div className="scada-graph-body">
-        {renderChart(height)}
-      </div>
-    </Card>
-  );
-});
-
-TelemetryGraphCard.displayName = 'TelemetryGraphCard';
 
 /**
  * Main EnergyGraphs Component
@@ -979,14 +461,15 @@ const EnergyGraphs = () => {
       const stableKey = sId ? `id:${sId}` : (s.sochiotFieldName ? `key:${s.sochiotFieldName}` : `name:${s.displayName}`);
       
       // Look up telemetry snapshots using stable identifiers
+      const sNameNorm = normalizeKey(s.displayName || s.name);
       const tel = (sId ? telemetryMap.get(`id:${sId}`) : null) ||
                   (s.sochiotFieldName ? telemetryMap.get(`key:${s.sochiotFieldName}`) : null) ||
-                  (s.displayName ? apiSettings.find(a => a.displayName?.toLowerCase() === s.displayName?.toLowerCase()) : null);
+                  (sNameNorm ? apiSettings.find(a => normalizeKey(a.displayName) === sNameNorm) : null);
 
       // Check metadata for friendly default units if missing
       const meta = MAIN_METER_FIELDS_METADATA.find(m =>
         m.key === s.sochiotFieldName ||
-        m.label.toLowerCase() === s.displayName?.toLowerCase()
+        normalizeKey(m.label) === sNameNorm
       );
 
       settingsMap.set(stableKey, {
@@ -1568,6 +1051,20 @@ const EnergyGraphs = () => {
       )}
     </div>
   );
+};
+
+export {
+  TelemetryGraphCard,
+  ScadaTooltip,
+  SAMPLING_INTERVALS,
+  RANGE_PRESETS,
+  GRAPH_PALETTES,
+  parseUtcDate,
+  calculateDateRange,
+  formatTimestampLabel,
+  formatTooltipWindow,
+  formatVal,
+  isCumulativeSetting
 };
 
 export default EnergyGraphs;

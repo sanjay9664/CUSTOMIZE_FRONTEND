@@ -34,6 +34,8 @@ import {
   formatNumber,
   mapLatestEventsToTelemetry
 } from './utils/energyTelemetry';
+import EnergyMetricCard from './components/EnergyMetricCard';
+import { resolveDeviceTelemetry } from './utils/energyTelemetryAdapter';
 import {
   useMeterGroups,
   normalizeMeterGroups,
@@ -95,36 +97,6 @@ const FIELD_LABELS = {
   noLoadHrs: { label: 'NO LOAD HRS', unit: 'h' },
   noLoadMin: { label: 'NO LOAD MIN', unit: 'm' },
   loadPct: { label: 'LOAD %', unit: '%' },
-};
-
-const TelemetryCard = ({ label, value, unit, colorClass, type, isMapped = true, isOnline = true }) => {
-  const active = isMapped && isOnline;
-  // Show last known data when mapped but offline (dimmed, amber color)
-  const showLastKnown = isMapped && !isOnline && value !== '—';
-  const hasVisibleValue = active || showLastKnown;
-  return (
-    <div
-      className={`p-2 rounded-3 telemetry-card-glow card-hover-${type} d-flex flex-column justify-content-between h-100`}
-      style={{
-        opacity: active ? 1 : showLastKnown ? 0.78 : 0.32,
-        filter: active ? 'none' : showLastKnown ? 'none' : 'grayscale(1) brightness(0.6)',
-        pointerEvents: 'auto'
-      }}
-    >
-      <span className="text-secondary uppercase tracking-wide mb-1 opacity-75" style={{ fontSize: '0.62rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-      <div className="d-flex align-items-baseline justify-content-between mt-auto">
-        <span
-          className={`fw-bold font-monospace fs-5 ${active ? colorClass : showLastKnown ? 'text-warning' : 'text-secondary'}`}
-          style={{ letterSpacing: '0.5px', opacity: showLastKnown ? 0.85 : 1 }}
-        >
-          {value}
-        </span>
-        {hasVisibleValue && unit && value !== '—' && (
-          <span className="opacity-75 ms-1" style={{ fontSize: '0.65rem', color: 'inherit' }}>{unit}</span>
-        )}
-      </div>
-    </div>
-  );
 };
 
 const MiniMFMMeter = ({ meter, isMapped = true, isOnline, onClick }) => {
@@ -567,7 +539,12 @@ const SubMeters = () => {
 
             if (!matchResult) return meter;
 
-            const { updates, lastEventTime } = mapLatestEventsToTelemetry(matchResult, meter.mapping);
+            const deviceObj = meter.device || meter;
+            const resObj = mapLatestEventsToTelemetry(matchResult, deviceObj);
+            const updates = resObj.updates;
+            const lastEventTime = resObj.lastEventTime;
+            const resolvedSettings = resObj.resolvedSettings;
+
             if (!updates || Object.keys(updates).length === 0) return meter;
 
             const telemetryValues = {
@@ -575,19 +552,10 @@ const SubMeters = () => {
               ...updates
             };
 
-            // Sanitization for tariffs
-            const ebTar = Number(telemetryValues.ebTariff);
-            if (isNaN(ebTar) || ebTar > 100 || ebTar <= 0) {
-              telemetryValues.ebTariff = 7.50;
-            }
-            const dgTar = Number(telemetryValues.dgTariff);
-            if (isNaN(dgTar) || dgTar > 100 || dgTar <= 0) {
-              telemetryValues.dgTariff = 18.50;
-            }
-
             const updatedMeter = {
               ...meter,
-              telemetryValues
+              telemetryValues,
+              resolvedSettings: resolvedSettings && resolvedSettings.length > 0 ? resolvedSettings : (meter.resolvedSettings || [])
             };
 
             if (lastEventTime) {
@@ -1422,14 +1390,9 @@ const SubMeters = () => {
               </Modal.Header>
               <Modal.Body className="p-3" style={{ maxHeight: '80vh', overflowY: 'auto', zIndex: 1, position: 'relative' }}>
                 {(() => {
-                  const ALL_CHANGE_FIELDS = [
-                    'ebKvah', 'ebKwh', 'balance', 'totalKw', 'pf', 'totalKva', 'dgKwh',
-                    'activePower', 'reactivePower', 'apparentPower', 'cumulativekWh', 'freq',
-                    'vR', 'vY', 'vB', 'iR', 'iY', 'iB',
-                    'vLLAvg', 'vLNAvg', 'iAvg', 'kvaAvg', 'kvarAvg', 'pfAvg',
-                    'vRY', 'vYB', 'vBR', 'pfR', 'pfY', 'pfB',
-                    'loadHrs', 'loadMin', 'noLoadHrs', 'noLoadMin', 'loadPct'
-                  ];
+                  const resolvedList = (activeMeter?.resolvedSettings && activeMeter.resolvedSettings.length > 0)
+                    ? activeMeter.resolvedSettings
+                    : resolveDeviceTelemetry(activeMeter?.device || activeMeter, activeMeter?.telemetryValues || {}, 'SUB_ENERGY_METER').resolvedSettings;
 
                   return (
                     <Row className="g-3">
@@ -1438,25 +1401,27 @@ const SubMeters = () => {
                           <h6 className="text-info glow-text-info uppercase tracking-wider fs-12 mb-3 d-flex align-items-center gap-2 fw-bold">
                             <Zap size={14} className="animate-pulse" /> Telemetry Breakdown
                           </h6>
-                          <Row className="g-2">
-                            {ALL_CHANGE_FIELDS.map(key => {
-                              const meta = FIELD_LABELS[key] || { label: key, unit: '' };
-                              const val = activeMeter?.telemetryValues?.[key] ?? activeMeter?.[key];
-                              return (
-                                <Col sm={4} xs={6} key={key} className="mb-2">
-                                  <TelemetryCard
-                                    label={meta.label}
-                                    value={formatTelemetryValue(val)}
-                                    unit={meta.unit}
-                                    colorClass="text-info glow-text-info"
-                                    type="change"
-                                    isMapped={true}
-                                    isOnline={isOnline}
+                          {resolvedList.length === 0 ? (
+                            <div className="text-center py-4 text-secondary fs-13 font-monospace">
+                              No telemetry parameters available.
+                            </div>
+                          ) : (
+                            <Row className="g-2">
+                              {resolvedList.map((item, idx) => (
+                                <Col sm={4} xs={6} key={item.settingId || item.fieldKey || idx} className="mb-2">
+                                  <EnergyMetricCard
+                                    setting={item.settingDef || { displayName: item.displayName, unit: item.unit }}
+                                    telemetry={item}
+                                    displayConfig={{
+                                      accentColor: '#38bdf8',
+                                      compact: true
+                                    }}
+                                    isConfigured={isMapped}
                                   />
                                 </Col>
-                              );
-                            })}
-                          </Row>
+                              ))}
+                            </Row>
+                          )}
                         </div>
                       </Col>
                     </Row>
