@@ -214,6 +214,24 @@ body.dark-mode .aqi-badge-tvoc {
   color: #a78bfa;
 }
 
+.aqi-badge-temp {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+body.dark-mode .aqi-badge-temp {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.aqi-badge-hum {
+  background: #cffafe;
+  color: #0891b2;
+}
+body.dark-mode .aqi-badge-hum {
+  background: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+}
+
 .aqi-metric-title {
   font-size: 0.92rem;
   font-weight: 700;

@@ -23,6 +23,14 @@ import {
   formatNumber,
   mapLatestEventsToTelemetry
 } from './utils/energyTelemetry';
+import EnergyMetricCard from './components/EnergyMetricCard';
+import {
+  resolveDeviceTelemetry,
+  mapSettingToTelemetry,
+  formatTelemetryValue,
+  getThresholdStatusFromSetting,
+  getCanonicalEnergyTemplate
+} from './utils/energyTelemetryAdapter';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -342,6 +350,63 @@ const CircularGauge = ({ value, min = 0, max = 100, label, unit, limits, default
   );
 };
 
+const getSettingDisplayConfig = (displayName = '', fieldKey = '') => {
+  const name = String(displayName).toUpperCase();
+  let accentColor = '#38bdf8';
+  let icon = <Activity size={14} className="text-info" />;
+  let isImportant = false;
+
+  if (name.includes('BALANCE')) {
+    accentColor = '#eab308';
+    icon = <Coins size={14} className="text-warning" />;
+    isImportant = true;
+  } else if (name.includes('R-PHASE') || name.includes('R-') || name.includes(' R ') || name.includes('VR') || name.includes('IR')) {
+    accentColor = '#ef4444';
+    icon = <Activity size={14} className="text-danger" />;
+  } else if (name.includes('Y-PHASE') || name.includes('Y-') || name.includes(' Y ') || name.includes('VY') || name.includes('IY')) {
+    accentColor = '#f59e0b';
+    icon = <Activity size={14} className="text-warning" />;
+  } else if (name.includes('B-PHASE') || name.includes('B-') || name.includes(' B ') || name.includes('VB') || name.includes('IB')) {
+    accentColor = '#06b6d4';
+    icon = <Activity size={14} className="text-info" />;
+  } else if (name.includes('KWH') || name.includes('ACTIVE ENERGY') || name === 'EP') {
+    accentColor = '#10b981';
+    icon = <Zap size={14} className="text-success animate-pulse" />;
+  } else if (name.includes('KVAH') || name.includes('APPARENT ENERGY')) {
+    accentColor = '#3b82f6';
+    icon = <Gauge size={14} className="text-info" />;
+  } else if (name.includes('TOTAL KW') || name.includes('ACTIVE POWER')) {
+    accentColor = '#10b981';
+    icon = <Sliders size={14} className="text-danger" />;
+  } else if (name.includes('TOTAL KVA') || name.includes('APPARENT POWER')) {
+    accentColor = '#3b82f6';
+    icon = <Gauge size={14} className="text-primary" />;
+  } else if (name.includes('REACTIVE POWER') || name.includes('KVAR') || name === 'EQ') {
+    accentColor = '#eab308';
+    icon = <Activity size={14} className="text-warning" />;
+  } else if (name.includes('POWER FACTOR') || name === 'PF') {
+    accentColor = '#14b8a6';
+    icon = <Cpu size={14} className="text-success" />;
+  } else if (name.includes('DG') || name.includes('GENERATOR')) {
+    accentColor = '#f97316';
+    icon = <Flame size={14} className="text-orange" />;
+  } else if (name.includes('FREQ') || name.includes('HZ')) {
+    accentColor = '#06b6d4';
+    icon = <Activity size={14} className="text-info" />;
+  } else if (name.includes('LOAD HRS') || name.includes('LOAD MIN') || name.includes('RUNTIME')) {
+    accentColor = '#94a3b8';
+    icon = <Clock size={14} className="text-secondary" />;
+  } else if (name.includes('LOAD %') || name.includes('TARGET')) {
+    accentColor = '#3b82f6';
+    icon = <Gauge size={14} className="text-primary" />;
+  } else if (name.includes('TARIFF')) {
+    accentColor = '#f59e0b';
+    icon = <Coins size={14} className="text-warning" />;
+  }
+
+  return { accentColor, icon, isImportant };
+};
+
 const MainMeter = () => {
   const { getOverallStatus } = useDeviceStatus();
   const { sites, selectedSite, setSelectedSite } = useSiteStore();
@@ -387,6 +452,10 @@ const MainMeter = () => {
   // Tracks the timestamp (ms) of the latest MongoDB event received for the current meter.
   // Used for freshness check in isMeterOnline to avoid stale data causing false-ONLINE.
   const [lastTelemetryAt, setLastTelemetryAt] = useState(null);
+
+  // Template-driven resolved telemetry map and settings list
+  const [resolvedTelemetryMap, setResolvedTelemetryMap] = useState(new Map());
+  const [resolvedSettingsList, setResolvedSettingsList] = useState([]);
 
   const [templates, setTemplates] = useState([]);
   const [activeRightTab, setActiveRightTab] = useState('telemetry');
@@ -731,6 +800,8 @@ const MainMeter = () => {
       activePower: 0, reactivePower: 0, apparentPower: 0, freq: 0, cumulativekWh: 0
     });
     setLastTelemetryAt(null); // Reset freshness timer so stale data from old meter doesn't bleed over
+    setResolvedTelemetryMap(new Map());
+    setResolvedSettingsList([]);
     setHistoryLog([]);
     setMfmPageIndex(0);
   }, [selectedMeterId]);
@@ -777,6 +848,20 @@ const MainMeter = () => {
     return Object.keys(mappedFields).length > 0;
   }, [mappedFields]);
 
+  // Derived display settings list honoring frontend template definition
+  const displaySettings = useMemo(() => {
+    if (resolvedSettingsList && resolvedSettingsList.length > 0) {
+      return resolvedSettingsList;
+    }
+    const foundDevice = siteDevices.find(d => String(d.id || d.deviceId) === String(selectedMeterId)) || siteDevices[0];
+    if (foundDevice) {
+      const initial = resolveDeviceTelemetry(foundDevice, { fields: [] }, 'MAIN_ENERGY_METER');
+      return initial.resolvedSettings;
+    }
+    const initial = resolveDeviceTelemetry(null, { fields: [] }, 'MAIN_ENERGY_METER');
+    return initial.resolvedSettings;
+  }, [siteDevices, selectedMeterId, resolvedSettingsList]);
+
   // Polling for Latest Device Events: GET /devices/:deviceId/events/latest every 30 seconds
   useEffect(() => {
     if (!selectedMeterId) return;
@@ -791,7 +876,17 @@ const MainMeter = () => {
         const eventsRes = await bmsService.getDeviceEventsLatest(selectedMeterId, selectedSiteId).catch(() => null);
         if (!isMounted || !eventsRes) return;
 
-        const { updates, lastEventTime } = mapLatestEventsToTelemetry(eventsRes, mainMeterTemplateRef.current?.mapping);
+        const foundDevice = siteDevices.find(d => String(d.id || d.deviceId) === String(selectedMeterId)) || siteDevices[0];
+        const resObj = mapLatestEventsToTelemetry(eventsRes, foundDevice || mainMeterTemplateRef.current);
+        const updates = resObj.updates;
+        const lastEventTime = resObj.lastEventTime;
+
+        if (resObj.settingsTelemetryMap) {
+          setResolvedTelemetryMap(resObj.settingsTelemetryMap);
+        }
+        if (resObj.resolvedSettings && resObj.resolvedSettings.length > 0) {
+          setResolvedSettingsList(resObj.resolvedSettings);
+        }
 
         if (updates && Object.keys(updates).length > 0) {
           setData(prev => ({
@@ -1461,118 +1556,55 @@ const MainMeter = () => {
                           </Col>
                         )}
 
-                        {/* Grid Change Parameters */}
-                        {[
-                          { defaultLabel: 'EB KVAH', defaultUnit: 'kVAh', key: 'ebKvah', config: mapping?.emChangeConfig, rawValue: data.ebKvah, icon: <Gauge size={14} className="text-info" /> },
-                          { defaultLabel: 'EB KWH', defaultUnit: 'kWh', key: 'ebKwh', config: mapping?.emChangeConfig, rawValue: data.ebKwh, icon: <Zap size={14} className="text-warning animate-pulse" /> },
-                          { defaultLabel: 'BALANCE', defaultUnit: '', key: 'balance', isImportant: true, config: mapping?.emChangeConfig, rawValue: data.balance, icon: <Coins size={14} className="text-warning" /> },
-                          { defaultLabel: 'TOTAL KW', defaultUnit: 'kW', key: 'totalKw', config: mapping?.emChangeConfig, rawValue: data.totalKw, icon: <Sliders size={14} className="text-danger" />, limits: emLimitsConfig.totalKw },
-                          { defaultLabel: 'POWER FACTOR', defaultUnit: '', key: 'pf', config: mapping?.emChangeConfig, rawValue: data.pf, icon: <Cpu size={14} className="text-success" /> },
-                          { defaultLabel: 'TOTAL KVA', defaultUnit: 'kVA', key: 'totalKva', config: mapping?.emChangeConfig, rawValue: data.totalKva, icon: <Gauge size={14} className="text-primary" />, limits: emLimitsConfig.totalKva },
-                          { defaultLabel: 'DG KWH', defaultUnit: 'kWh', key: 'dgKwh', config: mapping?.emChangeConfig, rawValue: data.dgKwh, icon: <Flame size={14} className="text-orange" /> },
-                          { defaultLabel: 'ACTIVE POWER', defaultUnit: 'kW', key: 'activePower', config: mapping?.emPowerConfig, rawValue: data.activePower, icon: <Zap size={14} className="text-info" /> },
-                          { defaultLabel: 'REACTIVE POWER', defaultUnit: 'kVAR', key: 'reactivePower', config: mapping?.emPowerConfig, rawValue: data.reactivePower, icon: <Activity size={14} className="text-warning" /> },
-                          { defaultLabel: 'APPARENT POWER', defaultUnit: 'kVA', key: 'apparentPower', config: mapping?.emPowerConfig, rawValue: data.apparentPower, icon: <Gauge size={14} className="text-primary" /> },
-                          { defaultLabel: 'CUMULATIVE ENERGY', defaultUnit: 'kWh', key: 'cumulativekWh', config: mapping?.emConsumptionConfig, rawValue: data.cumulativekWh, icon: <Zap size={14} className="text-success" /> },
-                          { defaultLabel: 'FREQUENCY', defaultUnit: 'Hz', key: 'freq', config: mapping?.emSystemConfig, rawValue: data.freq, icon: <Activity size={14} className="text-info" /> },
-                          { defaultLabel: 'AVG VOLTAGE L-L', defaultUnit: 'V', key: 'vLLAvg', config: mapping?.emChangeConfig, rawValue: data.vLLAvg, icon: <Activity size={14} className="text-info" /> },
-                          { defaultLabel: 'AVG VOLTAGE L-N', defaultUnit: 'V', key: 'vLNAvg', config: mapping?.emChangeConfig, rawValue: data.vLNAvg, icon: <Activity size={14} className="text-info" /> },
-                          { defaultLabel: 'AVG CURRENT', defaultUnit: 'A', key: 'iAvg', config: mapping?.emChangeConfig, rawValue: data.iAvg, icon: <Activity size={14} className="text-info" /> },
-                          { defaultLabel: 'POWER KVA (AVG)', defaultUnit: 'kVA', key: 'kvaAvg', config: mapping?.emChangeConfig, rawValue: data.kvaAvg, icon: <Activity size={14} className="text-primary" /> },
-                          { defaultLabel: 'POWER KVAR (AVG)', defaultUnit: 'kVAR', key: 'kvarAvg', config: mapping?.emChangeConfig, rawValue: data.kvarAvg, icon: <Activity size={14} className="text-warning" /> },
-                          { defaultLabel: 'AVG PF', defaultUnit: '', key: 'pfAvg', config: mapping?.emChangeConfig, rawValue: data.pfAvg, icon: <Cpu size={14} className="text-success" /> },
-                          { defaultLabel: 'VOLTAGE R-Y', defaultUnit: 'V', key: 'vRY', config: mapping?.emChangeConfig, rawValue: data.vRY, icon: <Activity size={14} className="text-danger" /> },
-                          { defaultLabel: 'VOLTAGE Y-B', defaultUnit: 'V', key: 'vYB', config: mapping?.emChangeConfig, rawValue: data.vYB, icon: <Activity size={14} className="text-warning" /> },
-                          { defaultLabel: 'VOLTAGE B-R', defaultUnit: 'V', key: 'vBR', config: mapping?.emChangeConfig, rawValue: data.vBR, icon: <Activity size={14} className="text-info" /> },
-                          { defaultLabel: 'PF-R', defaultUnit: '', key: 'pfR', config: mapping?.emChangeConfig, rawValue: data.pfR, icon: <Cpu size={14} className="text-danger" /> },
-                          { defaultLabel: 'PF-Y', defaultUnit: '', key: 'pfY', config: mapping?.emChangeConfig, rawValue: data.pfY, icon: <Cpu size={14} className="text-warning" /> },
-                          { defaultLabel: 'PF-B', defaultUnit: '', key: 'pfB', config: mapping?.emChangeConfig, rawValue: data.pfB, icon: <Cpu size={14} className="text-info" /> },
-                          { defaultLabel: 'LOAD HRS', defaultUnit: 'h', key: 'loadHrs', config: mapping?.emChangeConfig, rawValue: data.loadHrs, icon: <Clock size={14} className="text-secondary" /> },
-                          { defaultLabel: 'LOAD MIN', defaultUnit: 'm', key: 'loadMin', config: mapping?.emChangeConfig, rawValue: data.loadMin, icon: <Clock size={14} className="text-secondary" /> },
-                          { defaultLabel: 'NO LOAD HRS', defaultUnit: 'h', key: 'noLoadHrs', config: mapping?.emChangeConfig, rawValue: data.noLoadHrs, icon: <Clock size={14} className="text-secondary" /> },
-                          { defaultLabel: 'NO LOAD MIN', defaultUnit: 'm', key: 'noLoadMin', config: mapping?.emChangeConfig, rawValue: data.noLoadMin, icon: <Clock size={14} className="text-secondary" /> },
-                          { defaultLabel: 'LOAD %', defaultUnit: '%', key: 'loadPct', config: mapping?.emChangeConfig, rawValue: data.loadPct, icon: <Gauge size={14} className="text-primary" /> }
-                        ].map((item, idx) => {
-                          if (!isFieldVisible(item.key)) return null;
+                        {/* Grid Parameters mapped dynamically via <EnergyMetricCard /> */}
+                        {(() => {
+                          // Filter out the 3 phase voltages and 3 phase currents (displayed as circular gauges above)
+                          const isPhaseGaugeParam = (dName) => {
+                            const n = (dName || '').toLowerCase();
+                            return (
+                              n.includes('r-phase volt') || n.includes('y-phase volt') || n.includes('b-phase volt') ||
+                              n === 'voltage-r' || n === 'voltage-y' || n === 'voltage-b' ||
+                              n === 'r-current' || n === 'y-current' || n === 'b-current' ||
+                              n.includes('r-current') || n.includes('y-current') || n.includes('b-current')
+                            );
+                          };
 
-                          // Skip rendering duplicates if primary parameters are already present
-                          if (item.key === 'activePower' && isFieldVisible('totalKw')) return null;
-                          if (item.key === 'apparentPower' && isFieldVisible('totalKva')) return null;
-                          if (item.key === 'cumulativekWh' && isFieldVisible('ebKwh')) return null;
+                          const gridList = displaySettings.filter(item => !isPhaseGaugeParam(item.displayName));
 
-                          const { label, val } = getFieldMetadata(item.config, item.key, item.defaultLabel, item.defaultUnit, item.rawValue);
-                          const numericValue = typeof item.rawValue === 'number' ? item.rawValue : Number(item.rawValue) || 0;
+                          return gridList.map((item, idx) => {
+                            const config = getSettingDisplayConfig(item.displayName, item.fieldKey);
+                            const limits = emLimitsConfig[item.fieldKey] || emLimitsConfig[item.displayName];
+                            const settingObj = {
+                              ...(item.settingDef || {}),
+                              displayName: item.displayName,
+                              unit: item.unit,
+                              limits
+                            };
+                            const telemetryObj = {
+                              value: item.value,
+                              rawValue: item.rawValue,
+                              time: item.time,
+                              status: item.status,
+                              isWarning: item.isWarning,
+                              isCritical: item.isCritical
+                            };
 
-                          // Get threshold status if limits are configured and device is configured
-                          const cardStatus = (isDeviceConfigured && item.limits) ? getThresholdStatus(numericValue, item.limits) : 'default';
-
-                          // Determine the parameter accent color based on key
-                          let accentColor = 'rgba(255, 255, 255, 0.1)';
-                          if (item.key.includes('R') || item.key === 'vR' || item.key === 'iR') accentColor = '#ef4444';
-                          else if (item.key.includes('Y') || item.key === 'vY' || item.key === 'iY') accentColor = '#f59e0b';
-                          else if (item.key.includes('B') || item.key === 'vB' || item.key === 'iB') accentColor = '#06b6d4';
-                          else if (item.key === 'balance') accentColor = '#eab308';
-                          else if (item.key === 'totalKw' || item.key === 'activePower' || item.key === 'cumulativekWh' || item.key === 'ebKwh') accentColor = '#10b981';
-                          else if (item.key === 'totalKva' || item.key === 'apparentPower' || item.key === 'ebKvah') accentColor = '#3b82f6';
-                          else if (item.key === 'dgKwh') accentColor = '#f97316';
-                          else if (item.key === 'pf') accentColor = '#14b8a6';
-                          else if (item.key === 'freq') accentColor = '#06b6d4';
-
-                          let borderStyle = !isDeviceConfigured
-                            ? { border: '1px solid rgba(255, 255, 255, 0.05)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }
-                            : { borderLeft: `4px solid ${accentColor}`, transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)' };
-                          let textClass = !isDeviceConfigured ? 'text-secondary' : (item.isImportant ? 'text-warning' : 'text-white');
-
-                          if (isDeviceConfigured) {
-                            if (cardStatus === 'alert') {
-                              borderStyle = {
-                                ...borderStyle,
-                                borderColor: 'rgba(239, 68, 68, 0.4)',
-                                borderLeft: '4px solid #ef4444',
-                                boxShadow: '0 0 12px rgba(239, 68, 68, 0.25)'
-                              };
-                              textClass = 'text-danger';
-                            } else if (cardStatus === 'warning') {
-                              borderStyle = {
-                                ...borderStyle,
-                                borderColor: 'rgba(245, 158, 11, 0.4)',
-                                borderLeft: '4px solid #f59e0b',
-                                boxShadow: '0 0 12px rgba(245, 158, 11, 0.25)'
-                              };
-                              textClass = 'text-warning';
-                            } else if (cardStatus === 'normal') {
-                              borderStyle = {
-                                ...borderStyle,
-                                borderColor: 'rgba(16, 185, 129, 0.4)',
-                                borderLeft: '4px solid #10b981',
-                                boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)'
-                              };
-                              textClass = 'text-success';
-                            }
-                          }
-
-                          return (
-                            <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={idx}>
-                              <div
-                                className={`parameter-glass-card p-2.5 rounded-3 h-100 d-flex flex-column align-items-center justify-content-center text-center ${isDeviceConfigured && item.isImportant ? 'important-glow-card' : ''}`}
-                                style={borderStyle}
-                              >
-                                <div className="d-flex align-items-center justify-content-center gap-1.5 mb-1 w-100" style={{ opacity: isDeviceConfigured ? 1 : 0.6 }}>
-                                  {item.icon}
-                                  <small className="text-secondary uppercase fw-bold tracking-wider" style={{ fontSize: '0.68rem' }}>{label}</small>
-                                </div>
-                                <h5 className={`mb-0 fw-bold font-monospace tracking-wide ${textClass}`} style={{ fontSize: '0.95rem' }}>{val}</h5>
-                                {isDeviceConfigured && item.limits && (parseLimit(item.limits.low) !== null || parseLimit(item.limits.high) !== null || parseLimit(item.limits.normalMin) !== null || parseLimit(item.limits.normalMax) !== null) && (
-                                  <div className="fs-10 text-secondary font-monospace mt-1 text-center" style={{ opacity: 0.7, fontSize: '0.65rem' }}>
-                                    {parseLimit(item.limits.low) !== null && `L: <${item.limits.low}`}
-                                    {parseLimit(item.limits.high) !== null && ` H: >${item.limits.high}`}
-                                    {parseLimit(item.limits.normalMin) !== null && parseLimit(item.limits.normalMax) !== null && ` [${item.limits.normalMin}-${item.limits.normalMax}]`}
-                                  </div>
-                                )}
-                              </div>
-                            </Col>
-                          );
-                        })}
+                            return (
+                              <Col xs={6} sm={4} md={3} lg={3} className="mb-3" key={item.settingId || item.fieldKey || idx}>
+                                <EnergyMetricCard
+                                  setting={settingObj}
+                                  telemetry={telemetryObj}
+                                  displayConfig={{
+                                    icon: config.icon,
+                                    accentColor: config.accentColor,
+                                    isImportant: config.isImportant
+                                  }}
+                                  isConfigured={isDeviceConfigured}
+                                />
+                              </Col>
+                            );
+                          });
+                        })()}
                       </Row>
                     </div>
                   )}

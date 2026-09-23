@@ -41,114 +41,16 @@ import { getApiUrl } from '../../utils/apiConfig';
 import { getAuthHeaders, normalizeList } from '../../services/apiClient';
 import './AQIOverview.css';
 
-// ── Sensor Validation & Bounds (Prevents Malfunctioned Data) ──
-const VALID_RANGES = {
-  aqi: { min: 0, max: 500, label: 'AQI' },
-  pm25: { min: 0, max: 1000, label: 'PM2.5' },
-  pm10: { min: 0, max: 1000, label: 'PM10' },
-  co2: { min: 300, max: 5000, label: 'CO2' },
-  tvoc: { min: 0, max: 10000, label: 'TVOC' },
-  tempC: { min: -40, max: 80, label: 'Temperature' },
-  hum: { min: 0, max: 100, label: 'Humidity' }
-};
-
-/**
- * Validates whether a value is a real, non-malfunctioning sensor reading
- */
-const validateSensorVal = (val, type) => {
-  if (val === null || val === undefined || val === '') return null;
-  const num = Number(val);
-  if (isNaN(num) || !Number.isFinite(num)) return null;
-
-  // Check known hardware error/malfunction sentinel values (e.g. -999, 65535)
-  if (num === -999 || num === 65535 || num === 32767 || num === 99999) return null;
-
-  const range = VALID_RANGES[type];
-  if (range && (num < range.min || num > range.max)) {
-    // Value falls outside physically valid limits; reject as malfunction
-    return null;
-  }
-
-  return num;
-};
-
-/**
- * Calculates standard US EPA AQI from raw PM2.5 (µg/m³) only if real PM2.5 is present
- */
-const calculateAqiFromPm25 = (pm25) => {
-  if (pm25 === null || pm25 === undefined || isNaN(pm25)) return null;
-  const c = Math.max(0, Number(pm25));
-
-  const breakpoints = [
-    { cLow: 0.0, cHigh: 12.0, iLow: 0, iHigh: 50 },
-    { cLow: 12.1, cHigh: 35.4, iLow: 51, iHigh: 100 },
-    { cLow: 35.5, cHigh: 55.4, iLow: 101, iHigh: 150 },
-    { cLow: 55.5, cHigh: 150.4, iLow: 151, iHigh: 200 },
-    { cLow: 150.5, cHigh: 250.4, iLow: 201, iHigh: 300 },
-    { cLow: 250.5, cHigh: 500.4, iLow: 301, iHigh: 500 }
-  ];
-
-  for (const bp of breakpoints) {
-    if (c >= bp.cLow && c <= bp.cHigh) {
-      const aqi = ((bp.iHigh - bp.iLow) / (bp.cHigh - bp.cLow)) * (c - bp.cLow) + bp.iLow;
-      return Math.round(aqi);
-    }
-  }
-
-  if (c > 500.4) return 500;
-  return null;
-};
-
-/**
- * Resolves standard AQI Category strictly from a real numeric value
- */
-const getAqiCategory = (val) => {
-  if (val === null || val === undefined || isNaN(val)) {
-    return {
-      label: 'NO DATA',
-      colorClass: 'text-secondary',
-      capsuleClass: 'bg-secondary bg-opacity-25 text-secondary border border-secondary border-opacity-25',
-      colorHex: '#94a3b8',
-      description: 'Awaiting sensor telemetry.'
-    };
-  }
-
-  const num = Number(val);
-  if (num <= 50) {
-    return {
-      label: 'GOOD',
-      colorClass: 'aqi-good',
-      capsuleClass: 'aqi-capsule-good',
-      colorHex: '#10b981',
-      description: 'Air quality is satisfactory and poses little or no risk.'
-    };
-  }
-  if (num <= 100) {
-    return {
-      label: 'MODERATE',
-      colorClass: 'aqi-moderate',
-      capsuleClass: 'aqi-capsule-moderate',
-      colorHex: '#eab308',
-      description: 'Air quality is acceptable. Elevated particles may affect sensitive individuals.'
-    };
-  }
-  if (num <= 150) {
-    return {
-      label: 'UNHEALTHY FOR SENSITIVE',
-      colorClass: 'aqi-unhealthy-sensitive',
-      capsuleClass: 'aqi-capsule-unhealthy-sensitive',
-      colorHex: '#f97316',
-      description: 'Members of sensitive groups may experience health effects.'
-    };
-  }
-  return {
-    label: 'UNHEALTHY',
-    colorClass: 'aqi-unhealthy',
-    capsuleClass: 'aqi-capsule-unhealthy',
-    colorHex: '#ef4444',
-    description: 'Everyone may begin to experience health effects.'
-  };
-};
+import {
+  resolveAqiDeviceTelemetry,
+  resolveAqiSnapshots,
+  getAqiCategory,
+  getThresholdStatusFromSetting,
+  formatTimestampByInterval,
+  validateSensorVal,
+  CANONICAL_AQI_METRICS
+} from './utils/aqiTelemetryAdapter.js';
+import AqiMetricCard from './components/AqiMetricCard.jsx';
 
 /**
  * Format helper for numbers (strictly returns em dash '—' if value is null/missing)
@@ -221,35 +123,81 @@ const SAMPLING_INTERVALS = [
   { label: 'DAILY', value: 'DAILY' }
 ];
 
-/**
- * Formats timestamps on x-axis according to active interval and time range
- */
-const formatTimestampByInterval = (date, range, interval) => {
-  if (!date) return '';
-  const d = date instanceof Date ? date : new Date(date);
-  if (isNaN(d.getTime())) return '';
-
-  if (interval === 'DAILY') {
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+// Multi-metric chart display configuration
+const CHART_METRIC_CONFIGS = {
+  aqi: {
+    key: 'aqi',
+    label: 'AQI',
+    unit: '',
+    gradientId: 'aqiZoneGrad',
+    strokeColor: '#f59e0b',
+    stop0: '#f59e0b',
+    stop1: '#10b981',
+    domain: [0, 'auto'],
+    ticks: [0, 50, 100, 150]
+  },
+  tempC: {
+    key: 'tempC',
+    label: 'Temperature',
+    unit: '°C',
+    altUnit: '°F',
+    gradientId: 'tempZoneGrad',
+    strokeColor: '#38bdf8',
+    stop0: '#38bdf8',
+    stop1: '#0284c7',
+    domain: ['auto', 'auto'],
+    ticks: undefined
+  },
+  hum: {
+    key: 'hum',
+    label: 'Humidity',
+    unit: '%',
+    gradientId: 'humZoneGrad',
+    strokeColor: '#06b6d4',
+    stop0: '#06b6d4',
+    stop1: '#0891b2',
+    domain: [0, 100],
+    ticks: [0, 25, 50, 75, 100]
+  },
+  co2: {
+    key: 'co2',
+    label: 'CO₂',
+    unit: 'ppm',
+    gradientId: 'co2ZoneGrad',
+    strokeColor: '#a855f7',
+    stop0: '#a855f7',
+    stop1: '#7c3aed',
+    domain: [300, 'auto'],
+    ticks: undefined
+  },
+  tvoc: {
+    key: 'tvoc',
+    label: 'TVOC',
+    unit: 'ppb',
+    gradientId: 'tvocZoneGrad',
+    strokeColor: '#ec4899',
+    stop0: '#ec4899',
+    stop1: '#be185d',
+    domain: [0, 'auto'],
+    ticks: undefined
+  },
+  pm25: {
+    key: 'pm25',
+    label: 'PM2.5',
+    unit: 'µg/m³',
+    gradientId: 'pm25ZoneGrad',
+    strokeColor: '#eab308',
+    stop0: '#eab308',
+    stop1: '#ca8a04',
+    domain: [0, 'auto'],
+    ticks: undefined
   }
-
-  if (range === '7d') {
-    const day = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    const time = d.toLocaleTimeString([], { hour: 'numeric', minute: interval?.includes('MIN') ? '2-digit' : undefined, hour12: true });
-    return `${day} ${time}`;
-  }
-
-  if (interval === 'MIN_15' || interval === 'MIN_30') {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-  }
-
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
 };
 
 /**
- * Custom Interactive Tooltip for Historical Area Chart
+ * Custom Interactive Tooltip for Historical Area Chart (Multi-Metric Aware)
  */
-const HistoricalChartTooltip = ({ active, payload, label, useFahrenheit = false }) => {
+const HistoricalChartTooltip = ({ active, payload, label, useFahrenheit = false, activeMetric = 'aqi' }) => {
   if (!active || !payload || !payload.length) return null;
   const pt = payload[0]?.payload;
   if (!pt) return null;
@@ -263,16 +211,74 @@ const HistoricalChartTooltip = ({ active, payload, label, useFahrenheit = false 
         : `${fmt(pt.tempC, 1)}°C`)
     : (pt.tempF !== null && pt.tempF !== undefined ? `${fmt(pt.tempF, 1)}°F` : null);
 
+  let activeTitle = 'AQI Index:';
+  let activeVal = pt.aqi !== null ? `${fmt(pt.aqi, 0)} (${aqiInfo.label})` : '—';
+  let activeColor = aqiInfo.colorHex;
+
+  if (activeMetric === 'tempC') {
+    activeTitle = 'Temperature:';
+    activeVal = displayTemp !== null ? displayTemp : '—';
+    activeColor = '#38bdf8';
+  } else if (activeMetric === 'hum') {
+    activeTitle = 'Humidity:';
+    activeVal = pt.hum !== null && pt.hum !== undefined ? `${fmt(pt.hum, 0)}%` : '—';
+    activeColor = '#06b6d4';
+  } else if (activeMetric === 'co2') {
+    activeTitle = 'CO₂:';
+    activeVal = pt.co2 !== null && pt.co2 !== undefined ? `${fmt(pt.co2, 0)} ppm` : '—';
+    activeColor = '#a855f7';
+  } else if (activeMetric === 'tvoc') {
+    activeTitle = 'TVOC:';
+    activeVal = pt.tvoc !== null && pt.tvoc !== undefined ? `${fmt(pt.tvoc, 0)} ppb` : '—';
+    activeColor = '#ec4899';
+  } else if (activeMetric === 'pm25') {
+    activeTitle = 'PM2.5:';
+    activeVal = pt.pm25 !== null && pt.pm25 !== undefined ? `${fmt(pt.pm25, 1)} µg/m³` : '—';
+    activeColor = '#eab308';
+  }
+
   return (
     <div className="aqi-chart-tooltip">
       <div className="aqi-chart-tooltip-header">
         {pt.fullDate || label}
       </div>
-      <div className="aqi-chart-tooltip-row fw-bold" style={{ color: aqiInfo.colorHex }}>
-        <span>AQI Index:</span>
-        <span className="font-monospace fs-7">{fmt(pt.aqi, 0)} ({aqiInfo.label})</span>
+
+      <div className="aqi-chart-tooltip-row fw-bold" style={{ color: activeColor }}>
+        <span>{activeTitle}</span>
+        <span className="font-monospace fs-7">{activeVal}</span>
       </div>
-      {pt.pm25 !== null && pt.pm25 !== undefined && (
+
+      {activeMetric !== 'aqi' && pt.aqi !== null && pt.aqi !== undefined && (
+        <div className="aqi-chart-tooltip-row text-secondary">
+          <span>AQI:</span>
+          <span className="font-monospace" style={{ color: aqiInfo.colorHex }}>{fmt(pt.aqi, 0)} ({aqiInfo.label})</span>
+        </div>
+      )}
+      {activeMetric !== 'tempC' && displayTemp !== null && (
+        <div className="aqi-chart-tooltip-row text-secondary">
+          <span>Temperature:</span>
+          <span className="text-light font-monospace">{displayTemp}</span>
+        </div>
+      )}
+      {activeMetric !== 'hum' && pt.hum !== null && pt.hum !== undefined && (
+        <div className="aqi-chart-tooltip-row text-secondary">
+          <span>Humidity:</span>
+          <span className="text-light font-monospace">{fmt(pt.hum, 0)}%</span>
+        </div>
+      )}
+      {activeMetric !== 'co2' && pt.co2 !== null && pt.co2 !== undefined && (
+        <div className="aqi-chart-tooltip-row text-secondary">
+          <span>CO₂:</span>
+          <span className="text-light font-monospace">{fmt(pt.co2, 0)} ppm</span>
+        </div>
+      )}
+      {activeMetric !== 'tvoc' && pt.tvoc !== null && pt.tvoc !== undefined && (
+        <div className="aqi-chart-tooltip-row text-secondary">
+          <span>TVOC:</span>
+          <span className="text-light font-monospace">{fmt(pt.tvoc, 0)} ppb</span>
+        </div>
+      )}
+      {activeMetric !== 'pm25' && pt.pm25 !== null && pt.pm25 !== undefined && (
         <div className="aqi-chart-tooltip-row text-secondary">
           <span>PM2.5:</span>
           <span className="text-light font-monospace">{fmt(pt.pm25, 1)} µg/m³</span>
@@ -282,26 +288,6 @@ const HistoricalChartTooltip = ({ active, payload, label, useFahrenheit = false 
         <div className="aqi-chart-tooltip-row text-secondary">
           <span>PM10:</span>
           <span className="text-light font-monospace">{fmt(pt.pm10, 1)} µg/m³</span>
-        </div>
-      )}
-      {pt.co2 !== null && pt.co2 !== undefined && (
-        <div className="aqi-chart-tooltip-row text-secondary">
-          <span>CO₂:</span>
-          <span className="text-light font-monospace">{fmt(pt.co2, 0)} ppm</span>
-        </div>
-      )}
-      {pt.tvoc !== null && pt.tvoc !== undefined && (
-        <div className="aqi-chart-tooltip-row text-secondary">
-          <span>TVOC:</span>
-          <span className="text-light font-monospace">{fmt(pt.tvoc, 0)} ppb</span>
-        </div>
-      )}
-      {(displayTemp !== null || (pt.hum !== null && pt.hum !== undefined)) && (
-        <div className="aqi-chart-tooltip-row text-secondary">
-          <span>Temp & Humidity:</span>
-          <span className="text-info font-monospace">
-            {displayTemp !== null ? displayTemp : '—'} • {pt.hum !== null && pt.hum !== undefined ? `${fmt(pt.hum, 0)}%` : '—'}
-          </span>
         </div>
       )}
     </div>
@@ -314,30 +300,29 @@ const AQIOverview = () => {
   const { sites, selectedSite, setSelectedSite } = useSiteStore();
   const { getOverallStatus } = useDeviceStatus();
 
+  const selectedSiteId = useMemo(() => {
+    return selectedSite?.id || sites?.[0]?.id || '1';
+  }, [selectedSite, sites]);
+
+  const requestIdRef = useRef(0);
+
   // Devices & channels state
   const [devices, setDevices] = useState([]);
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState(() => {
-    return localStorage.getItem('selected_aqi_device_id') || '';
+    const initialSiteId = selectedSite?.id || sites?.[0]?.id || '1';
+    return localStorage.getItem(`selected_aqi_device_id_${initialSiteId}`) || '';
   });
 
-  // Real-time sensor state strictly parsed from API/WebSocket response
-  const [liveTelemetry, setLiveTelemetry] = useState({
-    aqi: null,
-    pm25: null,
-    pm10: null,
-    co2: null,
-    tvoc: null,
-    tempC: null,
-    tempF: null,
-    hum: null,
-    tvocUnit: 'PPM',
-    co2Unit: 'ppm',
-    tempUnit: 'Deg.C',
-    humUnit: '%',
-    lastEventTime: null,
-    alarmState: null
+  // Configuration-driven live telemetry state
+  const [resolvedMetrics, setResolvedMetrics] = useState(() => {
+    return resolveAqiDeviceTelemetry(null, {}).resolvedMetrics;
   });
+  const [liveTelemetry, setLiveTelemetry] = useState(() => {
+    return resolveAqiDeviceTelemetry(null, {}).parsedTelemetry;
+  });
+  const [availableMetrics, setAvailableMetrics] = useState(['aqi']);
+  const [selectedChartMetric, setSelectedChartMetric] = useState('aqi');
 
   // Historical telemetry snapshots state
   const [historicalData, setHistoricalData] = useState([]);
@@ -345,21 +330,10 @@ const AQIOverview = () => {
   const [timeRange, setTimeRange] = useState('7d'); // '12h' | '24h' | '7d'
   const [samplingInterval, setSamplingInterval] = useState('DAILY'); // 'MIN_15' | 'MIN_30' | 'HOURLY' | 'DAILY'
 
-  const handleTimeRangeChange = (newRange) => {
-    setTimeRange(newRange);
-    if (newRange === '7d') {
-      setSamplingInterval('DAILY');
-    } else {
-      setSamplingInterval('HOURLY');
-    }
-  };
-
   // View settings
   const [useFahrenheit, setUseFahrenheit] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isLiveConnected, setIsLiveConnected] = useState(false);
-
-  const requestIdRef = useRef(0);
 
   // Live timer tick
   useEffect(() => {
@@ -367,17 +341,20 @@ const AQIOverview = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const selectedSiteId = useMemo(() => {
-    return selectedSite?.id || sites?.[0]?.id || '1';
-  }, [selectedSite, sites]);
-
   // 1. Fetch real AQI devices for the site (strictly category=AQI_SENSOR)
   useEffect(() => {
     if (!selectedSiteId) {
       setDevices([]);
       setSelectedDeviceId('');
+      setDevicesLoading(false);
       return;
     }
+
+    // Synchronously clear stale device state as soon as the site changes
+    requestIdRef.current += 1;
+    setSelectedDeviceId('');
+    setDevices([]);
+    setHistoricalData([]);
 
     let isMounted = true;
     const fetchAqiDevices = async () => {
@@ -410,20 +387,27 @@ const AQIOverview = () => {
           setDevices(aqiDevices);
 
           if (aqiDevices.length > 0) {
-            const currentInList = aqiDevices.some(d => String(d.id || d.deviceId) === String(selectedDeviceId));
-            if (!currentInList) {
-              const firstId = String(aqiDevices[0].id || aqiDevices[0].deviceId);
-              setSelectedDeviceId(firstId);
-              localStorage.setItem('selected_aqi_device_id', firstId);
-            }
+            const savedSiteDeviceId = localStorage.getItem(`selected_aqi_device_id_${selectedSiteId}`);
+            const currentInList = aqiDevices.find(d => String(d.id || d.deviceId) === String(savedSiteDeviceId));
+            const chosenId = currentInList
+              ? String(currentInList.id || currentInList.deviceId)
+              : String(aqiDevices[0].id || aqiDevices[0].deviceId);
+
+            setSelectedDeviceId(chosenId);
+            localStorage.setItem(`selected_aqi_device_id_${selectedSiteId}`, chosenId);
+            localStorage.setItem('selected_aqi_device_id', chosenId);
           } else {
             setSelectedDeviceId('');
+            localStorage.removeItem(`selected_aqi_device_id_${selectedSiteId}`);
             localStorage.removeItem('selected_aqi_device_id');
           }
         }
       } catch (err) {
         console.warn('Error fetching AQI devices:', err);
-        if (isMounted) setDevices([]);
+        if (isMounted) {
+          setDevices([]);
+          setSelectedDeviceId('');
+        }
       } finally {
         if (isMounted) setDevicesLoading(false);
       }
@@ -434,8 +418,8 @@ const AQIOverview = () => {
   }, [selectedSiteId]);
 
   const selectedDevice = useMemo(() => {
-    if (!devices || devices.length === 0) return null;
-    return devices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId)) || devices[0];
+    if (!devices || devices.length === 0 || !selectedDeviceId) return null;
+    return devices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId)) || null;
   }, [devices, selectedDeviceId]);
 
   // Online check
@@ -463,197 +447,127 @@ const AQIOverview = () => {
     return false;
   }, [selectedDevice, getOverallStatus]);
 
-  // 2. Parse Raw Telemetry Fields from Real Response with Device Settings Mapping
-  const parseFieldsToTelemetry = useCallback((fields = [], defaultAlarmState = null) => {
-    if (!Array.isArray(fields) || fields.length === 0) return null;
+  // Synchronize resolved metrics whenever the selected device changes
+  useEffect(() => {
+    const initial = resolveAqiDeviceTelemetry(selectedDevice, {});
+    setResolvedMetrics(initial.resolvedMetrics);
+    setLiveTelemetry(initial.parsedTelemetry);
 
-    // Build lookup from selectedDevice settings if available
-    const settings = selectedDevice?.settings || [];
-    const settingMetricMap = new Map();
-    const unitsMap = {
-      tvoc: 'PPM',
-      co2: 'ppm',
-      tempC: 'Deg.C',
-      hum: '%'
-    };
-
-    settings.forEach(s => {
-      const name = String(s.displayName || '').toLowerCase();
-      const fieldName = String(s.sochiotFieldName || s.fieldKey || s.fieldName || '').trim();
-      const sId = String(s.settingId !== undefined && s.settingId !== null ? s.settingId : (s.id !== undefined && s.id !== null ? s.id : '')).trim();
-      let metricType = null;
-
-      if (/aqi|iaq|air\s*quality/i.test(name) || fieldName === '3,104') metricType = 'aqi';
-      else if (/pm\s*2\.?5/i.test(name)) metricType = 'pm25';
-      else if (/pm\s*10/i.test(name)) metricType = 'pm10';
-      else if (/co\s*2|carbon/i.test(name) || fieldName === '3,102') metricType = 'co2';
-      else if (/tvoc|voc/i.test(name) || fieldName === '3,103') metricType = 'tvoc';
-      else if (sId === '27' || fieldName === '3,100' || /temp|temperature/i.test(name)) metricType = 'tempC';
-      else if (sId === '28' || fieldName === '3,101' || /hum|humidity|rh/i.test(name)) metricType = 'hum';
-
-      if (metricType) {
-        if (s.id) settingMetricMap.set(String(s.id), metricType);
-        if (s.settingId) settingMetricMap.set(String(s.settingId), metricType);
-        if (s.fieldKey) settingMetricMap.set(String(s.fieldKey).trim().toLowerCase(), metricType);
-        if (s.sochiotFieldId) settingMetricMap.set(String(s.sochiotFieldId), metricType);
-        if (s.sochiotFieldName) settingMetricMap.set(String(s.sochiotFieldName).trim().toLowerCase(), metricType);
-        if (s.fieldName) settingMetricMap.set(String(s.fieldName).trim().toLowerCase(), metricType);
-        if (s.displayName) settingMetricMap.set(String(s.displayName).trim().toLowerCase(), metricType);
-        if (s.unit) unitsMap[metricType] = s.unit;
-      }
-    });
-
-    let parsedAqi = null;
-    let parsedPm25 = null;
-    let parsedPm10 = null;
-    let parsedCo2 = null;
-    let parsedTvoc = null;
-    let parsedTempC = null;
-    let parsedHum = null;
-    let latestTime = null;
-
-    for (const f of fields) {
-      if (!f) continue;
-      const val = f.currentValue !== undefined ? f.currentValue : (f.value !== undefined ? f.value : (f.lastValue !== undefined ? f.lastValue : (f.avgValue !== undefined ? f.avgValue : null)));
-      if (val === null || val === undefined) continue;
-
-      if (f.time && (!latestTime || f.time > latestTime)) latestTime = f.time;
-
-      let metricType = null;
-      const fId = f.settingId !== undefined && f.settingId !== null ? String(f.settingId) : (f.id !== undefined && f.id !== null ? String(f.id) : null);
-      const fKey = String(f.fieldKey || f.sochiotFieldName || f.fieldName || '').trim().toLowerCase();
-      const fName = String(f.displayName || f.name || '').trim().toLowerCase();
-
-      if (fId && settingMetricMap.has(fId)) {
-        metricType = settingMetricMap.get(fId);
-      } else if (f.sochiotFieldId && settingMetricMap.has(String(f.sochiotFieldId))) {
-        metricType = settingMetricMap.get(String(f.sochiotFieldId));
-      } else if (fKey && settingMetricMap.has(fKey)) {
-        metricType = settingMetricMap.get(fKey);
-      } else if (fName && settingMetricMap.has(fName)) {
-        metricType = settingMetricMap.get(fName);
-      }
-
-      if (!metricType) {
-        if (/aqi|iaq|air\s*quality/i.test(fName) || fKey === '3,104') metricType = 'aqi';
-        else if (/pm\s*2\.?5/i.test(fName)) metricType = 'pm25';
-        else if (/pm\s*10/i.test(fName)) metricType = 'pm10';
-        else if (/co\s*2|carbon\s*dioxide/i.test(fName) || fKey === '3,102') metricType = 'co2';
-        else if (/tvoc|voc/i.test(fName) || fKey === '3,103') metricType = 'tvoc';
-        else if (fId === '27' || fKey === '3,100' || /temp|temperature/i.test(fName)) metricType = 'tempC';
-        else if (fId === '28' || fKey === '3,101' || /hum|humidity|rh/i.test(fName)) metricType = 'hum';
-      }
-
-      if (!metricType) continue;
-
-      if (f.unit) unitsMap[metricType] = f.unit;
-
-      const v = validateSensorVal(val, metricType);
-      if (v !== null) {
-        if (metricType === 'aqi') parsedAqi = v;
-        else if (metricType === 'pm25') parsedPm25 = v;
-        else if (metricType === 'pm10') parsedPm10 = v;
-        else if (metricType === 'co2') parsedCo2 = v;
-        else if (metricType === 'tvoc') parsedTvoc = v;
-        else if (metricType === 'tempC') parsedTempC = v;
-        else if (metricType === 'hum') parsedHum = v;
-      }
+    if (initial.availableMetrics && initial.availableMetrics.length > 0) {
+      setAvailableMetrics(initial.availableMetrics);
+      setSelectedChartMetric(curr => {
+        if (initial.availableMetrics.includes(curr)) return curr;
+        return initial.availableMetrics[0] || 'aqi';
+      });
     }
-
-    // If AQI was not reported directly, but real PM2.5 is present, calculate official EPA AQI
-    if (parsedAqi === null && parsedPm25 !== null) {
-      parsedAqi = calculateAqiFromPm25(parsedPm25);
-    }
-
-    const parsedTempF = parsedTempC !== null ? +(parsedTempC * 1.8 + 32).toFixed(1) : null;
-
-    return {
-      aqi: parsedAqi,
-      pm25: parsedPm25,
-      pm10: parsedPm10,
-      co2: parsedCo2,
-      tvoc: parsedTvoc,
-      tempC: parsedTempC,
-      tempF: parsedTempF,
-      hum: parsedHum,
-      tvocUnit: unitsMap.tvoc || 'PPM',
-      co2Unit: unitsMap.co2 || 'ppm',
-      tempUnit: unitsMap.tempC || 'Deg.C',
-      humUnit: unitsMap.hum || '%',
-      lastEventTime: latestTime,
-      alarmState: defaultAlarmState
-    };
   }, [selectedDevice]);
 
-  // 3. Fetch Real-Time Latest Device Events (GET /devices/:id/events/latest)
+  // 2. Fetch Real-Time Latest Device Events (GET /devices/:id/events/latest)
   const fetchLatestRealTelemetry = useCallback(async () => {
-    if (!selectedDeviceId) {
-      setLiveTelemetry({
-        aqi: null, pm25: null, pm10: null, co2: null,
-        tvoc: null, tempC: null, tempF: null, hum: null,
-        tvocUnit: 'PPM', co2Unit: 'ppm', tempUnit: 'Deg.C', humUnit: '%',
-        lastEventTime: null, alarmState: null
-      });
+    if (!selectedDeviceId || !selectedSiteId || devicesLoading) {
+      const reset = resolveAqiDeviceTelemetry(null, {});
+      setLiveTelemetry(reset.parsedTelemetry);
+      setResolvedMetrics(reset.resolvedMetrics);
+      return;
+    }
+
+    // Safety guard: ensure the device belongs to current site's device list
+    const currentDevice = devices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId));
+    if (!currentDevice) {
+      const reset = resolveAqiDeviceTelemetry(null, {});
+      setLiveTelemetry(reset.parsedTelemetry);
+      setResolvedMetrics(reset.resolvedMetrics);
+      return;
+    }
+    const devSiteId = currentDevice.siteId || currentDevice.site_id || currentDevice.site?.id;
+    if (devSiteId && String(devSiteId) !== String(selectedSiteId)) {
       return;
     }
 
     try {
       const res = await bmsService.getDeviceEventsLatest(selectedDeviceId, selectedSiteId).catch(() => null);
       if (res && res.data) {
-        const fields = res.data.fields || [];
-        const parsed = parseFieldsToTelemetry(fields, res.data.alarmState);
-        if (parsed) {
-          setLiveTelemetry(prev => ({
-            ...prev,
-            ...parsed
-          }));
+        const { parsedTelemetry, resolvedMetrics: updatedSettings, availableMetrics: avail } = resolveAqiDeviceTelemetry(
+          selectedDevice,
+          res.data
+        );
 
-          // Add and show as per the data: update or append to historical timeline
-          if (parsed.aqi !== null || parsed.co2 !== null || parsed.tvoc !== null) {
-            const pointTime = new Date(parsed.lastEventTime || Date.now());
-            const timeStr = formatTimestampByInterval(pointTime, timeRange, samplingInterval);
-            const fullDate = pointTime.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        setLiveTelemetry(prev => ({
+          ...prev,
+          ...parsedTelemetry
+        }));
+        setResolvedMetrics(updatedSettings);
 
-            setHistoricalData(prev => {
-              const newPoint = {
-                time: timeStr,
-                fullDate,
-                aqi: parsed.aqi,
-                pm25: parsed.pm25,
-                pm10: parsed.pm10,
-                co2: parsed.co2,
-                tvoc: parsed.tvoc,
-                tempC: parsed.tempC,
-                tempF: parsed.tempF,
-                hum: parsed.hum,
-                rawTimestamp: pointTime.getTime()
-              };
+        if (avail && avail.length > 0) {
+          setAvailableMetrics(prev => {
+            const merged = Array.from(new Set([...prev, ...avail]));
+            return merged;
+          });
+        }
 
-              if (prev.length === 0) return [newPoint];
-              const last = prev[prev.length - 1];
-              // If last point was within 60s, update it
-              if (Math.abs(last.rawTimestamp - newPoint.rawTimestamp) < 60000) {
-                const next = [...prev];
-                next[next.length - 1] = newPoint;
-                return next;
-              }
-              const next = [...prev, newPoint];
-              return next.length > 500 ? next.slice(next.length - 500) : next;
-            });
-          }
+        // Add or update latest historical point if real data is available
+        const hasAnyVal = parsedTelemetry.aqi !== null || parsedTelemetry.tempC !== null ||
+          parsedTelemetry.hum !== null || parsedTelemetry.co2 !== null ||
+          parsedTelemetry.tvoc !== null || parsedTelemetry.pm25 !== null;
+
+        if (hasAnyVal) {
+          const pointTime = new Date(parsedTelemetry.lastEventTime || Date.now());
+          const timeStr = formatTimestampByInterval(pointTime, timeRange, samplingInterval);
+          const fullDate = pointTime.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+
+          setHistoricalData(prev => {
+            const newPoint = {
+              time: timeStr,
+              fullDate,
+              aqi: parsedTelemetry.aqi,
+              pm25: parsedTelemetry.pm25,
+              pm10: parsedTelemetry.pm10,
+              co2: parsedTelemetry.co2,
+              tvoc: parsedTelemetry.tvoc,
+              tempC: parsedTelemetry.tempC,
+              tempF: parsedTelemetry.tempF,
+              hum: parsedTelemetry.hum,
+              rawTimestamp: pointTime.getTime()
+            };
+
+            if (prev.length === 0) return [newPoint];
+            const last = prev[prev.length - 1];
+            if (Math.abs(last.rawTimestamp - newPoint.rawTimestamp) < 60000) {
+              const next = [...prev];
+              next[next.length - 1] = newPoint;
+              return next;
+            }
+            const next = [...prev, newPoint];
+            return next.length > 500 ? next.slice(next.length - 500) : next;
+          });
         }
       }
     } catch (err) {
       console.warn('Could not fetch latest real device telemetry:', err);
     }
-  }, [selectedDeviceId, selectedSiteId, parseFieldsToTelemetry, timeRange, samplingInterval]);
+  }, [selectedDeviceId, selectedSiteId, selectedDevice, devices, devicesLoading, timeRange, samplingInterval]);
 
-  // 4. Fetch Real Historical Snapshots (GET /telemetry/snapshots)
-  const fetchHistoricalSnapshots = useCallback(async () => {
-    if (!selectedDeviceId || !selectedSiteId) {
+  // 3. Fetch Real Historical Snapshots (GET /telemetry/snapshots)
+  const fetchHistoricalSnapshots = useCallback(async (overrideRange, overrideInterval) => {
+    if (!selectedDeviceId || !selectedSiteId || devicesLoading) {
       setHistoricalData([]);
       return;
     }
+
+    // Safety guard: ensure the device belongs to current site's device list
+    const currentDevice = devices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId));
+    if (!currentDevice) {
+      setHistoricalData([]);
+      return;
+    }
+    const devSiteId = currentDevice.siteId || currentDevice.site_id || currentDevice.site?.id;
+    if (devSiteId && String(devSiteId) !== String(selectedSiteId)) {
+      setHistoricalData([]);
+      return;
+    }
+
+    const effectiveRange = overrideRange || timeRange;
+    const effectiveInterval = overrideInterval || samplingInterval;
 
     requestIdRef.current += 1;
     const curRequestId = requestIdRef.current;
@@ -663,19 +577,18 @@ const AQIOverview = () => {
       const now = new Date();
       let from = new Date();
 
-      if (timeRange === '12h') {
+      if (effectiveRange === '12h') {
         from = new Date(now.getTime() - 12 * 60 * 60 * 1000);
-      } else if (timeRange === '24h') {
+      } else if (effectiveRange === '24h') {
         from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       } else {
         from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       }
 
       // Backend validates interval to: "MIN_15" | "HOURLY" | "DAILY" | "MONTHLY"
-      // When "MIN_30" is chosen in the UI, directly request "MIN_15" from backend (never send MIN_30)
+      // When "MIN_30" is chosen in the UI, request "MIN_15" from backend (never send MIN_30)
       // to avoid 400 VALIDATION_ERROR, and aggregate into 30-min buckets on the client.
-      const backendInterval = samplingInterval === 'MIN_30' ? 'MIN_15' : samplingInterval;
-      const shouldDownsample30Min = samplingInterval === 'MIN_30';
+      const backendInterval = effectiveInterval === 'MIN_30' ? 'MIN_15' : effectiveInterval;
 
       const res = await bmsService.getDeviceTelemetrySnapshots(selectedSiteId, selectedDeviceId, {
         interval: backendInterval,
@@ -687,250 +600,67 @@ const AQIOverview = () => {
       if (curRequestId !== requestIdRef.current) return;
 
       const settings = res?.data?.settings || [];
-      if (!Array.isArray(settings) || settings.length === 0) {
-        setHistoricalData([]);
-        return;
-      }
-
-      // Find real settings in response (matching explicit settingId: 27, fieldKey: "3,100", displayName: "Temperature")
-      let aqiSetting = settings.find(s =>
-        s.settingId === 29 ||
-        s.fieldKey === '3,104' ||
-        s.sochiotFieldName === '3,104' ||
-        /aqi|iaq/i.test(s.displayName || s.fieldKey || '')
+      const { points, availableMetrics: avail } = resolveAqiSnapshots(
+        selectedDevice,
+        settings,
+        effectiveRange,
+        effectiveInterval
       );
-      let pm25Setting = settings.find(s =>
-        /pm\s*2\.?5/i.test(s.displayName || s.fieldKey || '')
-      );
-      let pm10Setting = settings.find(s =>
-        /pm\s*10/i.test(s.displayName || s.fieldKey || '')
-      );
-      let co2Setting = settings.find(s =>
-        s.settingId === 25 ||
-        s.fieldKey === '3,102' ||
-        s.sochiotFieldName === '3,102' ||
-        /co\s*2|carbon/i.test(s.displayName || s.fieldKey || '')
-      );
-      let tvocSetting = settings.find(s =>
-        s.settingId === 26 ||
-        s.fieldKey === '3,103' ||
-        s.sochiotFieldName === '3,103' ||
-        /tvoc|voc/i.test(s.displayName || s.fieldKey || '')
-      );
-      let tempSetting = settings.find(s =>
-        s.settingId === 27 ||
-        String(s.settingId) === '27' ||
-        s.id === 27 ||
-        String(s.id) === '27' ||
-        s.fieldKey === '3,100' ||
-        s.sochiotFieldName === '3,100' ||
-        /temp|temperature/i.test(s.displayName || s.fieldKey || '')
-      );
-      let humSetting = settings.find(s =>
-        s.settingId === 28 ||
-        String(s.settingId) === '28' ||
-        s.id === 28 ||
-        String(s.id) === '28' ||
-        s.fieldKey === '3,101' ||
-        s.sochiotFieldName === '3,101' ||
-        /hum|humidity|rh/i.test(s.displayName || s.fieldKey || '')
-      );
-
-      // Populate latest live values from snapshots if live telemetry hasn't arrived yet
-      if (tempSetting && Array.isArray(tempSetting.snapshots) && tempSetting.snapshots.length > 0) {
-        const sortedTempSnaps = [...tempSetting.snapshots].sort((a, b) => new Date(b.windowStart || b.windowEnd || 0) - new Date(a.windowStart || a.windowEnd || 0));
-        const latestSnap = sortedTempSnaps[0];
-        const val = latestSnap.lastValue !== null && latestSnap.lastValue !== undefined ? latestSnap.lastValue : latestSnap.avgValue;
-        const validT = validateSensorVal(val, 'tempC');
-        if (validT !== null) {
-          setLiveTelemetry(prev => {
-            if (prev.tempC === null) {
-              return {
-                ...prev,
-                tempC: validT,
-                tempF: +(validT * 1.8 + 32).toFixed(1)
-              };
-            }
-            return prev;
-          });
-        }
-      }
-
-      if (humSetting && Array.isArray(humSetting.snapshots) && humSetting.snapshots.length > 0) {
-        const sortedHumSnaps = [...humSetting.snapshots].sort((a, b) => new Date(b.windowStart || b.windowEnd || 0) - new Date(a.windowStart || a.windowEnd || 0));
-        const latestSnap = sortedHumSnaps[0];
-        const val = latestSnap.lastValue !== null && latestSnap.lastValue !== undefined ? latestSnap.lastValue : latestSnap.avgValue;
-        const validH = validateSensorVal(val, 'hum');
-        if (validH !== null) {
-          setLiveTelemetry(prev => {
-            if (prev.hum === null) {
-              return {
-                ...prev,
-                hum: validH
-              };
-            }
-            return prev;
-          });
-        }
-      }
-
-      // Use snapshots from AQI or PM2.5 or CO2 or Temperature as the primary chronological timeline
-      const primarySetting = aqiSetting || pm25Setting || co2Setting || tempSetting || settings[0];
-      let rawSnaps = primarySetting?.snapshots || [];
-
-      if (!Array.isArray(rawSnaps) || rawSnaps.length === 0) {
-        setHistoricalData([]);
-        return;
-      }
-
-      // Helper function to build fast tolerance-based timestamp lookup for companion settings
-      const createSnapshotLookup = (setting) => {
-        if (!setting || !Array.isArray(setting.snapshots) || setting.snapshots.length === 0) {
-          return () => null;
-        }
-        const map = new Map();
-        const sortedTimes = [];
-        setting.snapshots.forEach(s => {
-          const t = new Date(s.windowStart || s.windowEnd || 0).getTime();
-          if (!isNaN(t) && t > 0) {
-            const v = s.avgValue !== null && s.avgValue !== undefined ? s.avgValue : s.lastValue;
-            map.set(t, v);
-            sortedTimes.push(t);
-          }
-        });
-        sortedTimes.sort((a, b) => a - b);
-
-        return (targetTime, toleranceMs = 30 * 60 * 1000) => {
-          if (map.has(targetTime)) return map.get(targetTime);
-          let closestTime = null;
-          let minDiff = Infinity;
-          for (const t of sortedTimes) {
-            const diff = Math.abs(t - targetTime);
-            if (diff < minDiff) {
-              minDiff = diff;
-              closestTime = t;
-            }
-          }
-          if (closestTime !== null && minDiff <= toleranceMs) {
-            return map.get(closestTime);
-          }
-          return null;
-        };
-      };
-
-      // Helper function to aggregate 15-min snapshots into 30-min buckets
-      const downsampleSnapsTo30Min = (snaps) => {
-        if (!Array.isArray(snaps) || snaps.length === 0) return [];
-        const buckets = new Map();
-        snaps.forEach(snap => {
-          const t = new Date(snap.windowStart || snap.windowEnd || 0).getTime();
-          if (isNaN(t) || t <= 0) return;
-          const bucketKey = Math.floor(t / (30 * 60 * 1000)) * (30 * 60 * 1000);
-          if (!buckets.has(bucketKey)) {
-            buckets.set(bucketKey, {
-              ...snap,
-              windowStart: new Date(bucketKey).toISOString(),
-              windowEnd: new Date(bucketKey + 30 * 60 * 1000).toISOString(),
-              _values: []
-            });
-          }
-          const v = snap.avgValue !== null && snap.avgValue !== undefined ? snap.avgValue : snap.lastValue;
-          if (v !== null && v !== undefined && !isNaN(Number(v))) {
-            buckets.get(bucketKey)._values.push(Number(v));
-          }
-        });
-        return Array.from(buckets.values()).map(b => {
-          const sum = b._values.reduce((acc, c) => acc + c, 0);
-          const avg = b._values.length > 0 ? +(sum / b._values.length).toFixed(2) : b.avgValue;
-          return {
-            ...b,
-            avgValue: avg,
-            lastValue: b._values.length > 0 ? b._values[b._values.length - 1] : b.lastValue
-          };
-        });
-      };
-
-      // If client-side downsampling from 15-min to 30-min buckets
-      if (shouldDownsample30Min) {
-        rawSnaps = downsampleSnapsTo30Min(rawSnaps);
-        if (tempSetting && Array.isArray(tempSetting.snapshots)) {
-          tempSetting = { ...tempSetting, snapshots: downsampleSnapsTo30Min(tempSetting.snapshots) };
-        }
-        if (humSetting && Array.isArray(humSetting.snapshots)) {
-          humSetting = { ...humSetting, snapshots: downsampleSnapsTo30Min(humSetting.snapshots) };
-        }
-        if (pm25Setting && Array.isArray(pm25Setting.snapshots)) {
-          pm25Setting = { ...pm25Setting, snapshots: downsampleSnapsTo30Min(pm25Setting.snapshots) };
-        }
-        if (pm10Setting && Array.isArray(pm10Setting.snapshots)) {
-          pm10Setting = { ...pm10Setting, snapshots: downsampleSnapsTo30Min(pm10Setting.snapshots) };
-        }
-        if (co2Setting && Array.isArray(co2Setting.snapshots)) {
-          co2Setting = { ...co2Setting, snapshots: downsampleSnapsTo30Min(co2Setting.snapshots) };
-        }
-        if (tvocSetting && Array.isArray(tvocSetting.snapshots)) {
-          tvocSetting = { ...tvocSetting, snapshots: downsampleSnapsTo30Min(tvocSetting.snapshots) };
-        }
-      }
-
-      const lookupTemp = createSnapshotLookup(tempSetting);
-      const lookupHum = createSnapshotLookup(humSetting);
-      const lookupPm25 = createSnapshotLookup(pm25Setting);
-      const lookupPm10 = createSnapshotLookup(pm10Setting);
-      const lookupCo2 = createSnapshotLookup(co2Setting);
-      const lookupTvoc = createSnapshotLookup(tvocSetting);
-
-      // Sort chronologically ascending
-      const sorted = [...rawSnaps].sort((a, b) => new Date(a.windowStart || 0) - new Date(b.windowStart || 0));
-
-      const points = sorted.map(snap => {
-        const d = new Date(snap.windowStart || snap.windowEnd);
-        const targetMs = d.getTime();
-        let val = validateSensorVal(snap.avgValue !== null ? snap.avgValue : snap.lastValue, 'aqi');
-
-        const pointPm25 = validateSensorVal(lookupPm25(targetMs), 'pm25');
-
-        // Fallback: If primary was PM2.5 or AQI was not reported, calculate real AQI from PM2.5 snapshot
-        if (val === null && pointPm25 !== null) {
-          val = calculateAqiFromPm25(pointPm25);
-        }
-
-        const pointTempC = validateSensorVal(lookupTemp(targetMs), 'tempC');
-        const pointTempF = pointTempC !== null ? +(pointTempC * 1.8 + 32).toFixed(1) : null;
-        const pointHum = validateSensorVal(lookupHum(targetMs), 'hum');
-        const pointPm10 = validateSensorVal(lookupPm10(targetMs), 'pm10');
-        const pointCo2 = validateSensorVal(lookupCo2(targetMs), 'co2');
-        const pointTvoc = validateSensorVal(lookupTvoc(targetMs), 'tvoc');
-
-        const timeStr = formatTimestampByInterval(d, timeRange, samplingInterval);
-
-        return {
-          time: timeStr,
-          fullDate: d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
-          aqi: val,
-          pm25: pointPm25,
-          pm10: pointPm10,
-          co2: pointCo2,
-          tvoc: pointTvoc,
-          tempC: pointTempC,
-          tempF: pointTempF,
-          hum: pointHum,
-          rawTimestamp: targetMs
-        };
-      }).filter(p => p.aqi !== null); // Discard any points with no real data
 
       setHistoricalData(points);
+
+      // Populate live telemetry fallback from latest snapshot if live is currently empty
+      if (points.length > 0) {
+        const latestPoint = points[points.length - 1];
+        setLiveTelemetry(prev => ({
+          ...prev,
+          aqi: prev.aqi !== null ? prev.aqi : latestPoint.aqi,
+          pm25: prev.pm25 !== null ? prev.pm25 : latestPoint.pm25,
+          pm10: prev.pm10 !== null ? prev.pm10 : latestPoint.pm10,
+          co2: prev.co2 !== null ? prev.co2 : latestPoint.co2,
+          tvoc: prev.tvoc !== null ? prev.tvoc : latestPoint.tvoc,
+          tempC: prev.tempC !== null ? prev.tempC : latestPoint.tempC,
+          tempF: prev.tempF !== null ? prev.tempF : latestPoint.tempF,
+          hum: prev.hum !== null ? prev.hum : latestPoint.hum
+        }));
+      }
+
+      if (avail && avail.length > 0) {
+        setAvailableMetrics(prev => {
+          const merged = Array.from(new Set([...prev, ...avail]));
+          return merged;
+        });
+
+        // Ensure selected chart metric is valid for this device
+        setSelectedChartMetric(curr => {
+          if (avail.includes(curr)) return curr;
+          return avail[0] || 'aqi';
+        });
+      }
     } catch (err) {
       console.warn('Error fetching historical snapshots:', err);
       if (curRequestId === requestIdRef.current) setHistoricalData([]);
     } finally {
       if (curRequestId === requestIdRef.current) setHistoryLoading(false);
     }
-  }, [selectedDeviceId, selectedSiteId, timeRange, samplingInterval]);
+  }, [selectedDeviceId, selectedSiteId, selectedDevice, devices, devicesLoading, timeRange, samplingInterval]);
 
-  // 5. Polling for Latest Device Events every 30 seconds
+  // Immediate filter change handlers
+  const handleTimeRangeChange = (newRange) => {
+    if (newRange === timeRange) return;
+    setTimeRange(newRange);
+    fetchHistoricalSnapshots(newRange, samplingInterval);
+  };
+
+  const handleIntervalChange = (newInterval) => {
+    if (newInterval === samplingInterval) return;
+    setSamplingInterval(newInterval);
+    fetchHistoricalSnapshots(timeRange, newInterval);
+  };
+
+  // 4. Polling for Latest Device Events every 30 seconds
   useEffect(() => {
-    if (!selectedDeviceId) return;
+    if (!selectedDeviceId || !selectedDevice || devicesLoading) return;
 
     fetchLatestRealTelemetry();
 
@@ -939,15 +669,21 @@ const AQIOverview = () => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [selectedDeviceId, fetchLatestRealTelemetry]);
+  }, [selectedDeviceId, selectedDevice, devicesLoading, fetchLatestRealTelemetry]);
 
   // Historical snapshots fetch on device or filter change
   useEffect(() => {
+    if (!selectedDeviceId || !selectedDevice || devicesLoading) {
+      setHistoricalData([]);
+      return;
+    }
+
     fetchHistoricalSnapshots();
-  }, [fetchHistoricalSnapshots]);
+  }, [selectedDeviceId, selectedDevice, devicesLoading, fetchHistoricalSnapshots]);
 
   // 5. WebSocket Live Telemetry Listener
   useEffect(() => {
+    if (!selectedDeviceId || !selectedDevice || devicesLoading) return;
     const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
     const socket = io(backendUrl, { path: '/socket.io', transports: ['websocket', 'polling'], autoConnect: false });
 
@@ -982,12 +718,19 @@ const AQIOverview = () => {
           }
         });
 
-        const parsed = parseFieldsToTelemetry(incomingFields);
-        if (parsed) {
-          setLiveTelemetry(prev => ({
-            ...prev,
-            ...parsed
-          }));
+        const { parsedTelemetry, resolvedMetrics: updatedSettings, availableMetrics: avail } = resolveAqiDeviceTelemetry(
+          selectedDevice,
+          { fields: incomingFields }
+        );
+
+        setLiveTelemetry(prev => ({
+          ...prev,
+          ...parsedTelemetry
+        }));
+        setResolvedMetrics(updatedSettings);
+
+        if (avail && avail.length > 0) {
+          setAvailableMetrics(prev => Array.from(new Set([...prev, ...avail])));
         }
       }
     });
@@ -995,15 +738,17 @@ const AQIOverview = () => {
     return () => {
       socket.disconnect();
     };
-  }, [selectedDeviceId, parseFieldsToTelemetry]);
+  }, [selectedDeviceId, selectedDevice]);
 
   // 6. Calculate Real Forecast strictly from real historical points
   // Requires at least 4 real data points to compute regression slope; otherwise returns null
   const forecastData = useMemo(() => {
     if (!historicalData || historicalData.length < 4) return null;
+    const aqiPoints = historicalData.filter(p => p.aqi !== null && p.aqi !== undefined);
+    if (aqiPoints.length < 4) return null;
 
     // Use last 6 points to compute linear slope
-    const recent = historicalData.slice(-6);
+    const recent = aqiPoints.slice(-6);
     const n = recent.length;
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
@@ -1094,7 +839,14 @@ const AQIOverview = () => {
       options: siteOptions,
       onChange: (newId) => {
         const match = sites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
-        if (match && setSelectedSite) setSelectedSite(match);
+        if (match && setSelectedSite) {
+          requestIdRef.current += 1;
+          setSelectedDeviceId('');
+          setDevices([]);
+          setHistoricalData([]);
+          setDevicesLoading(true);
+          setSelectedSite(match);
+        }
       },
       ariaLabel: 'Select Facility Site'
     };
@@ -1127,14 +879,17 @@ const AQIOverview = () => {
       })),
       onChange: (newId) => {
         setSelectedDeviceId(newId);
+        if (selectedSiteId) {
+          localStorage.setItem(`selected_aqi_device_id_${selectedSiteId}`, String(newId));
+        }
         localStorage.setItem('selected_aqi_device_id', String(newId));
       },
       ariaLabel: 'Select Sensor Device',
       disabled: false
     };
-  }, [devices, devicesLoading, selectedDeviceId]);
+  }, [devices, devicesLoading, selectedDeviceId, selectedSiteId]);
 
-  const isDeviceConfigured = Boolean(devices && devices.length > 0);
+  const isDeviceConfigured = Boolean(!devicesLoading && devices && devices.length > 0 && selectedDevice);
 
   return (
     <div className="fade-in aqi-overview-workspace">
@@ -1176,7 +931,7 @@ const AQIOverview = () => {
               fetchLatestRealTelemetry();
               fetchHistoricalSnapshots();
             }}
-            disabled={!selectedDeviceId}
+            disabled={!selectedDeviceId || !isDeviceConfigured || devicesLoading}
             title="Refresh Real Sensor Readings"
           >
             <RefreshCw size={14} />
@@ -1187,6 +942,17 @@ const AQIOverview = () => {
         variant="scada"
         className="aqi-context-banner"
       />
+
+      {/* ── Loading State ── */}
+      {devicesLoading && (
+        <div className="energy-empty-state-card energy-empty-state-darkened text-center py-5">
+          <Spinner animation="border" variant="info" className="mb-3" />
+          <h4 className="text-white fw-bold mb-2">Loading AQI Sensors...</h4>
+          <p className="text-secondary fs-7 mx-auto" style={{ maxWidth: '450px' }}>
+            Fetching configured environmental sensors for this site.
+          </p>
+        </div>
+      )}
 
       {/* ── Empty State: No Devices Configured for Site ── */}
       {!devicesLoading && !isDeviceConfigured && (
@@ -1204,33 +970,53 @@ const AQIOverview = () => {
       {isDeviceConfigured && (
         <>
           <Row className="g-3 mb-3">
-            {/* ── 1. AQI Hero Card ── */}
+            {/* ── 1. AQI / Primary Hero Card ── */}
             <Col xl={3} lg={4} md={12}>
               <Card className="aqi-card aqi-hero-card">
-                <span className="aqi-hero-label">AQI</span>
-                <div className={`aqi-hero-value ${aqiCategory.colorClass}`}>
-                  {fmt(liveTelemetry.aqi, 0)}
-                </div>
-                <div className={`aqi-status-capsule ${aqiCategory.capsuleClass}`}>
-                  {aqiCategory.label}
-                </div>
-                <div className="aqi-hero-alert-box">
-                  {liveTelemetry.aqi !== null ? (
-                    <>
-                      {liveTelemetry.aqi > 100 ? (
-                        <AlertTriangle size={16} className="text-warning flex-shrink-0" />
+                {resolvedMetrics.aqi?.isConfigured !== false ? (
+                  <>
+                    <span className="aqi-hero-label">AQI</span>
+                    <div className={`aqi-hero-value ${aqiCategory.colorClass}`}>
+                      {fmt(liveTelemetry.aqi, 0)}
+                    </div>
+                    <div className={`aqi-status-capsule ${aqiCategory.capsuleClass}`}>
+                      {aqiCategory.label}
+                    </div>
+                    <div className="aqi-hero-alert-box">
+                      {liveTelemetry.aqi !== null ? (
+                        <>
+                          {liveTelemetry.aqi > 100 ? (
+                            <AlertTriangle size={16} className="text-warning flex-shrink-0" />
+                          ) : (
+                            <CheckCircle2 size={16} className="text-success flex-shrink-0" />
+                          )}
+                          <span className="text-truncate">{aqiCategory.description}</span>
+                        </>
                       ) : (
-                        <CheckCircle2 size={16} className="text-success flex-shrink-0" />
+                        <>
+                          <Info size={16} className="text-secondary flex-shrink-0" />
+                          <span>Awaiting sensor telemetry</span>
+                        </>
                       )}
-                      <span className="text-truncate">{aqiCategory.description}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Info size={16} className="text-secondary flex-shrink-0" />
-                      <span>Awaiting sensor telemetry</span>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="aqi-hero-label">Temperature & Humidity</span>
+                    <div className="aqi-hero-value text-info">
+                      {useFahrenheit
+                        ? (liveTelemetry.tempF !== null ? `${fmt(liveTelemetry.tempF, 1)}°F` : '—')
+                        : (liveTelemetry.tempC !== null ? `${fmt(liveTelemetry.tempC, 1)}°C` : '—')}
+                    </div>
+                    <div className="aqi-status-capsule bg-info bg-opacity-20 text-info">
+                      Humidity: {liveTelemetry.hum !== null ? `${fmt(liveTelemetry.hum, 0)}%` : '—'}
+                    </div>
+                    <div className="aqi-hero-alert-box">
+                      <Thermometer size={16} className="text-info flex-shrink-0" />
+                      <span className="text-truncate">Environmental Climate Monitor</span>
+                    </div>
+                  </>
+                )}
               </Card>
             </Col>
 
@@ -1239,98 +1025,133 @@ const AQIOverview = () => {
               <Row className="g-3 h-100">
                 {/* Card 1: PM2.5 */}
                 <Col sm={4} xs={6}>
-                  <Card className="aqi-card aqi-metric-card">
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="aqi-badge aqi-badge-pm">pm</span>
-                      <span className="aqi-metric-title">PM2.5</span>
-                    </div>
-                    <div className="aqi-metric-value-row">
-                      <span className="aqi-metric-value">{fmt(liveTelemetry.pm25, 1)}</span>
-                      <span className="aqi-metric-unit">µg/m³</span>
-                    </div>
-                    <div className="aqi-metric-sublabel text-truncate">Fine Particulates</div>
-                  </Card>
+                  <AqiMetricCard
+                    setting={resolvedMetrics.pm25}
+                    telemetry={{
+                      value: liveTelemetry.pm25,
+                      unit: resolvedMetrics.pm25?.unit || 'µg/m³',
+                      status: getThresholdStatusFromSetting(liveTelemetry.pm25, resolvedMetrics.pm25)
+                    }}
+                    displayConfig={{
+                      badgeText: 'pm',
+                      badgeClass: 'aqi-badge-pm',
+                      sublabel: 'Fine Particulates',
+                      decimals: 1
+                    }}
+                    isConfigured={resolvedMetrics.pm25?.isConfigured !== false}
+                    onClick={() => availableMetrics.includes('pm25') && setSelectedChartMetric('pm25')}
+                  />
                 </Col>
 
                 {/* Card 2: PM10 */}
                 <Col sm={4} xs={6}>
-                  <Card className="aqi-card aqi-metric-card">
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="aqi-badge aqi-badge-pm">pm</span>
-                      <span className="aqi-metric-title">PM10</span>
-                    </div>
-                    <div className="aqi-metric-value-row">
-                      <span className="aqi-metric-value">{fmt(liveTelemetry.pm10, 1)}</span>
-                      <span className="aqi-metric-unit">µg/m³</span>
-                    </div>
-                    <div className="aqi-metric-sublabel text-truncate">Coarse Dust</div>
-                  </Card>
+                  <AqiMetricCard
+                    setting={resolvedMetrics.pm10}
+                    telemetry={{
+                      value: liveTelemetry.pm10,
+                      unit: resolvedMetrics.pm10?.unit || 'µg/m³',
+                      status: getThresholdStatusFromSetting(liveTelemetry.pm10, resolvedMetrics.pm10)
+                    }}
+                    displayConfig={{
+                      badgeText: 'pm',
+                      badgeClass: 'aqi-badge-pm',
+                      sublabel: 'Coarse Dust',
+                      decimals: 1
+                    }}
+                    isConfigured={resolvedMetrics.pm10?.isConfigured !== false}
+                  />
                 </Col>
 
                 {/* Card 3: Radial Arc Gauge for CO2 */}
                 <Col sm={4} xs={12}>
-                  <Card className="aqi-card aqi-gauge-card">
+                  <Card className="aqi-card aqi-gauge-card h-100">
                     <RadialArcGauge
                       value={liveTelemetry.co2}
                       min={300}
                       max={2000}
-                      unit={liveTelemetry.co2Unit || 'ppm'}
+                      unit={liveTelemetry.co2Unit || resolvedMetrics.co2?.unit || 'ppm'}
                     />
                   </Card>
                 </Col>
 
                 {/* Card 4: CO2 */}
                 <Col sm={4} xs={6}>
-                  <Card className="aqi-card aqi-metric-card">
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="aqi-badge aqi-badge-co2">co₂</span>
-                      <span className="aqi-metric-title">CO₂</span>
-                    </div>
-                    <div className="aqi-metric-value-row">
-                      <span className="aqi-metric-value">{fmt(liveTelemetry.co2, 0)}</span>
-                      <span className="aqi-metric-unit">{liveTelemetry.co2Unit || 'ppm'}</span>
-                    </div>
-                    <div className="aqi-metric-sublabel">CO2 Concentration</div>
-                  </Card>
+                  <AqiMetricCard
+                    setting={resolvedMetrics.co2}
+                    telemetry={{
+                      value: liveTelemetry.co2,
+                      unit: liveTelemetry.co2Unit || resolvedMetrics.co2?.unit || 'ppm',
+                      status: getThresholdStatusFromSetting(liveTelemetry.co2, resolvedMetrics.co2)
+                    }}
+                    displayConfig={{
+                      badgeText: 'co₂',
+                      badgeClass: 'aqi-badge-co2',
+                      sublabel: 'CO2 Concentration',
+                      decimals: 0
+                    }}
+                    isConfigured={resolvedMetrics.co2?.isConfigured !== false}
+                    onClick={() => availableMetrics.includes('co2') && setSelectedChartMetric('co2')}
+                  />
                 </Col>
 
                 {/* Card 5: TVOC */}
                 <Col sm={4} xs={6}>
-                  <Card className="aqi-card aqi-metric-card">
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="aqi-badge aqi-badge-tvoc">
-                        <ArrowUp size={12} className="me-0.5" /> TVOC
-                      </span>
-                      <span className="aqi-metric-title">TVOC</span>
-                    </div>
-                    <div className="aqi-metric-value-row">
-                      <span className="aqi-metric-value">{fmt(liveTelemetry.tvoc, 0)}</span>
-                      <span className="aqi-metric-unit">{liveTelemetry.tvocUnit || 'ppb'}</span>
-                    </div>
-                    <div className="aqi-metric-sublabel">Volatile Compounds</div>
-                  </Card>
+                  <AqiMetricCard
+                    setting={resolvedMetrics.tvoc}
+                    telemetry={{
+                      value: liveTelemetry.tvoc,
+                      unit: liveTelemetry.tvocUnit || resolvedMetrics.tvoc?.unit || 'ppb',
+                      status: getThresholdStatusFromSetting(liveTelemetry.tvoc, resolvedMetrics.tvoc)
+                    }}
+                    displayConfig={{
+                      badgeText: 'TVOC',
+                      badgeClass: 'aqi-badge-tvoc',
+                      sublabel: 'Volatile Compounds',
+                      decimals: 0
+                    }}
+                    isConfigured={resolvedMetrics.tvoc?.isConfigured !== false}
+                    onClick={() => availableMetrics.includes('tvoc') && setSelectedChartMetric('tvoc')}
+                  />
                 </Col>
 
                 {/* Card 6: Temperature & Humidity */}
                 <Col sm={4} xs={12}>
-                  <Card className="aqi-card aqi-metric-card">
-                    <div className="d-flex align-items-center justify-content-between">
+                  <Card className="aqi-card aqi-metric-card h-100">
+                    <div
+                      className="d-flex align-items-center justify-content-between cursor-pointer"
+                      onClick={() => availableMetrics.includes('tempC') && setSelectedChartMetric('tempC')}
+                      title="Click to view Temperature trend"
+                    >
                       <div className="d-flex align-items-center gap-1.5 text-info">
                         <Thermometer size={17} />
-                        <span className="fw-black fs-5" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
-                          {useFahrenheit
-                            ? (liveTelemetry.tempF !== null ? `${fmt(liveTelemetry.tempF, 1)}°F` : '—')
-                            : (liveTelemetry.tempC !== null ? `${fmt(liveTelemetry.tempC, 1)}°C` : '—')}
+                        <span className="aqi-metric-title">
+                          {resolvedMetrics.tempC?.displayName || 'Temperature'}
                         </span>
                       </div>
+                      <span className="fw-black fs-5" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
+                        {useFahrenheit
+                          ? (liveTelemetry.tempF !== null ? `${fmt(liveTelemetry.tempF, 1)}°F` : '—')
+                          : (liveTelemetry.tempC !== null ? `${fmt(liveTelemetry.tempC, 1)}°C` : '—')}
+                      </span>
                     </div>
-                    <div className="d-flex align-items-center gap-2 mt-2">
+                    <div
+                      className="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-10 cursor-pointer"
+                      onClick={() => availableMetrics.includes('hum') && setSelectedChartMetric('hum')}
+                      title="Click to view Humidity trend"
+                    >
+                      <div className="d-flex align-items-center gap-1.5 text-info">
+                        <Droplets size={16} />
+                        <span className="aqi-metric-title">
+                          {resolvedMetrics.hum?.displayName || 'Humidity'}
+                        </span>
+                      </div>
                       <span className="fs-5 fw-black" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
                         {liveTelemetry.hum !== null ? `${fmt(liveTelemetry.hum, 0)}%` : '—'}
                       </span>
                     </div>
-                    <div className="aqi-metric-sublabel d-flex align-items-center gap-1 text-info">
-                      <Droplets size={13} /> Humidity
+                    <div className="aqi-metric-sublabel d-flex align-items-center justify-content-between mt-auto pt-1">
+                      <span>Ambient Climate</span>
+                      <span className="text-secondary fs-9">{useFahrenheit ? '°F' : '°C'}</span>
                     </div>
                   </Card>
                 </Col>
@@ -1456,22 +1277,43 @@ const AQIOverview = () => {
             </Col>
           </Row>
 
-          {/* ── 4. Main Air Quality Over Time Historical Chart ── */}
+          {/* ── 4. Main Environmental Trend Historical Chart ── */}
           <Row className="g-3">
             <Col xs={12}>
               <Card className="aqi-card aqi-main-chart-card">
                 <div className="aqi-chart-header">
                   <div>
                     <h5 className="fw-bold mb-1" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
-                      Air Quality Over Time (Past {timeRange === '12h' ? '12 Hours' : (timeRange === '24h' ? '24 Hours' : '7 Days')})
+                      {CHART_METRIC_CONFIGS[selectedChartMetric]?.label || 'Air Quality'} Over Time (Past {timeRange === '12h' ? '12 Hours' : (timeRange === '24h' ? '24 Hours' : '7 Days')})
                     </h5>
                     <span className="text-secondary fs-8">
-                      {selectedDevice ? `Real telemetry trend for ${selectedDevice.name}` : 'Continuous multi-parameter air quality record'} • {SAMPLING_INTERVALS.find(i => i.value === samplingInterval)?.label || samplingInterval}
+                      {selectedDevice ? `Real telemetry trend for ${selectedDevice.name}` : 'Continuous multi-parameter environmental record'} • {SAMPLING_INTERVALS.find(i => i.value === samplingInterval)?.label || samplingInterval}
                     </span>
                   </div>
 
-                  {/* Range & Sampling Interval Filter Controls */}
+                  {/* Range, Interval & Metric Filter Controls */}
                   <div className="d-flex flex-wrap align-items-center gap-3">
+                    {/* Multi-Metric Selector Tabs */}
+                    <div className="aqi-filter-group">
+                      <span className="aqi-filter-label">Metric:</span>
+                      {['aqi', 'tempC', 'hum', 'co2', 'tvoc', 'pm25']
+                        .filter(m => availableMetrics.includes(m))
+                        .map(m => {
+                          const cfg = CHART_METRIC_CONFIGS[m];
+                          if (!cfg) return null;
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              className={`aqi-time-filter-btn ${selectedChartMetric === m ? 'active' : ''}`}
+                              onClick={() => setSelectedChartMetric(m)}
+                            >
+                              {cfg.label}
+                            </button>
+                          );
+                        })}
+                    </div>
+
                     {/* Time Range Filter Tabs */}
                     <div className="aqi-filter-group">
                       <span className="aqi-filter-label">Range:</span>
@@ -1506,7 +1348,7 @@ const AQIOverview = () => {
                           key={int.value}
                           type="button"
                           className={`aqi-time-filter-btn ${samplingInterval === int.value ? 'active' : ''}`}
-                          onClick={() => setSamplingInterval(int.value)}
+                          onClick={() => handleIntervalChange(int.value)}
                         >
                           {int.label}
                         </button>
@@ -1522,79 +1364,168 @@ const AQIOverview = () => {
                       <Spinner animation="border" variant="info" size="sm" className="mb-2" />
                       <span className="text-secondary fs-8">Loading historical snapshots...</span>
                     </div>
-                  ) : historicalData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                      <AreaChart data={historicalData} margin={{ top: 10, right: 15, left: -15, bottom: 5 }}>
-                        <defs>
-                          <linearGradient id="aqiZoneGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.65} />
-                            <stop offset="45%" stopColor="#eab308" stopOpacity={0.4} />
-                            <stop offset="85%" stopColor="#22c55e" stopOpacity={0.15} />
-                            <stop offset="100%" stopColor="#10b981" stopOpacity={0.03} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(148, 163, 184, 0.2)'} vertical={false} />
-                        <XAxis
-                          dataKey="time"
-                          stroke="#94a3b8"
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(148, 163, 184, 0.25)' }}
-                          dy={6}
-                          minTickGap={35}
-                        />
-                        <YAxis
-                          stroke="#94a3b8"
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(148, 163, 184, 0.25)' }}
-                          ticks={[0, 50, 100, 150]}
-                          domain={[0, 'auto']}
-                        />
-                        <Tooltip content={<HistoricalChartTooltip useFahrenheit={useFahrenheit} />} />
-                        <Area
-                          type="monotone"
-                          dataKey="aqi"
-                          stroke="#f59e0b"
-                          strokeWidth={2.8}
-                          fill="url(#aqiZoneGradient)"
-                          dot={false}
-                          activeDot={{ r: 6, fill: '#f59e0b', stroke: '#ffffff', strokeWidth: 2 }}
-                          isAnimationActive={true}
-                          animationDuration={600}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="d-flex flex-column align-items-center justify-content-center text-center h-100 bg-dark bg-opacity-25 rounded-3 border border-secondary border-opacity-10 m-2">
-                      <Activity size={36} className="text-secondary opacity-40 mb-2" />
-                      <h6 className="text-secondary fs-7 fw-bold mb-1">No historical telemetry recorded</h6>
-                      <span className="text-secondary opacity-60 fs-8">
-                        No periodic snapshots have been logged for this sensor yet.
-                      </span>
-                    </div>
-                  )}
+                  ) : (() => {
+                    const metricCfg = CHART_METRIC_CONFIGS[selectedChartMetric] || CHART_METRIC_CONFIGS.aqi;
+                    const chartDataKey = selectedChartMetric === 'tempC' && useFahrenheit ? 'tempF' : selectedChartMetric;
+                    const hasMetricData = historicalData.some(p => p[chartDataKey] !== null && p[chartDataKey] !== undefined);
+
+                    if (!hasMetricData) {
+                      return (
+                        <div className="d-flex flex-column align-items-center justify-content-center text-center h-100 bg-dark bg-opacity-25 rounded-3 border border-secondary border-opacity-10 m-2">
+                          <Activity size={36} className="text-secondary opacity-40 mb-2" />
+                          <h6 className="text-secondary fs-7 fw-bold mb-1">No historical {metricCfg.label} telemetry recorded</h6>
+                          <span className="text-secondary opacity-60 fs-8">
+                            No periodic snapshots have been logged for this parameter yet.
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                        <AreaChart data={historicalData} margin={{ top: 10, right: 15, left: -15, bottom: 5 }}>
+                          <defs>
+                            <linearGradient id={metricCfg.gradientId} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={metricCfg.stop0} stopOpacity={0.65} />
+                              <stop offset="45%" stopColor={metricCfg.stop1} stopOpacity={0.35} />
+                              <stop offset="85%" stopColor={metricCfg.stop1} stopOpacity={0.12} />
+                              <stop offset="100%" stopColor={metricCfg.stop1} stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(148, 163, 184, 0.2)'} vertical={false} />
+                          <XAxis
+                            dataKey="time"
+                            stroke="#94a3b8"
+                            fontSize={11}
+                            tickLine={false}
+                            axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(148, 163, 184, 0.25)' }}
+                            dy={6}
+                            minTickGap={35}
+                          />
+                          <YAxis
+                            stroke="#94a3b8"
+                            fontSize={11}
+                            tickLine={false}
+                            axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(148, 163, 184, 0.25)' }}
+                            ticks={metricCfg.ticks}
+                            domain={metricCfg.domain}
+                            unit={selectedChartMetric === 'tempC' ? (useFahrenheit ? '°F' : '°C') : (metricCfg.unit ? ` ${metricCfg.unit}` : '')}
+                          />
+                          <Tooltip content={<HistoricalChartTooltip useFahrenheit={useFahrenheit} activeMetric={selectedChartMetric} />} />
+                          <Area
+                            type="monotone"
+                            dataKey={chartDataKey}
+                            stroke={metricCfg.strokeColor}
+                            strokeWidth={2.8}
+                            fill={`url(#${metricCfg.gradientId})`}
+                            dot={false}
+                            activeDot={{ r: 6, fill: metricCfg.strokeColor, stroke: '#ffffff', strokeWidth: 2 }}
+                            isAnimationActive={true}
+                            animationDuration={600}
+                            connectNulls={false}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    );
+                  })()}
                 </div>
 
-                {/* Threshold Legend Bar */}
-                <div className="aqi-threshold-legend">
-                  <div className="aqi-legend-segment good">
-                    <span className="aqi-legend-dot" style={{ background: '#10b981' }} />
-                    <span>Good (0–50)</span>
+                {/* Dynamic Threshold Legend Bar */}
+                {selectedChartMetric === 'tempC' ? (
+                  <div className="aqi-threshold-legend">
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#38bdf8' }} />
+                      <span>Cool ({useFahrenheit ? '< 68°F' : '< 20°C'})</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#10b981' }} />
+                      <span>Comfort ({useFahrenheit ? '68–79°F' : '20–26°C'})</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#f97316' }} />
+                      <span>Warm ({useFahrenheit ? '> 79°F' : '> 26°C'})</span>
+                    </div>
                   </div>
-                  <div className="aqi-legend-segment moderate">
-                    <span className="aqi-legend-dot" style={{ background: '#eab308' }} />
-                    <span>Moderate (51–100)</span>
+                ) : selectedChartMetric === 'hum' ? (
+                  <div className="aqi-threshold-legend">
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#f59e0b' }} />
+                      <span>Dry (&lt; 30%)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#10b981' }} />
+                      <span>Optimal (30–60%)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#06b6d4' }} />
+                      <span>Humid (&gt; 60%)</span>
+                    </div>
                   </div>
-                  <div className="aqi-legend-segment unhealthy-sensitive">
-                    <span className="aqi-legend-dot" style={{ background: '#f97316' }} />
-                    <span>Unhealthy for Sensitive (101–150)</span>
+                ) : selectedChartMetric === 'co2' ? (
+                  <div className="aqi-threshold-legend">
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#10b981' }} />
+                      <span>Good (&lt; 800 ppm)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#f59e0b' }} />
+                      <span>Moderate (800–1200 ppm)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#ef4444' }} />
+                      <span>Elevated (&gt; 1200 ppm)</span>
+                    </div>
                   </div>
-                  <div className="aqi-legend-segment unhealthy">
-                    <span className="aqi-legend-dot" style={{ background: '#ef4444' }} />
-                    <span>Unhealthy (151+)</span>
+                ) : selectedChartMetric === 'tvoc' ? (
+                  <div className="aqi-threshold-legend">
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#10b981' }} />
+                      <span>Good (&lt; 300 ppb)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#f59e0b' }} />
+                      <span>Moderate (300–1000 ppb)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#ef4444' }} />
+                      <span>Elevated (&gt; 1000 ppb)</span>
+                    </div>
                   </div>
-                </div>
+                ) : selectedChartMetric === 'pm25' ? (
+                  <div className="aqi-threshold-legend">
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#10b981' }} />
+                      <span>Good (0–12 µg/m³)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#eab308' }} />
+                      <span>Moderate (12.1–35.4 µg/m³)</span>
+                    </div>
+                    <div className="aqi-legend-segment">
+                      <span className="aqi-legend-dot" style={{ background: '#ef4444' }} />
+                      <span>Unhealthy (&gt; 35.4 µg/m³)</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aqi-threshold-legend">
+                    <div className="aqi-legend-segment good">
+                      <span className="aqi-legend-dot" style={{ background: '#10b981' }} />
+                      <span>Good (0–50)</span>
+                    </div>
+                    <div className="aqi-legend-segment moderate">
+                      <span className="aqi-legend-dot" style={{ background: '#eab308' }} />
+                      <span>Moderate (51–100)</span>
+                    </div>
+                    <div className="aqi-legend-segment unhealthy-sensitive">
+                      <span className="aqi-legend-dot" style={{ background: '#f97316' }} />
+                      <span>Unhealthy for Sensitive (101–150)</span>
+                    </div>
+                    <div className="aqi-legend-segment unhealthy">
+                      <span className="aqi-legend-dot" style={{ background: '#ef4444' }} />
+                      <span>Unhealthy (151+)</span>
+                    </div>
+                  </div>
+                )}
               </Card>
             </Col>
           </Row>

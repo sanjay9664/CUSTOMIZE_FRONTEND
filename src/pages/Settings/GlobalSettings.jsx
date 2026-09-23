@@ -15,7 +15,7 @@ const ALL_MODULES = [
   { key: 'HVAC', label: 'HVAC', icon: <Thermometer size={18} />, subItems: ['Chiller', 'AHU', 'Cooling Tower', 'PDF Report'], configKey: 'showHVAC' },
   { key: 'VRV', label: 'VRV', icon: <Wind size={18} />, subItems: [] },
   { key: 'AC', label: 'AC', icon: <Wind size={18} />, subItems: ['Overview', 'PDF Report'], configKey: 'showAC' },
-  { key: 'AQI Sensor', label: 'AQI Sensor', icon: <Wind size={18} />, subItems: ['Overview', 'Temp & Humidity', 'PDF Report'], configKey: 'showAQISensor' },
+  { key: 'AQI Sensor', label: 'AQI Sensor', icon: <Wind size={18} />, subItems: ['Overview', 'Graphs', 'Reports'], configKey: 'showAQISensor' },
   { key: 'Water Management', label: 'Water Management', icon: <Droplets size={18} />, subItems: ['Overview', 'AG TANK', 'UG TANK'], configKey: 'showWaterManagement' },
   { key: 'Motors', label: 'Motors', icon: <Activity size={18} />, subItems: ['Overview', 'Pump Room 1', 'Pump Room 2', 'VFD / DOL Status', 'PDF Report'], configKey: 'showMotors' },
   { key: 'Fire', label: 'Fire', icon: <ShieldAlert size={18} />, subItems: ['Overview', 'Pump Status', 'Header Pressure', 'Jockey / Main', 'PDF Report'], configKey: 'showFirePumps' },
@@ -78,7 +78,7 @@ const GlobalSettings = () => {
       showServiceHistory: { 'Equipment-wise': true, 'Service Records': true, 'PDF Report': true },
       showDailyDPR: { 'Data Aggregation': true, 'Daily Logs': true, 'PDF Report': true },
       showEnergyMetering: { Overview: true, 'Main Meter': true, 'Sub Meters': true, Graphs: true, 'PDF Report': true },
-      showAQISensor: { Overview: true, 'Temp & Humidity': true, 'PDF Report': true },
+      showAQISensor: { Overview: true, Graphs: true, Reports: true },
       showHVAC: { Chiller: true, AHU: true, 'Cooling Tower': true, 'PDF Report': true },
       showAC: { Overview: true, 'PDF Report': true }
     };

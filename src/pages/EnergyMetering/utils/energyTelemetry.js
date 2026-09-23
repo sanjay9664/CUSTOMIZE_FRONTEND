@@ -1,8 +1,18 @@
-/**
- * Unified Energy Telemetry Utility
- * Centralizes parameter synonyms, register mapping, extraction helpers,
- * limit checks, and SVG gauge math across Main Meter, Sub Meters, Overview, and Graphs.
- */
+import {
+  resolveDeviceTelemetry,
+  mapSettingToTelemetry,
+  formatTelemetryValue,
+  getThresholdStatusFromSetting,
+  getCanonicalEnergyTemplate
+} from './energyTelemetryAdapter.js';
+
+export {
+  resolveDeviceTelemetry,
+  mapSettingToTelemetry,
+  formatTelemetryValue,
+  getThresholdStatusFromSetting,
+  getCanonicalEnergyTemplate
+};
 
 export const PARAMETER_SYNONYMS = {
   // Energy & Consumption
@@ -10,17 +20,17 @@ export const PARAMETER_SYNONYMS = {
   ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY', 'KVAH', 'S'],
   cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP'],
   dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY', 'GEN KWH'],
-  balance: ['3,162', '3,168', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
+  balance: ['3,162', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
 
   // Powers
-  totalKw: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW'],
-  activePower: ['3,190', '3,151', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW'],
+  totalKw: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW'],
+  activePower: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW'],
   totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA', 'KVA'],
   apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA', 'KVA'],
   reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER', 'KVAR', 'POWER KVAR', 'Eq'],
 
   // Voltages (Phase to Neutral)
-  vR: ['3,168', '3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R', 'R-PHASE VOLTAGE', 'R-Phase Voltage'],
+  vR: ['3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R', 'R-PHASE VOLTAGE', 'R-Phase Voltage'],
   vY: ['3,169', '3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE', 'Voltage-Y', 'Y-PHASE VOLTAGE', 'Y-Phase Voltage'],
   vB: ['3,170', '3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE', 'Voltage-B', 'B-PHASE VOLTAGE', 'B-Phase Voltage'],
 
@@ -34,7 +44,7 @@ export const PARAMETER_SYNONYMS = {
   // Currents
   iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current', 'R-PHASE CURRENT'],
   iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current', 'Y-PHASE CURRENT'],
-  iB: ['3,173', '3,168', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current', 'B-PHASE CURRENT'],
+  iB: ['3,173', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current', 'B-PHASE CURRENT'],
   iAvg: ['AVG CURRENT', 'I_AVG', 'IAVG', 'Avg Current', 'AVERAGE CURRENT'],
 
   // Power Factors
@@ -61,10 +71,10 @@ export const PARAMETER_SYNONYMS = {
 
   // Tariffs & Limits
   ebTariff: ['3,160', 'EB TARIFF', 'GRID TARIFF', 'EB_RATE', 'EBTARIFF', 'EB Tariff'],
-  dgTariff: ['3,172', 'DG TARIFF', 'GEN RATE', 'DG_RATE', 'DGTARIFF', 'DG Tariff'],
-  ebRLoadSet: ['3,173', 'EB R LOAD', 'EB_R_LOAD', 'EB_R_LIMIT', 'EBRLOADSET'],
-  ebYLoadSet: ['3,174', 'EB Y LOAD', 'EB_Y_LOAD', 'EB_Y_LIMIT', 'EBYLOADSET'],
-  ebBLoadSet: ['3,175', 'EB B LOAD', 'EB_B_LOAD', 'EB_B_LIMIT', 'EBBLOADSET'],
+  dgTariff: ['3,172_DG', 'DG TARIFF', 'GEN RATE', 'DG_RATE', 'DGTARIFF', 'DG Tariff'],
+  ebRLoadSet: ['3,173_LOAD', 'EB R LOAD', 'EB_R_LOAD', 'EB_R_LIMIT', 'EBRLOADSET'],
+  ebYLoadSet: ['3,174_LOAD', 'EB Y LOAD', 'EB_Y_LOAD', 'EB_Y_LIMIT', 'EBYLOADSET'],
+  ebBLoadSet: ['3,175_LOAD', 'EB B LOAD', 'EB_B_LOAD', 'EB_B_LIMIT', 'EBBLOADSET'],
   dgRLoadSet: ['3,176', 'DG R LOAD', 'DG_R_LOAD', 'DG_R_LIMIT', 'DGRLOADSET'],
   dgYLoadSet: ['3,177', 'DG Y LOAD', 'DG_Y_LOAD', 'DG_Y_LIMIT', 'DGYLOADSET'],
   dgBLoadSet: ['3,178', 'DG B LOAD', 'DG_B_LOAD', 'DG_B_LIMIT', 'DGBLOADSET'],
@@ -77,7 +87,7 @@ export const PARAMETER_SYNONYMS = {
   overloadTrip: ['3,165', 'OVERLOAD TRIP', 'OL TRIP', 'OVERLOAD_TRIP', 'OVERLOAD TRIP STATUS'],
   overloadLimitReached: ['3,166', 'OVERLOAD LIMIT', 'OL LIMIT', 'OVERLOAD_WARN', 'OVERLOAD LIMIT REACHED'],
   connectedStatus: ['3,167', 'CONNECTED STATUS', 'RELAY STATUS', 'BREAKER STATUS', 'CONNECTED', 'CONNECTED_STATUS'],
-  forceOff: ['3,168', 'FORCE OFF', 'REMOTE TRIP', 'FORCE_OFF', 'FORCE_OFF_STATUS'],
+  forceOff: ['3,168_OFF', 'FORCE OFF', 'REMOTE TRIP', 'FORCE_OFF', 'FORCE_OFF_STATUS'],
   meterSrno: ['3,150', 'METER SERIAL', 'SERIAL NUMBER', 'SR NO', 'METER SR', 'METER_NO', 'METERSRNO', 'Meter_Srno'],
   noOfOverloadCheck: ['3,169', 'OVERLOAD CHECK', 'OL CHECK', 'OVERLOAD_COUNT', 'NOOFOVERLOADCHECK'],
   ebDgStatus: ['3,170', 'EB DG STATUS', 'EB/DG STATUS', 'SOURCE STATUS', 'EB_DG', 'EBDGSTATUS'],
@@ -298,14 +308,63 @@ export const formatNumber = (num, decimals = 2) => {
 /**
  * Maps raw events payload from GET /devices/:deviceId/events/latest
  * to canonical telemetry fields for Main Meter, Sub Meters and Digital Twin displays.
+ * Incorporates settingId and fieldKey priority with adapter resolution.
  */
 export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) => {
-  if (!eventsPayload) return { updates: {}, lastEventTime: null };
+  if (!eventsPayload) {
+    return { updates: {}, lastEventTime: null, rawFields: [], settingsTelemetryMap: new Map(), resolvedSettings: [] };
+  }
 
   const payload = eventsPayload.data || eventsPayload;
   const fieldsArray = Array.isArray(payload.fields)
     ? payload.fields
-    : (Array.isArray(payload) ? payload : null);
+    : (Array.isArray(payload) ? payload : (Array.isArray(payload.results) ? payload.results : null));
+
+  // If templateMapping contains device with settings, delegate to resolveDeviceTelemetry
+  const device = templateMapping?.device || (templateMapping?.settings ? templateMapping : null);
+  if (device) {
+    const resolved = resolveDeviceTelemetry(device, eventsPayload, templateMapping?.category);
+    // Also merge canonical legacy keys for backward-compatible consumption in data state
+    const canonicalUpdates = { ...resolved.updates };
+    
+    // Map resolved values to standard MFM state keys if available
+    resolved.resolvedSettings.forEach(item => {
+      const sName = (item.displayName || '').toLowerCase();
+      const num = typeof item.value === 'number' ? item.value : Number(item.value);
+      const val = isNaN(num) ? item.value : num;
+
+      if (sName.includes('r-phase volt') || sName === 'voltage-r' || sName === 'voltage r') canonicalUpdates.vR = val;
+      else if (sName.includes('y-phase volt') || sName === 'voltage-y' || sName === 'voltage y') canonicalUpdates.vY = val;
+      else if (sName.includes('b-phase volt') || sName === 'voltage-b' || sName === 'voltage b') canonicalUpdates.vB = val;
+      else if (sName.includes('r-current') || sName === 'current-r' || sName === 'current r') canonicalUpdates.iR = val;
+      else if (sName.includes('y-current') || sName === 'current-y' || sName === 'current y') canonicalUpdates.iY = val;
+      else if (sName.includes('b-current') || sName === 'current-b' || sName === 'current b') canonicalUpdates.iB = val;
+      else if (sName.includes('total kw') || sName === 'active power') {
+        canonicalUpdates.totalKw = val;
+        canonicalUpdates.activePower = val;
+      } else if (sName.includes('eb kwh') || sName.includes('active energy')) {
+        canonicalUpdates.ebKwh = val;
+        canonicalUpdates.cumulativekWh = val;
+      } else if (sName.includes('eb kvah') || sName.includes('apparent energy')) {
+        canonicalUpdates.ebKvah = val;
+      } else if (sName.includes('total kva') || sName === 'apparent power') {
+        canonicalUpdates.totalKva = val;
+        canonicalUpdates.apparentPower = val;
+      } else if (sName.includes('reactive power')) canonicalUpdates.reactivePower = val;
+      else if (sName === 'power factor' || sName === 'pf') canonicalUpdates.pf = val;
+      else if (sName === 'frequency' || sName === 'freq') canonicalUpdates.freq = val;
+      else if (sName.includes('balance')) canonicalUpdates.balance = val;
+      else if (sName.includes('dg kwh')) canonicalUpdates.dgKwh = val;
+    });
+
+    return {
+      updates: canonicalUpdates,
+      lastEventTime: resolved.lastEventTime,
+      rawFields: fieldsArray || [],
+      settingsTelemetryMap: resolved.settingsTelemetryMap,
+      resolvedSettings: resolved.resolvedSettings
+    };
+  }
 
   const updates = {};
   let maxTime = payload.lastEventTime || null;
@@ -335,7 +394,6 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       ic: 'iB',
       ir: 'iR',
       iy: 'iY',
-      ib: 'iB',
       kw: 'totalKw',
       p: 'totalKw',
       totalkw: 'totalKw',
@@ -415,6 +473,7 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
         field.displayName,
         field.fieldName,
         field.name,
+        field.fieldKey,
         field.key,
         field.label
       ].filter(Boolean);
@@ -471,7 +530,6 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
         const parsedVal = (field.dataType === 'NUMBER' || (!isNaN(num) && typeof rawVal !== 'boolean')) ? num : rawVal;
         updates[matchedKey] = parsedVal;
 
-        // Complementary bidirectional state syncing
         if (matchedKey === 'totalKw' && updates.activePower === undefined) {
           updates.activePower = parsedVal;
         } else if (matchedKey === 'activePower' && updates.totalKw === undefined) {

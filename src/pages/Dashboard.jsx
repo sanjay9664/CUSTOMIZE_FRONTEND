@@ -1512,8 +1512,8 @@ const Dashboard = () => {
       gaugePercent: 90,
       submenus: [
         { name: 'Overview', route: '/aqi-sensor/overview' },
-        { name: 'Temp & Humidity', route: '/aqi-sensor/temp-humidity' },
-        { name: 'PDF Report', route: '/aqi-sensor/report' },
+        { name: 'Graphs', route: '/aqi-sensor/graphs' },
+        { name: 'Reports', route: '/aqi-sensor/reports' },
       ],
       metrics: [
         { label: 'Air Quality', val: 'AQI 24', icon: <Gauge size={13} />, status: 'green' },

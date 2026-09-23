@@ -139,7 +139,11 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     { title: "AC", icon: <Wind size={20} />, disabled: modulesConfig ? !modulesConfig["AC"] : false,
       subItems: [{ title: "Overview", path: "/ac/overview" }, { title: "PDF Report", path: "/ac/report" }].filter(s => submodulesConfig.showAC?.[s.title] ?? true) },
     { title: "AQI Sensor", icon: <Leaf size={20} />, disabled: modulesConfig ? !modulesConfig["AQI Sensor"] : false,
-      subItems: [{ title: "Overview", path: "/aqi-sensor/overview" }, { title: "Temp & Humidity", path: "/aqi-sensor/temp-humidity" }].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? true) },
+      subItems: [
+        { title: "Overview", path: "/aqi-sensor/overview" },
+        { title: "Graphs", path: "/aqi-sensor/graphs" },
+        { title: "Reports", path: "/aqi-sensor/reports" }
+      ].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? (s.title === 'Reports' ? (submodulesConfig.showAQISensor?.['PDF Report'] ?? true) : true)) },
     // Water & Utilities
     { title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? !modulesConfig["Water Management"] : false,
       subItems: [{ title: "Overview", path: "/water-management/overview" }, { title: "AG TANK", path: "/water-management/ag-pump" }, { title: "UG TANK", path: "/water-management/ug-pump" }].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
