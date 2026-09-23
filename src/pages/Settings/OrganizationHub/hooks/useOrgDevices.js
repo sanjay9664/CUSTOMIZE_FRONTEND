@@ -225,7 +225,11 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
         // 1d. Match by moduleId across all devices
         if (!matchedDev && sModId) {
           for (const dev of normalizedDevices) {
-            const foundM = dev.modules.find(m => String(m.id) === sModId);
+            const foundM = dev.modules.find(m =>
+              String(m.id) === sModId ||
+              (m.name && m.name.trim().toLowerCase() === sModId.toLowerCase()) ||
+              (m.label && m.label.trim().toLowerCase() === sModId.toLowerCase())
+            );
             if (foundM) {
               matchedDev = dev;
               matchedModule = foundM;
@@ -242,13 +246,20 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
         // 2. Match module within device:
         if (matchedDev) {
           if (!matchedModule && sModId) {
-            matchedModule = matchedDev.modules.find(m => String(m.id) === sModId);
+            matchedModule = matchedDev.modules.find(m =>
+              String(m.id) === sModId ||
+              (m.name && m.name.trim().toLowerCase() === sModId.toLowerCase()) ||
+              (m.label && m.label.trim().toLowerCase() === sModId.toLowerCase())
+            );
           }
           if (!matchedModule && sField) {
             matchedModule = matchedDev.modules.find(m => m.allFields?.some(f => f.fieldName === sField));
           }
           if (!matchedModule && sModName) {
-            matchedModule = matchedDev.modules.find(m => m.name && m.name.trim().toLowerCase() === sModName);
+            matchedModule = matchedDev.modules.find(m =>
+              (m.name && m.name.trim().toLowerCase() === sModName) ||
+              (m.label && m.label.trim().toLowerCase() === sModName)
+            );
           }
           if (!matchedModule && matchedDev.modules.length === 1) {
             matchedModule = matchedDev.modules[0];

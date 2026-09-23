@@ -10,6 +10,49 @@ import { fetchDeviceDetails, extractDeviceModulesAndFields, fetchDevicesByDevice
 import { getApiUrl } from '../../../../utils/apiConfig';
 import { DEVICE_CATEGORIES, formatCategoryLabel, getTemplateForCategory } from '../../../../constants/deviceTemplates';
 
+export const findMatchingModule = (modules, row) => {
+  if (!Array.isArray(modules) || modules.length === 0 || !row) return null;
+  const rowModId = row.moduleId ? String(row.moduleId).trim() : '';
+  const rowModName = (row.moduleName || '').trim().toLowerCase();
+  const rowField = (row.sochiotFieldName || '').trim().toLowerCase();
+
+  // 1. Direct ID match
+  if (rowModId) {
+    const byId = modules.find(m => String(m.id) === rowModId);
+    if (byId) return byId;
+  }
+
+  // 2. If rowModId matches module name or clean label (e.g. rowModId is "CHANGE")
+  if (rowModId) {
+    const byNameInId = modules.find(m => {
+      const mName = (m.name || '').trim().toLowerCase();
+      const mClean = (m.label || m.name || '').replace(/\s*\((general|other)\)/gi, '').trim().toLowerCase();
+      return mName === rowModId.toLowerCase() || mClean === rowModId.toLowerCase();
+    });
+    if (byNameInId) return byNameInId;
+  }
+
+  // 3. Match by row.moduleName
+  if (rowModName) {
+    const byModName = modules.find(m => {
+      const mName = (m.name || '').trim().toLowerCase();
+      const mClean = (m.label || m.name || '').replace(/\s*\((general|other)\)/gi, '').trim().toLowerCase();
+      return mName === rowModName || mClean === rowModName;
+    });
+    if (byModName) return byModName;
+  }
+
+  // 4. Match by event field presence
+  if (rowField) {
+    const byField = modules.find(m =>
+      m.allFields?.some(af => (af.fieldName || '').trim().toLowerCase() === rowField)
+    );
+    if (byField) return byField;
+  }
+
+  return null;
+};
+
 const RegisterDeviceModal = ({
   show,
   onHide,
@@ -136,18 +179,28 @@ const RegisterDeviceModal = ({
         const parsed = extractDeviceModulesAndFields(raw);
         setDeviceConfigs(prev => ({ ...prev, [cleanId]: parsed || { modules: [] } }));
 
-        // Auto-select first module for rows sharing this device that don't have a moduleId yet
+        // Auto-select or normalize module for rows sharing this device
         if (parsed?.modules?.length > 0) {
           const firstModId = String(parsed.modules[0].id);
           const firstModName = parsed.modules[0].label || parsed.modules[0].name || '';
           setDynamicTemplateFields(prev => {
             return prev.map((row, i) => {
-              if ((String(row.deviceId) === cleanId || (rowIdx !== null && i === rowIdx)) && !row.moduleId) {
-                return {
-                  ...row,
-                  moduleId: firstModId,
-                  moduleName: firstModName
-                };
+              if (String(row.deviceId) === cleanId || (rowIdx !== null && i === rowIdx)) {
+                const matchedMod = findMatchingModule(parsed.modules, row);
+                if (matchedMod) {
+                  return {
+                    ...row,
+                    moduleId: String(matchedMod.id),
+                    moduleName: matchedMod.label || matchedMod.name || ''
+                  };
+                }
+                if (!row.moduleId) {
+                  return {
+                    ...row,
+                    moduleId: firstModId,
+                    moduleName: firstModName
+                  };
+                }
               }
               return row;
             });
@@ -198,19 +251,29 @@ const RegisterDeviceModal = ({
             return next;
           });
 
-          // Auto-assign first module for rows that have deviceId but no moduleId yet
+          // Auto-assign or normalize module for rows that have deviceId
           setDynamicTemplateFields(prev => {
             return prev.map(row => {
               const devIdStr = String(row.deviceId);
               const matchingDev = devs.find(d => String(d.id) === devIdStr);
-              if (matchingDev && !row.moduleId) {
+              if (matchingDev) {
                 const parsed = extractDeviceModulesAndFields(matchingDev);
                 if (parsed?.modules?.length > 0) {
-                  return {
-                    ...row,
-                    moduleId: String(parsed.modules[0].id),
-                    moduleName: parsed.modules[0].label || parsed.modules[0].name || ''
-                  };
+                  const matchedMod = findMatchingModule(parsed.modules, row);
+                  if (matchedMod) {
+                    return {
+                      ...row,
+                      moduleId: String(matchedMod.id),
+                      moduleName: matchedMod.label || matchedMod.name || ''
+                    };
+                  }
+                  if (!row.moduleId) {
+                    return {
+                      ...row,
+                      moduleId: String(parsed.modules[0].id),
+                      moduleName: parsed.modules[0].label || parsed.modules[0].name || ''
+                    };
+                  }
                 }
               }
               return row;
@@ -222,6 +285,34 @@ const RegisterDeviceModal = ({
       });
     }
   }, [show, editingDevice?.id, registerForm?.sochiotDeviceIds]);
+
+  // Auto-normalize module IDs (e.g. resolve name like "CHANGE" to real module ID) whenever configs load
+  useEffect(() => {
+    if (!show || !Array.isArray(dynamicTemplateFields) || dynamicTemplateFields.length === 0) return;
+    let changed = false;
+    const updated = dynamicTemplateFields.map(row => {
+      if (!row.deviceId) return row;
+      const modules = deviceConfigs[String(row.deviceId)]?.modules;
+      if (!Array.isArray(modules) || modules.length === 0) return row;
+      const matchedMod = findMatchingModule(modules, row);
+      if (matchedMod) {
+        const targetId = String(matchedMod.id);
+        const targetName = matchedMod.label || matchedMod.name || '';
+        if (String(row.moduleId) !== targetId || (targetName && row.moduleName !== targetName)) {
+          changed = true;
+          return {
+            ...row,
+            moduleId: targetId,
+            moduleName: targetName
+          };
+        }
+      }
+      return row;
+    });
+    if (changed) {
+      setDynamicTemplateFields(updated);
+    }
+  }, [show, deviceConfigs, dynamicTemplateFields, setDynamicTemplateFields]);
 
   // Preload device configurations for any rows that already have a deviceId (at most once per cleanId)
   useEffect(() => {
@@ -1137,7 +1228,7 @@ const RegisterDeviceModal = ({
                               disabled={Boolean(f.required)}
                               onChange={(e) => {
                                 const copy = [...dynamicTemplateFields];
-                                copy[idx] = { ...copy[idx], displayName: e.target.value, isManualEntry: true };
+                                copy[idx] = { ...copy[idx], displayName: e.target.value };
                                 setDynamicTemplateFields(copy);
                               }}
                               placeholder="Parameter Name"
@@ -1185,7 +1276,16 @@ const RegisterDeviceModal = ({
                                     nextRow.deviceId = selectedId;
                                     nextRow.deviceName = selectedName;
                                     nextRow.deviceVal = valArray;
-                                    if (!nextRow.moduleId && defaultModId) {
+                                    if (cachedConfig?.modules?.length > 0) {
+                                      const matched = findMatchingModule(cachedConfig.modules, nextRow);
+                                      if (matched) {
+                                        nextRow.moduleId = String(matched.id);
+                                        nextRow.moduleName = matched.label || matched.name || '';
+                                      } else if (!nextRow.moduleId && defaultModId) {
+                                        nextRow.moduleId = defaultModId;
+                                        nextRow.moduleName = defaultModName;
+                                      }
+                                    } else if (!nextRow.moduleId && defaultModId) {
                                       nextRow.moduleId = defaultModId;
                                       nextRow.moduleName = defaultModName;
                                     }
@@ -1233,11 +1333,13 @@ const RegisterDeviceModal = ({
                             const devConfig = deviceConfigs[f.deviceId];
                             const isLoadingModules = loadingDeviceIds[f.deviceId];
                             const modules = devConfig?.modules || [];
+                            const matchedMod = findMatchingModule(modules, f);
+                            const currentModId = matchedMod ? String(matchedMod.id) : (f.moduleId ? String(f.moduleId) : '');
 
                             return (
                               <Form.Select
                                 size="sm"
-                                value={f.moduleId || ''}
+                                value={currentModId || ''}
                                 disabled={!f.deviceId || isLoadingModules}
                                 onChange={(e) => {
                                   const newModuleId = e.target.value;
@@ -1255,14 +1357,14 @@ const RegisterDeviceModal = ({
                               >
                                 {!f.deviceId ? (
                                   <option value="">Select Device First</option>
-                                ) : isLoadingModules && !f.moduleId ? (
+                                ) : isLoadingModules && !currentModId ? (
                                   <option value="">Loading modules...</option>
                                 ) : modules.length === 0 ? (
                                   <>
                                     <option value="">No modules found</option>
-                                    {f.moduleId && (
-                                      <option value={String(f.moduleId)}>
-                                        {f.moduleName || f.deviceName || `Module #${f.moduleId}`}
+                                    {currentModId && (
+                                      <option value={String(currentModId)}>
+                                        {f.moduleName || f.deviceName || `Module #${currentModId}`}
                                       </option>
                                     )}
                                   </>
@@ -1277,9 +1379,9 @@ const RegisterDeviceModal = ({
                                         </option>
                                       );
                                     })}
-                                    {f.moduleId && !modules.some(m => String(m.id) === String(f.moduleId)) && (
-                                      <option value={String(f.moduleId)}>
-                                        {f.moduleName || f.deviceName || `Module #${f.moduleId}`}
+                                    {currentModId && !modules.some(m => String(m.id) === String(currentModId)) && (
+                                      <option value={String(currentModId)}>
+                                        {f.moduleName || f.deviceName || `Module #${currentModId}`}
                                       </option>
                                     )}
                                   </>
@@ -1294,18 +1396,19 @@ const RegisterDeviceModal = ({
                           {(() => {
                             const devConfig = deviceConfigs[f.deviceId];
                             const modules = devConfig?.modules || [];
-                            const selectedModule = modules.find(m => String(m.id) === String(f.moduleId));
+                            const selectedModule = findMatchingModule(modules, f);
                             const eventFields = selectedModule?.eventFields || [];
                             const settingFields = selectedModule?.settingFields || [];
                             const hasFields = eventFields.length > 0 || settingFields.length > 0;
+                            const isCustomEntry = Boolean(f.isManualEntry);
 
                             return (
                               <div className="d-flex align-items-center gap-1 w-100">
-                                {hasFields && !f.isManualEntry ? (
+                                {hasFields && !isCustomEntry ? (
                                   <Form.Select
                                     size="sm"
                                     value={f.sochiotFieldName || ''}
-                                    disabled={!f.moduleId}
+                                    disabled={!f.moduleId && !selectedModule}
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       if (val === '__custom__') {
@@ -1370,9 +1473,9 @@ const RegisterDeviceModal = ({
                                     <Form.Control
                                       size="sm"
                                       type="text"
-                                      placeholder={f.moduleId ? "e.g. OFF_TIME or 3,100F" : (!f.deviceId ? "Select Device First" : "Select Module First")}
+                                      placeholder={(f.moduleId || selectedModule) ? "e.g. OFF_TIME or 3,100F" : (!f.deviceId ? "Select Device First" : "Select Module First")}
                                       value={f.sochiotFieldName || ''}
-                                      disabled={!f.moduleId}
+                                      disabled={!f.moduleId && !selectedModule}
                                       onChange={(e) => {
                                         const copy = [...dynamicTemplateFields];
                                         copy[idx].sochiotFieldName = e.target.value;
@@ -1472,7 +1575,7 @@ const RegisterDeviceModal = ({
                           moduleName: defaultModuleName,
                           sochiotFieldName: '',
                           displayName: '',
-                          isManualEntry: true,
+                          isManualEntry: false,
                           required: false,
                           thresholdValue: '',
                           warningHigh: null,
@@ -1647,9 +1750,10 @@ const RegisterDeviceModal = ({
                 }
 
                 // Filter valid telemetry fields: only create setting body items for rows where event field was chosen!
-                const validFields = (dynamicTemplateFields || []).filter(f => 
-                  f && f.sochiotFieldName && String(f.sochiotFieldName).trim() !== '' && f.moduleId
-                );
+                const validFields = (dynamicTemplateFields || []).filter(f => {
+                  const matchedMod = findMatchingModule(deviceConfigs[f.deviceId]?.modules, f);
+                  return f && f.sochiotFieldName && String(f.sochiotFieldName).trim() !== '' && (f.moduleId || matchedMod);
+                });
 
                 if (!editingDevice && validFields.length === 0) {
                   if (typeof showToast === 'function') {
@@ -1660,11 +1764,17 @@ const RegisterDeviceModal = ({
 
                 // Extract unique module IDs from validFields, dynamicTemplateFields, and registerForm
                 const fieldModuleIds = (validFields || [])
-                  .map(f => parseInt(f.moduleId, 10))
+                  .map(f => {
+                    const matchedMod = findMatchingModule(deviceConfigs[f.deviceId]?.modules, f);
+                    return parseInt(matchedMod ? matchedMod.id : f.moduleId, 10);
+                  })
                   .filter(m => !isNaN(m) && m > 0);
 
                 const dynamicModuleIds = (dynamicTemplateFields || [])
-                  .map(f => parseInt(f.moduleId, 10))
+                  .map(f => {
+                    const matchedMod = findMatchingModule(deviceConfigs[f.deviceId]?.modules, f);
+                    return parseInt(matchedMod ? matchedMod.id : f.moduleId, 10);
+                  })
                   .filter(m => !isNaN(m) && m > 0);
 
                 const formModuleIds = Array.isArray(registerForm?.moduleIds)
@@ -1674,13 +1784,15 @@ const RegisterDeviceModal = ({
                 const parsedModuleIds = Array.from(new Set([...fieldModuleIds, ...dynamicModuleIds, ...formModuleIds]));
 
                 const templateSettings = validFields.map((f, idx) => {
-                  const mId = parseInt(f.moduleId, 10);
+                  const matchedMod = findMatchingModule(deviceConfigs[f.deviceId]?.modules, f);
+                  const rawModId = matchedMod ? matchedMod.id : f.moduleId;
+                  const mId = parseInt(rawModId, 10);
                   const parsedMeta = f.meta 
                     ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
                     : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
                   return {
                     moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
-                    moduleName: String(f.moduleName || f.deviceName || 'General').trim(),
+                    moduleName: String(matchedMod?.label || matchedMod?.name || f.moduleName || f.deviceName || 'General').trim(),
                     fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
                     sochiotFieldName: String(f.sochiotFieldName || '').trim(),
                     displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
@@ -1774,14 +1886,16 @@ const RegisterDeviceModal = ({
                     if (res.ok && templateSettings.length > 0 && resolvedSiteId) {
                       try {
                         const settingsForPut = validFields.map((f, idx) => {
-                          const mId = parseInt(f.moduleId, 10);
+                          const matchedMod = findMatchingModule(deviceConfigs[f.deviceId]?.modules, f);
+                          const rawModId = matchedMod ? matchedMod.id : f.moduleId;
+                          const mId = parseInt(rawModId, 10);
                           const parsedMeta = f.meta 
                             ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
                             : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
                           return {
                             ...(f.id ? { id: f.id } : {}),
                             moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
-                            moduleName: String(f.moduleName || f.deviceName || 'General').trim(),
+                            moduleName: String(matchedMod?.label || matchedMod?.name || f.moduleName || f.deviceName || 'General').trim(),
                             fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
                             sochiotFieldName: String(f.sochiotFieldName || '').trim(),
                             displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
