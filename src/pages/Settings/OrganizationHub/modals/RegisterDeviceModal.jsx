@@ -1881,7 +1881,6 @@ const RegisterDeviceModal = ({
                     ? Number(f.sochiotFieldId)
                     : resolvedFieldId;
 
-                  const resolvedGraphId = (f.graphId && !isNaN(Number(f.graphId))) ? Number(f.graphId) : null;
                   const resolvedEventId = (f.eventId && !isNaN(Number(f.eventId))) ? Number(f.eventId) : null;
 
                   return {
@@ -1891,7 +1890,7 @@ const RegisterDeviceModal = ({
                     moduleName: String(matchedMod?.label || matchedMod?.name || f.moduleName || f.deviceName || '').trim() || null,
                     fieldId: resolvedFieldId,
                     sochiotFieldId: resolvedSochiotFieldId,
-                    graphId: resolvedGraphId,
+                    // Note: graphId omitted per backend validation ("for now dont send the graphID or send zero")
                     eventId: resolvedEventId,
                     eventKey: f.eventKey ? String(f.eventKey).trim() : null,
                     deviceName: String(f.deviceName || '').trim() || null,
