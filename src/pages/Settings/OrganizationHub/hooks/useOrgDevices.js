@@ -225,7 +225,11 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
         // 1d. Match by moduleId across all devices
         if (!matchedDev && sModId) {
           for (const dev of normalizedDevices) {
-            const foundM = dev.modules.find(m => String(m.id) === sModId);
+            const foundM = dev.modules.find(m =>
+              String(m.id) === sModId ||
+              (m.name && m.name.trim().toLowerCase() === sModId.toLowerCase()) ||
+              (m.label && m.label.trim().toLowerCase() === sModId.toLowerCase())
+            );
             if (foundM) {
               matchedDev = dev;
               matchedModule = foundM;
@@ -242,13 +246,20 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
         // 2. Match module within device:
         if (matchedDev) {
           if (!matchedModule && sModId) {
-            matchedModule = matchedDev.modules.find(m => String(m.id) === sModId);
+            matchedModule = matchedDev.modules.find(m =>
+              String(m.id) === sModId ||
+              (m.name && m.name.trim().toLowerCase() === sModId.toLowerCase()) ||
+              (m.label && m.label.trim().toLowerCase() === sModId.toLowerCase())
+            );
           }
           if (!matchedModule && sField) {
             matchedModule = matchedDev.modules.find(m => m.allFields?.some(f => f.fieldName === sField));
           }
           if (!matchedModule && sModName) {
-            matchedModule = matchedDev.modules.find(m => m.name && m.name.trim().toLowerCase() === sModName);
+            matchedModule = matchedDev.modules.find(m =>
+              (m.name && m.name.trim().toLowerCase() === sModName) ||
+              (m.label && m.label.trim().toLowerCase() === sModName)
+            );
           }
           if (!matchedModule && matchedDev.modules.length === 1) {
             matchedModule = matchedDev.modules[0];
@@ -269,6 +280,12 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
         const resolvedModId = matchedModule ? String(matchedModule.id) : (s.moduleId ? String(s.moduleId) : '');
         const resolvedModName = matchedModule?.name || matchedModule?.label || s.moduleName || (resolvedModId ? `Module #${resolvedModId}` : '');
 
+        const autoCumulative = /(kwh|kvah|kvarh|energy|consumption|m3|cubic meter)/i.test(s.displayName || s.sochiotFieldName || '') ||
+                               /(kwh|kvah|kvarh|m3)/i.test(s.unit || '');
+        const isCumulativeVal = (s.isCumulative !== undefined && s.isCumulative !== null)
+          ? Boolean(s.isCumulative)
+          : autoCumulative;
+
         return {
           id: s.id,
           deviceId: resolvedDevId,
@@ -279,81 +296,65 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
           displayName: s.displayName || matchedFieldDef?.displayName || s.sochiotFieldName || '',
           dataType: s.dataType || matchedFieldDef?.dataType || 'INTEGER',
           unit: s.unit || matchedFieldDef?.unit || '',
+          fieldId: s.fieldId || s.sochiotFieldId || matchedFieldDef?.id || matchedFieldDef?.mappingId || null,
+          sochiotFieldId: s.sochiotFieldId || s.fieldId || matchedFieldDef?.id || matchedFieldDef?.mappingId || null,
+          graphId: s.graphId || null,
+          eventId: s.eventId || matchedFieldDef?.eventId || null,
+          eventKey: s.eventKey || matchedFieldDef?.eventKey || null,
+          enumValues: Array.isArray(s.enumValues) ? s.enumValues : (Array.isArray(matchedFieldDef?.enumValues) ? matchedFieldDef.enumValues : []),
+          isTelemetry: s.isTelemetry !== false,
+          isCumulative: isCumulativeVal,
           warningHigh: s.warningHigh !== undefined && s.warningHigh !== null ? s.warningHigh : '',
           criticalHigh: s.criticalHigh !== undefined && s.criticalHigh !== null ? s.criticalHigh : '',
           warningLow: s.warningLow !== undefined && s.warningLow !== null ? s.warningLow : '',
           criticalLow: s.criticalLow !== undefined && s.criticalLow !== null ? s.criticalLow : '',
           isCommand: Boolean(s.isCommand),
-          graphable: s.graphable !== false
+          commandAlias: s.commandAlias || null,
+          isReadable: s.isReadable !== false,
+          isDisplayed: s.isDisplayed !== false,
+          graphable: s.graphable !== false,
+          isActive: s.isActive !== false,
+          displayOrder: s.displayOrder !== undefined && s.displayOrder !== null ? s.displayOrder : 0,
+          meta: s.meta || null
         };
       });
     };
 
     const mergeWithCategoryTemplate = (savedMappedFields = [], category, currentDev = null, fallbackDevIds = []) => {
-      const tmpl = getTemplateForCategory(category);
-      if (!tmpl || !Array.isArray(tmpl.parameters) || tmpl.parameters.length === 0) {
-        return savedMappedFields || [];
+      // In edit device: show all the previous settings already configured for this device
+      if (Array.isArray(savedMappedFields) && savedMappedFields.length > 0) {
+        return savedMappedFields;
       }
 
-      // Find primary device from saved mapped fields, currentDev, or fallbackDevIds
-      const defaultDevField = (savedMappedFields || []).find(s => s.deviceId && String(s.deviceId).trim() !== '' && String(s.deviceId) !== '101');
-      const defaultDeviceId = defaultDevField?.deviceId || (fallbackDevIds.length > 0 ? String(fallbackDevIds[0]) : '');
-      const defaultDeviceName = defaultDevField?.deviceName || (defaultDeviceId ? `Device #${defaultDeviceId}` : '');
-      const defaultModuleId = defaultDevField?.moduleId || '';
-      const defaultModuleName = defaultDevField?.moduleName || '';
+      const tmpl = getTemplateForCategory(category);
+      const defaultParam = (tmpl?.parameters && tmpl.parameters.length > 0) ? tmpl.parameters[0] : null;
 
-      const matchedFields = new Set();
+      const fallbackId = (fallbackDevIds.length > 0 ? String(fallbackDevIds[0]) : '');
+      const defaultDevName = fallbackId ? `Device #${fallbackId}` : '';
 
-      const templateMerged = tmpl.parameters.map(param => {
-        const pName = (param.name || '').trim().toLowerCase();
-        const existing = (savedMappedFields || []).find(s => {
-          const sDisp = (s.displayName || '').trim().toLowerCase();
-          const sSoch = (s.sochiotFieldName || '').trim().toLowerCase();
-          return sDisp === pName || sSoch === pName;
-        });
-
-        if (existing) {
-          matchedFields.add(existing);
-          return {
-            ...existing,
-            displayName: existing.displayName || param.name,
-            required: Boolean(param.required),
-            deviceId: existing.deviceId || defaultDeviceId,
-            deviceName: existing.deviceName || defaultDeviceName,
-            moduleId: existing.moduleId || defaultModuleId,
-            moduleName: existing.moduleName || defaultModuleName
-          };
-        }
-
-        return {
-          deviceId: defaultDeviceId,
-          deviceName: defaultDeviceName,
-          deviceVal: null,
-          moduleId: defaultModuleId,
-          moduleName: defaultModuleName,
-          sochiotFieldName: '',
-          displayName: param.name,
-          required: Boolean(param.required),
-          thresholdValue: '',
-          warningHigh: null,
-          criticalHigh: null,
-          warningLow: null,
-          criticalLow: null,
-          dataType: 'INTEGER',
-          unit: '',
-          isCommand: false,
-          graphable: true
-        };
-      });
-
-      // Append any custom saved fields that didn't match standard template parameters
-      (savedMappedFields || []).forEach(s => {
-        if (!matchedFields.has(s)) {
-          templateMerged.push(s);
-        }
-      });
-
-      return templateMerged;
+      // For a new device or device without previous settings: show ONE field row to start with
+      return [{
+        deviceId: fallbackId,
+        deviceName: defaultDevName,
+        deviceVal: null,
+        moduleId: '',
+        moduleName: '',
+        sochiotFieldName: '',
+        displayName: defaultParam?.name || '',
+        required: Boolean(defaultParam?.required),
+        thresholdValue: '',
+        warningHigh: null,
+        criticalHigh: null,
+        warningLow: null,
+        criticalLow: null,
+        dataType: defaultParam?.dataType || 'INTEGER',
+        unit: defaultParam?.unit || '',
+        isCommand: false,
+        graphable: true,
+        isTelemetry: true,
+        isCumulative: defaultParam ? /(kwh|kvah|kvarh|energy|consumption|m3)/i.test(defaultParam.name || '') : false,
+        isActive: true
+      }];
     };
 
     const initialSettings = (Array.isArray(d.template_settings) && d.template_settings.length > 0)
