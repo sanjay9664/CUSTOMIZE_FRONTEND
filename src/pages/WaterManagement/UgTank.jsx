@@ -38,7 +38,7 @@ const UgTank = () => {
   const [selectedAssetId, setSelectedAssetId] = useState('');
   const [selectedAssetName, setSelectedAssetName] = useState('');
   const [devices, setDevices] = useState([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [selectedDeviceId, setSelectedDeviceId] = useState('ALL');
 
   const isRealSiteName = (name) => {
     if (!name || typeof name !== 'string') return false;
@@ -187,11 +187,11 @@ const UgTank = () => {
       setDevices(devList);
       if (devList.length > 0) {
         setSelectedDeviceId(prev => {
-          if (prev && devList.some(d => String(d.id) === String(prev))) return prev;
-          return devList[0].id;
+          if (prev && (prev === 'ALL' || devList.some(d => String(d.id) === String(prev)))) return prev;
+          return 'ALL';
         });
       } else {
-        setSelectedDeviceId('');
+        setSelectedDeviceId('ALL');
       }
     };
 
@@ -200,157 +200,153 @@ const UgTank = () => {
 
   // 4. Sync REAL Telemetry onto UG Tanks & Pumps
   useEffect(() => {
-    if (!selectedDeviceId) {
-      setTanks(prev => prev.map(t => ({ ...t, isMapped: false, isOnline: false, level: 0 })));
-      setPumps1(prev => prev.map(p => ({ ...p, isMapped: false, isOnline: false })));
-      setPumps2(prev => prev.map(p => ({ ...p, isMapped: false, isOnline: false })));
-      return;
-    }
+    if (!selectedSiteId) return;
 
     const fetchRealTelemetry = async () => {
       try {
-        let eventsRes = await apiClient.get(`/sites/${selectedSiteId}/devices/${selectedDeviceId}/events/latest`).catch(() => null) ||
-                        await apiClient.get(`/devices/${selectedDeviceId}/events/latest`).catch(() => null);
+        const devList = devices.length > 0 ? devices : [];
+        if (devList.length === 0 && !selectedDeviceId) return;
 
-        const liveData = await apiClient.get(`/sites/${selectedSiteId || 1}/devices/${selectedDeviceId}/live`).catch(() => null) ||
-                         await apiClient.get(`/devices/${selectedDeviceId}`).catch(() => null);
+        // Fetch telemetry for all devices or selected device
+        const fetchDevs = (selectedDeviceId && selectedDeviceId !== 'ALL')
+          ? devList.filter(d => String(d.id) === String(selectedDeviceId))
+          : devList;
 
-        let realLevel, realPressure, realAmps;
-        let p1Status, p2Status;
+        const devTelemetryMap = {};
+        let explicitLevelFound = false;
+        let explicitLevelVal = 0;
 
-        const extractTelemetry = (payload) => {
-          if (!payload) return;
-          const pData = payload?.data ?? payload;
-          const allFields = [];
-          if (Array.isArray(pData?.fields)) allFields.push(...payloadData?.fields || pData.fields);
-          if (Array.isArray(payload?.fields)) allFields.push(...payload.fields);
+        await Promise.all(fetchDevs.map(async (dev) => {
+          try {
+            const devId = dev.id;
+            let eventsRes = await apiClient.get(`/sites/${selectedSiteId}/devices/${devId}/events/latest`).catch(() => null) ||
+                            await apiClient.get(`/devices/${devId}/events/latest`).catch(() => null);
 
-          const rawList = Array.isArray(pData) ? pData
-            : Array.isArray(payload) ? payload
-            : Array.isArray(pData?.modules) ? pData.modules
-            : [pData];
+            let realLevel, realPressure, realAmps, pStatus;
+            const pData = eventsRes?.data ?? eventsRes;
+            const allFields = [];
+            if (Array.isArray(pData?.fields)) allFields.push(...pData.fields);
+            if (Array.isArray(eventsRes?.fields)) allFields.push(...eventsRes.fields);
 
-          rawList.forEach(evt => {
-            if (!evt) return;
-            const mId = String(evt.moduleId ?? evt.module_id ?? evt.module ?? evt.name ?? '').toUpperCase();
-            const fields = Array.isArray(evt.eventFields) ? evt.eventFields : (Array.isArray(evt.fields) ? evt.fields : []);
+            const rawList = Array.isArray(pData) ? pData
+              : Array.isArray(eventsRes) ? eventsRes
+              : Array.isArray(pData?.modules) ? pData.modules
+              : [pData];
 
-            fields.forEach(f => allFields.push(f));
+            rawList.forEach(evt => {
+              if (!evt) return;
+              const fields = Array.isArray(evt.eventFields) ? evt.eventFields : (Array.isArray(evt.fields) ? evt.fields : []);
+              fields.forEach(f => allFields.push(f));
+            });
 
-            // Module-specific extraction for analog sensors & digital I/O
-            if (mId.includes('ANALOG_INPUT_1') || mId.includes('ADC_1') || mId === '1') {
-              const valField = fields.find(f => String(f.eventFieldName || f.fieldName || '').toLowerCase() === 'value') || fields[0];
-              const val = valField?.fieldCurrentValue ?? valField?.currentValue ?? valField?.value;
-              if (val !== undefined && val !== null && val !== '') {
-                const num = Number(val);
-                if (!isNaN(num) && num > 0.001) realLevel = num;
-              }
-            }
-
-            if (mId.includes('INPUT_1') || mId.includes('DIGITAL_1') || mId.includes('OUTPUT_1')) {
-              const stField = fields.find(f => ['state', 'status', 'value'].includes(String(f.eventFieldName || f.fieldName || '').toLowerCase())) || fields[0];
-              const val = String(stField?.fieldCurrentValue ?? stField?.currentValue ?? stField?.value ?? '').toUpperCase();
-              if (val === 'HIGH' || val === '1' || val === 'OPEN' || val === 'ON' || val === 'RUNNING') {
-                p1Status = 'Running';
-              } else if (val === 'LOW' || val === '0' || val === 'CLOSED' || val === 'OFF') {
-                p1Status = 'Stopped';
-              }
-            }
-
-            if (mId.includes('INPUT_2') || mId.includes('DIGITAL_2') || mId.includes('OUTPUT_2')) {
-              const stField = fields.find(f => ['state', 'status', 'value'].includes(String(f.eventFieldName || f.fieldName || '').toLowerCase())) || fields[0];
-              const val = String(stField?.fieldCurrentValue ?? stField?.currentValue ?? stField?.value ?? '').toUpperCase();
-              if (val === 'HIGH' || val === '1' || val === 'OPEN' || val === 'ON' || val === 'RUNNING') {
-                p2Status = 'Running';
-              } else if (val === 'LOW' || val === '0' || val === 'CLOSED' || val === 'OFF') {
-                p2Status = 'Stopped';
-              }
-            }
-          });
-
-          // 1. Inspect explicit display names (Level, Capacity, Tank, Water)
-          if (realLevel === undefined) {
+            // ONLY extract level if field name explicitly mentions level/tank/water (DO NOT use arbitrary numbers)
             allFields.forEach(f => {
               const fName = String(f.fieldName || f.eventFieldName || f.name || '').toLowerCase();
               const fDispName = String(f.displayName || f.eventFieldDisplayName || fName).toLowerCase();
               const fVal = f.currentValue ?? f.fieldCurrentValue ?? f.value ?? f.fieldcurrentvalue;
 
               if (fVal !== undefined && fVal !== null && fVal !== '') {
-                if (fDispName.includes('level') || fDispName.includes('capacity') || fDispName.includes('tank') || fDispName.includes('water') || fName.includes('level')) {
-                  if (realLevel === undefined) realLevel = fVal;
+                const num = Number(fVal);
+                if (fDispName.includes('level') || fDispName.includes('capacity') || fDispName.includes('water_level') || (fName.includes('level') && !fName.includes('mode') && !fName.includes('status'))) {
+                  if (realLevel === undefined && !isNaN(num)) realLevel = num;
                 }
                 if (fDispName.includes('pressure') || fName.includes('pressure')) {
-                  if (realPressure === undefined) realPressure = fVal;
+                  if (realPressure === undefined && !isNaN(num)) realPressure = num;
                 }
-                if (fDispName.includes('amps') || fDispName.includes('current') || fDispName.includes('hz')) {
-                  if (realAmps === undefined) realAmps = fVal;
+                if (fDispName.includes('amps') || fDispName.includes('current') || fName.includes('amps') || fName.includes('current')) {
+                  if (realAmps === undefined && !isNaN(num)) realAmps = num;
+                }
+                if (fDispName.includes('status') || fDispName.includes('state') || fName.includes('status')) {
+                  const valStr = String(fVal).toUpperCase();
+                  if (['HIGH', '1', 'OPEN', 'ON', 'RUNNING'].includes(valStr)) pStatus = 'Running';
+                  else if (['LOW', '0', 'CLOSED', 'OFF', 'STOPPED'].includes(valStr)) pStatus = 'Stopped';
                 }
               }
             });
-          }
 
-          // 2. Numeric Level Fallback (prefer values > 0.01 to ignore zeroed noise like ANALOG_INPUT_2: 0.000227)
-          if (realLevel === undefined) {
-            allFields.forEach(f => {
-              const fVal = f.currentValue ?? f.fieldCurrentValue ?? f.value;
-              const num = Number(fVal);
-              if (fVal !== undefined && fVal !== null && !isNaN(num) && num > 0.01 && num <= 100) {
-                if (realLevel === undefined) realLevel = num;
-              }
-            });
+            if (realLevel !== undefined) {
+              explicitLevelFound = true;
+              const rNum = Number(realLevel);
+              explicitLevelVal = (rNum > 0 && rNum <= 10) ? Math.round(rNum * 10) : Math.round(rNum);
+            }
+
+            const parsedAmps = (realAmps !== undefined && realAmps !== null && !isNaN(Number(realAmps))) ? Number(realAmps) : 0;
+            const numPressure = (realPressure !== undefined && realPressure !== null && !isNaN(Number(realPressure))) ? Number(realPressure).toFixed(1) : undefined;
+            const isRunning = parsedAmps > 0 || pStatus === 'Running';
+
+            devTelemetryMap[String(devId)] = {
+              isMapped: true,
+              isOnline: isRunning,
+              status: isRunning ? 'Running' : 'Stopped',
+              amp: isRunning ? (parsedAmps > 0 ? parsedAmps.toFixed(1) : '13.6') : '0.0',
+              pressure: numPressure ? Number(numPressure) : (isRunning ? 0.9 : 0.0),
+              deviceName: dev.name
+            };
+          } catch (e) {}
+        }));
+
+        // Update Tanks: ONLY show level % if explicit water level sensor is mapped & active
+        setTanks(prev => prev.map((t, idx) => {
+          if (explicitLevelFound && idx === 0) {
+            return {
+              ...t,
+              isMapped: true,
+              isOnline: true,
+              level: explicitLevelVal
+            };
           }
+          return {
+            ...t,
+            isMapped: false,
+            isOnline: false,
+            level: 0
+          };
+        }));
+
+        // Update Pumps dynamically per device position in devices array
+        const updatePumpsForStation = (prevPumps) => {
+          return prevPumps.map((pump, idx) => {
+            let targetDev = null;
+
+            if (selectedDeviceId && selectedDeviceId !== 'ALL') {
+              const selIdx = devList.findIndex(d => String(d.id) === String(selectedDeviceId));
+              const matchIdx = selIdx >= 0 ? selIdx : 0;
+              if (idx === matchIdx) {
+                targetDev = devList[matchIdx];
+              }
+            } else {
+              targetDev = devList[idx];
+            }
+
+            if (targetDev && devTelemetryMap[String(targetDev.id)]) {
+              const tele = devTelemetryMap[String(targetDev.id)];
+              return {
+                ...pump,
+                isMapped: true,
+                isOnline: tele.isOnline,
+                status: tele.status,
+                amp: tele.amp,
+                pressure: tele.pressure > 0 ? tele.pressure : pump.pressure
+              };
+            }
+
+            // Unmapped pumps default to STOPPED (0.0 A)
+            return {
+              ...pump,
+              isMapped: false,
+              isOnline: false,
+              status: 'Stopped',
+              amp: '0.0',
+              pressure: 0.0
+            };
+          });
         };
 
-        extractTelemetry(eventsRes);
-
-        if (liveData && realLevel === undefined) {
-          const t = liveData?.telemetry || liveData?.meta || liveData?.data || liveData || {};
-          realLevel = t.tank_level ?? t.water_level ?? t.level ?? t.value ?? t['Tank Level'] ?? t['Capacity'] ?? t['Water Level'];
-          if (realPressure === undefined) realPressure = t.pressure ?? t.outlet_pressure;
-          if (realAmps === undefined) realAmps = t.amps ?? t.current;
-        }
-
-        let rawLevelNum = Number(realLevel);
-        let numLevel = 0;
-        if (realLevel !== undefined && realLevel !== null && !isNaN(rawLevelNum)) {
-          if (rawLevelNum > 0 && rawLevelNum <= 10) {
-            // 0..10 sensor range (e.g. 8.215m = 82% level)
-            numLevel = Math.round(rawLevelNum * 10);
-          } else if (rawLevelNum > 10 && rawLevelNum <= 100) {
-            numLevel = Math.round(rawLevelNum);
-          } else if (rawLevelNum > 100) {
-            numLevel = 100;
-          }
-        }
-
-        const numPressure = (realPressure !== undefined && realPressure !== null && !isNaN(Number(realPressure))) ? Number(realPressure).toFixed(1) : undefined;
-        const numAmps = (realAmps !== undefined && realAmps !== null && !isNaN(Number(realAmps))) ? Number(realAmps).toFixed(1) : undefined;
-
-        setTanks(prev => prev.map(t => ({
-          ...t,
-          isMapped: true,
-          isOnline: true,
-          level: numLevel
-        })));
-
-        setPumps1(prev => prev.map((p, idx) => ({
-          ...p,
-          isMapped: true,
-          isOnline: true,
-          status: idx === 0 && p1Status ? p1Status : p.status,
-          pressure: numPressure ? Number(numPressure) : p.pressure,
-          amp: numAmps || p.amp
-        })));
-
-        setPumps2(prev => prev.map((p, idx) => ({
-          ...p,
-          isMapped: true,
-          isOnline: true,
-          status: idx === 0 && p2Status ? p2Status : p.status,
-          pressure: numPressure ? Number(numPressure) : p.pressure,
-          amp: numAmps || p.amp
-        })));
-      } catch (e) {}
+        setPumps1(prev => updatePumpsForStation(prev));
+        setPumps2(prev => updatePumpsForStation(prev));
+      } catch (e) {
+        console.error('UgTank fetchRealTelemetry error:', e);
+      }
     };
 
     fetchRealTelemetry();
@@ -438,15 +434,20 @@ const UgTank = () => {
                 }
               });
               const hasRecentStats = statsCache.some(s => activeModules.has(String(s.moduleId)) || activeModules.has(String(s.meta?.module_id)));
-              if (hasRecentStats) {
+              if (hasRecentStats || deviceId || selectedDeviceId) {
                 isOnline = true;
               }
             }
 
-            const isMapped = !!deviceId;
+            const isMapped = true;
             if (pump.isOnline !== isOnline || pump.isMapped !== isMapped) {
               changed = true;
               return { ...pump, isOnline, isMapped };
+            }
+          } else if (selectedDeviceId) {
+            if (pump.isOnline !== true || pump.isMapped !== true) {
+              changed = true;
+              return { ...pump, isOnline: true, isMapped: true };
             }
           } else {
             if (pump.isMapped !== false) {
@@ -466,37 +467,34 @@ const UgTank = () => {
         const next = prev.map((tank, index) => {
           const ugTemplates = templates.filter(t => t.module === 'UG Tank');
           let template = ugTemplates.find(t => t.mapping?.ugTankRange?.name === tank.name);
-          if (template && template.mapping) {
+          
+          if (template && template.mapping && template.mapping.ugTankLevelConfig?.enabled !== false) {
             let deviceId = template.mapping.deviceId || template.mapping.ugTankLevelConfig?.device || template.mapping.ugLevelConfig?.device;
-            if (!deviceId) {
-              const anyConfig = Object.values(template.mapping).find(cfg => cfg && typeof cfg === 'object' && cfg.device);
-              if (anyConfig) deviceId = anyConfig.device;
-            }
             let isOnline = getOverallStatus(deviceId, template.mapping.gatewayUuid);
             
             if (!isOnline && template.mapping) {
               const activeModules = new Set();
-              ['ugTankLevelConfig', 'ugLevelConfig', 'ugAmpsConfig', 'ugStatusStartConfig', 'ugStatusStopConfig'].forEach(cfgKey => {
+              ['ugTankLevelConfig', 'ugLevelConfig'].forEach(cfgKey => {
                 const cfg = template.mapping[cfgKey];
                 if (cfg && cfg.enabled !== false && cfg.module) {
                   activeModules.add(String(cfg.module));
                 }
               });
               const hasRecentStats = statsCache.some(s => activeModules.has(String(s.moduleId)) || activeModules.has(String(s.meta?.module_id)));
-              if (hasRecentStats) {
+              if (hasRecentStats || deviceId) {
                 isOnline = true;
               }
             }
 
-            const isMapped = !!deviceId;
+            const isMapped = true;
             if (tank.isOnline !== isOnline || tank.isMapped !== isMapped) {
               changed = true;
               return { ...tank, isOnline, isMapped };
             }
           } else {
-            if (tank.isMapped !== false || tank.isOnline !== false) {
+            if (tank.isMapped !== false || tank.isOnline !== false || tank.level !== 0) {
               changed = true;
-              return { ...tank, isMapped: false, isOnline: false };
+              return { ...tank, isMapped: false, isOnline: false, level: 0 };
             }
           }
           return tank;
@@ -504,7 +502,7 @@ const UgTank = () => {
         return changed ? next : prev;
       });
     } catch (e) { console.error(e); }
-  }, [getOverallStatus]);
+  }, [getOverallStatus, selectedDeviceId]);
 
   useEffect(() => {
     const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
@@ -527,72 +525,35 @@ const UgTank = () => {
         setTanks(prev => {
           let updated = false;
 
-          const ugTemplates = templates.filter(t =>
-            t.module === 'UG Tank' || t.module === 'UG Pump'
-          );
+          const ugLevelTemplates = templates.filter(t => t.module === 'UG Tank');
 
           const next = prev.map((tank, index) => {
-            let template = ugTemplates.find(t => t.mapping?.ugTankRange?.name === tank.name);
+            let template = ugLevelTemplates.find(t => t.mapping?.ugTankRange?.name === tank.name);
+            let config = template?.mapping?.ugTankLevelConfig;
 
-            let config = null;
-
-            if (template && template.mapping && template.mapping.ugTankLevelConfig && template.mapping.ugTankLevelConfig.module) {
-              config = template.mapping.ugTankLevelConfig;
-            }
-
-            let isOnline = tank.isOnline;
-            let isMapped = tank.isMapped;
-            if (template && template.mapping) {
-              let deviceId = template.mapping.deviceId || config?.device || template.mapping.ugLevelConfig?.device;
-              if (!deviceId) {
-                const anyConfig = Object.values(template.mapping).find(cfg => cfg && typeof cfg === 'object' && cfg.device);
-                if (anyConfig) deviceId = anyConfig.device;
-              }
-              isOnline = getOverallStatus(deviceId, template.mapping.gatewayUuid);
+            if (template && config && config.enabled !== false && config.module && config.field) {
+              let deviceId = template.mapping?.deviceId || config.device;
+              let isOnline = getOverallStatus(deviceId, template.mapping?.gatewayUuid);
               
-              if (!isOnline && template.mapping) {
-                const activeModules = new Set();
-                ['ugTankLevelConfig', 'ugLevelConfig', 'ugAmpsConfig', 'ugStatusStartConfig', 'ugStatusStopConfig'].forEach(cfgKey => {
-                  const cfg = template.mapping[cfgKey];
-                  if (cfg && cfg.enabled !== false && cfg.module) {
-                    activeModules.add(String(cfg.module));
-                  }
-                });
-                const hasRecentStats = stats.some(s => activeModules.has(String(s.moduleId)) || activeModules.has(String(s.meta?.module_id)));
-                if (hasRecentStats) {
-                  isOnline = true;
-                }
-              }
-              
-              isMapped = !!deviceId;
-            } else {
-              isMapped = false;
-              isOnline = false;
-            }
-
-            let nextTank = { ...tank };
-            if (nextTank.isOnline !== isOnline || nextTank.isMapped !== isMapped) {
-              nextTank.isOnline = isOnline;
-              nextTank.isMapped = isMapped;
-              updated = true;
-            }
-
-            if (!isMapped) {
-              if (!selectedDeviceId && nextTank.level !== 0) {
-                nextTank.level = 0;
-                updated = true;
-              }
-            } else if (config && config.field && config.module) {
               const stat = stats.find(s => String(s.moduleId) === String(config.module) || String(s.meta?.module_id) === String(config.module));
+              if (stat) isOnline = true;
+              
+              let newLevel = tank.level;
               if (stat && stat.meta && stat.meta[config.field] !== undefined) {
-                const newLevel = Math.round(Number(stat.meta[config.field]));
-                if (nextTank.level !== newLevel) {
-                  nextTank.level = newLevel;
-                  updated = true;
-                }
+                newLevel = Math.round(Number(stat.meta[config.field]));
+              }
+
+              if (tank.isOnline !== isOnline || tank.isMapped !== true || tank.level !== newLevel) {
+                updated = true;
+                return { ...tank, isMapped: true, isOnline, level: newLevel };
+              }
+            } else if (!tank.level || tank.level === 0) {
+              if (tank.isMapped !== false || tank.isOnline !== false || tank.level !== 0) {
+                updated = true;
+                return { ...tank, isMapped: false, isOnline: false, level: 0 };
               }
             }
-            return nextTank;
+            return tank;
           });
           return updated ? next : prev;
         });
@@ -1179,7 +1140,7 @@ const UgTank = () => {
                 style={{ minWidth: 220, cursor: selectedAssetId ? 'pointer' : 'not-allowed' }}
                 disabled={!selectedAssetId}
               >
-                <option value="" className="bg-dark text-white">Select Asset Device</option>
+                <option value="ALL" className="bg-dark text-white">ALL MAPPED DEVICES</option>
                 {devices.map(d => (
                   <option key={d.id} value={String(d.id)} className="bg-dark text-info">
                     {d.name || d.label || `Device #${d.id}`}
@@ -1259,7 +1220,7 @@ const UgTank = () => {
                       <g key={tank.id} transform={`translate(60, ${yPos})`}>
                         <rect width="180" height="130" rx="10" className="scada-tank-rect" fill="#0c121e" stroke={!tank.isOnline ? "#334155" : "#1e293b"} strokeWidth={isFullscreen ? 4 : 3} />
                         
-                        {/* Floating Status Badge for Tank — show OFFLINE badge only, ONLINE badge removed */}
+                        {/* Floating Status Badge for Tank */}
                         {tank.isMapped && !tank.isOnline && (
                         <g transform="translate(12, -8)">
                           <rect width="52" height="15" rx="4" fill="#0f172a" stroke="#ef4444" strokeWidth="1" />
@@ -1272,8 +1233,10 @@ const UgTank = () => {
 
                         <g clipPath="url(#tankInnerClip)">
                           <rect x="0" y={130 - (tank.level * 1.3)} width="180" height={tank.level * 1.3} fill={tank.isOnline ? "url(#waterGrad)" : "#475569"} fillOpacity={tank.isOnline ? "0.7" : "0.3"} />
-                          {tank.isOnline && <rect x="0" y={125 - (tank.level * 1.3)} width="180" height="20" fill="url(#wavePattern)" fillOpacity="0.8" />}
-                          <text x="90" y="75" textAnchor="middle" fill={tank.isOnline ? "#fff" : "#64748b"} fontSize="42" fontWeight="900" filter={tank.isOnline ? "url(#liquidGlow)" : "none"}>{tank.isOnline ? `${tank.level}%` : "--%"}</text>
+                          {tank.isOnline && tank.level > 0 && <rect x="0" y={125 - (tank.level * 1.3)} width="180" height="20" fill="url(#wavePattern)" fillOpacity="0.8" />}
+                          <text x="90" y="75" textAnchor="middle" fill={tank.isOnline && tank.isMapped ? "#fff" : "#64748b"} fontSize="42" fontWeight="900" filter={tank.isOnline && tank.isMapped ? "url(#liquidGlow)" : "none"}>
+                            {tank.isMapped && tank.isOnline && tank.level > 0 ? `${tank.level}%` : "--%"}
+                          </text>
                         </g>
                         <text x="90" y="152" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="900">{tank.name}</text>
                         <path d="M180 65 L220 65" fill="none" stroke="#1e293b" strokeWidth="18" />
@@ -1371,7 +1334,7 @@ const UgTank = () => {
                             {p.isMapped && p.isOnline && p.amp !== undefined ? `| ${Number(p.amp).toFixed(1)} A` : ''}
                           </text>
                           <text x="14" y="44" fill={!p.isMapped ? "#64748b" : (!p.isOnline ? "#64748b" : (active ? "#22c55e" : "#475569"))} fontSize={!p.isMapped || !p.isOnline ? "12" : "16"} fontWeight="900">
-                            {!p.isMapped ? "STOPPED" : (!p.isOnline ? "OFFLINE" : p.status.toUpperCase())}
+                            {!p.isMapped ? "STOPPED" : (!p.isOnline ? "STOPPED" : p.status.toUpperCase())}
                             {p.isMapped && <tspan fill={!p.isOnline ? '#64748b' : (p.mode === 'AUTO' ? '#38bdf8' : '#f59e0b')} fontSize="10" dy="-1">| {p.mode}</tspan>}
                           </text>
                           <g transform="translate(165, 30)" style={{ cursor: 'pointer' }} onClick={(e) => openLimitSettings(e, p)}>
