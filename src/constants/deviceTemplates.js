@@ -652,39 +652,231 @@ export const DEVICE_TEMPLATES = {
     ]
   },
 
-  AG_TANK: {
-    id: 'AG_TANK',
-    label: 'Above Ground (AG) Tank',
-    parameters: [
-      { name: 'Tank Level', required: true },
-      { name: 'Tank Level %', required: true },
-      { name: 'Tank Capacity', required: false },
-      { name: 'Inlet Flow', required: false },
-      { name: 'Outlet Flow', required: false },
-      { name: 'Inlet Valve', required: false },
-      { name: 'Outlet Valve', required: false },
-      { name: 'Low-Level Alarm', required: false },
-      { name: 'High-Level Alarm', required: false },
-      { name: 'Overflow Alarm', required: false }
-    ]
-  },
+ AG_TANK: {
+  id: 'AG_TANK',
+  label: 'Above Ground (AG) Tank',
 
-  UG_TANK: {
-    id: 'UG_TANK',
-    label: 'Underground (UG) Tank',
-    parameters: [
-      { name: 'Tank Level', required: true },
-      { name: 'Tank Level %', required: true },
-      { name: 'Tank Capacity', required: false },
-      { name: 'Inlet Flow', required: false },
-      { name: 'Outlet Flow', required: false },
-      { name: 'Inlet Valve', required: false },
-      { name: 'Outlet Valve', required: false },
-      { name: 'Low-Level Alarm', required: false },
-      { name: 'High-Level Alarm', required: false },
-      { name: 'Overflow Alarm', required: false }
-    ]
-  },
+  parameters: [
+    {
+      name: 'WATER LEVEL',
+      parameter: 'Tank Level',
+      required: true
+    },
+    {
+      name: 'WATER LEVEL %',
+      parameter: 'Tank Level %',
+      required: true
+    },
+    {
+      name: 'TANK CAPACITY',
+      parameter: 'Tank Capacity',
+      required: false
+    },
+    {
+      name: 'INLET FLOW',
+      parameter: 'Inlet Flow',
+      required: false
+    },
+    {
+      name: 'OUTLET FLOW',
+      parameter: 'Outlet Flow',
+      required: false
+    },
+    {
+      name: 'OPEN VALVE',
+      parameter: 'Inlet Valve',
+      required: false
+    },
+    {
+      name: 'CLOSE VALVE',
+      parameter: 'Outlet Valve',
+      required: false
+    },
+    {
+      name: 'VALVE STATUS START',
+      parameter: 'Valve Status Start',
+      required: false
+    },
+    {
+      name: 'VALVE STATUS STOP',
+      parameter: 'Valve Status Stop',
+      required: false
+    },
+    {
+      name: 'LOWER LIMITS',
+      parameter: 'Low-Level Alarm',
+      required: false
+    },
+    {
+      name: 'UPPER LIMITS',
+      parameter: 'High-Level Alarm',
+      required: false
+    },
+    {
+      name: 'OVERFLOW ALARM',
+      parameter: 'Overflow Alarm',
+      required: false
+    }
+  ]
+},
+
+ UG_TANK: {
+  id: 'UG_TANK',
+  label: 'Underground (UG) Tank',
+
+  parameters: [
+    {
+      name: 'WATER LEVEL',
+      parameter: 'Tank Level',
+      required: true
+    },
+    {
+      name: 'WATER LEVEL %',
+      parameter: 'Tank Level %',
+      required: true
+    },
+    {
+      name: 'TANK CAPACITY',
+      parameter: 'Tank Capacity',
+      required: false
+    },
+    {
+      name: 'INLET FLOW',
+      parameter: 'Inlet Flow',
+      required: false
+    },
+    {
+      name: 'OUTLET FLOW',
+      parameter: 'Outlet Flow',
+      required: false
+    },
+    {
+      name: 'OPEN VALVE',
+      parameter: 'Inlet Valve',
+      required: false
+    },
+    {
+      name: 'CLOSE VALVE',
+      parameter: 'Outlet Valve',
+      required: false
+    },
+    {
+      name: 'VALVE STATUS START',
+      parameter: 'Valve Status Start',
+      required: false
+    },
+    {
+      name: 'VALVE STATUS STOP',
+      parameter: 'Valve Status Stop',
+      required: false
+    },
+    {
+      name: 'LOWER LIMITS',
+      parameter: 'Low-Level Alarm',
+      required: false
+    },
+    {
+      name: 'UPPER LIMITS',
+      parameter: 'High-Level Alarm',
+      required: false
+    },
+    {
+      name: 'OVERFLOW ALARM',
+      parameter: 'Overflow Alarm',
+      required: false
+    },
+    {
+      name: 'AUTO MODE',
+      parameter: 'Auto Mode',
+      required: false
+    },
+    {
+      name: 'MANUAL MODE',
+      parameter: 'Manual Mode',
+      required: false
+    },
+    {
+      name: 'BYPASS MODE',
+      parameter: 'Bypass Mode',
+      required: false
+    },
+    {
+      name: 'START COMMAND',
+      parameter: 'Start Command',
+      required: false
+    },
+    {
+      name: 'STOP COMMAND',
+      parameter: 'Stop Command',
+      required: false
+    },
+    {
+      name: 'AUTO SETTING',
+      parameter: 'Auto Setting',
+      required: false
+    },
+    {
+      name: 'MANUAL SETTING',
+      parameter: 'Manual Setting',
+      required: false
+    },
+    {
+      name: 'START PRESSURE',
+      parameter: 'Start Pressure',
+      required: false
+    },
+    {
+      name: 'STOP PRESSURE',
+      parameter: 'Stop Pressure',
+      required: false
+    },
+    {
+      name: 'LOCAL MODE',
+      parameter: 'Local Mode',
+      required: false
+    },
+    {
+      name: 'REMOTE MODE',
+      parameter: 'Remote Mode',
+      required: false
+    },
+    {
+      name: 'OUTPUT CURRENT',
+      parameter: 'Output Current',
+      required: false
+    },
+    {
+      name: 'OUTPUT VOLTAGE',
+      parameter: 'Output Voltage',
+      required: false
+    },
+    {
+      name: 'OUTPUT POWER',
+      parameter: 'Output Power',
+      required: false
+    },
+    {
+      name: 'RUNNING ROTATION SPEED',
+      parameter: 'Running Rotation Speed',
+      required: false
+    },
+    {
+      name: 'OUTPUT TORQUE',
+      parameter: 'Output Torque',
+      required: false
+    },
+    {
+      name: 'BUS VOLTAGE',
+      parameter: 'Bus Voltage',
+      required: false
+    },
+    {
+      name: 'CURRENT FREQUENCY',
+      parameter: 'Current Frequency',
+      required: false
+    }
+  ]
+},
 
   PUMP: {
     id: 'PUMP',

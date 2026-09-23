@@ -18,7 +18,9 @@ import {
   ArrowRight,
   TrendingUp,
   ShieldCheck,
-  Radio
+  Radio,
+  Sparkles,
+  Building2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -86,7 +88,7 @@ const EnergyMeteringOverview = () => {
   const [saveSuccessMessage, setSaveSuccessMessage] = useState('Settings saved successfully');
   const [groupActionStatus, setGroupActionStatus] = useState(null);
   const [showGroups, setShowGroups] = useState(true);
-  const [viewMode, setViewMode] = useState('overview'); // 'overview' | 'solar'
+  const [viewMode, setViewMode] = useState('solar'); // 'solar' | 'overview'
 
   const refreshTemplates = () => {
     try {
@@ -498,27 +500,57 @@ const EnergyMeteringOverview = () => {
   };
 
   return (
-    <div className="energy-overview-page p-3 p-md-4">
-      {/* View Switcher Toolbar */}
-      <div className="d-flex justify-content-end align-items-center mb-3">
-        <div className="d-flex align-items-center gap-2 bg-dark bg-opacity-75 p-1 rounded-pill border border-secondary border-opacity-25">
-          <button
-            type="button"
-            onClick={() => setViewMode('overview')}
-            className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-2 transition-all ${
-              viewMode === 'overview' ? 'btn-primary text-white shadow-sm' : 'text-secondary border-0 bg-transparent'
-            }`}
-          >
-            <LayoutDashboard size={15} /> Facility Overview
-          </button>
+    <div className="energy-overview-page p-3 p-md-4" style={{ background: '#0a101d', minHeight: '100vh', color: '#e2e8f0' }}>
+      {/* Dynamic Top Header & View Switcher Toolbar */}
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 p-3 rounded-4" style={{ background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.8), rgba(15, 23, 42, 0.9))', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)' }}>
+        <div className="d-flex align-items-center gap-3">
+          <div className="p-2.5 rounded-3 d-flex align-items-center justify-content-center" style={{ background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.1))', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }}>
+            <Building2 size={24} />
+          </div>
+          <div>
+            <div className="d-flex align-items-center gap-2">
+              <h4 className="fw-bold text-white mb-0" style={{ letterSpacing: '-0.3px' }}>Energy Metering Dashboard</h4>
+              <span className="badge rounded-pill d-inline-flex align-items-center gap-1.5 px-2.5 py-1" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', fontSize: '0.68rem', fontWeight: 600 }}>
+                <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '6px', height: '6px' }} /> REALTIME
+              </span>
+            </div>
+            <p className="text-secondary mb-0 fs-13 mt-0.5">Live SCADA telemetry, facility active load hierarchy, and feeder distribution.</p>
+          </div>
+        </div>
+
+        {/* View Switcher Toggle Pill */}
+        <div className="d-flex align-items-center gap-1.5 p-1.5 rounded-pill" style={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255, 255, 255, 0.12)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)' }}>
           <button
             type="button"
             onClick={() => setViewMode('solar')}
-            className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-2 transition-all ${
-              viewMode === 'solar' ? 'btn-warning text-dark shadow-sm' : 'text-secondary border-0 bg-transparent'
+            className={`btn btn-sm rounded-pill px-3.5 py-1.5 fw-semibold d-flex align-items-center gap-2 transition-all ${
+              viewMode === 'solar'
+                ? 'text-dark shadow-sm'
+                : 'text-secondary border-0 bg-transparent'
             }`}
+            style={{
+              background: viewMode === 'solar' ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' : 'transparent',
+              boxShadow: viewMode === 'solar' ? '0 0 16px rgba(245, 158, 11, 0.4)' : 'none',
+              fontWeight: 600
+            }}
           >
-            <Sun size={15} /> Solar Generation
+            <Sun size={16} className={viewMode === 'solar' ? 'text-dark' : 'text-warning'} /> Solar Generation
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('overview')}
+            className={`btn btn-sm rounded-pill px-3.5 py-1.5 fw-semibold d-flex align-items-center gap-2 transition-all ${
+              viewMode === 'overview'
+                ? 'text-white shadow-sm'
+                : 'text-secondary border-0 bg-transparent'
+            }`}
+            style={{
+              background: viewMode === 'overview' ? 'linear-gradient(135deg, #0284c7, #38bdf8)' : 'transparent',
+              boxShadow: viewMode === 'overview' ? '0 0 16px rgba(56, 189, 248, 0.4)' : 'none',
+              fontWeight: 600
+            }}
+          >
+            <LayoutDashboard size={16} /> Facility Overview
           </button>
         </div>
       </div>
@@ -532,25 +564,37 @@ const EnergyMeteringOverview = () => {
         </div>
       ) : (
         <div className="facility-overview-container fade-in">
-          {/* 1. KPI Headline Cards */}
+          {/* 1. Ultra-Sleek Glassmorphic KPI Cards */}
           <Row className="g-3 mb-4">
             <Col sm={6} xl={3}>
-              <Card className="scada-stat-card border-0 h-100 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderLeft: '4px solid #38bdf8' }}>
-                <Card.Body className="p-3">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <span className="text-secondary text-uppercase fw-semibold" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>Total Active Demand</span>
-                    <div className="p-2 rounded-3 bg-info bg-opacity-10 text-info">
-                      <Zap size={18} />
+              <Card
+                className="border-0 h-100 transition-all hover-lift"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.85), rgba(15, 23, 42, 0.95))',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  borderRadius: '18px',
+                  boxShadow: '0 8px 24px -6px rgba(56, 189, 248, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #38bdf8, #0ea5e9)' }} />
+                <Card.Body className="p-3.5">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <span className="text-secondary text-uppercase fw-bold" style={{ fontSize: '0.7rem', letterSpacing: '0.8px' }}>Total Active Demand</span>
+                    <div className="p-2.5 rounded-3 d-flex align-items-center justify-content-center" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.25)', color: '#38bdf8' }}>
+                      <Zap size={20} />
                     </div>
                   </div>
                   <div className="d-flex align-items-baseline gap-2">
-                    <span className="fw-bold text-white fs-3 font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="fw-bolder text-white font-monospace" style={{ fontSize: '2.1rem', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
                       {formatMetric(headlineMetrics.totalLoad)}
                     </span>
-                    <span className="text-info fw-bold fs-6">kW</span>
+                    <span className="fw-bold fs-6" style={{ color: '#38bdf8' }}>kW</span>
                   </div>
-                  <div className="d-flex align-items-center gap-1 mt-2 text-secondary" style={{ fontSize: '0.72rem' }}>
-                    <TrendingUp size={12} className="text-success" />
+                  <div className="d-flex align-items-center gap-1.5 mt-3 pt-2.5 border-top border-secondary border-opacity-10 text-secondary" style={{ fontSize: '0.73rem' }}>
+                    <TrendingUp size={13} className="text-success" />
                     <span>Real-time instantaneous facility demand</span>
                   </div>
                 </Card.Body>
@@ -558,22 +602,34 @@ const EnergyMeteringOverview = () => {
             </Col>
 
             <Col sm={6} xl={3}>
-              <Card className="scada-stat-card border-0 h-100 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderLeft: '4px solid #10b981' }}>
-                <Card.Body className="p-3">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <span className="text-secondary text-uppercase fw-semibold" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>Total Energy (EB)</span>
-                    <div className="p-2 rounded-3 bg-success bg-opacity-10 text-success">
-                      <Activity size={18} />
+              <Card
+                className="border-0 h-100 transition-all hover-lift"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.85), rgba(15, 23, 42, 0.95))',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '18px',
+                  boxShadow: '0 8px 24px -6px rgba(16, 185, 129, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #10b981, #059669)' }} />
+                <Card.Body className="p-3.5">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <span className="text-secondary text-uppercase fw-bold" style={{ fontSize: '0.7rem', letterSpacing: '0.8px' }}>Total Energy (EB)</span>
+                    <div className="p-2.5 rounded-3 d-flex align-items-center justify-content-center" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', color: '#10b981' }}>
+                      <Activity size={20} />
                     </div>
                   </div>
                   <div className="d-flex align-items-baseline gap-2">
-                    <span className="fw-bold text-white fs-3 font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="fw-bolder text-white font-monospace" style={{ fontSize: '2.1rem', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
                       {formatMetric(headlineMetrics.totalConsumption)}
                     </span>
-                    <span className="text-success fw-bold fs-6">kWh</span>
+                    <span className="fw-bold fs-6" style={{ color: '#10b981' }}>kWh</span>
                   </div>
-                  <div className="d-flex align-items-center gap-1 mt-2 text-secondary" style={{ fontSize: '0.72rem' }}>
-                    <ShieldCheck size={12} className="text-success" />
+                  <div className="d-flex align-items-center gap-1.5 mt-3 pt-2.5 border-top border-secondary border-opacity-10 text-secondary" style={{ fontSize: '0.73rem' }}>
+                    <ShieldCheck size={13} className="text-success" />
                     <span>Cumulative consumption across active meters</span>
                   </div>
                 </Card.Body>
@@ -581,44 +637,68 @@ const EnergyMeteringOverview = () => {
             </Col>
 
             <Col sm={6} xl={3}>
-              <Card className="scada-stat-card border-0 h-100 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderLeft: '4px solid #f59e0b' }}>
-                <Card.Body className="p-3">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <span className="text-secondary text-uppercase fw-semibold" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>Grid Power Quality</span>
-                    <div className="p-2 rounded-3 bg-warning bg-opacity-10 text-warning">
-                      <Gauge size={18} />
+              <Card
+                className="border-0 h-100 transition-all hover-lift"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.85), rgba(15, 23, 42, 0.95))',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  borderRadius: '18px',
+                  boxShadow: '0 8px 24px -6px rgba(245, 158, 11, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #f59e0b, #d97706)' }} />
+                <Card.Body className="p-3.5">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <span className="text-secondary text-uppercase fw-bold" style={{ fontSize: '0.7rem', letterSpacing: '0.8px' }}>Grid Power Quality</span>
+                    <div className="p-2.5 rounded-3 d-flex align-items-center justify-content-center" style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)', color: '#f59e0b' }}>
+                      <Gauge size={20} />
                     </div>
                   </div>
                   <div className="d-flex align-items-baseline gap-2">
-                    <span className="fw-bold text-white fs-3 font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="fw-bolder text-white font-monospace" style={{ fontSize: '2.1rem', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
                       {formatMetric(headlineMetrics.avgPf, 2)}
                     </span>
-                    <span className="text-warning fw-bold fs-6">Avg PF</span>
+                    <span className="fw-bold fs-6" style={{ color: '#f59e0b' }}>Avg PF</span>
                   </div>
-                  <div className="d-flex align-items-center gap-1 mt-2 text-secondary" style={{ fontSize: '0.72rem' }}>
-                    <span>Frequency: <strong className="text-white">50.0 Hz</strong></span>
+                  <div className="d-flex align-items-center gap-1.5 mt-3 pt-2.5 border-top border-secondary border-opacity-10 text-secondary" style={{ fontSize: '0.73rem' }}>
+                    <span>Grid Frequency: <strong className="text-white">50.0 Hz</strong></span>
                   </div>
                 </Card.Body>
               </Card>
             </Col>
 
             <Col sm={6} xl={3}>
-              <Card className="scada-stat-card border-0 h-100 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderLeft: '4px solid #a855f7' }}>
-                <Card.Body className="p-3">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <span className="text-secondary text-uppercase fw-semibold" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>Active Meter Feeds</span>
-                    <div className="p-2 rounded-3 bg-purple bg-opacity-10 text-purple" style={{ color: '#c084fc' }}>
-                      <Network size={18} />
+              <Card
+                className="border-0 h-100 transition-all hover-lift"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.85), rgba(15, 23, 42, 0.95))',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(168, 85, 247, 0.25)',
+                  borderRadius: '18px',
+                  boxShadow: '0 8px 24px -6px rgba(168, 85, 247, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #c084fc, #9333ea)' }} />
+                <Card.Body className="p-3.5">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <span className="text-secondary text-uppercase fw-bold" style={{ fontSize: '0.7rem', letterSpacing: '0.8px' }}>Active Meter Feeds</span>
+                    <div className="p-2.5 rounded-3 d-flex align-items-center justify-content-center" style={{ background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.25)', color: '#c084fc' }}>
+                      <Network size={20} />
                     </div>
                   </div>
                   <div className="d-flex align-items-baseline gap-2">
-                    <span className="fw-bold text-white fs-3 font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {headlineMetrics.onlineMeters} / {headlineMetrics.totalMeters}
+                    <span className="fw-bolder text-white font-monospace" style={{ fontSize: '2.1rem', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
+                      {headlineMetrics.onlineMeters} <span className="fs-5 text-secondary font-sans fw-normal">/ {headlineMetrics.totalMeters}</span>
                     </span>
-                    <span className="text-muted fs-6">Online</span>
+                    <span className="fw-bold fs-6 text-success">Online</span>
                   </div>
-                  <div className="d-flex align-items-center gap-1 mt-2 text-secondary" style={{ fontSize: '0.72rem' }}>
-                    <Radio size={12} className={headlineMetrics.onlineMeters > 0 ? 'text-success' : 'text-danger'} />
+                  <div className="d-flex align-items-center gap-1.5 mt-3 pt-2.5 border-top border-secondary border-opacity-10 text-secondary" style={{ fontSize: '0.73rem' }}>
+                    <Radio size={13} className={headlineMetrics.onlineMeters > 0 ? 'text-success' : 'text-danger'} />
                     <span>{headlineMetrics.groupedMeters} grouped, {headlineMetrics.ungroupedMeters} standalone</span>
                   </div>
                 </Card.Body>
@@ -628,10 +708,12 @@ const EnergyMeteringOverview = () => {
 
           {/* 2. Group Distribution Section */}
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 mt-4">
-            <div className="d-flex align-items-center gap-2">
-              <Layers3 size={20} className="text-warning" />
-              <h5 className="fw-bold text-white mb-0">Feeder Groups & Load Hierarchy</h5>
-              <Badge bg="secondary" className="bg-opacity-25 text-secondary fw-normal">
+            <div className="d-flex align-items-center gap-2.5">
+              <div className="p-2 rounded-3 text-warning d-flex align-items-center justify-content-center" style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                <Layers3 size={18} />
+              </div>
+              <h5 className="fw-bold text-white mb-0" style={{ letterSpacing: '-0.2px' }}>Feeder Groups & Load Hierarchy</h5>
+              <Badge bg="dark" className="border border-secondary border-opacity-25 text-warning fw-semibold px-2.5 py-1">
                 {groupedCollections.length} Ranked Groups
               </Badge>
             </div>
@@ -639,7 +721,8 @@ const EnergyMeteringOverview = () => {
               <button
                 type="button"
                 onClick={() => setShowGroups(!showGroups)}
-                className="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 d-flex align-items-center gap-1 text-light border-secondary border-opacity-50"
+                className="btn btn-sm rounded-pill px-3 py-1.5 d-flex align-items-center gap-1.5 text-light border-secondary border-opacity-50 transition-all"
+                style={{ background: 'rgba(30, 41, 59, 0.6)' }}
               >
                 {showGroups ? <EyeOff size={14} /> : <Eye size={14} />}
                 {showGroups ? 'Collapse Groups' : 'Expand Groups'}
@@ -647,7 +730,7 @@ const EnergyMeteringOverview = () => {
               <button
                 type="button"
                 onClick={openGroupManager}
-                className="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 d-flex align-items-center gap-1 fw-semibold"
+                className="btn btn-sm btn-outline-warning rounded-pill px-3.5 py-1.5 d-flex align-items-center gap-1.5 fw-semibold transition-all shadow-sm"
               >
                 <Settings2 size={14} /> Manage Groups
               </button>
@@ -656,16 +739,32 @@ const EnergyMeteringOverview = () => {
 
           {showGroups && (
             groupedCollections.length === 0 ? (
-              <div className="p-4 rounded-4 border border-secondary border-opacity-25 bg-dark bg-opacity-50 text-center mb-4">
-                <FolderTree size={36} className="text-secondary mb-2 opacity-50" />
-                <h6 className="text-white fw-bold mb-1">No Custom Groups Configured</h6>
-                <p className="text-secondary fs-13 mb-3">Group your sub-meters by floor, wing, or utility department for aggregate demand analytics.</p>
+              <div
+                className="p-5 rounded-4 text-center mb-4 transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.6), rgba(15, 23, 42, 0.8))',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px dashed rgba(245, 158, 11, 0.3)',
+                  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.25)'
+                }}
+              >
+                <div
+                  className="d-inline-flex p-3 rounded-circle mb-3 text-warning"
+                  style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.05))', border: '1px solid rgba(245, 158, 11, 0.3)', boxShadow: '0 0 20px rgba(245, 158, 11, 0.2)' }}
+                >
+                  <FolderTree size={36} />
+                </div>
+                <h5 className="text-white fw-bold mb-1">No Custom Groups Configured</h5>
+                <p className="text-secondary fs-13 mb-4 mx-auto" style={{ maxWidth: '480px' }}>
+                  Organize and cluster your sub-meters into logical floor levels, building wings, or utility departments for aggregate load & energy analytics.
+                </p>
                 <button
                   type="button"
                   onClick={openGroupManager}
-                  className="btn btn-sm btn-warning rounded-pill px-3 fw-bold"
+                  className="btn btn-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-sm transition-all"
+                  style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', border: 'none', boxShadow: '0 4px 20px rgba(245, 158, 11, 0.3)' }}
                 >
-                  <Plus size={14} className="me-1" /> Create First Group
+                  <Plus size={16} className="me-1" /> Create First Group
                 </button>
               </div>
             ) : (
@@ -675,48 +774,50 @@ const EnergyMeteringOverview = () => {
                     <Card
                       className="border-0 h-100 shadow-sm transition-all"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.85))',
-                        borderTop: `3px solid ${group.color}`,
-                        borderRadius: '14px'
+                        background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.85), rgba(15, 23, 42, 0.95))',
+                        backdropFilter: 'blur(12px)',
+                        border: `1px solid ${group.color}44`,
+                        borderTop: `4px solid ${group.color}`,
+                        borderRadius: '16px'
                       }}
                     >
-                      <Card.Body className="p-3 d-flex flex-column justify-content-between">
+                      <Card.Body className="p-3.5 d-flex flex-column justify-content-between">
                         <div>
                           <div className="d-flex justify-content-between align-items-start mb-2">
                             <div className="d-flex align-items-center gap-2">
-                              <span className="rounded-circle" style={{ width: '10px', height: '10px', backgroundColor: group.color }} />
+                              <span className="rounded-circle" style={{ width: '10px', height: '10px', backgroundColor: group.color, boxShadow: `0 0 8px ${group.color}` }} />
                               <h6 className="text-white fw-bold mb-0 text-truncate" style={{ maxWidth: '140px' }}>{group.name}</h6>
                             </div>
                             <Badge bg="dark" className="border border-secondary border-opacity-25 text-warning font-monospace" style={{ fontSize: '0.65rem' }}>
                               #{idx + 1} Load
                             </Badge>
                           </div>
-                          <div className="d-flex align-items-baseline gap-1 my-2">
-                            <span className="fs-4 fw-bold text-white font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          <div className="d-flex align-items-baseline gap-1.5 my-2">
+                            <span className="fs-3 fw-bold text-white font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
                               {formatMetric(group.totalLoadKw)}
                             </span>
-                            <span className="text-secondary fs-13">kW</span>
+                            <span className="text-secondary fs-13 fw-semibold">kW</span>
                           </div>
                           <div className="d-flex justify-content-between text-secondary fs-12 mb-3">
                             <span>{group.meters.length} meter(s)</span>
-                            <span className="text-success">{group.onlineCount} online</span>
+                            <span className="text-success fw-semibold">{group.onlineCount} online</span>
                           </div>
                         </div>
 
-                        <div className="d-flex gap-2 pt-2 border-top border-secondary border-opacity-25">
+                        <div className="d-flex gap-2 pt-2.5 border-top border-secondary border-opacity-20">
                           <button
                             type="button"
                             onClick={() => handleEditGroup(group.id)}
-                            className="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 flex-grow-1 text-light border-secondary border-opacity-50 fs-12"
+                            className="btn btn-sm btn-outline-secondary rounded-pill py-1 px-3 flex-grow-1 text-light border-secondary border-opacity-50 fs-12"
                           >
-                            <Settings2 size={11} className="me-1" /> Edit
+                            <Settings2 size={12} className="me-1" /> Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteGroup(group.id)}
-                            className="btn btn-sm btn-outline-danger rounded-pill py-0 px-2 fs-12"
+                            className="btn btn-sm btn-outline-danger rounded-pill py-1 px-2.5 fs-12"
                           >
-                            <Trash2 size={11} />
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       </Card.Body>
@@ -728,18 +829,32 @@ const EnergyMeteringOverview = () => {
           )}
 
           {/* 3. Feeder Meters Telemetry Table */}
-          <Card className="border-0 shadow-sm mt-4" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8))', borderRadius: '16px' }}>
-            <Card.Header className="bg-transparent border-bottom border-secondary border-opacity-25 p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-              <div>
-                <h6 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
-                  <Activity size={18} className="text-primary" /> Live Feeder & Meter Telemetry
-                </h6>
-                <small className="text-secondary">Click any meter row to inspect its live waveform and digital twin.</small>
+          <Card
+            className="border-0 shadow-sm mt-4 overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(19, 27, 44, 0.8), rgba(15, 23, 42, 0.95))',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '20px'
+            }}
+          >
+            <Card.Header
+              className="bg-transparent border-bottom border-secondary border-opacity-20 p-3.5 d-flex justify-content-between align-items-center flex-wrap gap-2"
+              style={{ background: 'rgba(15, 23, 42, 0.6)' }}
+            >
+              <div className="d-flex align-items-center gap-2.5">
+                <div className="p-2 rounded-3 text-primary d-flex align-items-center justify-content-center" style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                  <Activity size={18} />
+                </div>
+                <div>
+                  <h6 className="fw-bold text-white mb-0">Live Feeder & Meter Telemetry</h6>
+                  <small className="text-secondary fs-12">Click any meter row to inspect its live electrical waveform and digital twin.</small>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => navigate('/energy-meter/sub-meters')}
-                className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1"
+                className="btn btn-sm btn-outline-primary rounded-pill px-3.5 py-1.5 fw-semibold d-flex align-items-center gap-1.5 shadow-sm transition-all"
               >
                 View Full Submeters Grid <ArrowRight size={14} />
               </button>
@@ -747,23 +862,24 @@ const EnergyMeteringOverview = () => {
             <Card.Body className="p-0">
               <div className="table-responsive">
                 <Table hover borderless className="align-middle text-white mb-0" style={{ fontSize: '0.85rem' }}>
-                  <thead style={{ background: 'rgba(15, 23, 42, 0.9)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <tr className="text-secondary text-uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
-                      <th className="py-3 px-3">Meter / Feeder</th>
-                      <th className="py-3">Type</th>
-                      <th className="py-3 text-end">Load (kW)</th>
-                      <th className="py-3 text-end">Energy (kWh)</th>
-                      <th className="py-3 text-center">Voltages (R / Y / B)</th>
-                      <th className="py-3 text-center">Currents (R / Y / B)</th>
-                      <th className="py-3 text-center">PF</th>
-                      <th className="py-3 text-center">Status</th>
+                  <thead style={{ background: 'rgba(10, 16, 29, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <tr className="text-secondary text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.8px', fontWeight: 700 }}>
+                      <th className="py-3.5 px-4">Meter / Feeder</th>
+                      <th className="py-3.5">Type</th>
+                      <th className="py-3.5 text-end">Load (kW)</th>
+                      <th className="py-3.5 text-end">Energy (kWh)</th>
+                      <th className="py-3.5 text-center">Voltages (<span style={{ color: '#f87171' }}>R</span> / <span style={{ color: '#fbbf24' }}>Y</span> / <span style={{ color: '#38bdf8' }}>B</span>)</th>
+                      <th className="py-3.5 text-center">Currents (<span style={{ color: '#f87171' }}>R</span> / <span style={{ color: '#fbbf24' }}>Y</span> / <span style={{ color: '#38bdf8' }}>B</span>)</th>
+                      <th className="py-3.5 text-center">PF</th>
+                      <th className="py-3.5 text-center px-4">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {meterRows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="text-center py-4 text-secondary">
-                          No Energy Meters configured for this site yet.
+                        <td colSpan={8} className="text-center py-5 text-secondary">
+                          <Activity size={32} className="opacity-40 mb-2" />
+                          <div>No Energy Meters configured for this site yet.</div>
                         </td>
                       </tr>
                     ) : (
@@ -771,46 +887,62 @@ const EnergyMeteringOverview = () => {
                         <tr
                           key={meter.id}
                           onClick={() => navigate(meter.path)}
-                          style={{ cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                          style={{ cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s ease' }}
                           className="hover-row"
                         >
-                          <td className="py-3 px-3">
-                            <div className="fw-bold text-white">{meter.name}</div>
+                          <td className="py-3 px-4">
+                            <div className="fw-bold text-white fs-14">{meter.name}</div>
                             <small className="text-secondary font-monospace" style={{ fontSize: '0.7rem' }}>{meter.id}</small>
                           </td>
                           <td className="py-3">
                             <Badge
                               bg={meter.isMain ? 'primary' : 'dark'}
-                              className={`border border-secondary border-opacity-25 ${meter.isMain ? 'text-white' : 'text-secondary'}`}
+                              className={`border border-secondary border-opacity-25 px-2.5 py-1 ${meter.isMain ? 'text-white bg-primary' : 'text-secondary'}`}
+                              style={{ fontSize: '0.68rem', fontWeight: 600 }}
                             >
                               {meter.category}
                             </Badge>
                           </td>
-                          <td className="py-3 text-end fw-bold text-warning font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          <td className="py-3 text-end fw-bold text-warning font-monospace" style={{ fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
                             {formatMetric(meter.loadKw)}
                           </td>
-                          <td className="py-3 text-end text-success font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          <td className="py-3 text-end text-success fw-semibold font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
                             {formatMetric(meter.kwh)}
                           </td>
-                          <td className="py-3 text-center font-monospace text-secondary" style={{ fontSize: '0.75rem' }}>
-                            {formatMetric(meter.vR)} | {formatMetric(meter.vY)} | {formatMetric(meter.vB)} V
+                          <td className="py-3 text-center font-monospace" style={{ fontSize: '0.78rem' }}>
+                            <span style={{ color: '#f87171' }}>{formatMetric(meter.vR)}</span> <span className="text-secondary">/</span>{' '}
+                            <span style={{ color: '#fbbf24' }}>{formatMetric(meter.vY)}</span> <span className="text-secondary">/</span>{' '}
+                            <span style={{ color: '#38bdf8' }}>{formatMetric(meter.vB)}</span> <span className="text-muted fs-11">V</span>
                           </td>
-                          <td className="py-3 text-center font-monospace text-secondary" style={{ fontSize: '0.75rem' }}>
-                            {formatMetric(meter.iR)} | {formatMetric(meter.iY)} | {formatMetric(meter.iB)} A
+                          <td className="py-3 text-center font-monospace" style={{ fontSize: '0.78rem' }}>
+                            <span style={{ color: '#f87171' }}>{formatMetric(meter.iR)}</span> <span className="text-secondary">/</span>{' '}
+                            <span style={{ color: '#fbbf24' }}>{formatMetric(meter.iY)}</span> <span className="text-secondary">/</span>{' '}
+                            <span style={{ color: '#38bdf8' }}>{formatMetric(meter.iB)}</span> <span className="text-muted fs-11">A</span>
                           </td>
-                          <td className="py-3 text-center font-monospace text-info">
+                          <td className="py-3 text-center font-monospace text-info fw-semibold">
                             {formatMetric(meter.pf, 2)}
                           </td>
-                          <td className="py-3 text-center">
+                          <td className="py-3 text-center px-4">
                             <Badge
-                              bg={meter.isOnline ? 'success' : 'secondary'}
-                              className="bg-opacity-20 text-uppercase"
+                              bg="transparent"
+                              className="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 text-uppercase"
                               style={{
                                 color: meter.isOnline ? '#4ade80' : '#94a3b8',
-                                border: `1px solid ${meter.isOnline ? '#22c55e44' : '#64748b44'}`,
-                                fontSize: '0.65rem'
+                                background: meter.isOnline ? 'rgba(34, 197, 94, 0.12)' : 'rgba(148, 163, 184, 0.12)',
+                                border: `1px solid ${meter.isOnline ? 'rgba(34, 197, 94, 0.3)' : 'rgba(148, 163, 184, 0.2)'}`,
+                                fontSize: '0.65rem',
+                                fontWeight: 700
                               }}
                             >
+                              <span
+                                className="rounded-circle"
+                                style={{
+                                  width: '6px',
+                                  height: '6px',
+                                  backgroundColor: meter.isOnline ? '#22c55e' : '#64748b',
+                                  boxShadow: meter.isOnline ? '0 0 6px #22c55e' : 'none'
+                                }}
+                              />
                               {meter.status}
                             </Badge>
                           </td>

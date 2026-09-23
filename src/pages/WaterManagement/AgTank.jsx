@@ -466,8 +466,7 @@ const AgTank = () => {
 
               let eventsRes = await apiClient.get(`/sites/${selectedSiteId}/devices/${devId}/events/latest`).catch(() => null) ||
                               await apiClient.get(`/devices/${devId}/events/latest`).catch(() => null);
-              const liveData = await apiClient.get(`/sites/${selectedSiteId || 1}/devices/${devId}/live`).catch(() => null) ||
-                               await apiClient.get(`/devices/${devId}`).catch(() => null);
+              const liveData = null;
 
               let realLevel, realValve, realAmps;
               const payloadData = eventsRes?.data ?? eventsRes;
@@ -535,6 +534,10 @@ const AgTank = () => {
 
               const hasExplicitTankName = devNameStr.includes('TOWER-D-') || devNameStr.includes('TOWER-F-') || devNameStr.includes('DOM-') || devNameStr.includes('FLUSH-');
 
+              // Auto-map slot: when no agTankRange and no explicit name, assign sequential TOWER-D slot per device index
+              const devIndex = targetDevs.indexOf(dev);
+              const autoMapSlot = (!domTarget && !flushTarget && !hasExplicitTankName) ? (devIndex + 1) : 0;
+
               for (let localId = 1; localId <= 24; localId++) {
                 ['DOMESTIC', 'FLUSHING'].forEach(type => {
                   const tankName = `${type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-${localId}`;
@@ -551,8 +554,9 @@ const AgTank = () => {
                     }
                   } else if (hasExplicitTankName) {
                     isMapped = devNameStr.includes(tankName.toUpperCase());
-                  } else {
-                    isMapped = false;
+                  } else if (autoMapSlot > 0 && type === 'DOMESTIC' && localId === autoMapSlot) {
+                    // Fallback: auto-map this device to TOWER-D-{devIndex+1}
+                    isMapped = true;
                   }
 
                   if (isMapped) {
@@ -562,7 +566,8 @@ const AgTank = () => {
                       level: numLevel,
                       valveStatus: valveState,
                       status: valveState === 'OPEN' ? 'Running' : 'Stopped',
-                      amps: numAmps
+                      amps: numAmps,
+                      deviceName: dev.name || template?.name || ''
                     };
                   }
                 });
@@ -595,9 +600,8 @@ const AgTank = () => {
         let eventsRes = await apiClient.get(`/sites/${selectedSiteId}/devices/${selectedDeviceId}/events/latest`).catch(() => null) ||
                         await apiClient.get(`/devices/${selectedDeviceId}/events/latest`).catch(() => null);
 
-        // Step 2: Also fetch live telemetry as fallback
-        const liveData = await apiClient.get(`/sites/${selectedSiteId || 1}/devices/${selectedDeviceId}/live`).catch(() => null) ||
-                         await apiClient.get(`/devices/${selectedDeviceId}`).catch(() => null);
+        // Step 2: Set liveData to null (avoid 400 bad request /live call)
+        const liveData = null;
 
         // Step 3: Fetch full device details if template settings missing
         let devSettings = template.template_settings || template.settings || liveData?.template_settings || liveData?.settings || [];
@@ -747,6 +751,9 @@ const AgTank = () => {
 
         const hasExplicitTankName = devNameStr.includes('TOWER-D-') || devNameStr.includes('TOWER-F-') || devNameStr.includes('DOM-') || devNameStr.includes('FLUSH-');
 
+        // Fallback: when no agTankRange and no explicit tower name, auto-map to TOWER-D-1
+        const autoMapSingleTank = (!domTarget && !flushTarget && !hasExplicitTankName);
+
         setAllTanks(prev => prev.map(tank => {
           const tankName = `${tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-${tank.localId}`;
 
@@ -763,8 +770,9 @@ const AgTank = () => {
             }
           } else if (hasExplicitTankName) {
             isMapped = devNameStr.includes(tankName.toUpperCase());
-          } else {
-            isMapped = false;
+          } else if (autoMapSingleTank && tank.type === 'DOMESTIC' && tank.localId === 1) {
+            // Fallback: auto-map to first domestic tank slot
+            isMapped = true;
           }
 
           if (isMapped) {
@@ -775,7 +783,8 @@ const AgTank = () => {
               level: numLevel,
               valveStatus: valveState,
               status: valveState === 'OPEN' ? 'Running' : 'Stopped',
-              amps: numAmps
+              amps: numAmps,
+              deviceName: selectedDev?.name || template?.name || ''
             };
           }
           return {
@@ -804,8 +813,9 @@ const AgTank = () => {
             if (tank.type === 'FLUSHING' && flushTarget) isMapped = tankName === flushTarget;
           } else if (hasExplicitTankName) {
             isMapped = devNameStr.includes(tankName.toUpperCase());
-          } else {
-            isMapped = false;
+          } else if (tank.type === 'DOMESTIC' && tank.localId === 1) {
+            // Fallback: auto-map to first domestic tank slot
+            isMapped = true;
           }
 
           if (isMapped) {
@@ -907,6 +917,12 @@ const AgTank = () => {
 
     if (hasExplicitTankName) {
       return devNameStr.includes(tankName.toUpperCase());
+    }
+
+    // Fallback: match first domestic tank slot when no tower range is configured
+    if (tankType === 'DOMESTIC') {
+      const localId = parseInt((tankName.match(/\d+/) || [])[0] || '0', 10);
+      if (localId === 1) return true;
     }
 
     return false;
@@ -1727,7 +1743,7 @@ const AgTank = () => {
                   <div className={`fw-bold mb-0 mt-1 ${isFullscreen ? 'fs-7' : 'fs-10'} ${!tank.isMapped ? 'text-secondary opacity-50' : (!tank.isOnline ? 'text-danger' : 'text-success')}`}>
                     {!tank.isMapped ? 'NOT MAPPED' : (tank.isOnline ? 'ONLINE' : 'OFFLINE')}
                   </div>
-                  <div className={`fw-bold mb-0 ${isFullscreen ? 'fs-7' : 'fs-10'} text-muted`}>{tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-{tank.localId}</div>
+                  <div className={`fw-bold mb-0 ${isFullscreen ? 'fs-7' : 'fs-10'} text-muted`}>{tank.deviceName || `${tank.type === 'DOMESTIC' ? 'TOWER-D' : 'TOWER-F'}-${tank.localId}`}</div>
                   <div className={`d-flex justify-content-center gap-2 opacity-75 ${isFullscreen ? 'fs-7' : 'fs-10'}`}>
                     <span style={{ color: !tank.isMapped ? '#334155' : (!tank.isOnline ? '#475569' : getTankColor(tank.type, tank.level, tank.status)) }}>{!tank.isMapped ? '--' : (!tank.isOnline ? '--' : tank.level)}%</span>
                     {tank.isOnline && tank.amps !== undefined && (
