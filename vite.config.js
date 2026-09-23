@@ -8,10 +8,22 @@ export default defineConfig(({ mode }) => {
   // proxies that path to the backend origin, preventing a CORS request.
   // If an absolute URL is provided only use its origin: the incoming request
   // already contains /api/v1 and must not receive the prefix twice.
-  const configuredBackend = env.VITE_BACKEND_API_URL || '';
+  const configuredBackend = env.VITE_BACKEND_API_URL || env.VITE_BACKEND_TARGET || '';
   const backendTarget = configuredBackend.startsWith('http')
     ? new URL(configuredBackend).origin
-    : 'http://localhost:3001';
+    : (configuredBackend ? `http://${configuredBackend}` : '');
+
+  const proxyConfig = backendTarget ? {
+    '/api': {
+      target: backendTarget,
+      changeOrigin: true,
+      secure: false,
+      rewrite: (path) => {
+        if (path.startsWith('/api/v1')) return path;
+        return path.replace(/^\/api/, '/api/v1');
+      }
+    }
+  } : {};
 
   return {
     plugins: [react()],
@@ -20,17 +32,11 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      proxy: {
-        '/api': {
-          target: backendTarget,
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => {
-            if (path.startsWith('/api/v1')) return path;
-            return path.replace(/^\/api/, '/api/v1');
-          }
-        }
-      }
+      proxy: proxyConfig
+    },
+    preview: {
+      port: 4173,
+      proxy: proxyConfig
     }
   };
 });

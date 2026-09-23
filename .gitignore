@@ -12,3 +12,4 @@ openapidocs.yml
 .agents
 .gemini
 graphify-out
+.env

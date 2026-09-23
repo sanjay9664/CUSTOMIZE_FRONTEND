@@ -411,7 +411,7 @@ const MainMeter = () => {
   const { getOverallStatus } = useDeviceStatus();
   const { sites, selectedSite, setSelectedSite } = useSiteStore();
 
-  // Sites fetched from sites route (http://localhost:3001/api/v1/sites)
+  // Sites fetched from backend sites route
   const [routeSites, setRouteSites] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
@@ -423,7 +423,7 @@ const MainMeter = () => {
     return localStorage.getItem('selected_main_meter_site_id') || '';
   });
 
-  // Devices fetched from http://localhost:3001/api/v1/devices/ with site_id and category=MAIN_ENERGY_METER
+  // Devices fetched with site_id and category=MAIN_ENERGY_METER
   const [siteDevices, setSiteDevices] = useState([]);
   const [devicesLoading, setDevicesLoading] = useState(false);
 
