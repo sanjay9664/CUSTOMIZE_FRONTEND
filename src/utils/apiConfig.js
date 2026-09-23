@@ -3,8 +3,35 @@
  * Environment variables (import.meta.env) are the single source of truth.
  */
 
+const isDev = typeof import.meta !== 'undefined' && import.meta.env && Boolean(import.meta.env.DEV);
 const RAW_BACKEND = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BACKEND_API_URL) || '/api/v1';
-const BACKEND_BASE = RAW_BACKEND.replace(/\/+$/, '');
+
+/**
+ * Normalizes the backend base URL:
+ * - In development: Uses relative '/api/v1' so the Vite proxy forwards requests to the target,
+ *   bypassing browser CORS wildcard origin blocking when credentials: 'include' is used.
+ * - In production: Ensures '/api/v1' is appended if only origin is provided, preventing ROUTE_NOT_FOUND errors.
+ */
+const normalizeBackendBase = (url) => {
+  if (!url || (isDev && url.startsWith('http'))) {
+    return '/api/v1';
+  }
+  let base = url.trim().replace(/\/+$/, '');
+  if (!base.endsWith('/api/v1') && !base.endsWith('/v1')) {
+    base = `${base}/api/v1`;
+  }
+  return base;
+};
+
+const BACKEND_BASE = normalizeBackendBase(RAW_BACKEND);
+
+// Ensure legacy components relying on window.process.env.REACT_APP_BACKEND_URL
+// use the environment-configured backend without hardcoded overrides
+if (typeof window !== 'undefined') {
+  window.process = window.process || { env: {} };
+  window.process.env = window.process.env || {};
+  window.process.env.REACT_APP_BACKEND_URL = isDev ? '' : BACKEND_BASE;
+}
 
 /**
  * Resolves full API endpoint URL avoiding duplicate /v1 prefixes
