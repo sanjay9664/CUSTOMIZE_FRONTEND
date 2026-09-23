@@ -1,7 +1,7 @@
 /**
  * Sochiot Location & Entity API Service
  * Interacts with the Sochiot IoT platform using the Access-Token obtained from
- * http://localhost:3001/api/v1/auth/Access-token.
+ * the backend auth/Access-token endpoint.
  * 
  * Inspired by ismartaccess-frontend-v2 architecture:
  * - Centralized endpoints from apiEndpoints.js

@@ -2632,7 +2632,7 @@ const ConfigTemplates = () => {
   const handleBulkRemove = async () => {
     if (window.confirm(`Are you sure you want to remove ${selectedTemplates.length} selected mappings?`)) {
       try {
-        await Promise.all(selectedTemplates.map(id => fetch(`http://localhost:5000/api/templates/${id}`, { method: 'DELETE' })));
+        await Promise.all(selectedTemplates.map(id => fetch(`/api/templates/${id}`, { method: 'DELETE' })));
       } catch (error) {
         console.error('Error deleting multiple from backend:', error);
       }
