@@ -1670,12 +1670,12 @@ const MotorsOverview = () => {
         .text-heading-adaptive { color: #ffffff; }
 
         /* ═════════════════════════════════════════════════════════════
-           LIGHT MODE PREMIUM SCADA EXECUTIVE THEME OVERRIDES
+           SOOTHING & EYE-COMFORTABLE LIGHT MODE THEME (ANTI-GLARE EXECUTIVE)
            ═════════════════════════════════════════════════════════════ */
         .light-mode .motors-page-wrapper,
         html[data-theme="light"] .motors-page-wrapper {
-          background: #f8fafc !important;
-          color: #0f172a !important;
+          background: #edf2f7 !important;
+          color: #1e293b !important;
         }
 
         .light-mode .text-heading-adaptive,
@@ -1683,9 +1683,16 @@ const MotorsOverview = () => {
           color: #0f172a !important;
         }
 
+        .light-mode .text-cyan-glow,
+        html[data-theme="light"] .text-cyan-glow {
+          color: #0284c7 !important;
+          text-shadow: none !important;
+        }
+
         .light-mode .header-title,
         html[data-theme="light"] .header-title {
           color: #0f172a !important;
+          font-weight: 800;
         }
         .light-mode .header-subtitle,
         html[data-theme="light"] .header-subtitle {
@@ -1696,15 +1703,15 @@ const MotorsOverview = () => {
         html[data-theme="light"] .live-node-badge {
           background: #e0f2fe !important;
           border-color: #bae6fd !important;
-          color: #0284c7 !important;
+          color: #0369a1 !important;
         }
 
         .light-mode .clock-badge,
         html[data-theme="light"] .clock-badge {
           background: #ffffff !important;
           border-color: #cbd5e1 !important;
-          color: #334155 !important;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+          color: #475569 !important;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
         }
 
         .light-mode .btn-scada-glass,
@@ -1712,24 +1719,26 @@ const MotorsOverview = () => {
           background: #ffffff !important;
           border-color: #cbd5e1 !important;
           color: #334155 !important;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
         }
         .light-mode .btn-scada-glass:hover,
         html[data-theme="light"] .btn-scada-glass:hover {
-          border-color: #0ea5e9 !important;
+          border-color: #0284c7 !important;
           color: #0284c7 !important;
+          background: #f0f9ff !important;
         }
 
         .light-mode .selector-card,
         html[data-theme="light"] .selector-card {
           background: #ffffff !important;
           border: 1px solid #cbd5e1 !important;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+          box-shadow: 0 3px 12px rgba(15, 23, 42, 0.03) !important;
+          border-radius: 14px !important;
         }
 
         .light-mode .selector-label,
         html[data-theme="light"] .selector-label {
-          color: #334155 !important;
+          color: #475569 !important;
         }
 
         .light-mode .selector-icon-box,
@@ -1739,16 +1748,17 @@ const MotorsOverview = () => {
 
         .light-mode .selector-dropdown,
         html[data-theme="light"] .selector-dropdown {
-          background-color: #ffffff !important;
+          background-color: #f8fafc !important;
           border: 1px solid #cbd5e1 !important;
           color: #0f172a !important;
-          font-weight: 800 !important;
+          font-weight: 700 !important;
           box-shadow: none !important;
         }
         .light-mode .selector-dropdown:focus,
         html[data-theme="light"] .selector-dropdown:hover {
-          border-color: #0ea5e9 !important;
-          box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15) !important;
+          border-color: #0284c7 !important;
+          background-color: #ffffff !important;
+          box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
         }
 
         .light-mode .selector-subtext,
@@ -1759,14 +1769,32 @@ const MotorsOverview = () => {
         .light-mode .btn-card,
         html[data-theme="light"] .btn-card {
           background: #ffffff !important;
-          border-color: #bae6fd !important;
+          border-color: #cbd5e1 !important;
+        }
+
+        .light-mode .view-motors-action-btn,
+        html[data-theme="light"] .view-motors-action-btn {
+          background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%) !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25) !important;
+        }
+        .light-mode .view-motors-action-btn:hover,
+        html[data-theme="light"] .view-motors-action-btn:hover {
+          box-shadow: 0 6px 18px rgba(2, 132, 199, 0.35) !important;
         }
 
         .light-mode .kpi-card,
         html[data-theme="light"] .kpi-card {
           background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04) !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03) !important;
+          border-radius: 14px !important;
+        }
+        .light-mode .kpi-card:hover,
+        html[data-theme="light"] .kpi-card:hover {
+          border-color: #0284c7 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
         }
 
         .light-mode .kpi-label,
@@ -1788,38 +1816,40 @@ const MotorsOverview = () => {
         html[data-theme="light"] .nav-tabs-container {
           background: #ffffff !important;
           border: 1px solid #cbd5e1 !important;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+          border-radius: 12px !important;
         }
 
         .light-mode .nav-tab-btn,
         html[data-theme="light"] .nav-tab-btn {
-          color: #334155 !important;
+          color: #475569 !important;
           background: #f8fafc !important;
           border: 1px solid #cbd5e1 !important;
         }
         .light-mode .nav-tab-btn:hover,
         html[data-theme="light"] .nav-tab-btn:hover {
           background: #f1f5f9 !important;
-          color: #0ea5e9 !important;
+          color: #0284c7 !important;
         }
 
         .light-mode .nav-tab-btn.active,
         html[data-theme="light"] .nav-tab-btn.active {
-          background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%) !important;
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
           color: #ffffff !important;
           border-color: transparent !important;
-          box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3) !important;
+          box-shadow: 0 3px 12px rgba(15, 23, 42, 0.2) !important;
         }
 
         .light-mode .motor-card-scada,
         html[data-theme="light"] .motor-card-scada {
           background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04) !important;
+          border-radius: 16px !important;
         }
         .light-mode .motor-card-scada:hover,
         html[data-theme="light"] .motor-card-scada:hover {
-          box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12), 0 0 20px var(--card-accent) !important;
+          box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
         }
 
         .light-mode .motor-title,
@@ -1844,18 +1874,18 @@ const MotorsOverview = () => {
           background: #ffffff !important;
           border-color: #cbd5e1 !important;
           color: #0f172a !important;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
         }
 
         .light-mode .motor-avatar-frame-large,
         html[data-theme="light"] .motor-avatar-frame-large {
           background: #f8fafc !important;
-          box-shadow: 0 0 20px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(0,0,0,0.05) !important;
+          box-shadow: 0 0 15px rgba(0, 0, 0, 0.08), inset 0 0 8px rgba(0,0,0,0.04) !important;
         }
 
         .light-mode .telemetry-heading-small,
         html[data-theme="light"] .telemetry-heading-small {
-          color: #0284c7 !important;
+          color: #0369a1 !important;
         }
 
         .light-mode .compact-tile,
@@ -1863,11 +1893,12 @@ const MotorsOverview = () => {
           background: #f8fafc !important;
           border: 1px solid #cbd5e1 !important;
           box-shadow: none !important;
+          border-radius: 10px !important;
         }
         .light-mode .compact-tile:hover,
         html[data-theme="light"] .compact-tile:hover {
           background: #f1f5f9 !important;
-          border-color: #0ea5e9 !important;
+          border-color: #0284c7 !important;
         }
 
         .light-mode .stat-label-small,
@@ -1914,8 +1945,8 @@ const MotorsOverview = () => {
         .light-mode .action-btn-diag-small,
         html[data-theme="light"] .action-btn-diag-small {
           background: #f0f9ff !important;
-          border: 1px solid #0ea5e9 !important;
-          color: #0284c7 !important;
+          border: 1px solid #0284c7 !important;
+          color: #0369a1 !important;
         }
 
         .light-mode .action-btn-details-small,
@@ -1930,8 +1961,8 @@ const MotorsOverview = () => {
         .light-mode .scada-table-card,
         html[data-theme="light"] .scada-table-card {
           background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 3px 12px rgba(15, 23, 42, 0.03) !important;
         }
 
         .light-mode .table,
@@ -1943,7 +1974,7 @@ const MotorsOverview = () => {
         .light-mode .table th,
         html[data-theme="light"] .table th {
           color: #475569 !important;
-          background-color: #f8fafc !important;
+          background-color: #f1f5f9 !important;
           border-bottom-color: #cbd5e1 !important;
         }
 
@@ -1966,8 +1997,8 @@ const MotorsOverview = () => {
         .light-mode .facility-summary-card,
         html[data-theme="light"] .facility-summary-card {
           background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 3px 12px rgba(15, 23, 42, 0.03) !important;
         }
         .light-mode .facility-summary-card h6,
         html[data-theme="light"] .facility-summary-card h6 {
