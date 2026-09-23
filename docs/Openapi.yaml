@@ -5383,6 +5383,161 @@ components:
           type: string
           format: date-time
 
+    DeviceSettingInput:
+      type: object
+      required: [moduleId, sochiotFieldName, displayName, dataType]
+      properties:
+        id:
+          type: integer
+          description: Optional setting ID (provided to update existing setting by ID; omitted for new settings)
+          example: 18
+        fieldId:
+          type: integer
+          nullable: true
+          description: Sochiot field ID
+        sochiotFieldId:
+          type: integer
+          nullable: true
+          description: Direct mapping / alias for Sochiot field ID
+          example: 102
+        graphId:
+          type: integer
+          nullable: true
+          description: Graph or dashboard panel configuration ID
+          example: 1
+        eventId:
+          type: integer
+          nullable: true
+          description: Sochiot event ID mapping
+          example: 22
+        eventKey:
+          type: string
+          nullable: true
+          description: Sochiot event key
+          example: "EVT_TEMP_01"
+        moduleId:
+          type: integer
+          example: 4583
+        moduleName:
+          type: string
+          nullable: true
+          example: "Main Incomer"
+        deviceName:
+          type: string
+          nullable: true
+          description: Device name label or Sochiot source device name
+          example: "Air Handling Unit 1"
+        sochiotFieldName:
+          type: string
+          example: "3,100F"
+        displayName:
+          type: string
+          example: "Voltage R-N"
+        dataType:
+          $ref: '#/components/schemas/FieldDataType'
+        unit:
+          type: string
+          nullable: true
+          example: "V"
+        enumValues:
+          type: array
+          items:
+            type: string
+          default: []
+        defaultThresholds:
+          type: object
+          properties:
+            warningHigh:
+              type: number
+              nullable: true
+            criticalHigh:
+              type: number
+              nullable: true
+            warningLow:
+              type: number
+              nullable: true
+            criticalLow:
+              type: number
+              nullable: true
+        warningHigh:
+          type: number
+          nullable: true
+          example: 250.0
+        criticalHigh:
+          type: number
+          nullable: true
+          example: 260.0
+        warningLow:
+          type: number
+          nullable: true
+          example: 210.0
+        criticalLow:
+          type: number
+          nullable: true
+          example: 200.0
+        isCommand:
+          type: boolean
+          default: false
+          example: false
+        commandAlias:
+          type: string
+          nullable: true
+        isReadable:
+          type: boolean
+          default: true
+          example: true
+        isDisplayed:
+          type: boolean
+          default: true
+          example: true
+        graphable:
+          type: boolean
+          default: true
+          example: true
+        isTelemetry:
+          type: boolean
+          default: true
+          example: true
+        isCumulative:
+          type: boolean
+          default: false
+          example: false
+        displayOrder:
+          type: integer
+          default: 0
+          example: 1
+        isActive:
+          type: boolean
+          default: true
+          example: true
+        meta:
+          type: object
+          description: Optional setting-level metadata
+
+    DeviceDefaultValues:
+      type: object
+      properties:
+        plannedDownTime:
+          type: number
+          default: 0
+          example: 0
+        plannedProduction:
+          type: number
+          default: 1000
+          example: 1000
+        cycleTime:
+          type: number
+          default: 25
+          example: 25
+        machiningCycle:
+          type: number
+          default: 1
+          example: 1
+        wagesPerHour:
+          type: number
+          default: 500
+          example: 500
+
     DeviceWidget:
       type: object
       properties:
@@ -6169,6 +6324,21 @@ components:
         installedAt:
           type: string
           format: date-time
+        moduleIds:
+          type: array
+          items:
+            type: integer
+          example: [4583]
+        settings:
+          type: array
+          description: Device settings list
+          items:
+            $ref: '#/components/schemas/DeviceSettingInput'
+        template_settings:
+          type: array
+          description: Alternative alias for settings
+          items:
+            $ref: '#/components/schemas/DeviceSettingInput'
 
     UpdateDeviceRequest:
       type: object
@@ -6191,6 +6361,11 @@ components:
           type: array
           items:
             type: integer
+        moduleIds:
+          type: array
+          items:
+            type: integer
+          example: [4583]
         areaId:
           type: integer
         buildingId:
@@ -6211,6 +6386,22 @@ components:
         installedAt:
           type: string
           format: date-time
+        settings:
+          type: array
+          description: Device settings list to update or upsert (updates by id if provided, else upserts by deviceId + sochiotFieldName)
+          items:
+            $ref: '#/components/schemas/DeviceSettingInput'
+        template_settings:
+          type: array
+          description: Alternative alias for settings
+          items:
+            $ref: '#/components/schemas/DeviceSettingInput'
+        default_values:
+          $ref: '#/components/schemas/DeviceDefaultValues'
+        rules:
+          type: array
+          items:
+            type: object
 
     DeviceTemplateRequest:
       type: object
@@ -6243,31 +6434,9 @@ components:
         template_settings:
           type: array
           items:
-            type: object
-            required: [moduleId, sochiotFieldName, displayName, dataType]
-            properties:
-              moduleId:
-                type: integer
-              sochiotFieldName:
-                type: string
-              displayName:
-                type: string
-              dataType:
-                $ref: '#/components/schemas/FieldDataType'
-              unit:
-                type: string
-              warningHigh:
-                type: number
-              criticalHigh:
-                type: number
-              warningLow:
-                type: number
-              criticalLow:
-                type: number
-              isCommand:
-                type: boolean
-              graphable:
-                type: boolean
+            $ref: '#/components/schemas/DeviceSettingInput'
+        default_values:
+          $ref: '#/components/schemas/DeviceDefaultValues'
         rules:
           type: array
           items:
@@ -6313,37 +6482,12 @@ components:
       properties:
         settings:
           type: array
+          description: List of settings to update or upsert (updates by id if provided, else upserts by deviceId + sochiotFieldName; omitted settings are soft-deleted)
           items:
-            type: object
-            properties:
-              id:
-                type: integer
-              moduleId:
-                type: integer
-              sochiotFieldName:
-                type: string
-              displayName:
-                type: string
-              dataType:
-                $ref: '#/components/schemas/FieldDataType'
-              unit:
-                type: string
-              warningHigh:
-                type: number
-              criticalHigh:
-                type: number
-              warningLow:
-                type: number
-              criticalLow:
-                type: number
-              graphable:
-                type: boolean
-              isCommand:
-                type: boolean
-              isTelemetry:
-                type: boolean
-              isCumulative:
-                type: boolean
+            $ref: '#/components/schemas/DeviceSettingInput'
+        meta:
+          type: object
+          description: Optional device-level Sochiot metadata
 
     UpdateRuleRequest:
       type: object

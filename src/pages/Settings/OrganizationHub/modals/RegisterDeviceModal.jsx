@@ -9,6 +9,7 @@ import { parseLocationValue } from '../../../../utils/locationTreeUtils';
 import { fetchDeviceDetails, extractDeviceModulesAndFields, fetchDevicesByDeviceIds } from '../../../../services/sochiotLocationService';
 import { getApiUrl } from '../../../../utils/apiConfig';
 import { DEVICE_CATEGORIES, formatCategoryLabel, getTemplateForCategory } from '../../../../constants/deviceTemplates';
+import { isCumulativeMetric, validateUniqueSettingFieldNames } from '../../../../types/device.types';
 
 export const findMatchingModule = (modules, row) => {
   if (!Array.isArray(modules) || modules.length === 0 || !row) return null;
@@ -95,7 +96,9 @@ const RegisterDeviceModal = ({
     warningHigh: '',
     criticalHigh: '',
     warningLow: '',
-    criticalLow: ''
+    criticalLow: '',
+    isCumulative: false,
+    isTelemetry: true
   });
 
   const handleOpenThresholdModal = (idx) => {
@@ -105,7 +108,9 @@ const RegisterDeviceModal = ({
       warningHigh: f.warningHigh !== undefined && f.warningHigh !== null ? f.warningHigh : '',
       criticalHigh: f.criticalHigh !== undefined && f.criticalHigh !== null ? f.criticalHigh : '',
       warningLow: f.warningLow !== undefined && f.warningLow !== null ? f.warningLow : '',
-      criticalLow: f.criticalLow !== undefined && f.criticalLow !== null ? f.criticalLow : ''
+      criticalLow: f.criticalLow !== undefined && f.criticalLow !== null ? f.criticalLow : '',
+      isCumulative: isCumulativeMetric(f),
+      isTelemetry: f.isTelemetry !== false
     });
   };
 
@@ -133,6 +138,8 @@ const RegisterDeviceModal = ({
       copy[thresholdModalIndex].warningLow = wL;
       copy[thresholdModalIndex].criticalLow = cL;
       copy[thresholdModalIndex].thresholdValue = wH !== null ? wH : '';
+      copy[thresholdModalIndex].isCumulative = Boolean(thresholdDraft.isCumulative);
+      copy[thresholdModalIndex].isTelemetry = Boolean(thresholdDraft.isTelemetry);
       setDynamicTemplateFields(copy);
     }
     setThresholdModalIndex(null);
@@ -1217,42 +1224,91 @@ const RegisterDeviceModal = ({
                     ) : (
                       dynamicTemplateFields.map((f, idx) => (
                       <tr key={idx}>
-                        {/* 1. Display Name (Locked/Read-Only matching Central Template) */}
+                        {/* 1. Display Name (Template Parameter Selector / Editable) */}
                         <td>
-                          <div className="position-relative d-flex align-items-center w-100">
-                            <Form.Control
-                              size="sm"
-                              type="text"
-                              value={f.displayName || ''}
-                              readOnly={Boolean(f.required)}
-                              disabled={Boolean(f.required)}
-                              onChange={(e) => {
-                                const copy = [...dynamicTemplateFields];
-                                copy[idx] = { ...copy[idx], displayName: e.target.value };
-                                setDynamicTemplateFields(copy);
-                              }}
-                              placeholder="Parameter Name"
-                              className="wizard-input text-slate-100 w-100 text-truncate"
-                              style={{
-                                height: 32,
-                                fontSize: 12,
-                                cursor: f.required ? 'default' : 'text',
-                                backgroundColor: f.required ? 'rgba(15, 23, 42, 0.65)' : 'rgba(30, 41, 59, 0.75)',
-                                opacity: 0.95,
-                                paddingRight: f.required ? 20 : 10
-                              }}
-                              title={f.required ? `${f.displayName} *` : (f.displayName || 'Parameter Name')}
-                            />
-                            {f.required && (
-                              <span
-                                className="position-absolute end-0 me-2 text-danger fw-bold fs-13"
-                                style={{ pointerEvents: 'none', lineHeight: 1 }}
-                                title="Required Parameter"
-                              >
-                                *
-                              </span>
-                            )}
-                          </div>
+                          {(() => {
+                            const tmpl = getTemplateForCategory(registerForm?.category || editingDevice?.category || 'ENERGY_METER');
+                            const templateParams = tmpl?.parameters || [];
+                            const isCustom = Boolean(f.isCustomDisplayName);
+
+                            return (
+                              <div className="d-flex align-items-center gap-1 w-100 position-relative">
+                                {!isCustom ? (
+                                  <Form.Select
+                                    size="sm"
+                                    value={f.displayName || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val === '__custom__') {
+                                        const copy = [...dynamicTemplateFields];
+                                        copy[idx].isCustomDisplayName = true;
+                                        setDynamicTemplateFields(copy);
+                                        return;
+                                      }
+                                      const copy = [...dynamicTemplateFields];
+                                      const matchedParam = templateParams.find(p => p.name === val);
+                                      copy[idx].displayName = val;
+                                      if (matchedParam) {
+                                        copy[idx].required = Boolean(matchedParam.required);
+                                        if (matchedParam.unit) copy[idx].unit = matchedParam.unit;
+                                        if (matchedParam.dataType) copy[idx].dataType = matchedParam.dataType;
+                                        copy[idx].isCumulative = isCumulativeMetric({ displayName: val, unit: matchedParam.unit || copy[idx].unit });
+                                      }
+                                      setDynamicTemplateFields(copy);
+                                    }}
+                                    className="wizard-select text-truncate"
+                                    style={{ height: 32, fontSize: 12 }}
+                                  >
+                                    <option value="">Select Parameter</option>
+                                    {templateParams.length > 0 && (
+                                      <optgroup label={`${tmpl?.label || 'Template'} Parameters`}>
+                                        {templateParams.map(p => (
+                                          <option key={p.name} value={p.name}>
+                                            {p.name}{p.required ? ' *' : ''}
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    )}
+                                    {f.displayName && !templateParams.some(p => p.name === f.displayName) && (
+                                      <optgroup label="Current Setting">
+                                        <option value={f.displayName}>{f.displayName}</option>
+                                      </optgroup>
+                                    )}
+                                    <option value="__custom__">+ Enter Custom Name...</option>
+                                  </Form.Select>
+                                ) : (
+                                  <div className="d-flex align-items-center w-100 gap-1">
+                                    <Form.Control
+                                      size="sm"
+                                      type="text"
+                                      value={f.displayName || ''}
+                                      placeholder="Custom Parameter Name"
+                                      onChange={(e) => {
+                                        const copy = [...dynamicTemplateFields];
+                                        copy[idx].displayName = e.target.value;
+                                        setDynamicTemplateFields(copy);
+                                      }}
+                                      className="wizard-input text-slate-100 w-100 text-truncate"
+                                      style={{ height: 32, fontSize: 12 }}
+                                    />
+                                    <button
+                                      type="button"
+                                      title="Select from template parameters"
+                                      onClick={() => {
+                                        const copy = [...dynamicTemplateFields];
+                                        copy[idx].isCustomDisplayName = false;
+                                        setDynamicTemplateFields(copy);
+                                      }}
+                                      className="btn btn-sm btn-outline-info p-0 px-1.5 flex-shrink-0"
+                                      style={{ height: 32, fontSize: 11 }}
+                                    >
+                                      List
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* 2. Gateway & Device */}
@@ -1522,6 +1578,11 @@ const RegisterDeviceModal = ({
                                 <div className="d-flex align-items-center gap-1.5 overflow-hidden">
                                   <Sliders size={13} className="text-warning flex-shrink-0" />
                                   <span className="fs-12 fw-semibold">Threshold Limits</span>
+                                  {isCumulativeMetric(f) && (
+                                    <span className="badge bg-info bg-opacity-25 text-info fs-10 px-1 py-0.5 rounded font-monospace" title="Cumulative Metric (Indefinite accumulation for delta math)">
+                                      Σ
+                                    </span>
+                                  )}
                                 </div>
                                 <span className={`threshold-limits-chip font-monospace fs-10 px-1.5 py-0.5 rounded flex-shrink-0 ${!hasLimits ? 'opacity-75' : ''}`}>
                                   {hasLimits ? `${f.warningHigh ?? '-'}/${f.criticalHigh ?? '-'}` : 'Optional'}
@@ -1537,13 +1598,26 @@ const RegisterDeviceModal = ({
                             variant="link"
                             size="sm"
                             onClick={() => {
-                              if (f.required) return;
+                              if (dynamicTemplateFields.length <= 1) {
+                                const copy = [...dynamicTemplateFields];
+                                copy[0] = {
+                                  ...copy[0],
+                                  displayName: '',
+                                  sochiotFieldName: '',
+                                  moduleId: '',
+                                  moduleName: '',
+                                  warningHigh: null,
+                                  criticalHigh: null,
+                                  warningLow: null,
+                                  criticalLow: null
+                                };
+                                setDynamicTemplateFields(copy);
+                                return;
+                              }
                               setDynamicTemplateFields(dynamicTemplateFields.filter((_, i) => i !== idx));
                             }}
-                            disabled={Boolean(f.required)}
-                            className={`p-1 border-0 ${f.required ? 'text-muted opacity-25' : 'text-danger'}`}
-                            style={f.required ? { cursor: 'not-allowed' } : {}}
-                            title={f.required ? 'Required template parameter cannot be removed' : 'Remove Field'}
+                            className="p-1 border-0 text-danger"
+                            title="Remove Field"
                           >
                             <Trash2 size={15} />
                           </Button>
@@ -1565,6 +1639,10 @@ const RegisterDeviceModal = ({
                       const defaultModuleId = lastField?.moduleId || '';
                       const defaultModuleName = lastField?.moduleName || '';
 
+                      const tmpl = getTemplateForCategory(registerForm?.category || editingDevice?.category || 'ENERGY_METER');
+                      const existingNames = new Set((dynamicTemplateFields || []).map(f => (f.displayName || '').trim().toLowerCase()));
+                      const nextParam = (tmpl?.parameters || []).find(p => !existingNames.has((p.name || '').trim().toLowerCase())) || null;
+
                       setDynamicTemplateFields([
                         ...dynamicTemplateFields,
                         {
@@ -1574,18 +1652,21 @@ const RegisterDeviceModal = ({
                           moduleId: defaultModuleId,
                           moduleName: defaultModuleName,
                           sochiotFieldName: '',
-                          displayName: '',
+                          displayName: nextParam?.name || '',
                           isManualEntry: false,
-                          required: false,
+                          required: Boolean(nextParam?.required),
                           thresholdValue: '',
                           warningHigh: null,
                           criticalHigh: null,
                           warningLow: null,
                           criticalLow: null,
-                          dataType: 'INTEGER',
-                          unit: '',
+                          dataType: nextParam?.dataType || 'INTEGER',
+                          unit: nextParam?.unit || '',
                           isCommand: false,
-                          graphable: true
+                          graphable: true,
+                          isTelemetry: true,
+                          isCumulative: nextParam ? isCumulativeMetric({ displayName: nextParam.name, unit: nextParam.unit }) : false,
+                          isActive: true
                         }
                       ]);
                     }}
@@ -1640,11 +1721,12 @@ const RegisterDeviceModal = ({
                 const defaultModuleId = (dynamicTemplateFields || []).find(f => f.moduleId)?.moduleId || '';
                 const defaultModuleName = (dynamicTemplateFields || []).find(f => f.moduleName)?.moduleName || '';
 
-                if (isPristine && tmpl && tmpl.parameters) {
+                if (!editingDevice && isPristine) {
                   if (typeof setDynamicTemplateFields === 'function') {
-                    setDynamicTemplateFields(tmpl.parameters.map(p => ({
-                      displayName: p.name,
-                      required: Boolean(p.required),
+                    const firstParam = (tmpl?.parameters && tmpl.parameters.length > 0) ? tmpl.parameters[0] : null;
+                    setDynamicTemplateFields([{
+                      displayName: firstParam?.name || '',
+                      required: Boolean(firstParam?.required),
                       deviceId: defaultDev,
                       deviceName: defaultDevName,
                       deviceVal: defaultDevVal,
@@ -1656,42 +1738,40 @@ const RegisterDeviceModal = ({
                       criticalHigh: null,
                       warningLow: null,
                       criticalLow: null,
-                      dataType: 'INTEGER',
-                      unit: '',
+                      dataType: firstParam?.dataType || 'INTEGER',
+                      unit: firstParam?.unit || '',
                       isCommand: false,
-                      graphable: true
-                    })));
-                  }
-                } else if (tmpl && tmpl.parameters && Array.isArray(dynamicTemplateFields) && dynamicTemplateFields.length > 0) {
-                  const existingNames = new Set(dynamicTemplateFields.map(f => (f.displayName || '').trim().toLowerCase()));
-                  const missingParams = tmpl.parameters.filter(p => !existingNames.has((p.name || '').trim().toLowerCase()));
-                  if (missingParams.length > 0 && typeof setDynamicTemplateFields === 'function') {
-                    const extraFields = missingParams.map(p => ({
-                      displayName: p.name,
-                      required: Boolean(p.required),
-                      deviceId: defaultDev,
-                      deviceName: defaultDevName,
-                      deviceVal: defaultDevVal,
-                      moduleId: defaultModuleId,
-                      moduleName: defaultModuleName,
-                      sochiotFieldName: '',
-                      thresholdValue: '',
-                      warningHigh: null,
-                      criticalHigh: null,
-                      warningLow: null,
-                      criticalLow: null,
-                      dataType: 'INTEGER',
-                      unit: '',
-                      isCommand: false,
-                      graphable: true
-                    }));
-                    setDynamicTemplateFields([...dynamicTemplateFields, ...extraFields]);
+                      graphable: true,
+                      isTelemetry: true,
+                      isCumulative: firstParam ? isCumulativeMetric({ displayName: firstParam.name, unit: firstParam.unit }) : false,
+                      isActive: true
+                    }]);
                   }
                 } else if (!dynamicTemplateFields || dynamicTemplateFields.length === 0) {
                   if (typeof setDynamicTemplateFields === 'function') {
-                    setDynamicTemplateFields([
-                      { deviceId: defaultDev, deviceName: defaultDevName, deviceVal: defaultDevVal, moduleId: defaultModuleId, sochiotFieldName: '', displayName: '', warningHigh: null, criticalHigh: null, warningLow: null, criticalLow: null }
-                    ]);
+                    const firstParam = (tmpl?.parameters && tmpl.parameters.length > 0) ? tmpl.parameters[0] : null;
+                    setDynamicTemplateFields([{
+                      deviceId: defaultDev,
+                      deviceName: defaultDevName,
+                      deviceVal: defaultDevVal,
+                      moduleId: defaultModuleId,
+                      moduleName: defaultModuleName,
+                      sochiotFieldName: '',
+                      displayName: firstParam?.name || '',
+                      required: Boolean(firstParam?.required),
+                      thresholdValue: '',
+                      warningHigh: null,
+                      criticalHigh: null,
+                      warningLow: null,
+                      criticalLow: null,
+                      dataType: firstParam?.dataType || 'INTEGER',
+                      unit: firstParam?.unit || '',
+                      isCommand: false,
+                      graphable: true,
+                      isTelemetry: true,
+                      isCumulative: firstParam ? isCumulativeMetric({ displayName: firstParam.name, unit: firstParam.unit }) : false,
+                      isActive: true
+                    }]);
                   }
                 }
                 fetchAndStoreSochiotAccessToken();
@@ -1790,27 +1870,61 @@ const RegisterDeviceModal = ({
                   const parsedMeta = f.meta 
                     ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
                     : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
+
+                  const resolvedFieldId = (f.fieldId && !isNaN(Number(f.fieldId)))
+                    ? Number(f.fieldId)
+                    : ((f.sochiotFieldId && !isNaN(Number(f.sochiotFieldId)))
+                      ? Number(f.sochiotFieldId)
+                      : ((f.mappingId && !isNaN(Number(f.mappingId))) ? Number(f.mappingId) : null));
+
+                  const resolvedSochiotFieldId = (f.sochiotFieldId && !isNaN(Number(f.sochiotFieldId)))
+                    ? Number(f.sochiotFieldId)
+                    : resolvedFieldId;
+
+                  const resolvedGraphId = (f.graphId && !isNaN(Number(f.graphId))) ? Number(f.graphId) : null;
+                  const resolvedEventId = (f.eventId && !isNaN(Number(f.eventId))) ? Number(f.eventId) : null;
+
                   return {
+                    // Golden Rule 1: Include database id for existing settings; omit for new ones
+                    ...(typeof f.id === 'number' && f.id > 0 ? { id: f.id } : {}),
                     moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
-                    moduleName: String(matchedMod?.label || matchedMod?.name || f.moduleName || f.deviceName || 'General').trim(),
-                    fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
+                    moduleName: String(matchedMod?.label || matchedMod?.name || f.moduleName || f.deviceName || '').trim() || null,
+                    fieldId: resolvedFieldId,
+                    sochiotFieldId: resolvedSochiotFieldId,
+                    graphId: resolvedGraphId,
+                    eventId: resolvedEventId,
+                    eventKey: f.eventKey ? String(f.eventKey).trim() : null,
+                    deviceName: String(f.deviceName || '').trim() || null,
                     sochiotFieldName: String(f.sochiotFieldName || '').trim(),
                     displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
                     dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(String(f.dataType).toUpperCase())) ? String(f.dataType).toUpperCase() : 'INTEGER',
-                    unit: f.unit || null,
+                    unit: f.unit ? String(f.unit).trim() : null,
+                    displayOrder: (f.displayOrder !== undefined && f.displayOrder !== null && !isNaN(Number(f.displayOrder))) ? Number(f.displayOrder) : idx + 1,
+                    enumValues: Array.isArray(f.enumValues) ? f.enumValues : [],
                     warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined && !isNaN(Number(f.warningHigh))) ? Number(f.warningHigh) : null,
                     criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined && !isNaN(Number(f.criticalHigh))) ? Number(f.criticalHigh) : null,
                     warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined && !isNaN(Number(f.warningLow))) ? Number(f.warningLow) : null,
                     criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined && !isNaN(Number(f.criticalLow))) ? Number(f.criticalLow) : null,
+                    isTelemetry: f.isTelemetry !== false,
+                    isCumulative: isCumulativeMetric(f),
                     isCommand: Boolean(f.isCommand),
-                    commandAlias: f.commandAlias || null,
+                    commandAlias: f.commandAlias ? String(f.commandAlias).trim() : null,
                     isReadable: f.isReadable !== false,
                     isDisplayed: f.isDisplayed !== false,
                     graphable: f.graphable !== false,
-                    displayOrder: f.displayOrder ? parseInt(f.displayOrder, 10) : idx + 1,
+                    isActive: f.isActive !== false,
                     meta: parsedMeta
                   };
                 });
+
+                // Validate uniqueness of sochiotFieldName to prevent 409 DUPLICATE_SETTING
+                const duplicateCheck = validateUniqueSettingFieldNames(templateSettings);
+                if (!duplicateCheck.valid) {
+                  if (typeof showToast === 'function') {
+                    showToast('danger', `Duplicate setting field "${duplicateCheck.duplicateField}" detected. Each Sochiot Field must be unique.`);
+                  }
+                  return;
+                }
 
                 const existingRules = Array.isArray(registerForm?.rules) && registerForm.rules.length > 0
                   ? registerForm.rules
@@ -1840,6 +1954,7 @@ const RegisterDeviceModal = ({
                   name: registerForm.name.trim(),
                   category: registerForm.category || 'ENERGY_METER',
                   sochiotDeviceIds: parsedSochiotIds,
+                  moduleIds: parsedModuleIds,
                   serialNumber: registerForm.serialNumber ? registerForm.serialNumber.trim() : null,
                   sochiotTemplateId: registerForm.sochiotTemplateId ? Number(registerForm.sochiotTemplateId) : (editingDevice?.sochiotTemplateId || null),
                   templateName: null,
@@ -1851,6 +1966,7 @@ const RegisterDeviceModal = ({
                   energyGroupId: registerForm.energyGroupId ? parseInt(registerForm.energyGroupId, 10) : null,
                   displayOrder: parseInt(registerForm.displayOrder, 10) || 0,
                   isActive: registerForm.isActive !== false,
+                  settings: templateSettings,
                   template_settings: templateSettings,
                   rules: formattedRules
                 };
@@ -1858,7 +1974,7 @@ const RegisterDeviceModal = ({
                 if (registerForm.assetId) {
                   baseDevicePayload.assetId = String(registerForm.assetId);
                 }
-                if (registerForm.profileId && typeof registerForm.profileId === 'string' && registerForm.profileId.length >= 20 && !registerForm.profileId.includes(' ')) {
+                if (registerForm.profileId && typeof registerForm.profileId === 'string' && registerForm.profileId.length >= 10 && !registerForm.profileId.includes(' ')) {
                   baseDevicePayload.profileId = registerForm.profileId;
                 }
 
@@ -1869,10 +1985,9 @@ const RegisterDeviceModal = ({
                   let res;
                   if (editingDevice) {
                     const patchPayload = {
-                      ...baseDevicePayload
+                      ...baseDevicePayload,
+                      ...(resolvedSiteId ? { siteId: Number(resolvedSiteId) } : {})
                     };
-                    // Ensure 'settings' is NEVER passed in device update payload, only 'template_settings'
-                    delete patchPayload.settings;
 
                     const queryParam = resolvedSiteId ? `?siteId=${resolvedSiteId}` : '';
                     const updateUrl = getApiUrl(`/devices/${editingDevice.id}${queryParam}`);
@@ -1881,51 +1996,6 @@ const RegisterDeviceModal = ({
                       headers,
                       body: JSON.stringify(patchPayload)
                     });
-
-                    // Also sync device settings via PUT /sites/{siteId}/devices/{deviceId}/settings
-                    if (res.ok && templateSettings.length > 0 && resolvedSiteId) {
-                      try {
-                        const settingsForPut = validFields.map((f, idx) => {
-                          const matchedMod = findMatchingModule(deviceConfigs[f.deviceId]?.modules, f);
-                          const rawModId = matchedMod ? matchedMod.id : f.moduleId;
-                          const mId = parseInt(rawModId, 10);
-                          const parsedMeta = f.meta 
-                            ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
-                            : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
-                          return {
-                            ...(f.id ? { id: f.id } : {}),
-                            moduleId: !isNaN(mId) && mId > 0 ? mId : 0,
-                            moduleName: String(matchedMod?.label || matchedMod?.name || f.moduleName || f.deviceName || 'General').trim(),
-                            fieldId: f.fieldId || f.sochiotFieldId || f.mappingId || (typeof f.id === 'number' ? f.id : null),
-                            sochiotFieldName: String(f.sochiotFieldName || '').trim(),
-                            displayName: String(f.displayName || f.sochiotFieldName || '').trim(),
-                            dataType: (f.dataType && ['INTEGER', 'FLOAT', 'BOOLEAN', 'STRING', 'ENUM'].includes(String(f.dataType).toUpperCase())) ? String(f.dataType).toUpperCase() : 'INTEGER',
-                            unit: f.unit || null,
-                            enumValues: Array.isArray(f.enumValues) ? f.enumValues : [],
-                            warningHigh: (f.warningHigh !== '' && f.warningHigh !== null && f.warningHigh !== undefined && !isNaN(Number(f.warningHigh))) ? Number(f.warningHigh) : null,
-                            criticalHigh: (f.criticalHigh !== '' && f.criticalHigh !== null && f.criticalHigh !== undefined && !isNaN(Number(f.criticalHigh))) ? Number(f.criticalHigh) : null,
-                            warningLow: (f.warningLow !== '' && f.warningLow !== null && f.warningLow !== undefined && !isNaN(Number(f.warningLow))) ? Number(f.warningLow) : null,
-                            criticalLow: (f.criticalLow !== '' && f.criticalLow !== null && f.criticalLow !== undefined && !isNaN(Number(f.criticalLow))) ? Number(f.criticalLow) : null,
-                            isCommand: Boolean(f.isCommand),
-                            commandAlias: f.commandAlias || null,
-                            isReadable: f.isReadable !== false,
-                            isDisplayed: f.isDisplayed !== false,
-                            graphable: f.graphable !== false,
-                            displayOrder: f.displayOrder ? parseInt(f.displayOrder, 10) : idx + 1,
-                            meta: parsedMeta
-                          };
-                        });
-
-                        const settingsUrl = getApiUrl(`/sites/${resolvedSiteId}/devices/${editingDevice.id}/settings`);
-                        await fetch(settingsUrl, {
-                          method: 'PUT',
-                          headers,
-                          body: JSON.stringify({ settings: settingsForPut })
-                        });
-                      } catch (se) {
-                        console.warn('Device settings sync notice:', se);
-                      }
-                    }
                   } else {
                     const createPayload = { ...baseDevicePayload };
                     delete createPayload.settings;
@@ -2060,6 +2130,45 @@ const RegisterDeviceModal = ({
                   placeholder="Optional"
                 />
               </Form.Group>
+            </Col>
+
+            <Col xs={12} className="pt-2">
+              <div className="d-flex flex-column gap-2 p-3 rounded-2" style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="fs-12 fw-semibold text-white d-flex align-items-center gap-1.5">
+                      <span>Cumulative Metric (Energy / Water meters)</span>
+                      <span className="badge bg-info bg-opacity-25 text-info fs-10 font-monospace">kWh / m³</span>
+                    </div>
+                    <div className="text-slate-400 fs-11 mt-0.5">
+                      Enables indefinite accumulation tracking and hourly/daily delta consumption rollups.
+                    </div>
+                  </div>
+                  <Form.Check
+                    type="switch"
+                    id="modal-toggle-cumulative"
+                    checked={Boolean(thresholdDraft.isCumulative)}
+                    onChange={(e) => setThresholdDraft({ ...thresholdDraft, isCumulative: e.target.checked })}
+                    className="fs-14 ms-3"
+                  />
+                </div>
+
+                <div className="d-flex align-items-center justify-content-between pt-2 border-top border-secondary border-opacity-25">
+                  <div>
+                    <div className="fs-12 fw-semibold text-white">Live Telemetry Collection</div>
+                    <div className="text-slate-400 fs-11 mt-0.5">
+                      Records live telemetry readings and scheduled rollups for this metric.
+                    </div>
+                  </div>
+                  <Form.Check
+                    type="switch"
+                    id="modal-toggle-telemetry"
+                    checked={thresholdDraft.isTelemetry !== false}
+                    onChange={(e) => setThresholdDraft({ ...thresholdDraft, isTelemetry: e.target.checked })}
+                    className="fs-14 ms-3"
+                  />
+                </div>
+              </div>
             </Col>
           </Row>
         )}
