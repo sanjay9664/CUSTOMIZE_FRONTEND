@@ -464,16 +464,19 @@ const SubMeters = () => {
 
     setMeters(prev => {
       return siteDevices.map((dev, idx) => {
-        const devId = String(dev.id || dev.deviceId || `SM-${idx + 1}`);
-        const bmsDevId = dev.bmsDeviceId || dev.deviceId || devId;
+        // Use ?? so numeric id=0 isn't treated as falsy
+        const rawId = dev.id ?? dev.deviceId;
+        const devId = (rawId !== undefined && rawId !== null) ? String(rawId) : `SM-${idx + 1}`;
+        const bmsDevId = dev.bmsDeviceId ?? dev.deviceId ?? rawId;
+        const bmsDevIdStr = (bmsDevId !== undefined && bmsDevId !== null) ? String(bmsDevId) : devId;
         const label = dev.name || dev.deviceName || dev.title || dev.hardwareId || `Sub-Meter ${dev.id}`;
         const mappingSource = dev.defaultValues || dev.settings?.[0]?.meta || dev.settings || dev.mapping || {};
         const existing = prev.find(m => String(m.id) === devId || String(m.deviceId) === String(dev.deviceId) || String(m.bmsDeviceId) === String(bmsDevId));
 
         return {
           id: devId,
-          deviceId: String(dev.id || dev.deviceId),
-          bmsDeviceId: String(bmsDevId),
+          deviceId: String(dev.id ?? dev.deviceId ?? ''),
+          bmsDeviceId: bmsDevIdStr,
           templateId: devId,
           label: label,
           type: dev.category || 'Sub-Energy Meter',
@@ -509,7 +512,10 @@ const SubMeters = () => {
   const fetchBatchEvents = async () => {
     if (!siteDevices || siteDevices.length === 0) return;
     const deviceIds = siteDevices
-      .map(d => String(d.bmsDeviceId || d.deviceId || d.id))
+      .map(d => {
+        const id = d.bmsDeviceId ?? d.deviceId ?? d.id;
+        return (id !== undefined && id !== null) ? String(id) : '';
+      })
       .filter(Boolean);
 
     if (deviceIds.length === 0) return;
@@ -528,12 +534,15 @@ const SubMeters = () => {
             const rawDevIdStr = String(meter.deviceId || '');
 
             const matchResult = results.find(r => {
-              const rDevId = String(r.deviceId || r.bmsDeviceId || r.id || '');
+              // Use ?? so numeric id=0 is preserved as "0" not dropped as falsy
+              const rDevId = String(r.deviceId ?? r.bmsDeviceId ?? r.id ?? '');
+              const rName = String(r.name || r.deviceName || '').trim().toUpperCase();
+              const meterLabel = String(meter.label || '').trim().toUpperCase();
               return (
                 rDevId === devIdStr ||
                 rDevId === bmsDevIdStr ||
                 rDevId === rawDevIdStr ||
-                (r.deviceName && String(r.deviceName).trim().toUpperCase() === String(meter.label).trim().toUpperCase())
+                (rName && meterLabel && rName === meterLabel)
               );
             });
 
@@ -544,8 +553,16 @@ const SubMeters = () => {
             const updates = resObj.updates;
             const lastEventTime = resObj.lastEventTime;
             const resolvedSettings = resObj.resolvedSettings;
+            // Store raw fields so the detail modal can re-resolve with full fidelity
+            const rawEventFields = Array.isArray(matchResult.fields) ? matchResult.fields : [];
 
-            if (!updates || Object.keys(updates).length === 0) return meter;
+            if (!updates || Object.keys(updates).length === 0) {
+              // Still store raw fields even if updates are empty, so the modal can resolve them
+              if (rawEventFields.length > 0) {
+                return { ...meter, rawEventFields };
+              }
+              return meter;
+            }
 
             const telemetryValues = {
               ...(meter.telemetryValues || {}),
@@ -555,6 +572,7 @@ const SubMeters = () => {
             const updatedMeter = {
               ...meter,
               telemetryValues,
+              rawEventFields,
               resolvedSettings: resolvedSettings && resolvedSettings.length > 0 ? resolvedSettings : (meter.resolvedSettings || [])
             };
 
@@ -683,6 +701,11 @@ const SubMeters = () => {
   };
 
   const getMeterMappedStatus = (meter) => {
+    if (!meter) return false;
+    if (meter.resolvedSettings && meter.resolvedSettings.length > 0) return true;
+    if (meter.telemetryValues && Object.keys(meter.telemetryValues).length > 0) return true;
+    if (Array.isArray(meter.device?.settings) && meter.device.settings.length > 0) return true;
+    if (Array.isArray(meter.device?.fields) && meter.device.fields.length > 0) return true;
     return Boolean(meter?.mapping && (meter.mapping.deviceId || Object.keys(meter.mapping).length > 0));
   };
 
@@ -1390,9 +1413,31 @@ const SubMeters = () => {
               </Modal.Header>
               <Modal.Body className="p-3" style={{ maxHeight: '80vh', overflowY: 'auto', zIndex: 1, position: 'relative' }}>
                 {(() => {
+                  // Prefer pre-resolved settings from the last batch (already has values via settingId match)
+                  // Fallback: re-run resolver with the raw fields array (not the processed telemetry map)
                   const resolvedList = (activeMeter?.resolvedSettings && activeMeter.resolvedSettings.length > 0)
                     ? activeMeter.resolvedSettings
-                    : resolveDeviceTelemetry(activeMeter?.device || activeMeter, activeMeter?.telemetryValues || {}, 'SUB_ENERGY_METER').resolvedSettings;
+                    : resolveDeviceTelemetry(
+                        activeMeter?.device || activeMeter,
+                        activeMeter?.rawEventFields?.length > 0
+                          ? { fields: activeMeter.rawEventFields }
+                          : activeMeter?.telemetryValues || {},
+                        activeMeter?.type || 'SUB_ENERGY_METER'
+                      ).resolvedSettings;
+
+                  // Deduplicate display settings by parameter name, preferring items with live readings over null duplicates
+                  const displayMap = new Map();
+                  resolvedList.forEach(item => {
+                    const nameKey = (item.displayName || item.settingDef?.displayName || item.settingDef?.name || '').trim().toLowerCase();
+                    if (!nameKey) return;
+                    const existing = displayMap.get(nameKey);
+                    if (!existing) {
+                      displayMap.set(nameKey, item);
+                    } else if ((existing.value === null || existing.value === undefined) && (item.value !== null && item.value !== undefined)) {
+                      displayMap.set(nameKey, item);
+                    }
+                  });
+                  const displayList = Array.from(displayMap.values());
 
                   return (
                     <Row className="g-3">
@@ -1401,13 +1446,13 @@ const SubMeters = () => {
                           <h6 className="text-info glow-text-info uppercase tracking-wider fs-12 mb-3 d-flex align-items-center gap-2 fw-bold">
                             <Zap size={14} className="animate-pulse" /> Telemetry Breakdown
                           </h6>
-                          {resolvedList.length === 0 ? (
+                          {displayList.length === 0 ? (
                             <div className="text-center py-4 text-secondary fs-13 font-monospace">
                               No telemetry parameters available.
                             </div>
                           ) : (
                             <Row className="g-2">
-                              {resolvedList.map((item, idx) => (
+                              {displayList.map((item, idx) => (
                                 <Col sm={4} xs={6} key={item.settingId || item.fieldKey || idx} className="mb-2">
                                   <EnergyMetricCard
                                     setting={item.settingDef || { displayName: item.displayName, unit: item.unit }}
@@ -1416,7 +1461,7 @@ const SubMeters = () => {
                                       accentColor: '#38bdf8',
                                       compact: true
                                     }}
-                                    isConfigured={isMapped}
+                                    isConfigured={true}
                                   />
                                 </Col>
                               ))}

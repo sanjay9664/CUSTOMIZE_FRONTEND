@@ -64,10 +64,14 @@ const categorizeDevices = (devices = []) => {
       name.includes('DIESEL')
     ) {
       dgDevices.push(d);
-    } else {
-      // Sub-meters / Feeders
+    } else if (
+      cat === 'SUB_ENERGY_METER' ||
+      cat === 'ENERGY_METER'
+    ) {
+      // Sub-meters / Feeders — strict category match only
       subMeters.push(d);
     }
+    // All other categories (sensors, controllers, etc.) are ignored in this view
   });
 
   return {
@@ -367,10 +371,14 @@ const EnergyMeteringOverview = () => {
     let isMounted = true;
 
     // Collect all device IDs for batch telemetry
+    // Use ?? not || so numeric id=0 isn't treated as falsy
     const deviceIds = Array.from(
       new Set(
         siteDevices
-          .map(d => String(d.bmsDeviceId || d.deviceId || d.id || ''))
+          .map(d => {
+            const id = d.bmsDeviceId ?? d.deviceId ?? d.id;
+            return (id !== undefined && id !== null) ? String(id) : '';
+          })
           .filter(Boolean)
       )
     );
@@ -387,12 +395,27 @@ const EnergyMeteringOverview = () => {
           setTelemetryMap(prev => {
             const next = new Map(prev);
             results.forEach(item => {
-              const devId = String(item.deviceId || item.bmsDeviceId || item.id || '');
+              const devId = String(
+                item.deviceId ?? item.bmsDeviceId ?? item.id ?? ''
+              ).trim();
               if (devId) {
-                // Find matching device definition to apply schema-aware field resolution
-                const devObj = siteDevices.find(d => String(d.id || d.deviceId) === devId) || null;
+                // Find matching device — also match by bmsDeviceId and name for cross-key safety
+                const devObj = siteDevices.find(d => {
+                  const dId = String(d.id ?? d.deviceId ?? '');
+                  const bmsId = String(d.bmsDeviceId ?? '');
+                  const dName = String(d.name || d.deviceName || '').trim().toUpperCase();
+                  const rName = String(item.name || item.deviceName || '').trim().toUpperCase();
+                  return dId === devId || bmsId === devId || (dName && rName && dName === rName);
+                }) || null;
                 const mapped = mapLatestEventsToTelemetry(item, devObj);
-                next.set(devId, mapped.updates || {});
+                const updates = mapped.updates || {};
+                next.set(devId, updates);
+                if (devObj) {
+                  const dId = String(devObj.id ?? devObj.deviceId ?? '');
+                  const bmsId = String(devObj.bmsDeviceId ?? '');
+                  if (dId) next.set(dId, updates);
+                  if (bmsId) next.set(bmsId, updates);
+                }
               }
             });
             return next;
@@ -419,8 +442,9 @@ const EnergyMeteringOverview = () => {
   const scadaData = useMemo(() => {
     const getTelemetry = (dev) => {
       if (!dev) return {};
-      const devId = String(dev.id || dev.deviceId || '');
-      const bmsId = String(dev.bmsDeviceId || '');
+      // Use ?? so id=0 (falsy) still resolves correctly
+      const devId = String(dev.id ?? dev.deviceId ?? '');
+      const bmsId = String(dev.bmsDeviceId ?? '');
       return telemetryMap.get(devId) || telemetryMap.get(bmsId) || {};
     };
 

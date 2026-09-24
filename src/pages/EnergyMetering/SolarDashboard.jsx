@@ -891,7 +891,7 @@ const SolarDashboard = ({
                       )}
                     </div>
 
-                    {/* Total Outgoing Load Footer */}
+                     {/* Total Outgoing Load Footer */}
                     <div
                       className="d-flex justify-content-between align-items-center mt-2 px-2.5 py-1.5 rounded-2"
                       style={{
@@ -905,6 +905,31 @@ const SolarDashboard = ({
                         {totalOutputW} W (100%)
                       </span>
                     </div>
+
+                    {/* System Loss Row */}
+                    {(() => {
+                      const lossW = totalInflowW - totalOutgoingW;
+                      const lossColor = lossW > 0 ? currentTheme.red : currentTheme.green;
+                      return (
+                        <div
+                          className="d-flex justify-content-between align-items-center mt-1 px-2.5 py-1.5 rounded-2"
+                          style={{
+                            background: lossW > 0
+                              ? (isDark ? 'rgba(239, 68, 68, 0.08)' : 'rgba(239, 68, 68, 0.06)')
+                              : (isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.06)'),
+                            border: `1px solid ${lossW > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                            fontSize: '11.5px'
+                          }}
+                        >
+                          <span className="text-muted" style={{ fontSize: '11px' }}>
+                            ⚡ System Loss (Unaccounted)
+                          </span>
+                          <span style={{ color: lossColor, fontWeight: 'bold' }}>
+                            {lossW > 0 ? lossW : 0} W
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                 </div>
