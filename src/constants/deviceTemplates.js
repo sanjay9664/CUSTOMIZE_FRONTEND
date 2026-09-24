@@ -528,11 +528,9 @@ export const DEVICE_TEMPLATES = {
   ]
 },
 
- SUB_ENERGY_METER: {
-
-  id: 'SUB_ENERGY_METER',
-
-  label: 'Sub-Energy Meter',
+  MAIN_ENERGY_METER: {
+    id: 'MAIN_ENERGY_METER',
+    label: 'Main Energy Meter',
 
   parameters: [
 
