@@ -8,6 +8,9 @@
 export const DEVICE_CATEGORIES = [
   'MAIN_ENERGY_METER',
   'SUB_ENERGY_METER',
+  'SOLAR_SYSTEM',
+  'INVERTER',
+  'UPS',
   'UG_TANK',
   'AG_TANK',
   'PUMP',
@@ -38,6 +41,9 @@ export const CATEGORY_LABELS = {
   MAIN_ENERGY_METER: 'Main Energy Meter',
   SUB_ENERGY_METER: 'Sub-Energy Meter',
   ENERGY_METER: 'Sub-Energy Meter', // fallback for any legacy device records
+  SOLAR_SYSTEM: 'Solar System',
+  INVERTER: 'Inverter',
+  UPS: 'Uninterruptible Power Supply (UPS)',
   UG_TANK: 'Underground (UG) Tank',
   AG_TANK: 'Above Ground (AG) Tank',
   PUMP: 'Pump',
@@ -117,6 +123,15 @@ export const isCategoryMatch = (deviceCategory, filterCategory) => {
 
   const acAliases = ['AC', 'AIR_CONDITIONER'];
   if (acAliases.includes(fCat) && acAliases.includes(dCat)) return true;
+
+  const solarAliases = ['SOLAR_SYSTEM', 'SOLAR', 'SOLAR_PLANT', 'SOLAR SYSTEM'];
+  if (solarAliases.includes(fCat) && solarAliases.includes(dCat)) return true;
+
+  const inverterAliases = ['INVERTER', 'SOLAR_INVERTER'];
+  if (inverterAliases.includes(fCat) && inverterAliases.includes(dCat)) return true;
+
+  const upsAliases = ['UPS', 'UNINTERRUPTIBLE_POWER_SUPPLY'];
+  if (upsAliases.includes(fCat) && upsAliases.includes(dCat)) return true;
 
   return false;
 };
@@ -651,6 +666,302 @@ export const DEVICE_TEMPLATES = {
       { name: 'Power Consumption', required: false }
     ]
   },
+  
+SOLAR_SYSTEM: {
+  id: 'SOLAR_SYSTEM',
+  label: 'Solar System',
+  parameters: [
+    // CORE / GENERAL PARAMETERS
+    { name: 'Solar System Status', required: true },
+    { name: 'Solar Generation Power (kW)', required: false },
+    { name: 'Daily Energy Generation (kWh)', required: false },
+    { name: 'Total Energy Generation (kWh)', required: false },
+    { name: 'Solar System Availability (%)', required: false },
+    { name: 'Solar Plant Load (%)', required: false },
+
+    // ELECTRICAL PARAMETERS
+    { name: 'AC Output Voltage (V)', required: false },
+    { name: 'AC Output Current (A)', required: false },
+    { name: 'AC Output Frequency (Hz)', required: false },
+    { name: 'AC Output Power (kW)', required: false },
+    { name: 'Apparent Power (kVA)', required: false },
+    { name: 'Reactive Power (kVAR)', required: false },
+    { name: 'Power Factor (PF)', required: false },
+    { name: 'DC Input Voltage (V)', required: false },
+    { name: 'DC Input Current (A)', required: false },
+    { name: 'DC Input Power (kW)', required: false },
+
+    // ENERGY / PERFORMANCE PARAMETERS
+    { name: 'Monthly Energy Generation (kWh)', required: false },
+    { name: 'Yearly Energy Generation (kWh)', required: false },
+    { name: 'Lifetime Energy Generation (kWh)', required: false },
+    { name: 'Solar Performance Ratio (%)', required: false },
+    { name: 'Solar System Efficiency (%)', required: false },
+    { name: 'Specific Energy Yield (kWh/kWp)', required: false },
+    { name: 'Installed Solar Capacity (kWp)', required: false },
+    { name: 'Export Energy (kWh)', required: false },
+    { name: 'Import Energy (kWh)', required: false },
+    { name: 'Self-Consumption Energy (kWh)', required: false },
+    { name: 'Grid Feed-in Power (kW)', required: false },
+
+    // ENVIRONMENTAL PARAMETERS
+    { name: 'Solar Irradiance (W/m²)', required: false },
+    { name: 'Ambient Temperature (°C)', required: false },
+    { name: 'Solar Panel Temperature (°C)', required: false },
+    { name: 'Wind Speed (m/s)', required: false },
+
+    // EQUIPMENT / STRING PARAMETERS
+    { name: 'Inverter Status', required: false },
+    { name: 'Solar Panel String Voltage (V)', required: false },
+    { name: 'Solar Panel String Current (A)', required: false },
+    { name: 'Solar Panel String Power (kW)', required: false },
+    { name: 'MPPT Voltage (V)', required: false },
+    { name: 'MPPT Current (A)', required: false },
+    { name: 'MPPT Power (kW)', required: false },
+    { name: 'Connected Inverter Count', required: false },
+    { name: 'Online Inverter Count', required: false },
+
+    // BATTERY / HYBRID SYSTEM PARAMETERS
+    { name: 'Battery State of Charge (%)', required: false },
+    { name: 'Battery Charging Power (kW)', required: false },
+    { name: 'Battery Discharging Power (kW)', required: false },
+    { name: 'Battery Voltage (V)', required: false },
+    { name: 'Battery Current (A)', required: false },
+    { name: 'Battery Status', required: false },
+
+    // ALARMS / DIAGNOSTICS
+    { name: 'Solar System Fault Status', required: false },
+    { name: 'Inverter Fault Status', required: false },
+    { name: 'Grid Failure Alarm', required: false },
+    { name: 'DC Overvoltage Alarm', required: false },
+    { name: 'AC Overvoltage Alarm', required: false },
+    { name: 'Insulation Resistance Alarm', required: false },
+    { name: 'Ground Fault Alarm', required: false },
+    { name: 'Overtemperature Alarm', required: false },
+    { name: 'Communication Status', required: false },
+    { name: 'Last Fault Code', required: false },
+    { name: 'Last Fault Timestamp', required: false },
+
+    // ADVANCED / DERIVED PARAMETERS
+    { name: 'Carbon Emission Reduction (kgCO2)', required: false },
+    { name: 'Equivalent Trees Saved', required: false },
+    { name: 'Estimated Energy Generation (kWh)', required: false },
+    { name: 'Solar Generation Forecast (kWh)', required: false },
+    { name: 'Solar Curtailment Power (kW)', required: false },
+    { name: 'Solar Curtailment Energy (kWh)', required: false }
+  ]
+},
+
+INVERTER: {
+  id: 'INVERTER',
+  label: 'Inverter',
+  parameters: [
+    // CORE / GENERAL PARAMETERS
+    { name: 'Inverter Status', required: true },
+    { name: 'Output Power (kW)', required: false },
+    { name: 'Input Power (kW)', required: false },
+    { name: 'Output Voltage (V)', required: false },
+    { name: 'Output Current (A)', required: false },
+    { name: 'Input Voltage (V)', required: false },
+    { name: 'Input Current (A)', required: false },
+    { name: 'Output Frequency (Hz)', required: false },
+    { name: 'Power Factor (PF)', required: false },
+
+    // ELECTRICAL PARAMETERS
+    { name: 'Apparent Power (kVA)', required: false },
+    { name: 'Reactive Power (kVAR)', required: false },
+    { name: 'DC Bus Voltage (V)', required: false },
+    { name: 'DC Bus Current (A)', required: false },
+    { name: 'Phase Voltage (V)', required: false },
+    { name: 'Phase Current (A)', required: false },
+    { name: 'R-Phase Voltage (V)', required: false },
+    { name: 'Y-Phase Voltage (V)', required: false },
+    { name: 'B-Phase Voltage (V)', required: false },
+    { name: 'R-Phase Current (A)', required: false },
+    { name: 'Y-Phase Current (A)', required: false },
+    { name: 'B-Phase Current (A)', required: false },
+    { name: 'Voltage Imbalance (%)', required: false },
+    { name: 'Current Imbalance (%)', required: false },
+
+    // ENERGY / PERFORMANCE PARAMETERS
+    { name: 'Daily Energy Generation (kWh)', required: false },
+    { name: 'Total Energy Generation (kWh)', required: false },
+    { name: 'Monthly Energy Generation (kWh)', required: false },
+    { name: 'Yearly Energy Generation (kWh)', required: false },
+    { name: 'Energy Consumption (kWh)', required: false },
+    { name: 'Inverter Efficiency (%)', required: false },
+    { name: 'Inverter Load (%)', required: false },
+    { name: 'Rated Power (kW)', required: false },
+    { name: 'Maximum Output Power (kW)', required: false },
+    { name: 'Runtime (Hours)', required: false },
+    { name: 'Start Count', required: false },
+
+    // OPERATING / CONTROL PARAMETERS
+    { name: 'Operating Mode', required: false },
+    { name: 'Auto / Manual Mode', required: false },
+    { name: 'Run Command', required: false },
+    { name: 'Frequency Setpoint (Hz)', required: false },
+    { name: 'Voltage Setpoint (V)', required: false },
+    { name: 'Power Setpoint (kW)', required: false },
+    { name: 'Speed (RPM)', required: false },
+    { name: 'Motor Temperature (°C)', required: false },
+    { name: 'Heatsink Temperature (°C)', required: false },
+    { name: 'Ambient Temperature (°C)', required: false },
+
+    // SOLAR / DC-SPECIFIC PARAMETERS
+    { name: 'PV Input Power (kW)', required: false },
+    { name: 'PV String Voltage (V)', required: false },
+    { name: 'PV String Current (A)', required: false },
+    { name: 'MPPT Voltage (V)', required: false },
+    { name: 'MPPT Current (A)', required: false },
+    { name: 'MPPT Power (kW)', required: false },
+    { name: 'Connected String Count', required: false },
+
+    // ALARMS / PROTECTION
+    { name: 'Fault Status', required: false },
+    { name: 'Alarm Status', required: false },
+    { name: 'Overvoltage Alarm', required: false },
+    { name: 'Undervoltage Alarm', required: false },
+    { name: 'Overcurrent Alarm', required: false },
+    { name: 'Overload Alarm', required: false },
+    { name: 'Overtemperature Alarm', required: false },
+    { name: 'Overfrequency Alarm', required: false },
+    { name: 'Underfrequency Alarm', required: false },
+    { name: 'DC Bus Fault', required: false },
+    { name: 'Ground Fault', required: false },
+    { name: 'Short Circuit Fault', required: false },
+    { name: 'Phase Failure Alarm', required: false },
+    { name: 'Communication Status', required: false },
+    { name: 'Last Fault Code', required: false },
+    { name: 'Last Fault Timestamp', required: false },
+
+    // ADVANCED PARAMETERS
+    { name: 'Total Operating Hours', required: false },
+    { name: 'Power Derating (%)', required: false },
+    { name: 'Harmonic Distortion THD (%)', required: false },
+    { name: 'Insulation Resistance (kΩ)', required: false },
+    { name: 'Internal Temperature (°C)', required: false },
+    { name: 'Firmware Version', required: false }
+  ]
+},
+
+UPS: {
+  id: 'UPS',
+  label: 'Uninterruptible Power Supply (UPS)',
+  parameters: [
+    // CORE / GENERAL PARAMETERS
+    { name: 'UPS Status', required: true },
+    { name: 'UPS Operating Mode', required: false },
+    { name: 'UPS Load (%)', required: false },
+    { name: 'Output Power (kW)', required: false },
+    { name: 'Output Apparent Power (kVA)', required: false },
+    { name: 'Input Voltage (V)', required: false },
+    { name: 'Output Voltage (V)', required: false },
+    { name: 'Input Frequency (Hz)', required: false },
+    { name: 'Output Frequency (Hz)', required: false },
+    { name: 'Output Current (A)', required: false },
+
+    // BATTERY PARAMETERS
+    { name: 'Battery State of Charge (%)', required: false },
+    { name: 'Battery Voltage (V)', required: false },
+    { name: 'Battery Current (A)', required: false },
+    { name: 'Battery Temperature (°C)', required: false },
+    { name: 'Battery Runtime Remaining (Minutes)', required: false },
+    { name: 'Battery Status', required: false },
+    { name: 'Battery Charging Status', required: false },
+    { name: 'Battery Charging Current (A)', required: false },
+    { name: 'Battery Discharging Current (A)', required: false },
+    { name: 'Battery Capacity (%)', required: false },
+    { name: 'Battery Health (%)', required: false },
+    { name: 'Battery Backup Time (Minutes)', required: false },
+    { name: 'Battery Replacement Date', required: false },
+    { name: 'Battery Count', required: false },
+    { name: 'Battery String Voltage (V)', required: false },
+
+    // ELECTRICAL PARAMETERS
+    { name: 'Input Current (A)', required: false },
+    { name: 'Input Power (kW)', required: false },
+    { name: 'Input Apparent Power (kVA)', required: false },
+    { name: 'Output Current (A)', required: false },
+    { name: 'Output Power Factor (PF)', required: false },
+    { name: 'Output Reactive Power (kVAR)', required: false },
+    { name: 'Input Power Factor (PF)', required: false },
+    { name: 'Bypass Voltage (V)', required: false },
+    { name: 'Bypass Frequency (Hz)', required: false },
+    { name: 'DC Bus Voltage (V)', required: false },
+    { name: 'DC Bus Current (A)', required: false },
+    { name: 'Phase Voltage (V)', required: false },
+    { name: 'Phase Current (A)', required: false },
+    { name: 'R-Phase Voltage (V)', required: false },
+    { name: 'Y-Phase Voltage (V)', required: false },
+    { name: 'B-Phase Voltage (V)', required: false },
+    { name: 'R-Phase Current (A)', required: false },
+    { name: 'Y-Phase Current (A)', required: false },
+    { name: 'B-Phase Current (A)', required: false },
+    { name: 'Voltage Imbalance (%)', required: false },
+    { name: 'Current Imbalance (%)', required: false },
+
+    // OPERATIONAL / TRANSFER PARAMETERS
+    { name: 'Inverter Status', required: false },
+    { name: 'Rectifier Status', required: false },
+    { name: 'Static Bypass Status', required: false },
+    { name: 'Maintenance Bypass Status', required: false },
+    { name: 'Battery Mode Status', required: false },
+    { name: 'Online Mode Status', required: false },
+    { name: 'Eco Mode Status', required: false },
+    { name: 'Transfer Status', required: false },
+    { name: 'Transfer Count', required: false },
+    { name: 'Runtime (Hours)', required: false },
+    { name: 'Start Count', required: false },
+
+    // TEMPERATURE / COOLING PARAMETERS
+    { name: 'UPS Temperature (°C)', required: false },
+    { name: 'Inverter Temperature (°C)', required: false },
+    { name: 'Rectifier Temperature (°C)', required: false },
+    { name: 'Ambient Temperature (°C)', required: false },
+    { name: 'Fan Status', required: false },
+    { name: 'Fan Speed (RPM)', required: false },
+
+    // ENERGY / PERFORMANCE PARAMETERS
+    { name: 'Daily Energy Consumption (kWh)', required: false },
+    { name: 'Total Energy Consumption (kWh)', required: false },
+    { name: 'UPS Efficiency (%)', required: false },
+    { name: 'Crest Factor', required: false },
+    { name: 'Output Harmonic Distortion THD (%)', required: false },
+    { name: 'Input Harmonic Distortion THD (%)', required: false },
+    { name: 'Rated Capacity (kVA)', required: false },
+    { name: 'Rated Power (kW)', required: false },
+
+    // ALARMS / PROTECTION
+    { name: 'Fault Status', required: false },
+    { name: 'Alarm Status', required: false },
+    { name: 'On Battery Alarm', required: false },
+    { name: 'Low Battery Alarm', required: false },
+    { name: 'Battery Fault Alarm', required: false },
+    { name: 'Battery Overtemperature Alarm', required: false },
+    { name: 'Input Failure Alarm', required: false },
+    { name: 'Output Failure Alarm', required: false },
+    { name: 'Output Overload Alarm', required: false },
+    { name: 'Output Overvoltage Alarm', required: false },
+    { name: 'Output Undervoltage Alarm', required: false },
+    { name: 'Overtemperature Alarm', required: false },
+    { name: 'Fan Failure Alarm', required: false },
+    { name: 'Bypass Failure Alarm', required: false },
+    { name: 'Emergency Power Off (EPO) Status', required: false },
+    { name: 'Communication Status', required: false },
+    { name: 'Last Fault Code', required: false },
+    { name: 'Last Fault Timestamp', required: false },
+
+    // ADVANCED / MAINTENANCE PARAMETERS
+    { name: 'Total Operating Hours', required: false },
+    { name: 'Last Battery Test Result', required: false },
+    { name: 'Battery Test Status', required: false },
+    { name: 'Next Battery Test Date', required: false },
+    { name: 'Battery Replacement Required', required: false },
+    { name: 'Firmware Version', required: false },
+    { name: 'Maintenance Due', required: false }
+  ]
+},
 
  AG_TANK: {
   id: 'AG_TANK',
@@ -992,6 +1303,9 @@ export const DEVICE_TEMPLATES = {
 DEVICE_TEMPLATES.MAIN_METER = DEVICE_TEMPLATES.MAIN_ENERGY_METER;
 DEVICE_TEMPLATES.SUB_METER = DEVICE_TEMPLATES.SUB_ENERGY_METER;
 DEVICE_TEMPLATES.ENERGY_METERING = DEVICE_TEMPLATES.SUB_ENERGY_METER;
+DEVICE_TEMPLATES.SOLAR = DEVICE_TEMPLATES.SOLAR_SYSTEM;
+DEVICE_TEMPLATES.SOLAR_PLANT = DEVICE_TEMPLATES.SOLAR_SYSTEM;
+DEVICE_TEMPLATES.SOLAR_INVERTER = DEVICE_TEMPLATES.INVERTER;
 
 /**
  * Maps any backend DeviceCategory to its corresponding template.
@@ -1086,6 +1400,20 @@ export const getTemplateForCategory = (category) => {
     case 'TRANSFORMER':
       return DEVICE_TEMPLATES.TRANSFORMER;
 
+    case 'UPS':
+    case 'UNINTERRUPTIBLE_POWER_SUPPLY':
+      return DEVICE_TEMPLATES.UPS;
+
+    case 'SOLAR_SYSTEM':
+    case 'SOLAR_PLANT':
+    case 'SOLAR SYSTEM':
+    case 'SOLAR':
+      return DEVICE_TEMPLATES.SOLAR_SYSTEM;
+
+    case 'INVERTER':
+    case 'SOLAR_INVERTER':
+      return DEVICE_TEMPLATES.INVERTER;
+    
     case 'SENSOR':
     case 'OTHER':
     default:
