@@ -246,8 +246,16 @@ const PageContextBanner = ({
               title={item.tooltip || ''}
             >
               {item.icon && <span className="context-banner-meta-icon">{item.icon}</span>}
-              {item.label && <span className="context-banner-meta-label">{item.label}</span>}
-              {item.value && <strong className="context-banner-meta-val">{item.value}</strong>}
+              {item.label && (
+                <span className="context-banner-meta-label">
+                  {item.label instanceof Date ? item.label.toLocaleTimeString() : (React.isValidElement(item.label) ? item.label : String(item.label))}
+                </span>
+              )}
+              {item.value && (
+                <strong className="context-banner-meta-val">
+                  {item.value instanceof Date ? item.value.toLocaleTimeString() : (React.isValidElement(item.value) ? item.value : String(item.value))}
+                </strong>
+              )}
             </div>
           );
         })}
