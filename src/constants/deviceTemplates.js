@@ -431,7 +431,7 @@ export const DEVICE_TEMPLATES = {
     ]
   },
 
- SUB_ENERGY_METER: {
+SUB_ENERGY_METER: {
   id: 'SUB_ENERGY_METER',
   label: 'Sub-Energy Meter',
 
@@ -528,203 +528,88 @@ export const DEVICE_TEMPLATES = {
   ]
 },
 
-  MAIN_ENERGY_METER: {
-    id: 'MAIN_ENERGY_METER',
-    label: 'Main Energy Meter',
+ MAIN_ENERGY_METER: {
+  id: 'MAIN_ENERGY_METER',
+  label: 'Main Energy Meter',
 
   parameters: [
-
     // =========================
-    // CORE ENERGY PARAMETERS
+    // MOST COMMON / CORE
     // =========================
     { name: 'EP (Active Energy - kWh)', required: false },
-
     { name: 'Eq (Reactive Energy - kVARh)', required: false },
-
     { name: 'PF (Power Factor)', required: false },
-
     { name: 'S (Apparent Power - kVA)', required: false },
-
     { name: 'Total KW (Active Power - kW)', required: false },
-
     { name: 'Total KVA (Apparent Power - kVA)', required: false },
-
-    { name: 'Reactive Power (kVAR - Reactive Power)', required: false },
-
     { name: 'Frequency (Hz - Hertz)', required: false },
 
-
     // =========================
-    // PHASE VOLTAGE
+    // PHASE VOLTAGE & CURRENT
     // =========================
     { name: 'R-Phase Voltage (V)', required: false },
-
     { name: 'Y-Phase Voltage (V)', required: false },
-
     { name: 'B-Phase Voltage (V)', required: false },
-
-    { name: 'Avg Voltage L-L (V)', required: false },
-
-    { name: 'Avg Voltage L-N (V)', required: false },
-
-    { name: 'Voltage R-Y (V)', required: false },
-
-    { name: 'Voltage Y-B (V)', required: false },
-
-    { name: 'Voltage B-R (V)', required: false },
-
-
-    // =========================
-    // PHASE CURRENT
-    // =========================
     { name: 'R-Current (A)', required: false },
-
     { name: 'Y-Current (A)', required: false },
-
     { name: 'B-Current (A)', required: false },
-
-    { name: 'Avg Current (A)', required: false },
-
 
     // =========================
     // PHASE POWER FACTOR
     // =========================
     { name: 'PF-R (R-Phase Power Factor)', required: false },
-
     { name: 'PF-Y (Y-Phase Power Factor)', required: false },
-
     { name: 'PF-B (B-Phase Power Factor)', required: false },
-
     { name: 'Avg PF (Average Power Factor)', required: false },
 
-
     // =========================
-    // ENERGY / GRID / DG
+    // ENERGY
     // =========================
-    { name: 'EB KVAH (Grid Apparent Energy - kVAh)', required: false },
-
     { name: 'EB KWH (Grid Active Energy - kWh)', required: false },
-
+    { name: 'EB KVAH (Grid Apparent Energy - kVAh)', required: false },
     { name: 'DG KWH (Generator Active Energy - kWh)', required: false },
-
-    { name: 'Balance (₹)', required: false },
-
-    { name: 'EB Tariff (₹/kWh)', required: false },
-
-    { name: 'DG Tariff (₹/kWh)', required: false },
-
+    { name: 'Reactive Power (kVAR - Reactive Power)', required: false },
 
     // =========================
-    // AVERAGE POWER
+    // AVERAGE ELECTRICAL VALUES
     // =========================
+    { name: 'Avg Voltage L-L (V)', required: false },
+    { name: 'Avg Voltage L-N (V)', required: false },
+    { name: 'Avg Current (A)', required: false },
     { name: 'Power KVA (AVG) (Avg Apparent Power - kVA)', required: false },
-
     { name: 'Power KVAR (AVG) (Avg Reactive Power - kVAR)', required: false },
 
+    // =========================
+    // LINE-TO-LINE VOLTAGE
+    // =========================
+    { name: 'Voltage R-Y (V)', required: false },
+    { name: 'Voltage Y-B (V)', required: false },
+    { name: 'Voltage B-R (V)', required: false },
 
     // =========================
-    // LOAD PARAMETERS
+    // METER / TARIFF
+    // =========================
+    { name: 'Balance (₹)', required: false },
+    { name: 'Meter Target', required: false },
+    { name: 'EB Tariff (₹/kWh)', required: false },
+    { name: 'DG Tariff (₹/kWh)', required: false },
+
+    // =========================
+    // PHASE LOAD
     // =========================
     { name: 'R-Phase Load (kW)', required: false },
-
     { name: 'Y-Phase Load (kW)', required: false },
-
     { name: 'B-Phase Load (kW)', required: false },
-
     { name: 'Load %', required: false },
 
+    // =========================
+    // LOAD / NO-LOAD TIME
+    // =========================
     { name: 'Load Hrs', required: false },
-
     { name: 'Load Min', required: false },
-
     { name: 'No Load Hrs', required: false },
-
-    { name: 'No Load Min', required: false },
-
-    { name: 'Meter Target', required: false },
-
-
-    // =========================
-    // OVERLOAD / CONTROL
-    // =========================
-    { name: 'Overload Trip', required: false },
-
-    { name: 'Overload Limit Reached', required: false },
-
-    { name: 'Low Balance Cut', required: false },
-
-    { name: 'Connected Status', required: false },
-
-    { name: 'Force Off', required: false },
-
-    { name: 'No. of Overload Checks', required: false },
-
-
-    // =========================
-    // LOAD SETTING
-    // =========================
-    { name: 'EB R Load Set (kW)', required: false },
-
-    { name: 'EB Y Load Set (kW)', required: false },
-
-    { name: 'EB B Load Set (kW)', required: false },
-
-    { name: 'DG R Load Set (kW)', required: false },
-
-    { name: 'DG Y Load Set (kW)', required: false },
-
-    { name: 'DG B Load Set (kW)', required: false },
-
-
-    // =========================
-    // METER INFORMATION
-    // =========================
-    { name: 'Meter Serial Number', required: false },
-
-    { name: 'EB/DG Status', required: false },
-
-    { name: 'Fixed Charge (₹)', required: false },
-
-
-    // =========================
-    // CONSUMPTION / ANALYTICS
-    // =========================
-    { name: 'Daily Energy (kWh)', required: false },
-
-    { name: 'Monthly Energy (kWh)', required: false },
-
-    { name: 'Yearly Energy (kWh)', required: false },
-
-    { name: 'Meter-wise Consumption', required: false },
-
-    { name: 'Area-wise Consumption', required: false },
-
-    { name: 'Equipment-wise Consumption', required: false },
-
-    { name: 'Energy Cost (₹)', required: false },
-
-    { name: 'Energy Trend', required: false },
-
-    { name: 'Carbon Emission (kgCO2)', required: false },
-
-
-    // =========================
-    // ELECTRICAL QUALITY
-    // =========================
-    { name: 'Harmonics THD (% Total Harmonic Distortion)', required: false },
-
-    { name: 'Phase Imbalance (%)', required: false },
-
-
-    // =========================
-    // METER RELATION
-    // =========================
-    { name: 'Main Meter', required: false },
-
-    { name: 'Sub Meter', required: false }
-
+    { name: 'No Load Min', required: false }
   ]
-
 },
 
   VRV: {
