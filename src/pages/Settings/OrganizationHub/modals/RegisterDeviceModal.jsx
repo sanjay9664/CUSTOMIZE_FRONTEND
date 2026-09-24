@@ -9,7 +9,7 @@ import { parseLocationValue } from '../../../../utils/locationTreeUtils';
 import { fetchDeviceDetails, extractDeviceModulesAndFields, fetchDevicesByDeviceIds } from '../../../../services/sochiotLocationService';
 import { getApiUrl } from '../../../../utils/apiConfig';
 import { DEVICE_CATEGORIES, formatCategoryLabel, getTemplateForCategory } from '../../../../constants/deviceTemplates';
-import { isCumulativeMetric, validateUniqueSettingFieldNames } from '../../../../types/device.types';
+import { isCumulativeMetric } from '../../../../types/device.types';
 
 export const findMatchingModule = (modules, row) => {
   if (!Array.isArray(modules) || modules.length === 0 || !row) return null;
@@ -1998,14 +1998,6 @@ const RegisterDeviceModal = ({
                   };
                 });
 
-                // Validate uniqueness of sochiotFieldName to prevent 409 DUPLICATE_SETTING
-                const duplicateCheck = validateUniqueSettingFieldNames(templateSettings);
-                if (!duplicateCheck.valid) {
-                  if (typeof showToast === 'function') {
-                    showToast('danger', `Duplicate setting field "${duplicateCheck.duplicateField}" detected. Each Sochiot Field must be unique.`);
-                  }
-                  return;
-                }
 
                 const existingRules = Array.isArray(registerForm?.rules) && registerForm.rules.length > 0
                   ? registerForm.rules
