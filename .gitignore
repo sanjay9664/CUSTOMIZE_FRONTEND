@@ -13,3 +13,4 @@ openapidocs.yml
 .gemini
 graphify-out
 .env
+.env.production

@@ -120,6 +120,4 @@ export const installGlobalFetchInterceptor = () => {
 
     return response;
   };
-
-  console.log('[FetchInterceptor] Global fetch interceptor installed.');
 };

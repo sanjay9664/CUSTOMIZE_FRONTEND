@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Offcanvas, Form, Button, Row, Col, Badge, Spinner, Modal } from 'react-bootstrap';
-import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu } from 'lucide-react';
+import { Offcanvas, Form, Button, Row, Col, Badge, Spinner, Modal, InputGroup } from 'react-bootstrap';
+import { FileText, BarChart2, Sliders, LayoutGrid, Trash2, X, Plus, Cpu, ArrowUpRight, ArrowDownRight, Zap, Activity, Check, RotateCcw } from 'lucide-react';
 import { useSiteStore } from '../../../../context/SiteContext';
 import { fetchAndStoreSochiotAccessToken } from '../../../../services/bmsService';
 import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
@@ -116,6 +116,16 @@ const RegisterDeviceModal = ({
 
   const handleCloseThresholdModal = () => {
     setThresholdModalIndex(null);
+  };
+
+  const handleClearThresholdDraft = () => {
+    setThresholdDraft(prev => ({
+      ...prev,
+      warningHigh: '',
+      criticalHigh: '',
+      warningLow: '',
+      criticalLow: ''
+    }));
   };
 
   const handleSaveThresholdDraft = () => {
@@ -643,6 +653,83 @@ const RegisterDeviceModal = ({
           border-color: #38bdf8 !important;
           box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
         }
+        /* Remove browser native number input spinners */
+        .threshold-input::-webkit-outer-spin-button,
+        .threshold-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .threshold-input[type=number] {
+          -moz-appearance: textfield;
+        }
+
+        .threshold-section-card {
+          background: rgba(15, 23, 42, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          padding: 16px;
+          transition: all 0.2s ease;
+        }
+        .threshold-section-card:hover {
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+        .threshold-section-card.upper {
+          border-top: 2px solid #f59e0b;
+        }
+        .threshold-section-card.lower {
+          border-top: 2px solid #0ea5e9;
+        }
+        .threshold-section-card.flags {
+          border-top: 2px solid #8b5cf6;
+        }
+
+        .alert-dot {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .alert-dot.amber {
+          background-color: #f59e0b;
+          box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+        }
+        .alert-dot.red {
+          background-color: #f43f5e;
+          box-shadow: 0 0 6px rgba(244, 63, 94, 0.7);
+        }
+
+        .threshold-input-group .input-group-text {
+          background-color: #1e293b !important;
+          border: 1px solid #334155 !important;
+          border-left: none !important;
+          color: #94a3b8 !important;
+          font-size: 11px;
+          font-weight: 600;
+          font-family: monospace;
+          border-top-right-radius: 8px !important;
+          border-bottom-right-radius: 8px !important;
+        }
+        .threshold-input-group .form-control {
+          border-top-right-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+        .threshold-input-group:focus-within .input-group-text {
+          border-color: #38bdf8 !important;
+        }
+
+        .threshold-toggle-row {
+          background: rgba(15, 23, 42, 0.45);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 12px 14px;
+          transition: all 0.2s ease;
+        }
+        .threshold-toggle-row:hover {
+          background: rgba(30, 41, 59, 0.5);
+          border-color: rgba(255, 255, 255, 0.12);
+        }
+
         .register-wizard-drawer .wizard-btn-primary:disabled {
           background-color: #1e3a8a;
           border-color: #1e3a8a;
@@ -805,6 +892,26 @@ const RegisterDeviceModal = ({
           border-color: #2563eb !important;
           box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
         }
+        body.light-mode .threshold-section-card {
+          background: #f8fafc;
+          border-color: #e2e8f0;
+        }
+        body.light-mode .threshold-section-card:hover {
+          border-color: #cbd5e1;
+        }
+        body.light-mode .threshold-toggle-row {
+          background: #f8fafc;
+          border-color: #e2e8f0;
+        }
+        body.light-mode .threshold-toggle-row:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+        body.light-mode .threshold-input-group .input-group-text {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #64748b !important;
+        }
         body.light-mode .register-wizard-drawer .wizard-btn-primary:disabled {
           background-color: #93c5fd;
           border-color: #93c5fd;
@@ -847,39 +954,6 @@ const RegisterDeviceModal = ({
             className={`wizard-step-item ${registerStep === 2 ? 'active' : ''}`}
             onClick={() => {
               if (registerForm.name && registerForm.name.trim()) {
-                const tmpl = getTemplateForCategory(registerForm.category || 'ENERGY_METER');
-                if (tmpl && tmpl.parameters && Array.isArray(dynamicTemplateFields) && dynamicTemplateFields.length > 0) {
-                  const existingNames = new Set(dynamicTemplateFields.map(f => (f.displayName || '').trim().toLowerCase()));
-                  const missingParams = tmpl.parameters.filter(p => !existingNames.has((p.name || '').trim().toLowerCase()));
-                  const defaultDev = dynamicTemplateFields.find(f => f.deviceId && String(f.deviceId).trim() !== '' && String(f.deviceId) !== '101')?.deviceId || '';
-                  const defaultDevName = dynamicTemplateFields.find(f => f.deviceName)?.deviceName || (defaultDev ? `Device #${defaultDev}` : '');
-                  const defaultDevVal = dynamicTemplateFields.find(f => f.deviceVal)?.deviceVal || null;
-                  const defaultModuleId = dynamicTemplateFields.find(f => f.moduleId)?.moduleId || '';
-                  const defaultModuleName = dynamicTemplateFields.find(f => f.moduleName)?.moduleName || '';
-
-                  if (missingParams.length > 0 && typeof setDynamicTemplateFields === 'function') {
-                    const extraFields = missingParams.map(p => ({
-                      displayName: p.name,
-                      required: Boolean(p.required),
-                      deviceId: defaultDev,
-                      deviceName: defaultDevName,
-                      deviceVal: defaultDevVal,
-                      moduleId: defaultModuleId,
-                      moduleName: defaultModuleName,
-                      sochiotFieldName: '',
-                      thresholdValue: '',
-                      warningHigh: null,
-                      criticalHigh: null,
-                      warningLow: null,
-                      criticalLow: null,
-                      dataType: 'INTEGER',
-                      unit: '',
-                      isCommand: false,
-                      graphable: true
-                    }));
-                    setDynamicTemplateFields([...dynamicTemplateFields, ...extraFields]);
-                  }
-                }
                 setRegisterStep(2);
               }
             }}
@@ -977,9 +1051,10 @@ const RegisterDeviceModal = ({
                           const tmpl = getTemplateForCategory(newCat);
                           if (tmpl && tmpl.parameters) {
                             if (!editingDevice) {
-                              setDynamicTemplateFields(tmpl.parameters.map(p => ({
-                                displayName: p.name,
-                                required: Boolean(p.required),
+                              const firstParam = tmpl.parameters.length > 0 ? tmpl.parameters[0] : null;
+                              setDynamicTemplateFields([{
+                                displayName: firstParam?.name || '',
+                                required: Boolean(firstParam?.required),
                                 deviceId: '',
                                 deviceName: '',
                                 deviceVal: null,
@@ -991,45 +1066,14 @@ const RegisterDeviceModal = ({
                                 criticalHigh: null,
                                 warningLow: null,
                                 criticalLow: null,
-                                dataType: 'INTEGER',
-                                unit: '',
+                                dataType: firstParam?.dataType || 'INTEGER',
+                                unit: firstParam?.unit || '',
                                 isCommand: false,
-                                graphable: true
-                              })));
-                            } else {
-                              setDynamicTemplateFields(prev => {
-                                const currentList = Array.isArray(prev) ? prev : [];
-                                const matched = new Set();
-                                const merged = tmpl.parameters.map(param => {
-                                  const pName = (param.name || '').trim().toLowerCase();
-                                  const existing = currentList.find(f => (f.displayName || '').trim().toLowerCase() === pName || (f.sochiotFieldName || '').trim().toLowerCase() === pName);
-                                  if (existing) {
-                                    matched.add(existing);
-                                    return { ...existing, displayName: existing.displayName || param.name, required: Boolean(param.required) };
-                                  }
-                                  return {
-                                    deviceId: '',
-                                    deviceName: '',
-                                    deviceVal: null,
-                                    moduleId: '',
-                                    moduleName: '',
-                                    sochiotFieldName: '',
-                                    displayName: param.name,
-                                    required: Boolean(param.required),
-                                    thresholdValue: '',
-                                    warningHigh: null,
-                                    criticalHigh: null,
-                                    warningLow: null,
-                                    criticalLow: null,
-                                    dataType: 'INTEGER',
-                                    unit: '',
-                                    isCommand: false,
-                                    graphable: true
-                                  };
-                                });
-                                currentList.forEach(f => { if (!matched.has(f)) merged.push(f); });
-                                return merged;
-                              });
+                                graphable: true,
+                                isTelemetry: true,
+                                isCumulative: firstParam ? isCumulativeMetric({ displayName: firstParam.name, unit: firstParam.unit }) : false,
+                                isActive: true
+                              }]);
                             }
                           }
                         }
@@ -1471,19 +1515,33 @@ const RegisterDeviceModal = ({
                                         const copy = [...dynamicTemplateFields];
                                         copy[idx].isManualEntry = true;
                                         copy[idx].sochiotFieldName = '';
+                                        copy[idx].sochiotFieldId = null;
+                                        copy[idx].fieldId = null;
                                         setDynamicTemplateFields(copy);
                                         return;
                                       }
                                       const copy = [...dynamicTemplateFields];
                                       copy[idx].sochiotFieldName = val;
-                                      // Only auto-populate display name if not already set by user
+                                      copy[idx].isManualEntry = false;
+                                      // Match against selectedModule fields to capture IDs and meta
                                       const matched = selectedModule?.allFields?.find(af => af.fieldName === val);
                                       if (matched) {
+                                        const matchedId = (matched.id && !isNaN(Number(matched.id)))
+                                          ? Number(matched.id)
+                                          : ((matched.mappingId && !isNaN(Number(matched.mappingId))) ? Number(matched.mappingId) : null);
+                                        copy[idx].sochiotFieldId = matchedId;
+                                        copy[idx].fieldId = matchedId;
+                                        if (matched.eventId) copy[idx].eventId = matched.eventId;
+                                        if (matched.eventKey) copy[idx].eventKey = matched.eventKey;
                                         if (!copy[idx].displayName || !copy[idx].displayName.trim()) {
                                           copy[idx].displayName = matched.displayName || matched.fieldName;
                                         }
                                         if (matched.unit) copy[idx].unit = matched.unit;
                                         if (matched.dataType) copy[idx].dataType = matched.dataType;
+                                        if (matched.multiplier) copy[idx].multiplier = matched.multiplier;
+                                      } else {
+                                        copy[idx].sochiotFieldId = null;
+                                        copy[idx].fieldId = null;
                                       }
                                       setDynamicTemplateFields(copy);
                                     }}
@@ -1534,7 +1592,18 @@ const RegisterDeviceModal = ({
                                       disabled={!f.moduleId && !selectedModule}
                                       onChange={(e) => {
                                         const copy = [...dynamicTemplateFields];
-                                        copy[idx].sochiotFieldName = e.target.value;
+                                        const manualVal = e.target.value;
+                                        copy[idx].sochiotFieldName = manualVal;
+                                        const matched = selectedModule?.allFields?.find(af => af.fieldName === manualVal);
+                                        if (matched) {
+                                          const matchedId = (matched.id && !isNaN(Number(matched.id)))
+                                            ? Number(matched.id)
+                                            : ((matched.mappingId && !isNaN(Number(matched.mappingId))) ? Number(matched.mappingId) : null);
+                                          copy[idx].sochiotFieldId = matchedId;
+                                          copy[idx].fieldId = matchedId;
+                                          if (matched.eventId) copy[idx].eventId = matched.eventId;
+                                          if (matched.eventKey) copy[idx].eventKey = matched.eventKey;
+                                        }
                                         setDynamicTemplateFields(copy);
                                       }}
                                       className="wizard-input font-monospace"
@@ -1871,17 +1940,30 @@ const RegisterDeviceModal = ({
                     ? (typeof f.meta === 'string' ? JSON.parse(f.meta) : f.meta)
                     : (f.multiplier ? { multiplier: parseFloat(f.multiplier) } : null);
 
+                  const matchedFieldDef = matchedMod?.allFields?.find(af => af.fieldName === f.sochiotFieldName);
+                  const fallbackFieldId = (matchedFieldDef?.id && !isNaN(Number(matchedFieldDef.id)))
+                    ? Number(matchedFieldDef.id)
+                    : ((matchedFieldDef?.mappingId && !isNaN(Number(matchedFieldDef.mappingId))) ? Number(matchedFieldDef.mappingId) : null);
+
                   const resolvedFieldId = (f.fieldId && !isNaN(Number(f.fieldId)))
                     ? Number(f.fieldId)
                     : ((f.sochiotFieldId && !isNaN(Number(f.sochiotFieldId)))
                       ? Number(f.sochiotFieldId)
-                      : ((f.mappingId && !isNaN(Number(f.mappingId))) ? Number(f.mappingId) : null));
+                      : ((f.mappingId && !isNaN(Number(f.mappingId)))
+                        ? Number(f.mappingId)
+                        : (fallbackFieldId !== null ? fallbackFieldId : null)));
 
                   const resolvedSochiotFieldId = (f.sochiotFieldId && !isNaN(Number(f.sochiotFieldId)))
                     ? Number(f.sochiotFieldId)
-                    : resolvedFieldId;
+                    : (resolvedFieldId !== null ? resolvedFieldId : fallbackFieldId);
 
-                  const resolvedEventId = (f.eventId && !isNaN(Number(f.eventId))) ? Number(f.eventId) : null;
+                  const resolvedEventId = (f.eventId && !isNaN(Number(f.eventId)))
+                    ? Number(f.eventId)
+                    : (matchedFieldDef?.eventId ? Number(matchedFieldDef.eventId) : null);
+
+                  const resolvedEventKey = f.eventKey
+                    ? String(f.eventKey).trim()
+                    : (matchedFieldDef?.eventKey ? String(matchedFieldDef.eventKey).trim() : null);
 
                   return {
                     // Golden Rule 1: Include database id for existing settings; omit for new ones
@@ -2053,139 +2135,209 @@ const RegisterDeviceModal = ({
       onHide={handleCloseThresholdModal}
       centered
       size="lg"
-      className="glass-modal"
+      className="glass-modal threshold-config-modal"
     >
-      <Modal.Header closeButton className="border-secondary border-opacity-25">
-        <Modal.Title className="fw-bold d-flex align-items-center gap-2 fs-15 wizard-subheading">
-          <Sliders className="text-warning" size={18} />
-          <span>
-            Configure Threshold Limits
-            {thresholdModalIndex !== null && (dynamicTemplateFields[thresholdModalIndex]?.displayName || dynamicTemplateFields[thresholdModalIndex]?.sochiotFieldName) && (
-              <span className="text-info font-monospace fs-13 ms-2 fw-normal">
-                ({dynamicTemplateFields[thresholdModalIndex]?.displayName || dynamicTemplateFields[thresholdModalIndex]?.sochiotFieldName})
-              </span>
-            )}
-          </span>
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="p-3">
-        {thresholdModalIndex !== null && (
-          <Row className="g-3">
-            <Col xs={12} sm={6} md={3}>
-              <Form.Group>
-                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
-                  Warning High
-                </Form.Label>
-                <Form.Control
-                  type="number"
-                  value={thresholdDraft.warningHigh}
-                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningHigh: e.target.value })}
-                  className="threshold-input font-monospace fs-13"
-                  placeholder="Optional"
-                />
-              </Form.Group>
-            </Col>
+      {thresholdModalIndex !== null && (() => {
+        const activeRow = dynamicTemplateFields[thresholdModalIndex] || {};
+        const paramName = activeRow.displayName || activeRow.sochiotFieldName || 'Telemetry Metric';
+        const paramUnit = activeRow.unit || '';
 
-            <Col xs={12} sm={6} md={3}>
-              <Form.Group>
-                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
-                  Critical High
-                </Form.Label>
-                <Form.Control
-                  type="number"
-                  value={thresholdDraft.criticalHigh}
-                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalHigh: e.target.value })}
-                  className="threshold-input font-monospace fs-13"
-                  placeholder="Optional"
-                />
-              </Form.Group>
-            </Col>
-
-            <Col xs={12} sm={6} md={3}>
-              <Form.Group>
-                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
-                  Warning Low
-                </Form.Label>
-                <Form.Control
-                  type="number"
-                  value={thresholdDraft.warningLow}
-                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningLow: e.target.value })}
-                  className="threshold-input font-monospace fs-13"
-                  placeholder="Optional"
-                />
-              </Form.Group>
-            </Col>
-
-            <Col xs={12} sm={6} md={3}>
-              <Form.Group>
-                <Form.Label className="fs-12 fw-semibold threshold-label mb-1">
-                  Critical Low
-                </Form.Label>
-                <Form.Control
-                  type="number"
-                  value={thresholdDraft.criticalLow}
-                  onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalLow: e.target.value })}
-                  className="threshold-input font-monospace fs-13"
-                  placeholder="Optional"
-                />
-              </Form.Group>
-            </Col>
-
-            <Col xs={12} className="pt-2">
-              <div className="d-flex flex-column gap-2 p-3 rounded-2" style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div className="d-flex align-items-center justify-content-between">
-                  <div>
-                    <div className="fs-12 fw-semibold text-white d-flex align-items-center gap-1.5">
-                      <span>Cumulative Metric (Energy / Water meters)</span>
-                      <span className="badge bg-info bg-opacity-25 text-info fs-10 font-monospace">kWh / m³</span>
-                    </div>
-                    <div className="text-slate-400 fs-11 mt-0.5">
-                      Enables indefinite accumulation tracking and hourly/daily delta consumption rollups.
-                    </div>
-                  </div>
-                  <Form.Check
-                    type="switch"
-                    id="modal-toggle-cumulative"
-                    checked={Boolean(thresholdDraft.isCumulative)}
-                    onChange={(e) => setThresholdDraft({ ...thresholdDraft, isCumulative: e.target.checked })}
-                    className="fs-14 ms-3"
-                  />
+        return (
+          <>
+            <Modal.Header closeButton className="border-secondary border-opacity-25 px-4 py-3">
+              <div className="d-flex align-items-center gap-3">
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-3 p-2 flex-shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    color: '#fbbf24'
+                  }}
+                >
+                  <Sliders size={20} />
                 </div>
-
-                <div className="d-flex align-items-center justify-content-between pt-2 border-top border-secondary border-opacity-25">
-                  <div>
-                    <div className="fs-12 fw-semibold text-white">Live Telemetry Collection</div>
-                    <div className="text-slate-400 fs-11 mt-0.5">
-                      Records live telemetry readings and scheduled rollups for this metric.
-                    </div>
-                  </div>
-                  <Form.Check
-                    type="switch"
-                    id="modal-toggle-telemetry"
-                    checked={thresholdDraft.isTelemetry !== false}
-                    onChange={(e) => setThresholdDraft({ ...thresholdDraft, isTelemetry: e.target.checked })}
-                    className="fs-14 ms-3"
-                  />
+                <div className="d-flex align-items-center gap-2 flex-wrap">
+                  <span className="fw-bold fs-15 text-white">Configure Threshold Limits</span>
+                  <Badge
+                    bg="transparent"
+                    className="border border-info border-opacity-40 text-info fw-semibold px-2 py-0.5 fs-11 font-monospace"
+                    style={{ background: 'rgba(14, 165, 233, 0.12)' }}
+                  >
+                    {paramName}{paramUnit ? ` (${paramUnit})` : ''}
+                  </Badge>
                 </div>
               </div>
-            </Col>
-          </Row>
-        )}
-      </Modal.Body>
-      <Modal.Footer className="border-secondary border-opacity-25">
-        <Button variant="outline-secondary" size="sm" onClick={handleCloseThresholdModal}>
-          Cancel
-        </Button>
-        <Button
-          variant="warning"
-          size="sm"
-          onClick={handleSaveThresholdDraft}
-          className="fw-bold text-dark px-4"
-          style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}
-        >
-          Save Threshold Limits
-        </Button>
-      </Modal.Footer>
+            </Modal.Header>
+
+            <Modal.Body className="p-4 d-flex flex-column gap-3">
+              <Row className="g-3">
+                {/* 1. Upper Thresholds Card */}
+                <Col xs={12} md={6}>
+                  <div className="threshold-section-card upper h-100">
+                    <div className="d-flex align-items-center gap-1.5 mb-3">
+                      <ArrowUpRight size={16} className="text-warning" />
+                      <span className="fs-13 fw-bold text-white">Upper Limits</span>
+                    </div>
+
+                    <div className="d-flex flex-column gap-3">
+                      {/* Warning High */}
+                      <Form.Group>
+                        <Form.Label className="fs-12 fw-semibold threshold-label d-flex align-items-center gap-1.5 mb-1.5">
+                          <span className="alert-dot amber" /> Warning High
+                        </Form.Label>
+                        <InputGroup size="sm" className="threshold-input-group">
+                          <Form.Control
+                            type="number"
+                            value={thresholdDraft.warningHigh}
+                            onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningHigh: e.target.value })}
+                            className="threshold-input font-monospace fs-13"
+                            placeholder="Optional"
+                          />
+                          {paramUnit && <InputGroup.Text>{paramUnit}</InputGroup.Text>}
+                        </InputGroup>
+                      </Form.Group>
+
+                      {/* Critical High */}
+                      <Form.Group>
+                        <Form.Label className="fs-12 fw-semibold threshold-label d-flex align-items-center gap-1.5 mb-1.5">
+                          <span className="alert-dot red" /> Critical High
+                        </Form.Label>
+                        <InputGroup size="sm" className="threshold-input-group">
+                          <Form.Control
+                            type="number"
+                            value={thresholdDraft.criticalHigh}
+                            onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalHigh: e.target.value })}
+                            className="threshold-input font-monospace fs-13"
+                            placeholder="Optional"
+                          />
+                          {paramUnit && <InputGroup.Text>{paramUnit}</InputGroup.Text>}
+                        </InputGroup>
+                      </Form.Group>
+                    </div>
+                  </div>
+                </Col>
+
+                {/* 2. Lower Thresholds Card */}
+                <Col xs={12} md={6}>
+                  <div className="threshold-section-card lower h-100">
+                    <div className="d-flex align-items-center gap-1.5 mb-3">
+                      <ArrowDownRight size={16} className="text-info" />
+                      <span className="fs-13 fw-bold text-white">Lower Limits</span>
+                    </div>
+
+                    <div className="d-flex flex-column gap-3">
+                      {/* Warning Low */}
+                      <Form.Group>
+                        <Form.Label className="fs-12 fw-semibold threshold-label d-flex align-items-center gap-1.5 mb-1.5">
+                          <span className="alert-dot amber" /> Warning Low
+                        </Form.Label>
+                        <InputGroup size="sm" className="threshold-input-group">
+                          <Form.Control
+                            type="number"
+                            value={thresholdDraft.warningLow}
+                            onChange={(e) => setThresholdDraft({ ...thresholdDraft, warningLow: e.target.value })}
+                            className="threshold-input font-monospace fs-13"
+                            placeholder="Optional"
+                          />
+                          {paramUnit && <InputGroup.Text>{paramUnit}</InputGroup.Text>}
+                        </InputGroup>
+                      </Form.Group>
+
+                      {/* Critical Low */}
+                      <Form.Group>
+                        <Form.Label className="fs-12 fw-semibold threshold-label d-flex align-items-center gap-1.5 mb-1.5">
+                          <span className="alert-dot red" /> Critical Low
+                        </Form.Label>
+                        <InputGroup size="sm" className="threshold-input-group">
+                          <Form.Control
+                            type="number"
+                            value={thresholdDraft.criticalLow}
+                            onChange={(e) => setThresholdDraft({ ...thresholdDraft, criticalLow: e.target.value })}
+                            className="threshold-input font-monospace fs-13"
+                            placeholder="Optional"
+                          />
+                          {paramUnit && <InputGroup.Text>{paramUnit}</InputGroup.Text>}
+                        </InputGroup>
+                      </Form.Group>
+                    </div>
+                  </div>
+                </Col>
+
+                {/* 3. Behavior & Telemetry Card */}
+                <Col xs={12}>
+                  <div className="threshold-section-card flags">
+                    <div className="d-flex align-items-center gap-1.5 mb-2.5">
+                      <Cpu size={15} className="text-primary" />
+                      <span className="fs-13 fw-bold text-white">Telemetry &amp; Tracking</span>
+                    </div>
+
+                    <div className="d-flex flex-column gap-2">
+                      <div className="threshold-toggle-row d-flex align-items-center justify-content-between py-2.5 px-3">
+                        <div className="d-flex align-items-center gap-2">
+                          <Zap size={16} className="text-warning flex-shrink-0" />
+                          <span className="fs-12 fw-semibold text-white">Cumulative Metric Tracking</span>
+                          <span className="badge bg-warning bg-opacity-20 text-warning fs-10 font-monospace">
+                            {paramUnit || 'kWh / m³'}
+                          </span>
+                        </div>
+                        <Form.Check
+                          type="switch"
+                          id="modal-toggle-cumulative"
+                          checked={Boolean(thresholdDraft.isCumulative)}
+                          onChange={(e) => setThresholdDraft({ ...thresholdDraft, isCumulative: e.target.checked })}
+                          className="fs-14 ms-3 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="threshold-toggle-row d-flex align-items-center justify-content-between py-2.5 px-3">
+                        <div className="d-flex align-items-center gap-2">
+                          <Activity size={16} className="text-info flex-shrink-0" />
+                          <span className="fs-12 fw-semibold text-white">Live Telemetry Collection</span>
+                        </div>
+                        <Form.Check
+                          type="switch"
+                          id="modal-toggle-telemetry"
+                          checked={thresholdDraft.isTelemetry !== false}
+                          onChange={(e) => setThresholdDraft({ ...thresholdDraft, isTelemetry: e.target.checked })}
+                          className="fs-14 ms-3 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            </Modal.Body>
+
+            <Modal.Footer className="border-secondary border-opacity-25 px-4 py-3 d-flex align-items-center justify-content-between">
+              <button
+                type="button"
+                onClick={handleClearThresholdDraft}
+                className="btn btn-sm btn-outline-secondary border-opacity-50 text-slate-400 d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-12 rounded-2"
+                title="Reset all threshold numbers to empty"
+              >
+                <RotateCcw size={12} /> Clear Thresholds
+              </button>
+
+              <div className="d-flex align-items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseThresholdModal}
+                  className="wizard-btn-cancel px-3.5 py-1.5 fs-12 rounded-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveThresholdDraft}
+                  className="wizard-btn-primary d-inline-flex align-items-center gap-1.5 px-4 py-1.5 fs-12 fw-semibold rounded-2"
+                >
+                  <Check size={14} /> Save Threshold Limits
+                </button>
+              </div>
+            </Modal.Footer>
+          </>
+        );
+      })()}
     </Modal>
     </>
   );
