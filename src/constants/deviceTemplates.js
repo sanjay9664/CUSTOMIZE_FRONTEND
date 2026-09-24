@@ -431,94 +431,303 @@ export const DEVICE_TEMPLATES = {
     ]
   },
 
-  SUB_ENERGY_METER: {
-    id: 'SUB_ENERGY_METER',
-    label: 'Sub-Energy Meter',
-    parameters: [
-      { name: 'Meter Status', required: true },
-      { name: 'Voltage (V - Volts)', required: true },
-      { name: 'Current (A - Amperes)', required: true },
-      { name: 'Frequency (Hz - Hertz)', required: false },
-      { name: 'Active Power (kW - Kilowatt)', required: false },
-      { name: 'Reactive Power (kVAR - Reactive Power)', required: false },
-      { name: 'Apparent Power (kVA - Apparent Power)', required: false },
-      { name: 'Power Factor (PF)', required: false },
-      { name: 'Import Energy (kWh - Active Energy)', required: false },
-      { name: 'Export Energy (kWh - Active Energy)', required: false },
-      { name: 'Active Energy (kWh - Kilowatt Hour)', required: false },
-      { name: 'Reactive Energy (kVARh - Reactive Energy Hour)', required: false },
-      { name: 'Maximum Demand (kW / kVA)', required: false },
-      { name: 'Average Demand (kW / kVA)', required: false },
-      { name: 'Peak Demand (kW / kVA)', required: false },
-      { name: 'Phase Voltage (V - Volts)', required: false },
-      { name: 'Phase Current (A - Amperes)', required: false },
-      { name: 'Phase Imbalance (%)', required: false },
-      { name: 'Harmonics THD (% Total Harmonic Distortion)', required: false },
-      { name: 'kWh (Active Energy - Kilowatt Hour)', required: false },
-      { name: 'kVAh (Apparent Energy - Kilovolt Ampere Hour)', required: false },
-      { name: 'kVARh (Reactive Energy - Kilovolt Ampere Reactive Hour)', required: false },
-      { name: 'Daily Energy (kWh)', required: false },
-      { name: 'Monthly Energy (kWh)', required: false },
-      { name: 'Yearly Energy (kWh)', required: false },
-      { name: 'Main Meter', required: false },
-      { name: 'Sub Meter', required: false },
-      { name: 'Meter-wise Consumption', required: false },
-      { name: 'Area-wise Consumption', required: false },
-      { name: 'Equipment-wise Consumption', required: false },
-      { name: 'Energy Cost (₹)', required: false },
-      { name: 'Energy Trend', required: false },
-      { name: 'Carbon Emission (kgCO2)', required: false }
-    ]
-  },
+ SUB_ENERGY_METER: {
+  id: 'SUB_ENERGY_METER',
+  label: 'Sub-Energy Meter',
 
-  MAIN_ENERGY_METER: {
-    id: 'MAIN_ENERGY_METER',
-    label: 'Main Energy Meter',
-    parameters: [
-      { name: 'EP (Active Energy - kWh)', required: false },
-      { name: 'Eq (Reactive Energy - kVARh)', required: false },
-      { name: 'PF (Power Factor)', required: false },
-      { name: 'S (Apparent Power - kVA)', required: false },
-      { name: 'R-Phase Voltage (V)', required: false },
-      { name: 'Y-Phase Voltage (V)', required: false },
-      { name: 'B-Phase Voltage (V)', required: false },
-      { name: 'R-Current (A)', required: false },
-      { name: 'Y-Current (A)', required: false },
-      { name: 'B-Current (A)', required: false },
-      { name: 'EB KVAH (Grid Apparent Energy - kVAh)', required: false },
-      { name: 'EB KWH (Grid Active Energy - kWh)', required: false },
-      { name: 'Balance (₹)', required: false },
-      { name: 'Total KW (Active Power - kW)', required: false },
-      { name: 'Power Factor (PF)', required: false },
-      { name: 'Total KVA (Apparent Power - kVA)', required: false },
-      { name: 'DG KWH (Generator Active Energy - kWh)', required: false },
-      { name: 'Reactive Power (kVAR - Reactive Power)', required: false },
-      { name: 'Frequency (Hz - Hertz)', required: false },
-      { name: 'Avg Voltage L-L (V)', required: false },
-      { name: 'Avg Voltage L-N (V)', required: false },
-      { name: 'Avg Current (A)', required: false },
-      { name: 'Power KVA (AVG) (Avg Apparent Power - kVA)', required: false },
-      { name: 'Power KVAR (AVG) (Avg Reactive Power - kVAR)', required: false },
-      { name: 'Avg PF (Average Power Factor)', required: false },
-      { name: 'Voltage R-Y (V)', required: false },
-      { name: 'Voltage Y-B (V)', required: false },
-      { name: 'Voltage B-R (V)', required: false },
-      { name: 'PF-R (R-Phase Power Factor)', required: false },
-      { name: 'PF-Y (Y-Phase Power Factor)', required: false },
-      { name: 'PF-B (B-Phase Power Factor)', required: false },
-      { name: 'Load Hrs', required: false },
-      { name: 'Load Min', required: false },
-      { name: 'No Load Hrs', required: false },
-      { name: 'No Load Min', required: false },
-      { name: 'Load %', required: false },
-      { name: 'Meter Target', required: false },
-      { name: 'EB Tariff (₹/kWh)', required: false },
-      { name: 'DG Tariff (₹/kWh)', required: false },
-      { name: 'R-Phase Load (kW)', required: false },
-      { name: 'Y-Phase Load (kW)', required: false },
-      { name: 'B-Phase Load (kW)', required: false }
-    ]
-  },
+  parameters: [
+    // =========================
+    // MOST COMMON / CORE
+    // =========================
+    { name: 'Meter Status', required: true },
+    { name: 'Meter Serial Number', required: true },
+    { name: 'Voltage (V - Volts)', required: true },
+    { name: 'Current (A - Amperes)', required: true },
+    { name: 'Active Power (kW - Kilowatt)', required: true },
+    { name: 'Power Factor (PF)', required: true },
+    { name: 'Active Energy (kWh - Kilowatt Hour)', required: true },
+    { name: 'Apparent Power (kVA - Apparent Power)', required: false },
+    { name: 'Apparent Energy (kVAh - Kilovolt Ampere Hour)', required: false },
+
+    // =========================
+    // PHASE PARAMETERS
+    // =========================
+    { name: 'Phase Voltage (V - Volts)', required: false },
+    { name: 'Phase Current (A - Amperes)', required: false },
+    { name: 'Voltage R (V)', required: false },
+    { name: 'Voltage Y (V)', required: false },
+    { name: 'Voltage B (V)', required: false },
+    { name: 'R Current (A)', required: false },
+    { name: 'Y Current (A)', required: false },
+    { name: 'B Current (A)', required: false },
+    { name: 'Phase Imbalance (%)', required: false },
+
+    // =========================
+    // ENERGY / POWER
+    // =========================
+    { name: 'Reactive Power (kVAR - Reactive Power)', required: false },
+    { name: 'Reactive Energy (kVARh - Reactive Energy Hour)', required: false },
+    { name: 'Import Energy (kWh - Active Energy)', required: false },
+    { name: 'Export Energy (kWh - Active Energy)', required: false },
+    { name: 'kWh (Active Energy - Kilowatt Hour)', required: false },
+    { name: 'kVAh (Apparent Energy - Kilovolt Ampere Hour)', required: false },
+    { name: 'kVARh (Reactive Energy - Kilovolt Ampere Reactive Hour)', required: false },
+    { name: 'Daily Energy (kWh)', required: false },
+    { name: 'Monthly Energy (kWh)', required: false },
+    { name: 'Yearly Energy (kWh)', required: false },
+
+    // =========================
+    // DEMAND
+    // =========================
+    { name: 'Maximum Demand (kW / kVA)', required: false },
+    { name: 'Average Demand (kW / kVA)', required: false },
+    { name: 'Peak Demand (kW / kVA)', required: false },
+
+    // =========================
+    // METER / LOAD SETTINGS
+    // =========================
+    { name: 'Balance (₹)', required: false },
+    { name: 'Fixed Charge (₹)', required: false },
+    { name: 'EB Tariff (₹)', required: false },
+    { name: 'DG Tariff (₹)', required: false },
+    { name: 'EB/DG Status', required: false },
+    { name: 'Connected Status', required: false },
+    { name: 'Force Off', required: false },
+    { name: 'Low Balance Cut', required: false },
+
+    // =========================
+    // OVERLOAD / LOAD SET
+    // =========================
+    { name: 'Overload Trip', required: false },
+    { name: 'Overload Limit Reached', required: false },
+    { name: 'No. of Overload Checks', required: false },
+    { name: 'EB R Load Set (kW)', required: false },
+    { name: 'EB Y Load Set (kW)', required: false },
+    { name: 'EB B Load Set (kW)', required: false },
+    { name: 'DG R Load Set (kW)', required: false },
+    { name: 'DG Y Load Set (kW)', required: false },
+    { name: 'DG B Load Set (kW)', required: false },
+
+    // =========================
+    // ELECTRICAL QUALITY
+    // =========================
+    { name: 'Frequency (Hz - Hertz)', required: false },
+    { name: 'Harmonics THD (% Total Harmonic Distortion)', required: false },
+
+    // =========================
+    // CONSUMPTION / ANALYTICS
+    // =========================
+    { name: 'Main Meter', required: false },
+    { name: 'Sub Meter', required: false },
+    { name: 'Meter-wise Consumption', required: false },
+    { name: 'Area-wise Consumption', required: false },
+    { name: 'Equipment-wise Consumption', required: false },
+    { name: 'Energy Cost (₹)', required: false },
+    { name: 'Energy Trend', required: false },
+    { name: 'Carbon Emission (kgCO2)', required: false }
+  ]
+},
+
+ SUB_ENERGY_METER: {
+
+  id: 'SUB_ENERGY_METER',
+
+  label: 'Sub-Energy Meter',
+
+  parameters: [
+
+    // =========================
+    // CORE ENERGY PARAMETERS
+    // =========================
+    { name: 'EP (Active Energy - kWh)', required: false },
+
+    { name: 'Eq (Reactive Energy - kVARh)', required: false },
+
+    { name: 'PF (Power Factor)', required: false },
+
+    { name: 'S (Apparent Power - kVA)', required: false },
+
+    { name: 'Total KW (Active Power - kW)', required: false },
+
+    { name: 'Total KVA (Apparent Power - kVA)', required: false },
+
+    { name: 'Reactive Power (kVAR - Reactive Power)', required: false },
+
+    { name: 'Frequency (Hz - Hertz)', required: false },
+
+
+    // =========================
+    // PHASE VOLTAGE
+    // =========================
+    { name: 'R-Phase Voltage (V)', required: false },
+
+    { name: 'Y-Phase Voltage (V)', required: false },
+
+    { name: 'B-Phase Voltage (V)', required: false },
+
+    { name: 'Avg Voltage L-L (V)', required: false },
+
+    { name: 'Avg Voltage L-N (V)', required: false },
+
+    { name: 'Voltage R-Y (V)', required: false },
+
+    { name: 'Voltage Y-B (V)', required: false },
+
+    { name: 'Voltage B-R (V)', required: false },
+
+
+    // =========================
+    // PHASE CURRENT
+    // =========================
+    { name: 'R-Current (A)', required: false },
+
+    { name: 'Y-Current (A)', required: false },
+
+    { name: 'B-Current (A)', required: false },
+
+    { name: 'Avg Current (A)', required: false },
+
+
+    // =========================
+    // PHASE POWER FACTOR
+    // =========================
+    { name: 'PF-R (R-Phase Power Factor)', required: false },
+
+    { name: 'PF-Y (Y-Phase Power Factor)', required: false },
+
+    { name: 'PF-B (B-Phase Power Factor)', required: false },
+
+    { name: 'Avg PF (Average Power Factor)', required: false },
+
+
+    // =========================
+    // ENERGY / GRID / DG
+    // =========================
+    { name: 'EB KVAH (Grid Apparent Energy - kVAh)', required: false },
+
+    { name: 'EB KWH (Grid Active Energy - kWh)', required: false },
+
+    { name: 'DG KWH (Generator Active Energy - kWh)', required: false },
+
+    { name: 'Balance (₹)', required: false },
+
+    { name: 'EB Tariff (₹/kWh)', required: false },
+
+    { name: 'DG Tariff (₹/kWh)', required: false },
+
+
+    // =========================
+    // AVERAGE POWER
+    // =========================
+    { name: 'Power KVA (AVG) (Avg Apparent Power - kVA)', required: false },
+
+    { name: 'Power KVAR (AVG) (Avg Reactive Power - kVAR)', required: false },
+
+
+    // =========================
+    // LOAD PARAMETERS
+    // =========================
+    { name: 'R-Phase Load (kW)', required: false },
+
+    { name: 'Y-Phase Load (kW)', required: false },
+
+    { name: 'B-Phase Load (kW)', required: false },
+
+    { name: 'Load %', required: false },
+
+    { name: 'Load Hrs', required: false },
+
+    { name: 'Load Min', required: false },
+
+    { name: 'No Load Hrs', required: false },
+
+    { name: 'No Load Min', required: false },
+
+    { name: 'Meter Target', required: false },
+
+
+    // =========================
+    // OVERLOAD / CONTROL
+    // =========================
+    { name: 'Overload Trip', required: false },
+
+    { name: 'Overload Limit Reached', required: false },
+
+    { name: 'Low Balance Cut', required: false },
+
+    { name: 'Connected Status', required: false },
+
+    { name: 'Force Off', required: false },
+
+    { name: 'No. of Overload Checks', required: false },
+
+
+    // =========================
+    // LOAD SETTING
+    // =========================
+    { name: 'EB R Load Set (kW)', required: false },
+
+    { name: 'EB Y Load Set (kW)', required: false },
+
+    { name: 'EB B Load Set (kW)', required: false },
+
+    { name: 'DG R Load Set (kW)', required: false },
+
+    { name: 'DG Y Load Set (kW)', required: false },
+
+    { name: 'DG B Load Set (kW)', required: false },
+
+
+    // =========================
+    // METER INFORMATION
+    // =========================
+    { name: 'Meter Serial Number', required: false },
+
+    { name: 'EB/DG Status', required: false },
+
+    { name: 'Fixed Charge (₹)', required: false },
+
+
+    // =========================
+    // CONSUMPTION / ANALYTICS
+    // =========================
+    { name: 'Daily Energy (kWh)', required: false },
+
+    { name: 'Monthly Energy (kWh)', required: false },
+
+    { name: 'Yearly Energy (kWh)', required: false },
+
+    { name: 'Meter-wise Consumption', required: false },
+
+    { name: 'Area-wise Consumption', required: false },
+
+    { name: 'Equipment-wise Consumption', required: false },
+
+    { name: 'Energy Cost (₹)', required: false },
+
+    { name: 'Energy Trend', required: false },
+
+    { name: 'Carbon Emission (kgCO2)', required: false },
+
+
+    // =========================
+    // ELECTRICAL QUALITY
+    // =========================
+    { name: 'Harmonics THD (% Total Harmonic Distortion)', required: false },
+
+    { name: 'Phase Imbalance (%)', required: false },
+
+
+    // =========================
+    // METER RELATION
+    // =========================
+    { name: 'Main Meter', required: false },
+
+    { name: 'Sub Meter', required: false }
+
+  ]
+
+},
 
   VRV: {
     id: 'VRV',
