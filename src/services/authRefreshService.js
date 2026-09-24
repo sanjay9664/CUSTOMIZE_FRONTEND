@@ -45,7 +45,6 @@ export const performTokenRefresh = async (force = false) => {
     }
 
     try {
-      console.log('[AuthRefresh] Regenerating access token...');
       const response = await fetch(AUTH_ENDPOINTS.refresh, {
         method: 'POST',
         credentials: 'include',
@@ -53,7 +52,6 @@ export const performTokenRefresh = async (force = false) => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        credentials: 'include', // Allows browser to transmit and receive HttpOnly refresh cookies
         body: JSON.stringify(currentRefreshToken ? { refreshToken: currentRefreshToken } : {})
       });
 
@@ -74,7 +72,6 @@ export const performTokenRefresh = async (force = false) => {
             userData
           });
 
-          console.log(`[AuthRefresh] Token successfully renewed at ${new Date().toLocaleTimeString()}`);
           return newAccessToken;
         }
       } else if (response.status === 401 || response.status === 403) {
@@ -102,13 +99,14 @@ const handleVisibilityOrFocus = () => {
   if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
   const currentToken = getAuthToken();
   if (currentToken && isTokenExpiringSoon(currentToken, 180)) {
-    console.log('[AuthRefresh] Tab active / visible with expiring token, refreshing now...');
     performTokenRefresh(true);
   }
 };
 
 export const startAutoTokenRefresh = () => {
-  stopAutoTokenRefresh();
+  if (refreshTimer) {
+    return;
+  }
 
   // Schedule periodic proactive refresh every 10 minutes
   refreshTimer = setInterval(() => {
@@ -127,15 +125,12 @@ export const startAutoTokenRefresh = () => {
   if (token && isTokenExpiringSoon(token, 180)) {
     performTokenRefresh(true);
   }
-
-  console.log('[AuthRefresh] Auto token refresh scheduler activated (Every 10 min + on tab focus).');
 };
 
 export const stopAutoTokenRefresh = () => {
   if (refreshTimer) {
     clearInterval(refreshTimer);
     refreshTimer = null;
-    console.log('[AuthRefresh] Auto token refresh scheduler stopped.');
   }
   if (typeof window !== 'undefined' && isListenersAttached) {
     window.removeEventListener('focus', handleVisibilityOrFocus);
