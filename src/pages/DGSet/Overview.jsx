@@ -339,6 +339,8 @@ const SiemensStyleDG = () => {
           } else {
             setSelectedDeviceId('');
             localStorage.removeItem('selected_dg_device_id');
+            setData(defaultCleanState);
+            setBackendEvents({});
           }
         }
       } catch (err) {
@@ -346,6 +348,8 @@ const SiemensStyleDG = () => {
         if (isMounted) {
           setDevices([]);
           setSelectedDeviceId('');
+          setData(defaultCleanState);
+          setBackendEvents({});
         }
       } finally {
         if (isMounted) setDevicesLoading(false);
@@ -412,16 +416,17 @@ const SiemensStyleDG = () => {
   }, [isManualRunning, data]);
 
   // 3. Live Telemetry Parser & 30s Polling Effect
-  const fetchDeviceTelemetry = useCallback(async () => {
-    if (!selectedDeviceId || !isDeviceConfigured) return;
+  const fetchDeviceTelemetry = useCallback(async (devId = selectedDeviceId) => {
+    const targetId = devId || selectedDeviceId;
+    if (!targetId) return;
     setIsFetchingTelemetry(true);
     try {
-      const eventsRes = await bmsService.getDeviceEventsLatest(selectedDeviceId, selectedSiteId).catch(() => null);
+      const eventsRes = await bmsService.getDeviceEventsLatest(targetId, selectedSiteId).catch(() => null);
 
       let newData = { ...defaultCleanState };
       let updated = false;
 
-      // Extract fields from eventsRes payload safely (supporting object with .fields, .data.fields, or array)
+      // Extract fields from eventsRes payload safely (supporting object with .fields, .data.fields, results array)
       const eventsList = [];
       const candidateSources = [
         eventsRes?.fields,
@@ -429,6 +434,8 @@ const SiemensStyleDG = () => {
         eventsRes?.data?.data?.fields,
         eventsRes?.events,
         eventsRes?.data?.events,
+        eventsRes?.data?.results,
+        eventsRes?.results,
         Array.isArray(eventsRes) ? eventsRes : null,
         Array.isArray(eventsRes?.data) ? eventsRes.data : null
       ];
@@ -438,6 +445,8 @@ const SiemensStyleDG = () => {
           src.forEach(item => {
             if (item && Array.isArray(item.eventFields)) {
               eventsList.push(...item.eventFields);
+            } else if (item && Array.isArray(item.fields)) {
+              eventsList.push(...item.fields);
             } else if (item && (item.eventFieldDisplayName || item.displayName || item.fieldName || item.name)) {
               eventsList.push(item);
             }
@@ -449,7 +458,7 @@ const SiemensStyleDG = () => {
 
       if (Array.isArray(eventsList) && eventsList.length > 0) {
         eventsList.forEach(f => {
-          const rawDispName = String(f.eventFieldDisplayName || f.displayName || f.fieldName || '').trim();
+          const rawDispName = String(f.eventFieldDisplayName || f.displayName || f.fieldName || f.name || '').trim();
           const dispName = rawDispName.toLowerCase();
           const val = f.fieldCurrentValue ?? f.currentValue ?? f.value;
 
@@ -500,12 +509,15 @@ const SiemensStyleDG = () => {
     }
   }, [selectedDeviceId, selectedSiteId]);
 
+  // Fetch telemetry whenever selectedDeviceId or devices change, and poll every 30s
   useEffect(() => {
     if (!selectedDeviceId) return;
-    fetchDeviceTelemetry();
-    const interval = setInterval(fetchDeviceTelemetry, 30000);
+    fetchDeviceTelemetry(selectedDeviceId);
+    const interval = setInterval(() => {
+      fetchDeviceTelemetry(selectedDeviceId);
+    }, 30000);
     return () => clearInterval(interval);
-  }, [selectedDeviceId, fetchDeviceTelemetry]);
+  }, [selectedDeviceId, selectedSiteId, devices, fetchDeviceTelemetry]);
 
   // Site selector configuration for PageContextBanner
   const siteSelector = useMemo(() => {
@@ -873,6 +885,15 @@ const SiemensStyleDG = () => {
     return groups;
   }, [filtered35Parameters]);
 
+  // Category counts from mapped parameters
+  const categoryCounts = useMemo(() => {
+    const counts = { ALL: mapped35Parameters.length, CHANGE: 0, PARM: 0, ENGINE: 0, TOTAL: 0, FAULT: 0 };
+    mapped35Parameters.forEach(p => {
+      if (counts[p.category] !== undefined) counts[p.category]++;
+    });
+    return counts;
+  }, [mapped35Parameters]);
+
   const handlePdfDownload = () => {
     setGeneratingPdf(true);
     try {
@@ -1118,51 +1139,40 @@ const SiemensStyleDG = () => {
         {/* CENTER COLUMN: UNIFIED 35 PARAMETERS MATRIX SHOWCASE (COMPACT TILES) */}
         <Col xl={5} lg={7}>
           <div className="dg-glass-card p-3 h-100">
-            {/* HEADER & SEARCH BAR */}
-            <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom border-white border-opacity-10">
-              <div className="d-flex align-items-center gap-2">
-                <ListFilter size={18} className="text-cyan-glow" />
-                <div>
-                  <h6 className="fw-bold text-main mb-0">GENERATOR PARAMETERS MATRIX</h6>
-                  <small className="text-dim fs-12">Total Parameters: <span className="text-cyan-glow fw-bold">35</span></small>
-                </div>
-              </div>
-
-              {/* SEARCH INPUT */}
-              <div style={{ minWidth: '190px' }}>
-                <InputGroup size="sm" className="dg-search-group">
-                  <InputGroup.Text className="bg-transparent border-0 text-muted ps-2.5">
-                    <Search size={13} />
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    placeholder="Search parameter..."
-                    value={paramSearch}
-                    onChange={(e) => setParamSearch(e.target.value)}
-                    className="bg-transparent text-main border-0 fs-12 shadow-none focus-none"
-                  />
-                </InputGroup>
-              </div>
-            </div>
-
-            {/* COMPACT CATEGORY FILTER CHIPS */}
-            <div className="d-flex align-items-center gap-1.5 flex-wrap mb-3">
+            {/* ULTRA-SLEEK INDUSTRIAL CATEGORY SELECTOR BAR */}
+            <div className="dg-category-nav-bar mb-3">
               {[
-                { key: 'ALL', label: 'ALL (35)' },
-                { key: 'CHANGE', label: '01 CHANGE (1)' },
-                { key: 'PARM', label: '02 PARM (9)' },
-                { key: 'ENGINE', label: '03 ENGINE (6)' },
-                { key: 'TOTAL', label: '04 TOTAL (5)' },
-                { key: 'FAULT', label: '05 FAULT (14)' }
-              ].map(cat => (
-                <button
-                  key={cat.key}
-                  onClick={() => setSelectedCategoryFilter(cat.key)}
-                  className={`btn btn-xs rounded-pill px-2.5 py-0.5 fs-12 transition-all ${selectedCategoryFilter === cat.key ? 'btn-cyan text-white shadow-sm' : 'dg-category-chip'}`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+                { key: 'ALL', code: null, name: 'ALL', color: 'cyan' },
+                { key: 'CHANGE', code: '01', name: 'CHANGE', color: 'success' },
+                { key: 'PARM', code: '02', name: 'PARM', color: 'warning' },
+                { key: 'ENGINE', code: '03', name: 'ENGINE', color: 'info' },
+                { key: 'TOTAL', code: '04', name: 'TOTAL', color: 'cyan' },
+                { key: 'FAULT', code: '05', name: 'FAULT', color: 'danger' }
+              ].map(cat => {
+                const isSelected = selectedCategoryFilter === cat.key;
+                const count = categoryCounts[cat.key] ?? 0;
+                return (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setSelectedCategoryFilter(prev => prev === cat.key && cat.key !== 'ALL' ? 'ALL' : cat.key)}
+                    className={`dg-cat-nav-btn ${isSelected ? `active ${cat.color}` : ''}`}
+                    title={`Filter by ${cat.name} (${count})`}
+                  >
+                    <span className="dg-cat-main">
+                      {cat.code ? (
+                        <span className={`dg-cat-code ${cat.color}`}>{cat.code}</span>
+                      ) : (
+                        <span className="dg-cat-dot cyan" />
+                      )}
+                      <span className="dg-cat-name">{cat.name}</span>
+                    </span>
+                    <span className={`dg-cat-badge ${isSelected ? `active ${cat.color}` : ''}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* 5 CATEGORIES COLLAPSIBLE ACCORDION SHOWCASE MATRIX (MATCHING IMAGE 2) */}
@@ -2244,16 +2254,167 @@ const SiemensStyleDG = () => {
         body.light-mode .dg-search-group,
         [data-theme="light"] .dg-search-group { background: #ffffff !important; border-color: #cbd5e1 !important; }
 
-        /* CATEGORY CHIPS */
-        .dg-category-chip {
-          background: rgba(255, 255, 255, 0.03);
+        /* ULTRA-SLEEK SEGMENTED CATEGORY NAV BAR */
+        .dg-category-nav-bar {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: rgba(15, 23, 42, 0.65);
           border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          padding: 4px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .dg-category-nav-bar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .dg-cat-nav-btn {
+          flex: 1 1 0;
+          min-width: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+          padding: 6px 9px;
+          border-radius: 7px;
+          border: 1px solid transparent;
+          background: transparent;
           color: #94a3b8;
           font-size: 0.72rem;
           font-weight: 600;
+          letter-spacing: 0.02em;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          white-space: nowrap;
         }
-        body.light-mode .dg-category-chip,
-        [data-theme="light"] .dg-category-chip { background: #ffffff !important; border-color: #cbd5e1 !important; color: #475569 !important; }
+
+        .dg-cat-nav-btn:hover {
+          color: #f1f5f9;
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .dg-cat-nav-btn.active {
+          background: rgba(14, 165, 233, 0.16);
+          border-color: rgba(14, 165, 233, 0.45);
+          color: #38bdf8;
+          box-shadow: 0 2px 10px rgba(14, 165, 233, 0.2);
+        }
+
+        .dg-cat-nav-btn.active.success {
+          background: rgba(16, 185, 129, 0.16);
+          border-color: rgba(16, 185, 129, 0.5);
+          color: #34d399;
+          box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
+        }
+        .dg-cat-nav-btn.active.warning {
+          background: rgba(245, 158, 11, 0.16);
+          border-color: rgba(245, 158, 11, 0.5);
+          color: #fbbf24;
+          box-shadow: 0 2px 10px rgba(245, 158, 11, 0.2);
+        }
+        .dg-cat-nav-btn.active.info {
+          background: rgba(59, 130, 246, 0.16);
+          border-color: rgba(59, 130, 246, 0.5);
+          color: #60a5fa;
+          box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);
+        }
+        .dg-cat-nav-btn.active.cyan {
+          background: rgba(6, 182, 212, 0.16);
+          border-color: rgba(6, 182, 212, 0.5);
+          color: #22d3ee;
+          box-shadow: 0 2px 10px rgba(6, 182, 212, 0.2);
+        }
+        .dg-cat-nav-btn.active.danger {
+          background: rgba(239, 68, 68, 0.16);
+          border-color: rgba(239, 68, 68, 0.5);
+          color: #f87171;
+          box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
+        }
+
+        .dg-cat-main {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          min-width: 0;
+        }
+
+        .dg-cat-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          display: inline-block;
+          flex-shrink: 0;
+        }
+        .dg-cat-dot.cyan { background: #06b6d4; box-shadow: 0 0 6px rgba(6, 182, 212, 0.6); }
+
+        .dg-cat-code {
+          font-family: monospace;
+          font-size: 0.62rem;
+          font-weight: 700;
+          padding: 1px 4px;
+          border-radius: 3px;
+          flex-shrink: 0;
+          background: rgba(255, 255, 255, 0.06);
+          color: #94a3b8;
+        }
+        .dg-cat-code.success { color: #10b981; background: rgba(16, 185, 129, 0.12); }
+        .dg-cat-code.warning { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+        .dg-cat-code.info { color: #3b82f6; background: rgba(59, 130, 246, 0.12); }
+        .dg-cat-code.cyan { color: #06b6d4; background: rgba(6, 182, 212, 0.12); }
+        .dg-cat-code.danger { color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+
+        .dg-cat-name {
+          font-weight: 700;
+          font-size: 0.7rem;
+          letter-spacing: 0.03em;
+        }
+
+        .dg-cat-badge {
+          font-family: monospace;
+          font-size: 0.65rem;
+          font-weight: 700;
+          padding: 1px 5px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.08);
+          color: #94a3b8;
+          flex-shrink: 0;
+          transition: all 0.2s ease;
+        }
+
+        .dg-cat-badge.active.cyan { background: rgba(6, 182, 212, 0.25); color: #22d3ee; }
+        .dg-cat-badge.active.success { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+        .dg-cat-badge.active.warning { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
+        .dg-cat-badge.active.info { background: rgba(59, 130, 246, 0.25); color: #60a5fa; }
+        .dg-cat-badge.active.danger { background: rgba(239, 68, 68, 0.25); color: #f87171; }
+
+        /* Light mode support */
+        body.light-mode .dg-category-nav-bar,
+        [data-theme="light"] .dg-category-nav-bar {
+          background: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .dg-cat-nav-btn,
+        [data-theme="light"] .dg-cat-nav-btn {
+          color: #64748b !important;
+        }
+        body.light-mode .dg-cat-nav-btn:hover,
+        [data-theme="light"] .dg-cat-nav-btn:hover {
+          background: #e2e8f0 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .dg-cat-badge,
+        [data-theme="light"] .dg-cat-badge {
+          background: #e2e8f0 !important;
+          color: #475569 !important;
+        }
+        body.light-mode .dg-cat-code,
+        [data-theme="light"] .dg-cat-code {
+          background: #e2e8f0 !important;
+          color: #475569 !important;
+        }
 
         .dg-code-pill {
           padding: 1px 7px;
