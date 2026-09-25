@@ -1,17 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Card, Badge, ProgressBar, Toast, ToastContainer, Table, Form, Button, InputGroup } from 'react-bootstrap';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Row, Col, Card, Badge, ProgressBar, Toast, ToastContainer, Table, Form, Button, InputGroup, Spinner } from 'react-bootstrap';
 import { 
   ShieldAlert, Zap, Activity, Gauge, Fuel, History, 
   Settings, FileDown, Home, Database, TrendingDown,
   Building2, Layers, Cpu, Search, Play, Square, RotateCcw, 
   AlertOctagon, Info, LayoutGrid, ListFilter, Sliders, CheckCircle2,
-  AlertCircle, ChevronRight, RefreshCw, Radio, Maximize2, Sun, Moon,
+  AlertCircle, ChevronRight, RefreshCw, RefreshCcw, Radio, Maximize2, Sun, Moon,
   Tag, MapPin, Clock, ChevronDown, ChevronUp, Thermometer, Droplets, Calendar, Upload, Image as ImageIcon
 } from 'lucide-react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { apiClient, normalizeList } from '../../services/apiClient';
+import { apiClient, normalizeList, getAuthHeaders } from '../../services/apiClient';
+import PageContextBanner from '../../components/PageContextBanner';
+import PdfButton from '../../components/PdfButton';
+import { useSiteStore } from '../../context/SiteContext';
+import bmsService from '../../services/bmsService';
+import { getApiUrl } from '../../utils/apiConfig';
 
 // FULL 35 PARAMETERS DEFINITION (NO DUMMY FAKE DATA - ALL TELEMETRY MAPPED WITH RICH ICONS)
 const SYSTEM_35_PARAMS = [
@@ -77,13 +82,42 @@ const SiemensStyleDG = () => {
     FAULT: false
   });
 
-  // ── 3-TIER HIERARCHICAL SELECTOR STATES (Site -> Asset -> Device) ──
+  const toggleCategoryCollapse = (cat) => {
+    setCollapsedCategories(prev => ({
+      ...prev,
+      [cat]: !prev[cat]
+    }));
+  };
+
+  useEffect(() => {
+    if (routeDeviceId) {
+      setSelectedDeviceId(String(routeDeviceId));
+    }
+  }, [routeDeviceId]);
+
+  // ── SITE & GENERATOR DEVICE STATES (PageContextBanner integration) ──
+  const { sites: storeSites, selectedSite, setSelectedSite } = useSiteStore();
   const [sites, setSites] = useState([]);
-  const [selectedSiteId, setSelectedSiteId] = useState('');
-  const [assets, setAssets] = useState([]);
-  const [selectedAssetId, setSelectedAssetId] = useState('');
+  const [selectedSiteId, setSelectedSiteId] = useState(() => {
+    return localStorage.getItem('selected_dg_site_id') || '';
+  });
   const [devices, setDevices] = useState([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [selectedDeviceId, setSelectedDeviceId] = useState(() => {
+    return localStorage.getItem('selected_dg_device_id') || '';
+  });
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [isFetchingTelemetry, setIsFetchingTelemetry] = useState(false);
+  const [lastTelemetryAt, setLastTelemetryAt] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => 
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // ── MANUAL CONTROL & TOAST NOTIFICATION STATES ──
   const [isManualRunning, setIsManualRunning] = useState(false);
@@ -168,8 +202,21 @@ const SiemensStyleDG = () => {
     return clean && !invalidNames.has(clean);
   };
 
-  // 1. Load Real Sites
+  // 1. Sync & Load Real Sites
   useEffect(() => {
+    if (Array.isArray(storeSites) && storeSites.length > 0) {
+      setSites(storeSites);
+      if (!selectedSiteId || !storeSites.some(s => String(s.id || s.siteId) === String(selectedSiteId))) {
+        const initialSite = selectedSite?.id ? String(selectedSite.id) : String(storeSites[0].id || storeSites[0].siteId);
+        setSelectedSiteId(initialSite);
+        localStorage.setItem('selected_dg_site_id', initialSite);
+        if (setSelectedSite && !selectedSite) {
+          setSelectedSite(storeSites[0]);
+        }
+      }
+      return;
+    }
+
     const loadSites = async () => {
       const siteMap = new Map();
       try {
@@ -188,171 +235,156 @@ const SiemensStyleDG = () => {
 
       if (siteMap.size === 0) {
         try {
-          const backendUrl = window.process?.env?.REACT_APP_BACKEND_URL || '';
-          const token = localStorage.getItem('sochiot_token');
-          const res = await fetch(`${backendUrl}/api/sites`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const list = Array.isArray(data) ? data : (data.sites || []);
-            list.forEach(s => {
-              if (s && (s.id || s.name)) {
-                const name = String(s.name || s.label || s.id).trim();
-                if (isRealSiteName(name)) siteMap.set(String(s.id || name), { id: String(s.id || name), name });
-              }
-            });
+          const scadaSitesDb = localStorage.getItem('scada_sites_db');
+          if (scadaSitesDb) {
+            const parsed = JSON.parse(scadaSitesDb);
+            if (Array.isArray(parsed)) {
+              parsed.forEach(s => {
+                if (s && (s.name || s.label) && isRealSiteName(s.name || s.label)) {
+                  const id = String(s.id || s.siteId || s.name);
+                  if (!siteMap.has(id)) siteMap.set(id, { id, name: s.name || s.label });
+                }
+              });
+            }
           }
         } catch (e) {}
       }
-
-      try {
-        const scadaSitesDb = localStorage.getItem('scada_sites_db');
-        if (scadaSitesDb) {
-          const parsed = JSON.parse(scadaSitesDb);
-          if (Array.isArray(parsed)) {
-            parsed.forEach(s => {
-              if (s && (s.name || s.label) && isRealSiteName(s.name || s.label)) {
-                const id = String(s.id || s.siteId || s.name);
-                if (!siteMap.has(id)) siteMap.set(id, { id, name: s.name || s.label });
-              }
-            });
-          }
-        }
-      } catch (e) {}
 
       const sitesList = Array.from(siteMap.values());
       setSites(sitesList);
       if (sitesList.length > 0) {
-        setSelectedSiteId(prev => (prev && sitesList.some(s => String(s.id) === String(prev))) ? prev : sitesList[0].id);
+        const initialId = (selectedSiteId && sitesList.some(s => String(s.id) === String(selectedSiteId)))
+          ? selectedSiteId
+          : sitesList[0].id;
+        setSelectedSiteId(initialId);
+        localStorage.setItem('selected_dg_site_id', initialId);
+        if (setSelectedSite) {
+          setSelectedSite(sitesList.find(s => String(s.id) === String(initialId)) || sitesList[0]);
+        }
       }
     };
     loadSites();
-  }, []);
+  }, [storeSites, selectedSite, selectedSiteId, setSelectedSite]);
 
-  // 2. Load Assets (Single-flight per selectedSiteId)
+  // Keep selected site synchronized with available sites
+  useEffect(() => {
+    if (sites.length > 0 && selectedSiteId) {
+      const match = sites.find(s => String(s.id || s.siteId) === String(selectedSiteId));
+      if (match && setSelectedSite && selectedSite?.id !== match.id) {
+        setSelectedSite(match);
+      }
+    }
+  }, [sites, selectedSiteId, setSelectedSite, selectedSite]);
+
+  // 2. Load Generator Devices for selectedSiteId (Category: GENERATOR)
   useEffect(() => {
     if (!selectedSiteId) {
-      setAssets([]);
-      setSelectedAssetId('');
       setDevices([]);
       setSelectedDeviceId('');
       return;
     }
 
-    const loadAssets = async () => {
-      const assetMap = new Map();
-      const selectedSiteObj = sites.find(s => String(s.id) === String(selectedSiteId));
-      const selectedSiteName = selectedSiteObj?.name || selectedSiteId;
-
+    let isMounted = true;
+    const fetchGeneratorDevices = async () => {
+      setDevicesLoading(true);
       try {
-        const res = await apiClient.get('/assets', { siteId: selectedSiteId }).catch(() => null);
-        const list = normalizeList(res, 'assets');
-        if (Array.isArray(list)) {
-          list.forEach(a => {
-            if (a && (a.id || a.assetId || a.name)) {
-              const id = String(a.id || a.assetId || a.name);
-              assetMap.set(id, { id, name: a.name || a.label || `Asset #${id}`, raw: a });
-            }
-          });
-        }
-      } catch (e) {}
+        const queryParams = new URLSearchParams({
+          siteId: String(selectedSiteId),
+          category: 'GENERATOR',
+          include: 'settings,rules,profile'
+        });
+        const url = getApiUrl(`/devices?${queryParams.toString()}`);
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: getAuthHeaders()
+        });
 
-      ['bms_registered_assets', 'scada_assets_db', 'tb_assets'].forEach(key => {
-        try {
-          const item = localStorage.getItem(key);
-          if (item) {
-            const parsed = JSON.parse(item);
-            const items = Array.isArray(parsed) ? parsed : [parsed];
-            items.forEach(a => {
-              if (a && (a.id || a.name)) {
-                const aSite = a.siteId || a.site || a.building || a.siteName;
-                if (!selectedSiteId || !aSite || String(aSite).toLowerCase() === String(selectedSiteId).toLowerCase() || String(aSite).toLowerCase() === String(selectedSiteName).toLowerCase()) {
-                  const id = String(a.id || a.name);
-                  if (!assetMap.has(id)) assetMap.set(id, { id, name: a.name || a.label || `Asset #${id}`, raw: a });
-                }
-              }
-            });
+        let items = [];
+        if (res && res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json?.data)) {
+            items = json.data;
+          } else if (Array.isArray(json)) {
+            items = json;
           }
-        } catch (e) {}
-      });
+        } else {
+          // Fallback via apiClient
+          const fallbackRes = await apiClient.get('/devices', { 
+            siteId: String(selectedSiteId), 
+            category: 'GENERATOR', 
+            include: 'settings,rules,profile' 
+          }).catch(() => null);
+          const list = normalizeList(fallbackRes, 'devices');
+          if (Array.isArray(list) && list.length > 0) {
+            items = list;
+          }
+        }
 
-      if (assetMap.size === 0) {
-        const defaultAssetId = `${String(selectedSiteId).toLowerCase().replace(/\s+/g, '-')}-dg-asset`;
-        assetMap.set(defaultAssetId, { id: defaultAssetId, name: `${selectedSiteName} DG Asset` });
-      }
+        if (isMounted) {
+          setDevices(items);
+          if (items.length > 0) {
+            const currentInList = items.some(d => String(d.id || d.deviceId) === String(selectedDeviceId));
+            const storedId = localStorage.getItem('selected_dg_device_id');
+            const storedInList = items.find(d => String(d.id || d.deviceId) === String(storedId));
 
-      const assetList = Array.from(assetMap.values());
-      setAssets(assetList);
-      if (assetList.length > 0) {
-        setSelectedAssetId(prev => (prev && assetList.some(a => String(a.id) === String(prev))) ? prev : assetList[0].id);
-      } else {
-        setSelectedAssetId('');
+            if (currentInList) {
+              // keep current
+            } else if (storedInList) {
+              setSelectedDeviceId(String(storedInList.id || storedInList.deviceId));
+            } else {
+              const firstId = String(items[0].id || items[0].deviceId);
+              setSelectedDeviceId(firstId);
+              localStorage.setItem('selected_dg_device_id', firstId);
+            }
+          } else {
+            setSelectedDeviceId('');
+            localStorage.removeItem('selected_dg_device_id');
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching generator devices:', err);
+        if (isMounted) {
+          setDevices([]);
+          setSelectedDeviceId('');
+        }
+      } finally {
+        if (isMounted) setDevicesLoading(false);
       }
     };
-    loadAssets();
-  }, [selectedSiteId]); // Removed sites from dependency array to prevent duplicate calls
 
-  // 3. Load Devices (Single-flight per selectedAssetId & selectedSiteId)
-  useEffect(() => {
-    if (!selectedAssetId) {
-      setDevices([]);
-      setSelectedDeviceId('');
-      return;
+    fetchGeneratorDevices();
+    return () => { isMounted = false; };
+  }, [selectedSiteId]);
+
+  const selectedSiteObj = useMemo(() => {
+    return sites.find(s => String(s.id || s._id || s.siteId) === String(selectedSiteId)) || null;
+  }, [sites, selectedSiteId]);
+
+  const selectedDevObj = useMemo(() => {
+    if (!devices || devices.length === 0) return null;
+    return devices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId)) || devices[0];
+  }, [devices, selectedDeviceId]);
+
+  const isDeviceConfigured = Boolean(devices && devices.length > 0 && selectedDevObj);
+
+  const isDeviceOnline = useMemo(() => {
+    if (!isDeviceConfigured || !selectedDevObj) return false;
+    if (selectedDevObj.status) {
+      const s = String(selectedDevObj.status).toUpperCase();
+      if (s === 'ONLINE' || s === 'ACTIVE') return true;
+      if (s === 'OFFLINE' || s === 'INACTIVE' || s === 'DISABLED') return false;
     }
+    if (selectedDevObj.lastSeenAt) {
+      const lastSeenMs = new Date(selectedDevObj.lastSeenAt).getTime();
+      if (Math.abs(Date.now() - lastSeenMs) < 15 * 60 * 1000) return true;
+    }
+    if (lastTelemetryAt && (Date.now() - lastTelemetryAt) < 24 * 3600 * 1000) {
+      return true;
+    }
+    return false;
+  }, [isDeviceConfigured, selectedDevObj, lastTelemetryAt]);
 
-    const loadDevices = async () => {
-      const devMap = new Map();
-
-      try {
-        const res = await apiClient.get('/devices', { siteId: String(selectedSiteId), category: 'GENERATOR', include: 'settings,rules,profile' }).catch(() => null);
-        const list = normalizeList(res, 'devices');
-        if (Array.isArray(list)) {
-          list.forEach(d => {
-            if (d && (d.id || d.deviceId || d.name)) {
-              const id = String(d.id || d.deviceId || d.name);
-              devMap.set(id, { id, name: d.name || d.title || `DG Device #${id}`, template: d });
-            }
-          });
-        }
-      } catch (e) {}
-
-      ['tb_devices', 'scada_devices_db', 'bms_registered_devices', 'dg_generator_devices'].forEach(key => {
-        try {
-          const item = localStorage.getItem(key);
-          if (item) {
-            const parsed = JSON.parse(item);
-            const items = Array.isArray(parsed) ? parsed : [parsed];
-            items.forEach(d => {
-              if (d && (d.id || d.name)) {
-                const id = String(d.id || d.name);
-                if (!devMap.has(id)) devMap.set(id, { id, name: d.name || d.label || `DG Device #${id}`, template: d });
-              }
-            });
-          }
-        } catch (e) {}
-      });
-
-      if (devMap.size === 0 && selectedAssetId) {
-        const defaultDevId = `dg-device-1`;
-        devMap.set(defaultDevId, { id: defaultDevId, name: `DG Device #${selectedAssetId}` });
-      }
-
-      const devList = Array.from(devMap.values());
-      setDevices(devList);
-      if (devList.length > 0) {
-        setSelectedDeviceId(prev => (prev && devList.some(d => String(d.id) === String(prev))) ? prev : devList[0].id);
-      } else {
-        setSelectedDeviceId('');
-      }
-    };
-    loadDevices();
-  }, [selectedAssetId, selectedSiteId]); // Removed sites & assets array objects from dependency array to prevent duplicate calls
-
-  const selectedSiteObj = useMemo(() => sites.find(s => String(s.id) === String(selectedSiteId)), [sites, selectedSiteId]);
-  const selectedAssetObj = useMemo(() => assets.find(a => String(a.id) === String(selectedAssetId)), [assets, selectedAssetId]);
-  const selectedDevObj = useMemo(() => devices.find(d => String(d.id) === String(selectedDeviceId)), [devices, selectedDeviceId]);
-  const activeDeviceDisplayName = selectedDevObj?.name || (selectedDeviceId ? `Device #${selectedDeviceId}` : '--');
+  const activeDeviceDisplayName = selectedDevObj?.name || selectedDevObj?.deviceName || (isDeviceConfigured ? `Generator #${selectedDeviceId}` : 'No device configured');
 
   // Clean Telemetry State (NO FAKE DUMMY NUMBERS)
   const [showToast, setShowToast] = useState(false);
@@ -379,101 +411,191 @@ const SiemensStyleDG = () => {
     return false;
   }, [isManualRunning, data]);
 
-  // Live Telemetry Parser Effect (Single Clean API Request)
-  useEffect(() => {
-    if (!selectedDeviceId) return;
+  // 3. Live Telemetry Parser & 30s Polling Effect
+  const fetchDeviceTelemetry = useCallback(async () => {
+    if (!selectedDeviceId || !isDeviceConfigured) return;
+    setIsFetchingTelemetry(true);
+    try {
+      const eventsRes = await bmsService.getDeviceEventsLatest(selectedDeviceId, selectedSiteId).catch(() => null);
 
-    const fetchDeviceTelemetry = async () => {
-      try {
-        const endpoint = selectedSiteId 
-          ? `/sites/${selectedSiteId}/devices/${selectedDeviceId}/events/latest` 
-          : `/devices/${selectedDeviceId}/events/latest`;
-        let eventsRes = await apiClient.get(endpoint).catch(() => null);
+      let newData = { ...defaultCleanState };
+      let updated = false;
 
-        let newData = { ...defaultCleanState };
-        let updated = false;
+      // Extract fields from eventsRes payload safely (supporting object with .fields, .data.fields, or array)
+      const eventsList = [];
+      const candidateSources = [
+        eventsRes?.fields,
+        eventsRes?.data?.fields,
+        eventsRes?.data?.data?.fields,
+        eventsRes?.events,
+        eventsRes?.data?.events,
+        Array.isArray(eventsRes) ? eventsRes : null,
+        Array.isArray(eventsRes?.data) ? eventsRes.data : null
+      ];
 
-        // Extract fields from eventsRes payload safely (supporting object with .fields, .data.fields, or array)
-        const eventsList = [];
-        const candidateSources = [
-          eventsRes?.fields,
-          eventsRes?.data?.fields,
-          eventsRes?.data?.data?.fields,
-          eventsRes?.events,
-          eventsRes?.data?.events,
-          Array.isArray(eventsRes) ? eventsRes : null,
-          Array.isArray(eventsRes?.data) ? eventsRes.data : null
-        ];
-
-        candidateSources.forEach(src => {
-          if (Array.isArray(src)) {
-            src.forEach(item => {
-              if (item && Array.isArray(item.eventFields)) {
-                eventsList.push(...item.eventFields);
-              } else if (item && (item.eventFieldDisplayName || item.displayName || item.fieldName || item.name)) {
-                eventsList.push(item);
-              }
-            });
-          }
-        });
-
-        const eventsMap = {};
-
-        if (Array.isArray(eventsList) && eventsList.length > 0) {
-          eventsList.forEach(f => {
-            const rawDispName = String(f.eventFieldDisplayName || f.displayName || f.fieldName || '').trim();
-            const dispName = rawDispName.toLowerCase();
-            const val = f.fieldCurrentValue ?? f.currentValue ?? f.value;
-
-            if (val !== undefined && val !== null && !isNaN(Number(val))) {
-              const num = Number(val);
-              updated = true;
-              if (rawDispName) {
-                eventsMap[rawDispName] = { val: num, unit: f.unit || '' };
-              }
-
-              if (dispName.includes('speed') || dispName.includes('rpm')) newData.engine.speed = num;
-              else if (dispName.includes('coolant')) newData.engine.coolant = num;
-              else if (dispName.includes('oil pressure') || dispName.includes('oil')) newData.engine.oilPressure = num;
-              else if (dispName.includes('frequency') || dispName.includes('freq')) newData.engine.freq = num;
-              else if (dispName.includes('battery')) newData.engine.battery = num;
-              else if (dispName.includes('run tim') || dispName.includes('runtime')) newData.engine.runtime = num;
-              else if (dispName.includes('starts') || dispName.includes('start')) newData.engine.starts = num;
-              else if (dispName.includes('total watts') || dispName.includes('active power') || dispName.includes('kw')) newData.power.kw = num;
-              else if (dispName.includes('apparent power') || dispName.includes('kva')) newData.power.kva = num;
-              else if (dispName.includes('reactive power') || dispName.includes('kvar')) newData.power.kvar = num;
-              else if (dispName.includes('power factor') || dispName.includes('pf')) newData.power.pf = num;
-              else if (dispName.includes('fuel level') || dispName.includes('fuel')) {
-                newData.diesel.level = num;
-                newData.diesel.remaining = (newData.diesel.capacity * num) / 100;
-              }
-              else if (dispName.includes('l1-l2') || dispName.includes('l1 - l2')) newData.voltage.ry = num;
-              else if (dispName.includes('l2-l3') || dispName.includes('l2 - l3')) newData.voltage.yb = num;
-              else if (dispName.includes('l3-l1') || dispName.includes('l3 - l1')) newData.voltage.br = num;
-              else if (dispName.includes('l1 current')) newData.current.r = num;
-              else if (dispName.includes('l2 current')) newData.current.y = num;
-              else if (dispName.includes('l3 current')) newData.current.b = num;
+      candidateSources.forEach(src => {
+        if (Array.isArray(src)) {
+          src.forEach(item => {
+            if (item && Array.isArray(item.eventFields)) {
+              eventsList.push(...item.eventFields);
+            } else if (item && (item.eventFieldDisplayName || item.displayName || item.fieldName || item.name)) {
+              eventsList.push(item);
             }
           });
         }
+      });
 
-        if (Object.keys(eventsMap).length > 0) {
-          setBackendEvents(eventsMap);
-        }
+      const eventsMap = {};
 
+      if (Array.isArray(eventsList) && eventsList.length > 0) {
+        eventsList.forEach(f => {
+          const rawDispName = String(f.eventFieldDisplayName || f.displayName || f.fieldName || '').trim();
+          const dispName = rawDispName.toLowerCase();
+          const val = f.fieldCurrentValue ?? f.currentValue ?? f.value;
 
+          if (val !== undefined && val !== null && !isNaN(Number(val))) {
+            const num = Number(val);
+            updated = true;
+            if (rawDispName) {
+              eventsMap[rawDispName] = { val: num, unit: f.unit || '' };
+            }
 
-        if (updated) {
-          setData(newData);
-        }
-      } catch (err) {}
-    };
+            if (dispName.includes('speed') || dispName.includes('rpm')) newData.engine.speed = num;
+            else if (dispName.includes('coolant')) newData.engine.coolant = num;
+            else if (dispName.includes('oil pressure') || dispName.includes('oil')) newData.engine.oilPressure = num;
+            else if (dispName.includes('frequency') || dispName.includes('freq')) newData.engine.freq = num;
+            else if (dispName.includes('battery')) newData.engine.battery = num;
+            else if (dispName.includes('run tim') || dispName.includes('runtime')) newData.engine.runtime = num;
+            else if (dispName.includes('starts') || dispName.includes('start')) newData.engine.starts = num;
+            else if (dispName.includes('total watts') || dispName.includes('active power') || dispName.includes('kw')) newData.power.kw = num;
+            else if (dispName.includes('apparent power') || dispName.includes('kva')) newData.power.kva = num;
+            else if (dispName.includes('reactive power') || dispName.includes('kvar')) newData.power.kvar = num;
+            else if (dispName.includes('power factor') || dispName.includes('pf')) newData.power.pf = num;
+            else if (dispName.includes('fuel level') || dispName.includes('fuel')) {
+              newData.diesel.level = num;
+              newData.diesel.remaining = (newData.diesel.capacity * num) / 100;
+            }
+            else if (dispName.includes('l1-l2') || dispName.includes('l1 - l2')) newData.voltage.ry = num;
+            else if (dispName.includes('l2-l3') || dispName.includes('l2 - l3')) newData.voltage.yb = num;
+            else if (dispName.includes('l3-l1') || dispName.includes('l3 - l1')) newData.voltage.br = num;
+            else if (dispName.includes('l1 current')) newData.current.r = num;
+            else if (dispName.includes('l2 current')) newData.current.y = num;
+            else if (dispName.includes('l3 current')) newData.current.b = num;
+          }
+        });
+      }
 
-    fetchDeviceTelemetry();
+      if (Object.keys(eventsMap).length > 0) {
+        setBackendEvents(eventsMap);
+      }
+
+      if (updated) {
+        setData(newData);
+        setLastTelemetryAt(Date.now());
+      }
+    } catch (err) {
+      console.warn('Error fetching DG telemetry:', err);
+    } finally {
+      setIsFetchingTelemetry(false);
+    }
   }, [selectedDeviceId, selectedSiteId]);
+
+  useEffect(() => {
+    if (!selectedDeviceId) return;
+    fetchDeviceTelemetry();
+    const interval = setInterval(fetchDeviceTelemetry, 30000);
+    return () => clearInterval(interval);
+  }, [selectedDeviceId, fetchDeviceTelemetry]);
+
+  // Site selector configuration for PageContextBanner
+  const siteSelector = useMemo(() => {
+    const siteOptions = (sites && sites.length > 0)
+      ? sites.map(s => ({
+          value: String(s.id || s._id || s.siteId),
+          label: s.name || s.siteName || s.title || `Site ${s.id}`
+        }))
+      : [{ value: '1', label: 'Main Facility Site' }];
+
+    const currentVal = selectedSiteId || siteOptions[0]?.value;
+
+    return {
+      value: currentVal,
+      options: siteOptions,
+      onChange: (newId) => {
+        setSelectedSiteId(newId);
+        localStorage.setItem('selected_dg_site_id', String(newId));
+        const found = sites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
+        if (found && setSelectedSite) {
+          setSelectedSite(found);
+        }
+      },
+      ariaLabel: 'Select Site'
+    };
+  }, [sites, selectedSiteId, setSelectedSite]);
+
+  // Device selector configuration for PageContextBanner
+  const deviceSelector = useMemo(() => {
+    if (devicesLoading) {
+      return {
+        value: '',
+        options: [{ value: '', label: 'Loading devices...' }],
+        disabled: true,
+        ariaLabel: 'Loading devices'
+      };
+    }
+
+    if (!devices || devices.length === 0) {
+      return {
+        value: '',
+        options: [{ value: '', label: 'No device configured' }],
+        disabled: true,
+        ariaLabel: 'No device configured'
+      };
+    }
+
+    const uniqueDevices = [];
+    const seenIds = new Set();
+    for (const d of devices) {
+      const id = String(d.id || d.deviceId || '');
+      if (!id || seenIds.has(id)) continue;
+      seenIds.add(id);
+      const name = d.name || d.deviceName || d.title || d.serialNumber || `Generator (${id})`;
+      uniqueDevices.push({ id, name });
+    }
+
+    const deviceOptions = uniqueDevices.map(d => ({
+      value: d.id,
+      label: d.name
+    }));
+
+    const currentVal = (selectedDeviceId && deviceOptions.some(m => String(m.value) === String(selectedDeviceId)))
+      ? String(selectedDeviceId)
+      : (deviceOptions[0]?.value || '');
+
+    return {
+      value: currentVal,
+      options: deviceOptions,
+      onChange: (newId) => {
+        if (!newId) return;
+        setSelectedDeviceId(newId);
+        localStorage.setItem('selected_dg_device_id', String(newId));
+      },
+      ariaLabel: 'Select Generator Device',
+      disabled: false
+    };
+  }, [devices, devicesLoading, selectedDeviceId]);
 
   // Compute live value mapping & mapped status for each of the 35 Parameters
   const mapped35Parameters = useMemo(() => {
+    if (!isDeviceConfigured) {
+      return SYSTEM_35_PARAMS.map(param => ({
+        ...param,
+        liveVal: '--',
+        isMapped: false,
+        mappedField: null
+      }));
+    }
+
     let savedMappings = {};
     const keysToInspect = [
       'scada_templates',
@@ -718,7 +840,7 @@ const SiemensStyleDG = () => {
 
       return { ...param, liveVal, isMapped, mappedField };
     });
-  }, [data, backendEvents, selectedDeviceId, selectedDevObj, activeDeviceDisplayName]);
+  }, [data, backendEvents, selectedDeviceId, selectedDevObj, activeDeviceDisplayName, isDeviceConfigured]);
 
   // Filtered parameters by search & category
   const filtered35Parameters = useMemo(() => {
@@ -779,7 +901,7 @@ const SiemensStyleDG = () => {
   };
 
   return (
-    <div id="pdf-content" className="dg-premium-page min-vh-100 p-3 fade-in">
+    <div id="pdf-content" className="fade-in main-meter-workspace dg-premium-page min-vh-100">
       {/* ACTION TOAST FEEDBACK NOTIFICATION */}
       {showToastMsg && (
         <div className="position-fixed top-0 end-0 p-3" style={{ zIndex: 9999 }}>
@@ -792,114 +914,37 @@ const SiemensStyleDG = () => {
         </div>
       )}
 
-      {/* EXECUTIVE TOP HEADER BAR */}
-      <div className="dg-glass-card p-3 mb-3 d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3">
-        <div className="d-flex align-items-center gap-3 flex-wrap">
-          <div className="dg-brand-badge">
-            <Cpu size={20} className="text-cyan-glow me-2" />
-            <span className="fw-bold tracking-wide text-main fs-6">GENERATOR MONITORING HMI</span>
-          </div>
-        </div>
+      {/* REUSABLE PAGE CONTEXT BANNER (MATCHING MAIN ENERGY METER) */}
+      <PageContextBanner
+        title={selectedDevObj ? (selectedDevObj.name || selectedDevObj.deviceName || 'DG Set') : 'DG Set'}
+        icon={<Zap className={isDeviceConfigured ? "text-warning" : "text-secondary"} size={22} />}
+        status={isDeviceConfigured ? (isDeviceOnline ? 'ONLINE' : 'OFFLINE') : 'NOT CONFIGURED'}
+        siteSelector={siteSelector}
+        deviceSelector={deviceSelector}
+        metadata={[
+          {
+            icon: <Clock size={15} />,
+            label: 'Realtime - last 1 day'
+          }
+        ]}
+        actions={[
+          <PdfButton
+            key="pdf-export"
+            label=""
+            title="Download Custom PDF Report"
+            variant="custom"
+            className="context-banner-action-btn p-1 border-0"
+            disabled={!isDeviceConfigured}
+            onClick={handlePdfDownload}
+          />
+        ]}
+        enableFullscreen={true}
+        variant="scada"
+        className="main-meter-context-banner"
+      />
 
-        <div className="d-flex align-items-center gap-3 flex-wrap">
-          <div className="d-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-pill-status">
-            <span className="dg-status-dot green"></span>
-            <span className="text-success fs-12 fw-semibold">System Online</span>
-            <span className="text-dim fs-12 ms-2 font-monospace">{new Date().toLocaleTimeString()}</span>
-          </div>
-
-          <button onClick={() => navigate('/dashboard')} className="btn dg-btn-outline-glass btn-sm">
-            <Home size={14} className="me-1.5" /> Dashboard
-          </button>
-          <button 
-            onClick={handlePdfDownload} 
-            disabled={!isAdmin}
-            className={`btn btn-sm ${isAdmin ? 'dg-btn-cyan' : 'btn-secondary opacity-50'}`}
-          >
-            <FileDown size={14} className="me-1.5" /> Export PDF
-          </button>
-        </div>
-      </div>
-
-      {/* 3-TIER HIERARCHICAL CASCADED SELECTOR BAR: Site -> Asset -> Device */}
-      <div className="dg-glass-card p-2.5 mb-2.5">
-        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2.5">
-          <div className="d-flex align-items-center gap-2.5 flex-wrap flex-grow-1">
-            {/* 1. Site Selector Dropdown */}
-            <div className="dg-selector-box">
-              <Building2 size={16} className="text-cyan-glow flex-shrink-0" />
-              <Form.Select
-                size="sm"
-                value={selectedSiteId}
-                onChange={(e) => {
-                  setSelectedSiteId(e.target.value);
-                  setSelectedAssetId('');
-                  setSelectedDeviceId('');
-                }}
-                className="dg-custom-select"
-              >
-                <option value="" className="dg-opt">Select Site / Location</option>
-                {sites.map(s => (
-                  <option key={s.id} value={String(s.id)} className="dg-opt">
-                    {s.name || s.label || `Site #${s.id}`}
-                  </option>
-                ))}
-              </Form.Select>
-            </div>
-
-            {/* 2. Asset Selector Dropdown */}
-            <div className="dg-selector-box warning">
-              <Layers size={16} className="text-warning-glow flex-shrink-0" />
-              <Form.Select
-                size="sm"
-                value={selectedAssetId}
-                onChange={(e) => {
-                  setSelectedAssetId(e.target.value);
-                  setSelectedDeviceId('');
-                }}
-                className="dg-custom-select warning"
-                disabled={!selectedSiteId}
-              >
-                <option value="" className="dg-opt">Select Site Asset</option>
-                {assets.map(a => (
-                  <option key={a.id} value={String(a.id)} className="dg-opt warning">
-                    {a.name || a.label || `Asset #${a.id}`}
-                  </option>
-                ))}
-              </Form.Select>
-            </div>
-
-            {/* 3. Device Selector Dropdown */}
-            <div className="dg-selector-box success">
-              <Cpu size={16} className="text-success-glow flex-shrink-0" />
-              <Form.Select
-                size="sm"
-                value={selectedDeviceId}
-                onChange={(e) => setSelectedDeviceId(e.target.value)}
-                className="dg-custom-select success"
-                disabled={!selectedAssetId}
-              >
-                <option value="" className="dg-opt text-info fw-bold">Select DG Device</option>
-                {devices.map(d => (
-                  <option key={d.id} value={String(d.id)} className="dg-opt">
-                    {d.name || d.label || `Device #${d.id}`}
-                  </option>
-                ))}
-              </Form.Select>
-            </div>
-          </div>
-
-          {/* Active Device Indicator */}
-          <div className="d-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-pill-status fs-12">
-            <Activity size={14} className="text-success pulse-icon" />
-            <span className="text-dim">Target:</span>
-            <span className="text-main fw-bold">{activeDeviceDisplayName}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ═══ UNIFIED SINGLE PAGE DASHBOARD GRID ═══ */}
-      <Row className="g-3">
+      {/* ═══ UNIFIED SINGLE PAGE DASHBOARD GRID (SKELETON ALWAYS DISPLAYED) ═══ */}
+      <Row className="g-3 mt-1">
         {/* LEFT COLUMN: HERO GENERATOR VISUAL UNIT (BIGGER IMAGE) & OPERATING STATUS */}
         <Col xl={4} lg={5}>
           <div className="d-flex flex-column gap-2.5">
@@ -907,43 +952,79 @@ const SiemensStyleDG = () => {
             <div className="dg-glass-card p-3 position-relative overflow-hidden dg-hero-card">
               <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div className="fw-bold fs-12 text-cyan-glow uppercase tracking-wider d-flex align-items-center gap-2">
-                  <Database size={16} /> GENERATOR VISUAL SHOWCASE
+                  <Cpu size={14} className="text-info" /> DG Digital Twin Showcase
                 </div>
                 <div className="d-flex align-items-center gap-2 flex-wrap ms-auto">
-                  {/* UPLOAD CUSTOM DG IMAGE BUTTON */}
-                  <label className="btn btn-xs dg-btn-outline-glass d-flex align-items-center gap-1.5 cursor-pointer mb-0 text-cyan-glow py-1 px-2.5 rounded-2" title="Upload your custom DG Set photo">
-                    <Upload size={13} />
-                    <span className="fs-12 fw-medium">Upload DG</span>
-                    <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                  </label>
+                  {/* UPLOAD & RESET BUTTONS ONLY WHEN DEVICE IS CONFIGURED */}
+                  {isDeviceConfigured && (
+                    <>
+                      <label className="btn btn-xs dg-btn-outline-glass d-flex align-items-center gap-1.5 cursor-pointer mb-0 text-cyan-glow py-1 px-2.5 rounded-2" title="Upload your custom DG Set photo">
+                        <Upload size={13} />
+                        <span className="fs-12 fw-medium">Upload DG</span>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                      </label>
 
-                  {/* RESTORE PREVIOUS / DEFAULT IMAGE BUTTON */}
-                  {customDgImage !== DEFAULT_DG_IMAGE && (
-                    <button 
-                      onClick={handleResetImage} 
-                      className="btn btn-xs btn-outline-warning d-flex align-items-center gap-1.5 py-1 px-2.5 fs-12 rounded-2"
-                      title="Restore original default DG image"
-                    >
-                      <RotateCcw size={13} />
-                      <span className="fw-medium">Reset Image</span>
-                    </button>
+                      {customDgImage !== DEFAULT_DG_IMAGE && (
+                        <button 
+                          onClick={handleResetImage} 
+                          className="btn btn-xs btn-outline-warning d-flex align-items-center gap-1.5 py-1 px-2.5 fs-12 rounded-2"
+                          title="Restore original default DG image"
+                        >
+                          <RotateCcw size={13} />
+                          <span className="fw-medium">Reset Image</span>
+                        </button>
+                      )}
+                    </>
                   )}
 
-                  <Badge bg="success" className="px-2.5 py-1 fs-12 uppercase rounded-pill border border-success border-opacity-30 fw-semibold ms-1">
-                    <Activity size={10} className="me-1 pulse-icon" /> ONLINE
+                  <Badge bg={isDeviceConfigured ? (isDeviceOnline ? "success" : "secondary") : "secondary"} className="px-2.5 py-1 fs-12 uppercase rounded-pill border border-opacity-30 fw-semibold ms-1">
+                    <Activity size={10} className="me-1 pulse-icon" /> {isDeviceConfigured ? (isDeviceOnline ? "ONLINE" : "OFFLINE") : "UNCONFIGURED"}
                   </Badge>
                 </div>
               </div>
 
-              {/* 100% CLEAN STILL HIGH-DEF GENERATOR IMAGE FRAME (NO SHAKE & NO OVERLAY TEXT) */}
+              {/* 100% CLEAN STILL HIGH-DEF GENERATOR IMAGE FRAME (OR UNCONFIGURED SKELETON STATE) */}
               <div className="position-relative rounded-4 overflow-hidden border border-white border-opacity-15 shadow-2xl dg-generator-hero-frame bg-dark">
-                <img 
-                  src={customDgImage || DEFAULT_DG_IMAGE} 
-                  alt="DG Generator Unit" 
-                  className="img-fluid dg-hero-img" 
-                  style={{ width: '100%', height: '360px', objectFit: 'cover', display: 'block' }} 
-                  onError={(e) => { e.target.src = DEFAULT_DG_IMAGE; }}
-                />
+                {!isDeviceConfigured ? (
+                  <div className="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3 py-5 select-none" style={{ minHeight: '360px' }}>
+                    {/* Dashed circular boundary */}
+                    <div 
+                      className="d-flex align-items-center justify-content-center mb-3"
+                      style={{
+                        width: '84px',
+                        height: '84px',
+                        borderRadius: '50%',
+                        border: '1.5px dashed rgba(56, 189, 248, 0.45)',
+                        background: 'rgba(56, 189, 248, 0.03)'
+                      }}
+                    >
+                      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="7" width="18" height="13" rx="2" />
+                        <line x1="3" y1="11" x2="21" y2="11" />
+                        <line x1="7" y1="15" x2="10" y2="15" />
+                        <path d="M15 4a3 3 0 0 1 3 3" />
+                        <path d="M13 2a6 6 0 0 1 6 6" />
+                        <line x1="1" y1="1" x2="23" y2="23" stroke="#38bdf8" strokeWidth="1.8" />
+                      </svg>
+                    </div>
+
+                    <h5 className="fw-bold text-white mb-2" style={{ fontSize: '1.05rem', letterSpacing: '0.2px' }}>
+                      No device configured for this site
+                    </h5>
+
+                    <p className="text-secondary mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.45', maxWidth: '240px' }}>
+                      Configure a device to view live telemetry, generator readings and SCADA data.
+                    </p>
+                  </div>
+                ) : (
+                  <img 
+                    src={customDgImage || DEFAULT_DG_IMAGE} 
+                    alt="DG Generator Unit" 
+                    className="img-fluid dg-hero-img" 
+                    style={{ width: '100%', height: '360px', objectFit: 'cover', display: 'block' }} 
+                    onError={(e) => { e.target.src = DEFAULT_DG_IMAGE; }}
+                  />
+                )}
               </div>
             </div>
 
@@ -968,7 +1049,7 @@ const SiemensStyleDG = () => {
                     </div>
 
                     {/* LIQUID FILL WITH BUBBLES & WAVE SURFACE */}
-                    <div className="dg-fluid-fill" style={{ height: `${data.diesel.level !== null ? Math.min(Math.max(data.diesel.level, 0), 100) : 0}%` }}>
+                    <div className="dg-fluid-fill" style={{ height: `${isDeviceConfigured && data.diesel.level !== null ? Math.min(Math.max(data.diesel.level, 0), 100) : 0}%` }}>
                       {/* DYNAMIC SURFACE GLOW LINE */}
                       <div className="dg-fluid-surface-glow"></div>
                       
@@ -988,7 +1069,7 @@ const SiemensStyleDG = () => {
 
                     {/* CENTER GLASS BADGE WITH READABLE NUMBER & LABEL */}
                     <div className="dg-tank-center-badge">
-                      <div className="dg-tank-val">{data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '-- %'}</div>
+                      <div className="dg-tank-val">{isDeviceConfigured && data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '-- %'}</div>
                       <div className="dg-tank-lbl">Level %</div>
                     </div>
                   </div>
@@ -1001,7 +1082,7 @@ const SiemensStyleDG = () => {
                         <div className="dg-fuel-tile-icon warning"><Droplets size={14} /></div>
                         <span className="dg-fuel-tile-lbl">Remaining Ltrs</span>
                       </div>
-                      <span className="dg-fuel-tile-val warning">{data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '--'}</span>
+                      <span className="dg-fuel-tile-val warning">{isDeviceConfigured && data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '--'}</span>
                     </div>
 
                     <div className="dg-fuel-tile danger">
@@ -1009,7 +1090,7 @@ const SiemensStyleDG = () => {
                         <div className="dg-fuel-tile-icon danger"><TrendingDown size={14} /></div>
                         <span className="dg-fuel-tile-lbl">Today Used</span>
                       </div>
-                      <span className="dg-fuel-tile-val danger">{data.diesel.spentToday !== null ? `${data.diesel.spentToday.toFixed(1)} L` : '--'}</span>
+                      <span className="dg-fuel-tile-val danger">{isDeviceConfigured && data.diesel.spentToday !== null ? `${data.diesel.spentToday.toFixed(1)} L` : '--'}</span>
                     </div>
 
                     <div className="dg-fuel-tile info">
@@ -1017,7 +1098,7 @@ const SiemensStyleDG = () => {
                         <div className="dg-fuel-tile-icon info"><Calendar size={14} /></div>
                         <span className="dg-fuel-tile-lbl">Refill Date</span>
                       </div>
-                      <span className="dg-fuel-tile-val info">{data.diesel.lastFill}</span>
+                      <span className="dg-fuel-tile-val info">{isDeviceConfigured ? data.diesel.lastFill : '--'}</span>
                     </div>
                   </div>
                 </Col>
@@ -1328,9 +1409,9 @@ const SiemensStyleDG = () => {
                   <Zap size={15} /> LIVE ELECTRICAL OVERVIEW
                 </div>
                 <div className="dg-target-badge">
-                  <Activity size={11} className="text-success pulse-icon me-1" />
+                  <Activity size={11} className={`text-success ${isDeviceConfigured ? 'pulse-icon' : 'opacity-50'} me-1`} />
                   <span className="text-dim">Target:</span>
-                  <span className="text-main fw-bold ms-1">{activeDeviceDisplayName}</span>
+                  <span className="text-main fw-bold ms-1">{isDeviceConfigured ? activeDeviceDisplayName : '--'}</span>
                 </div>
               </div>
 
@@ -1349,7 +1430,7 @@ const SiemensStyleDG = () => {
                     </div>
 
                     <div className="d-flex align-items-end justify-content-between mt-2">
-                      <div className="dg-power-val cyan">{data.power.kw !== null ? data.power.kw.toFixed(1) : '--'}</div>
+                      <div className="dg-power-val cyan">{isDeviceConfigured && data.power.kw !== null ? data.power.kw.toFixed(1) : '--'}</div>
                       <div className="dg-power-unit cyan">kW</div>
                     </div>
                   </div>
@@ -1369,7 +1450,7 @@ const SiemensStyleDG = () => {
                     </div>
 
                     <div className="d-flex align-items-end justify-content-between mt-2">
-                      <div className="dg-power-val warning">{data.power.kva !== null ? data.power.kva.toFixed(1) : '--'}</div>
+                      <div className="dg-power-val warning">{isDeviceConfigured && data.power.kva !== null ? data.power.kva.toFixed(1) : '--'}</div>
                       <div className="dg-power-unit warning">kVA</div>
                     </div>
                   </div>
@@ -1389,7 +1470,7 @@ const SiemensStyleDG = () => {
                     </div>
 
                     <div className="d-flex align-items-end justify-content-between mt-2">
-                      <div className="dg-power-val success">{data.power.kvar !== null ? data.power.kvar.toFixed(1) : '--'}</div>
+                      <div className="dg-power-val success">{isDeviceConfigured && data.power.kvar !== null ? data.power.kvar.toFixed(1) : '--'}</div>
                       <div className="dg-power-unit success">kVAr</div>
                     </div>
                   </div>
@@ -1419,7 +1500,7 @@ const SiemensStyleDG = () => {
                 <div className="mt-2.5 pt-2 border-top border-white border-opacity-10 transition-all">
                   <Row className="g-2">
                     <Col xs={6}>
-                      <button onClick={handleStartEngine} className="dg-action-btn-v2 start w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleStartEngine} disabled={!isDeviceConfigured} className="dg-action-btn-v2 start w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle start"><Play size={12} fill="currentColor" /></div>
                           <span>START</span>
@@ -1428,7 +1509,7 @@ const SiemensStyleDG = () => {
                       </button>
                     </Col>
                     <Col xs={6}>
-                      <button onClick={handleStopEngine} className="dg-action-btn-v2 stop w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleStopEngine} disabled={!isDeviceConfigured} className="dg-action-btn-v2 stop w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle stop"><Square size={12} fill="currentColor" /></div>
                           <span>STOP</span>
@@ -1437,7 +1518,7 @@ const SiemensStyleDG = () => {
                       </button>
                     </Col>
                     <Col xs={6}>
-                      <button onClick={handleResetEngine} className="dg-action-btn-v2 reset w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleResetEngine} disabled={!isDeviceConfigured} className="dg-action-btn-v2 reset w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle reset"><RotateCcw size={12} /></div>
                           <span>RESET</span>
@@ -1446,7 +1527,7 @@ const SiemensStyleDG = () => {
                       </button>
                     </Col>
                     <Col xs={6}>
-                      <button onClick={handleEmergencyStop} className="dg-action-btn-v2 emergency w-100 d-flex align-items-center justify-content-between">
+                      <button onClick={handleEmergencyStop} disabled={!isDeviceConfigured} className="dg-action-btn-v2 emergency w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
                           <div className="dg-action-icon-circle emergency"><AlertOctagon size={12} /></div>
                           <span>EMERGENCY</span>
@@ -1471,7 +1552,7 @@ const SiemensStyleDG = () => {
                     <Tag size={13} className="text-cyan-glow" />
                     <span className="text-dim fs-12 fw-medium">Generator ID</span>
                   </div>
-                  <span className="text-main fs-12 font-monospace fw-bold">{selectedDevObj?.name || (selectedDeviceId ? `DEV-${selectedDeviceId}` : '--')}</span>
+                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.name || selectedDevObj?.deviceName || `DEV-${selectedDeviceId}`) : '--'}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -1479,7 +1560,7 @@ const SiemensStyleDG = () => {
                     <Database size={13} className="text-info" />
                     <span className="text-dim fs-12 fw-medium">Capacity</span>
                   </div>
-                  <span className="text-main fs-12 font-monospace fw-bold">{selectedAssetObj?.name || (selectedAssetId ? selectedAssetId : '--')}</span>
+                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.capacity || selectedDevObj?.template?.capacity || '500 kVA') : '--'}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -1487,7 +1568,7 @@ const SiemensStyleDG = () => {
                     <Fuel size={13} className="text-warning" />
                     <span className="text-dim fs-12 fw-medium">Fuel Type</span>
                   </div>
-                  <span className="text-main fs-12 fw-bold">{selectedDeviceId ? (selectedDevObj?.template?.fuelType || 'Diesel') : '--'}</span>
+                  <span className="text-main fs-12 fw-bold">{isDeviceConfigured ? (selectedDevObj?.fuelType || selectedDevObj?.template?.fuelType || 'Diesel') : '--'}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -1495,7 +1576,7 @@ const SiemensStyleDG = () => {
                     <MapPin size={13} className="text-danger" />
                     <span className="text-dim fs-12 fw-medium">Location</span>
                   </div>
-                  <span className="text-main fs-12 fw-bold">{selectedSiteObj?.name || (selectedSiteId ? selectedSiteId : '--')}</span>
+                  <span className="text-main fs-12 fw-bold">{selectedSiteObj?.name || (selectedSiteId ? `Site #${selectedSiteId}` : '--')}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -1503,7 +1584,7 @@ const SiemensStyleDG = () => {
                     <Clock size={13} className="text-success" />
                     <span className="text-dim fs-12 fw-medium">Last Updated</span>
                   </div>
-                  <span className="text-main fs-12 font-monospace fw-bold">{selectedDeviceId ? new Date().toLocaleTimeString() : '--'}</span>
+                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? currentTime : '--'}</span>
                 </div>
               </div>
             </div>

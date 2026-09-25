@@ -16,9 +16,10 @@ export {
 
 export const PARAMETER_SYNONYMS = {
   // Energy & Consumption
-  ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP'],
-  ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY', 'KVAH', 'S'],
-  cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP'],
+  // Includes SELEC_EM2M displayNames: 'Total Active Energy', 'Total Reactive Energy', ' Apparent Energy '
+  ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP', 'Total Active Energy', 'TOTAL ACTIVE ENERGY', '4,0F'],
+  ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY', 'KVAH', 'S', 'Apparent Energy', 'APPARENT ENERGY', '4,12F'],
+  cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP', 'Total Active Energy', 'TOTAL ACTIVE ENERGY'],
   dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY', 'GEN KWH'],
   balance: ['3,162', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
 
@@ -30,7 +31,8 @@ export const PARAMETER_SYNONYMS = {
   reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER', 'KVAR', 'POWER KVAR', 'Eq'],
 
   // Voltages (Phase to Neutral)
-  vR: ['3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R', 'R-PHASE VOLTAGE', 'R-Phase Voltage'],
+  // Includes SELEC_EM2M 'Voltage LN' (single-phase line-to-neutral mapped to vR)
+  vR: ['3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R', 'R-PHASE VOLTAGE', 'R-Phase Voltage', 'Voltage LN', 'VOLTAGE LN', 'VLN', '4,20F'],
   vY: ['3,169', '3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE', 'Voltage-Y', 'Y-PHASE VOLTAGE', 'Y-Phase Voltage'],
   vB: ['3,170', '3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE', 'Voltage-B', 'B-PHASE VOLTAGE', 'B-Phase Voltage'],
 
@@ -42,7 +44,8 @@ export const PARAMETER_SYNONYMS = {
   vLNAvg: ['AVG VOLTAGE L-N', 'V_LN_AVG', 'AVG VLN', 'VLN AVG', 'Avg Voltage L-N'],
 
   // Currents
-  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current', 'R-PHASE CURRENT'],
+  // Includes SELEC_EM2M 'Current' (single-phase current mapped to iR)
+  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current', 'R-PHASE CURRENT', 'Current', 'CURRENT', '4,22F'],
   iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current', 'Y-PHASE CURRENT'],
   iB: ['3,173', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current', 'B-PHASE CURRENT'],
   iAvg: ['AVG CURRENT', 'I_AVG', 'IAVG', 'Avg Current', 'AVERAGE CURRENT'],
@@ -329,30 +332,58 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
     
     // Map resolved values to standard MFM state keys if available
     resolved.resolvedSettings.forEach(item => {
-      const sName = (item.displayName || '').toLowerCase();
+      if (item.value === null || item.value === undefined) return;
+      const sName = (item.displayName || '').toLowerCase().trim();
       const num = typeof item.value === 'number' ? item.value : Number(item.value);
       const val = isNaN(num) ? item.value : num;
 
-      if (sName.includes('r-phase volt') || sName === 'voltage-r' || sName === 'voltage r') canonicalUpdates.vR = val;
-      else if (sName.includes('y-phase volt') || sName === 'voltage-y' || sName === 'voltage y') canonicalUpdates.vY = val;
-      else if (sName.includes('b-phase volt') || sName === 'voltage-b' || sName === 'voltage b') canonicalUpdates.vB = val;
-      else if (sName.includes('r-current') || sName === 'current-r' || sName === 'current r') canonicalUpdates.iR = val;
-      else if (sName.includes('y-current') || sName === 'current-y' || sName === 'current y') canonicalUpdates.iY = val;
-      else if (sName.includes('b-current') || sName === 'current-b' || sName === 'current b') canonicalUpdates.iB = val;
-      else if (sName.includes('total kw') || sName === 'active power') {
+      if (
+        sName.includes('r-phase volt') || sName === 'voltage-r' || sName === 'voltage r' ||
+        sName === 'voltage ln' || sName.includes('voltage ln') || sName === 'vln' || sName === 'ua' || sName === 'vr'
+      ) canonicalUpdates.vR = val;
+      else if (sName.includes('y-phase volt') || sName === 'voltage-y' || sName === 'voltage y' || sName === 'ub' || sName === 'vy') canonicalUpdates.vY = val;
+      else if (sName.includes('b-phase volt') || sName === 'voltage-b' || sName === 'voltage b' || sName === 'uc' || sName === 'vb') canonicalUpdates.vB = val;
+      else if (
+        sName.includes('r-current') || sName === 'current-r' || sName === 'current r' ||
+        sName === 'current' || sName === 'line amps (r)' || sName === 'ia' || sName === 'ir'
+      ) canonicalUpdates.iR = val;
+      else if (sName.includes('y-current') || sName === 'current-y' || sName === 'current y' || sName === 'ib' || sName === 'iy') canonicalUpdates.iY = val;
+      else if (sName.includes('b-current') || sName === 'current-b' || sName === 'current b' || sName === 'ic' || sName === 'ib') canonicalUpdates.iB = val;
+      else if (
+        sName.includes('max.dmd-kwh') || sName.includes('max.dmd kwh') || sName.includes('max demand kwh')
+      ) canonicalUpdates.maxDmdKwh = val;
+      else if (
+        sName.includes('max.dmd-kvah') || sName.includes('max.dmd kvah') || sName.includes('max demand kvah')
+      ) canonicalUpdates.maxDmdKvah = val;
+      else if (
+        sName.includes('total kw') || sName.includes('active power') || sName === 'kw' || sName === 'p'
+      ) {
         canonicalUpdates.totalKw = val;
         canonicalUpdates.activePower = val;
-      } else if (sName.includes('eb kwh') || sName.includes('active energy')) {
+      } else if (
+        sName.includes('total reactive energy') || sName.includes('reactive energy') || sName.includes('kvarh')
+      ) {
+        canonicalUpdates.reactiveEnergy = val;
+      } else if (
+        sName.includes('eb kwh') || sName.includes('total active energy') || (sName.includes('active energy') && !sName.includes('reactive')) || sName === 'kwh' || sName === 'ep'
+      ) {
         canonicalUpdates.ebKwh = val;
         canonicalUpdates.cumulativekWh = val;
-      } else if (sName.includes('eb kvah') || sName.includes('apparent energy')) {
+      } else if (
+        sName.includes('eb kvah') || sName.includes('apparent energy') || sName === 'kvah' || sName === 's'
+      ) {
         canonicalUpdates.ebKvah = val;
-      } else if (sName.includes('total kva') || sName === 'apparent power') {
+      } else if (
+        sName.includes('total kva') || sName.includes('apparent power') || sName === 'kva'
+      ) {
         canonicalUpdates.totalKva = val;
         canonicalUpdates.apparentPower = val;
-      } else if (sName.includes('reactive power')) canonicalUpdates.reactivePower = val;
-      else if (sName === 'power factor' || sName === 'pf') canonicalUpdates.pf = val;
-      else if (sName === 'frequency' || sName === 'freq') canonicalUpdates.freq = val;
+      } else if (
+        sName.includes('reactive power') || sName === 'kvar' || sName === 'q'
+      ) {
+        canonicalUpdates.reactivePower = val;
+      } else if (sName === 'power factor' || sName === 'pf') canonicalUpdates.pf = val;
+      else if (sName === 'frequency' || sName === 'freq' || sName === 'hz') canonicalUpdates.freq = val;
       else if (sName.includes('balance')) canonicalUpdates.balance = val;
       else if (sName.includes('dg kwh')) canonicalUpdates.dgKwh = val;
     });
@@ -453,7 +484,14 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       overloadlimitreached: 'overloadLimitReached',
       forceoff: 'forceOff',
       metersrno: 'meterSrno',
-      noofoverloadcheck: 'noOfOverloadCheck'
+      noofoverloadcheck: 'noOfOverloadCheck',
+      voltageln: 'vR',
+      current: 'iR',
+      totalactiveenergy: 'ebKwh',
+      totalreactiveenergy: 'reactiveEnergy',
+      apparentenergy: 'ebKvah',
+      maxdmdkwh: 'maxDmdKwh',
+      maxdmdkvah: 'maxDmdKvah'
     };
 
     for (const [alias, key] of Object.entries(extraAliases)) {
@@ -559,5 +597,11 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
     }
   }
 
-  return { updates, lastEventTime: maxTime, rawFields: fieldsArray || [] };
+  return {
+    updates,
+    lastEventTime: maxTime,
+    rawFields: fieldsArray || [],
+    settingsTelemetryMap: new Map(),
+    resolvedSettings: []
+  };
 };
