@@ -124,6 +124,7 @@ const AppRoutes = () => {
       {/* Water Management */}
       <Route path="/water-management/overview" element={<WaterOverview />} />
       <Route path="/water-management/ag-pump" element={<AgTank />} />
+      <Route path="/water-management/ag-tank" element={<AgTank />} />
       <Route path="/water-management/ug-pump" element={<UgTank />} />
       <Route path="/water-management/domestic" element={<PlaceholderPage title="Domestic / Flushing" />} />
       <Route path="/water-management/level" element={<PlaceholderPage title="OHT / UG Level Monitoring" />} />

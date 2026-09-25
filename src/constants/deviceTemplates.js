@@ -91,11 +91,15 @@ export const isCategoryMatch = (deviceCategory, filterCategory) => {
   if (mainMeterAliases.includes(fCat) && mainMeterAliases.includes(dCat)) return true;
 
   // Tank aliases
-  const ugTankAliases = ['UG_TANK', 'UNDERGROUND_TANK', 'UNDERGROUND_WATER_TANK'];
+  const ugTankAliases = ['UG_TANK', 'UNDERGROUND_TANK', 'UNDERGROUND_WATER_TANK', 'UG_PUMP', 'UGTANK'];
   if (ugTankAliases.includes(fCat) && ugTankAliases.includes(dCat)) return true;
 
-  const agTankAliases = ['AG_TANK', 'ABOVE_GROUND_TANK', 'ABOVE_GROUND_WATER_TANK'];
+  const agTankAliases = ['AG_TANK', 'ABOVE_GROUND_TANK', 'ABOVE_GROUND_WATER_TANK', 'AG_PUMP', 'AGTANK'];
   if (agTankAliases.includes(fCat) && agTankAliases.includes(dCat)) return true;
+
+  // Pump aliases
+  const pumpAliases = ['PUMP', 'WATER_PUMP'];
+  if (pumpAliases.includes(fCat) && pumpAliases.includes(dCat)) return true;
 
   // Generator aliases
   const genAliases = ['GENERATOR', 'DG_SET', 'DG', 'DIESEL_GENERATOR'];
