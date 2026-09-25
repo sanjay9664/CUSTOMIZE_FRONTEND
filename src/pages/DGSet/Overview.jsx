@@ -838,6 +838,14 @@ const SiemensStyleDG = () => {
         }
       }
 
+      // Format floating point numbers in liveVal to 2 decimal places max
+      if (liveVal && liveVal !== '--') {
+        liveVal = String(liveVal).replace(/([+-]?\d+\.\d+)/g, (m) => {
+          const num = parseFloat(m);
+          return isNaN(num) ? m : num.toFixed(2);
+        });
+      }
+
       return { ...param, liveVal, isMapped, mappedField };
     });
   }, [data, backendEvents, selectedDeviceId, selectedDevObj, activeDeviceDisplayName, isDeviceConfigured]);
@@ -1185,16 +1193,16 @@ const SiemensStyleDG = () => {
                         {categorizedGroups['CHANGE'].map(p => {
                           const IconComp = p.icon || Zap;
                           return (
-                            <Col key={p.id} md={12}>
+                            <Col key={p.id} xs={12}>
                               <div className={`dg-param-tile-v2 ${p.isMapped ? 'success' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
+                                <div className="d-flex align-items-center gap-1.5 min-w-0 overflow-hidden flex-grow-1 me-1">
+                                  <span className="dg-param-num flex-shrink-0">{p.num}</span>
                                   <IconComp size={13} className={p.isMapped ? "text-success flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
+                                  <span className="dg-param-name text-truncate flex-grow-1 min-w-0" title={p.name}>{p.name}</span>
                                 </div>
-                                <div className="d-flex align-items-center gap-2">
+                                <div className="d-flex align-items-center gap-1 flex-shrink-0 ms-auto">
                                   <span className={`dg-param-val ${p.isMapped ? 'green' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
+                                  <ChevronRight size={13} className="opacity-40 flex-shrink-0" />
                                 </div>
                               </div>
                             </Col>
@@ -1232,16 +1240,16 @@ const SiemensStyleDG = () => {
                         {categorizedGroups['PARM'].map(p => {
                           const IconComp = p.icon || Settings;
                           return (
-                            <Col key={p.id} md={6}>
+                            <Col key={p.id} xs={12} sm={6}>
                               <div className={`dg-param-tile-v2 ${p.isMapped ? 'warning' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
+                                <div className="d-flex align-items-center gap-1.5 min-w-0 overflow-hidden flex-grow-1 me-1">
+                                  <span className="dg-param-num flex-shrink-0">{p.num}</span>
                                   <IconComp size={13} className={p.isMapped ? "text-warning flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
+                                  <span className="dg-param-name text-truncate flex-grow-1 min-w-0" title={p.name}>{p.name}</span>
                                 </div>
-                                <div className="d-flex align-items-center gap-2">
+                                <div className="d-flex align-items-center gap-1 flex-shrink-0 ms-auto">
                                   <span className={`dg-param-val ${p.isMapped ? 'warning' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
+                                  <ChevronRight size={13} className="opacity-40 flex-shrink-0" />
                                 </div>
                               </div>
                             </Col>
@@ -1279,16 +1287,16 @@ const SiemensStyleDG = () => {
                         {categorizedGroups['ENGINE'].map(p => {
                           const IconComp = p.icon || Cpu;
                           return (
-                            <Col key={p.id} md={6}>
+                            <Col key={p.id} xs={12} sm={6}>
                               <div className={`dg-param-tile-v2 ${p.isMapped ? 'info' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
+                                <div className="d-flex align-items-center gap-1.5 min-w-0 overflow-hidden flex-grow-1 me-1">
+                                  <span className="dg-param-num flex-shrink-0">{p.num}</span>
                                   <IconComp size={13} className={p.isMapped ? "text-info flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
+                                  <span className="dg-param-name text-truncate flex-grow-1 min-w-0" title={p.name}>{p.name}</span>
                                 </div>
-                                <div className="d-flex align-items-center gap-2">
+                                <div className="d-flex align-items-center gap-1 flex-shrink-0 ms-auto">
                                   <span className={`dg-param-val ${p.isMapped ? 'info' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
+                                  <ChevronRight size={13} className="opacity-40 flex-shrink-0" />
                                 </div>
                               </div>
                             </Col>
@@ -1326,16 +1334,16 @@ const SiemensStyleDG = () => {
                         {categorizedGroups['TOTAL'].map(p => {
                           const IconComp = p.icon || TrendingDown;
                           return (
-                            <Col key={p.id} md={6}>
+                            <Col key={p.id} xs={12} sm={6}>
                               <div className={`dg-param-tile-v2 ${p.isMapped ? 'cyan' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
+                                <div className="d-flex align-items-center gap-1.5 min-w-0 overflow-hidden flex-grow-1 me-1">
+                                  <span className="dg-param-num flex-shrink-0">{p.num}</span>
                                   <IconComp size={13} className={p.isMapped ? "text-cyan-glow flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
+                                  <span className="dg-param-name text-truncate flex-grow-1 min-w-0" title={p.name}>{p.name}</span>
                                 </div>
-                                <div className="d-flex align-items-center gap-2">
+                                <div className="d-flex align-items-center gap-1 flex-shrink-0 ms-auto">
                                   <span className={`dg-param-val ${p.isMapped ? 'green' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
+                                  <ChevronRight size={13} className="opacity-40 flex-shrink-0" />
                                 </div>
                               </div>
                             </Col>
@@ -1373,18 +1381,18 @@ const SiemensStyleDG = () => {
                         {categorizedGroups['FAULT'].map(p => {
                           const IconComp = p.icon || ShieldAlert;
                           return (
-                            <Col key={p.id} md={6}>
+                            <Col key={p.id} xs={12} sm={6}>
                               <div className={`dg-param-tile-v2 ${p.isMapped ? 'danger' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
+                                <div className="d-flex align-items-center gap-1.5 min-w-0 overflow-hidden flex-grow-1 me-1">
+                                  <span className="dg-param-num flex-shrink-0">{p.num}</span>
                                   <IconComp size={13} className={p.isMapped ? "text-danger flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
+                                  <span className="dg-param-name text-truncate flex-grow-1 min-w-0" title={p.name}>{p.name}</span>
                                 </div>
-                                <div className="d-flex align-items-center gap-2">
+                                <div className="d-flex align-items-center gap-1 flex-shrink-0 ms-auto">
                                   <span className={`dg-param-val ${p.isMapped ? (p.liveVal === '--' ? 'cyan' : 'red') : 'text-muted'}`}>
                                     {p.liveVal}
                                   </span>
-                                  <ChevronRight size={13} className="opacity-40" />
+                                  <ChevronRight size={13} className="opacity-40 flex-shrink-0" />
                                 </div>
                               </div>
                             </Col>
@@ -1881,12 +1889,14 @@ const SiemensStyleDG = () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 5px 9px;
-          min-height: 29px;
+          padding: 5px 8px;
+          min-height: 30px;
           border-radius: 8px;
           background: rgba(3, 7, 18, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.08);
           transition: all 0.2s ease;
+          gap: 6px;
+          overflow: hidden;
         }
         .dg-param-tile-v2.success { border-left: 3px solid #10b981; }
         .dg-param-tile-v2.warning { border-left: 3px solid #f59e0b; }
@@ -1921,27 +1931,43 @@ const SiemensStyleDG = () => {
           font-family: monospace;
           color: #64748b;
           background: rgba(255, 255, 255, 0.06);
-          padding: 1px 5px;
+          padding: 1px 4px;
           border-radius: 4px;
+          flex-shrink: 0;
         }
         .dg-param-name {
-          font-size: 0.74rem;
+          font-size: 0.72rem;
           font-weight: 500;
           color: #e2e8f0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          min-width: 0;
         }
         body.light-mode .dg-param-name,
         [data-theme="light"] .dg-param-name { color: #0f172a !important; }
 
         .dg-param-val {
-          font-size: 0.74rem;
+          font-size: 0.72rem;
           font-weight: 700;
           font-family: monospace;
+          white-space: nowrap;
+          flex-shrink: 0;
         }
         .dg-param-val.cyan { color: #0284c7; }
         .dg-param-val.warning { color: #d97706; }
         .dg-param-val.info { color: #0284c7; }
         .dg-param-val.green { color: #059669; }
-        .dg-param-val.red { color: #dc2626; background: rgba(239, 68, 68, 0.15); padding: 1px 6px; border-radius: 4px; }
+        .dg-param-val.red { 
+          color: #f87171; 
+          background: rgba(239, 68, 68, 0.2); 
+          padding: 2px 6px; 
+          border-radius: 4px; 
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          font-size: 0.7rem;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
 
         /* HYPER-REALISTIC MECHANICAL ENGINE RUNNING EFFECTS */
         .dg-hero-img { transition: transform 0.5s ease; }
