@@ -534,7 +534,7 @@ SUB_ENERGY_METER: {
   ]
 },
 
- MAIN_ENERGY_METER: {
+MAIN_ENERGY_METER: {
   id: 'MAIN_ENERGY_METER',
   label: 'Main Energy Meter',
 
@@ -614,7 +614,30 @@ SUB_ENERGY_METER: {
     { name: 'Load Hrs', required: false },
     { name: 'Load Min', required: false },
     { name: 'No Load Hrs', required: false },
-    { name: 'No Load Min', required: false }
+    { name: 'No Load Min', required: false },
+
+    // =========================
+    // ADDITIONAL METER PARAMETERS
+    // =========================
+    { name: 'LOW_BALANCE_CUT', required: false },
+    { name: 'OVERLOAD_TRIP', required: false },
+    { name: 'OVERLOAD_LIMIT_REACHED', required: false },
+    { name: 'CONNECTED_STATUS', required: false },
+    { name: 'FORCE_OFF', required: false },
+
+    { name: 'METER_SRNO', required: false },
+    { name: 'NO_OF_OVERLOAD_CHECK', required: false },
+    { name: 'EB_DG_STATUS', required: false },
+    { name: 'EB_TARIFF', required: false },
+    { name: 'DG_TARIFF', required: false },
+
+    { name: 'EB_R_LOAD_SET', required: false },
+    { name: 'EB_Y_LOAD_SET', required: false },
+    { name: 'EB_B_LOAD_SET', required: false },
+
+    { name: 'DG_R_LOAD_SET', required: false },
+    { name: 'DG_Y_LOAD_SET', required: false },
+    { name: 'DG_B_LOAD_SET', required: false }
   ]
 },
 

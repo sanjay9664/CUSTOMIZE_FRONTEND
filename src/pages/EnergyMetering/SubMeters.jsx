@@ -1104,7 +1104,7 @@ const SubMeters = () => {
                           <th className="py-3 text-center">Operational Load</th>
                           <th className="py-3 text-center">Avg. Volts</th>
                           <th className="py-3 text-center">Phase Amps</th>
-                          <th className="py-3 text-center">cos φ</th>
+                          <th className="py-3 text-center">Last Updated</th>
                           <th className="py-3 text-end">Health Status</th>
                         </tr>
                       </thead>
@@ -1115,6 +1115,17 @@ const SubMeters = () => {
                           const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
                           const showActive = isOnline || hasTelemetry;
                           const fmtNum = (v, d = 1) => { const n = Number(v); return isNaN(n) ? '0.0' : n.toFixed(d); };
+                          const formatLastUpdated = (m) => {
+                            const ts = m?.lastTelemetryTimestamp || m?.lastSeenAt || m?.device?.lastSeenAt || m?.device?.updatedAt || m?.updatedAt;
+                            const d = ts ? new Date(ts) : new Date();
+                            const dateObj = isNaN(d.getTime()) ? new Date() : d;
+                            const day = String(dateObj.getDate()).padStart(2, '0');
+                            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            const hours = String(dateObj.getHours()).padStart(2, '0');
+                            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                            const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+                            return `${day}/${month} ${hours}:${minutes}:${seconds}`;
+                          };
                           return (
                             <tr key={meter.id || idx} className="border-bottom border-secondary border-opacity-5" onClick={() => setSelectedMeter(meter)}>
                               <td className="py-3 font-monospace text-info fs-13">{meter.id}</td>
@@ -1122,7 +1133,7 @@ const SubMeters = () => {
                               <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
                               <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
                               <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.current)} A` : '—'}</td>
-                              <td className="py-3 text-center text-secondary font-monospace">{showActive ? fmtNum(meter.pf, 3) : '—'}</td>
+                              <td className="py-3 text-center text-secondary font-monospace">{formatLastUpdated(meter)}</td>
                               <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? (meter.load > 0.05 ? 'Running' : 'Online') : 'Offline'} /> : '—'}</td>
                             </tr>
                           );
@@ -1140,7 +1151,7 @@ const SubMeters = () => {
                           <th className="py-3">Feed Description</th>
                           <th className="py-3 text-center">Operational Load</th>
                           <th className="py-3 text-center">Avg. Volts</th>
-                          <th className="py-3 text-center">cos φ</th>
+                          <th className="py-3 text-center">Last Updated</th>
                           <th className="py-3 text-end">Health Status</th>
                         </tr>
                       </thead>
@@ -1151,13 +1162,24 @@ const SubMeters = () => {
                           const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
                           const showActive = isOnline || hasTelemetry;
                           const fmtNum = (v, d = 1) => { const n = Number(v); return isNaN(n) ? '0.0' : n.toFixed(d); };
+                          const formatLastUpdated = (m) => {
+                            const ts = m?.lastTelemetryTimestamp || m?.lastSeenAt || m?.device?.lastSeenAt || m?.device?.updatedAt || m?.updatedAt;
+                            const d = ts ? new Date(ts) : new Date();
+                            const dateObj = isNaN(d.getTime()) ? new Date() : d;
+                            const day = String(dateObj.getDate()).padStart(2, '0');
+                            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            const hours = String(dateObj.getHours()).padStart(2, '0');
+                            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                            const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+                            return `${day}/${month} ${hours}:${minutes}:${seconds}`;
+                          };
                           return (
                             <tr key={meter.id || idx} className="border-bottom border-secondary border-opacity-5" onClick={() => setSelectedMeter(meter)}>
                               <td className="py-3 font-monospace text-info fs-13">{meter.id}</td>
                               <td className="py-3 text-white fw-bold">{meter.label}</td>
                               <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
                               <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
-                              <td className="py-3 text-center text-secondary font-monospace">{showActive ? fmtNum(meter.pf, 3) : '—'}</td>
+                              <td className="py-3 text-center text-secondary font-monospace">{formatLastUpdated(meter)}</td>
                               <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? (meter.load > 0.05 ? 'Running' : 'Online') : 'Offline'} /> : '—'}</td>
                             </tr>
                           );
