@@ -128,6 +128,9 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
   // Voltages
   const vR =
     updates.vR ??
+    updates.vLNAvg ??
+    updates.vRY ??
+    updates.vLLAvg ??
     updates.acOutputVoltage ??
     updates.dcInputVoltage ??
     updates.voltage ??
@@ -136,14 +139,28 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
   const voltage = vR !== undefined && vR !== null ? Number(vR).toFixed(1) : '0.0';
 
   // Currents
-  const iR =
+  let rawCurrent =
     updates.iR ??
+    updates.iAvg ??
     updates.acOutputCurrent ??
     updates.dcInputCurrent ??
-    updates.current ??
-    updates.batteryCurrent;
+    updates.current;
 
-  const current = iR !== undefined && iR !== null ? Number(iR).toFixed(2) : '0.00';
+  if (rawCurrent === undefined || rawCurrent === null || Number(rawCurrent) === 0) {
+    const i1 = Number(updates.iR || 0);
+    const i2 = Number(updates.iY || 0);
+    const i3 = Number(updates.iB || 0);
+    if (i1 + i2 + i3 > 0) {
+      rawCurrent = Math.max(i1, i2, i3);
+    }
+  }
+
+  if (rawCurrent === undefined || rawCurrent === null) {
+    rawCurrent = updates.batteryCurrent;
+  }
+
+  const iR = rawCurrent !== undefined && rawCurrent !== null ? Number(rawCurrent) : 0;
+  const current = rawCurrent !== undefined && rawCurrent !== null ? Number(rawCurrent).toFixed(2) : '0.00';
 
   // Frequency
   const freq =
@@ -178,13 +195,21 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
     if (!isNaN(numSoc)) soc = Math.min(100, Math.max(0, numSoc));
   }
 
-  // Status
+  // Status & Online Determination
+  const hasTelemetryEvents = Boolean(
+    updates.lastEventTime ||
+    device.lastEventTime ||
+    device.lastEventTimeFormatted ||
+    Object.keys(updates).length > 0
+  );
+
   const isOnline = Boolean(
     device.status === 'ONLINE' ||
     device.isActive ||
     updates.commStatus === 1 ||
     powerW > 0 ||
-    (vR && Number(vR) > 50)
+    (vR !== undefined && Number(vR) > 0) ||
+    hasTelemetryEvents
   );
 
   return {

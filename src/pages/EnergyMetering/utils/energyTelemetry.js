@@ -16,60 +16,61 @@ export {
 
 export const PARAMETER_SYNONYMS = {
   // Energy & Consumption
-  // Includes SELEC_EM2M displayNames: 'Total Active Energy', 'Total Reactive Energy', ' Apparent Energy '
-  ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP', 'Total Active Energy', 'TOTAL ACTIVE ENERGY', '4,0F'],
-  ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY', 'KVAH', 'S', 'Apparent Energy', 'APPARENT ENERGY', '4,12F'],
-  cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP', 'Total Active Energy', 'TOTAL ACTIVE ENERGY'],
-  dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY', 'GEN KWH'],
+  ebKwh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP', 'Total Active Energy', 'TOTAL ACTIVE ENERGY', '4,0F', 'KW Hours', 'KW HOURS', 'KWHours', 'Active Energy Consumption (kWh)'],
+  ebKvah: ['3,152', '3,157', '4,93F', 'EB KVAH', 'EB_KVAH', 'APPARENT ENERGY', 'KVAH', 'S', 'Apparent Energy', 'APPARENT ENERGY', '4,12F', 'KVA Hours', 'KVA HOURS', 'Apparent Energy Consumption (kVAh)'],
+  cumulativekWh: ['3,151', '3,152', '4,91F', 'EB KWH', 'EB_KWH', 'EB ACTIVE ENERGY', 'CONSUMPTION', 'ACTIVE ENERGY', 'CUMULATIVE KWH', 'CUMULATIVE_KWH', 'KWH', 'EP', 'Total Active Energy', 'TOTAL ACTIVE ENERGY', 'KW Hours', 'Active Energy Consumption (kWh)'],
+  dgKwh: ['3,180', '3,181', 'DG KWH', 'DG_KWH', 'DG ACTIVE', 'DG ENERGY', 'GENERATOR ENERGY', 'GEN KWH', 'KW Hours', 'KW HOURS'],
   balance: ['3,162', 'BALANCE', 'PREPAID BALANCE', 'AMT', 'AMOUNT', 'CREDIT', 'PREPAID_BALANCE'],
 
   // Powers
-  totalKw: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW'],
-  activePower: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW'],
-  totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA', 'KVA'],
-  apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA', 'KVA'],
-  reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER', 'KVAR', 'POWER KVAR', 'Eq'],
+  totalKw: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW', 'Total Active Power (kW / Total Watts)', 'TOTAL ACTIVE POWER (KW / TOTAL WATTS)', 'Total Active Power', 'Generator Total Watts', 'GENERATOR TOTAL WATTS', 'Active Power (kW Kilowatt)', '4,31'],
+  activePower: ['3,190', 'TOTAL KW', 'TOTAL_KW', 'ACTIVE POWER', 'DEMAND', 'LOAD KW', 'ACTIVE_POWER', 'Total KW', 'KW', 'Total Active Power (kW / Total Watts)', 'TOTAL ACTIVE POWER (KW / TOTAL WATTS)', 'Total Active Power', 'Generator Total Watts', 'GENERATOR TOTAL WATTS', 'Active Power (kW Kilowatt)', '4,31'],
+  totalKva: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA', 'KVA', 'Total Apparent Power (kVA / Total VA)', 'Generator total VA', 'Apparent Power (kVA Kilovolt-Ampere)'],
+  apparentPower: ['3,191', 'TOTAL KVA', 'TOTAL_KVA', 'APPARENT POWER', 'LOAD KVA', 'APPARENT_POWER', 'Total KVA', 'KVA', 'Total Apparent Power (kVA / Total VA)', 'Generator total VA', 'Apparent Power (kVA Kilovolt-Ampere)'],
+  reactivePower: ['3,192', 'REACTIVE POWER', 'REACTIVE_POWER', 'KVAR', 'POWER KVAR', 'Eq', 'Total Reactive Power (kVAr / Total Var)', 'Generator total Var', 'Reactive Power (kVAr Reactive Power)'],
 
   // Voltages (Phase to Neutral)
-  // Includes SELEC_EM2M 'Voltage LN' (single-phase line-to-neutral mapped to vR)
-  vR: ['3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R', 'R-PHASE VOLTAGE', 'R-Phase Voltage', 'Voltage LN', 'VOLTAGE LN', 'VLN', '4,20F'],
+  vR: ['3,163', 'VOLTAGE R', 'VOLTAGE_R', 'VR', 'V_R', 'UA', 'U1', 'LINE VOLTS (R)', 'VOLTAGE R-PHASE', 'Voltage-R', 'R-PHASE VOLTAGE', 'R-Phase Voltage', 'Voltage LN', 'VOLTAGE LN', 'VLN', '4,20F', 'Average Voltage Line-to-Neutral (V L-N)', 'AVERAGE VOLTAGE LINE-TO-NEUTRAL (V L-N)', 'Average Voltage Line-to-Neutral', 'Phase-to-Neutral Voltage (V L-N)', 'Generator L-N voltage average', 'Line Voltage (V Volts)', '4,15'],
   vY: ['3,169', '3,164', 'VOLTAGE Y', 'VOLTAGE_Y', 'VY', 'V_Y', 'UB', 'U2', 'LINE VOLTS (Y)', 'VOLTAGE Y-PHASE', 'Voltage-Y', 'Y-PHASE VOLTAGE', 'Y-Phase Voltage'],
   vB: ['3,170', '3,165', 'VOLTAGE B', 'VOLTAGE_B', 'VB', 'V_B', 'UC', 'U3', 'LINE VOLTS (B)', 'VOLTAGE B-PHASE', 'Voltage-B', 'B-PHASE VOLTAGE', 'B-Phase Voltage'],
 
   // Voltages (Line to Line)
-  vRY: ['VOLTAGE R-Y', 'V_RY', 'VRY', 'LINE VOLTS (RY)', 'VOLTAGE RY', 'Voltage R-Y'],
-  vYB: ['VOLTAGE Y-B', 'V_YB', 'VYB', 'LINE VOLTS (YB)', 'VOLTAGE YB', 'Voltage Y-B'],
-  vBR: ['VOLTAGE B-R', 'V_BR', 'VBR', 'LINE VOLTS (BR)', 'VOLTAGE BR', 'Voltage B-R'],
-  vLLAvg: ['AVG VOLTAGE L-L', 'V_LL_AVG', 'AVG VLL', 'VLL AVG', 'Avg Voltage L-L'],
-  vLNAvg: ['AVG VOLTAGE L-N', 'V_LN_AVG', 'AVG VLN', 'VLN AVG', 'Avg Voltage L-N'],
+  vRY: ['VOLTAGE R-Y', 'V_RY', 'VRY', 'LINE VOLTS (RY)', 'VOLTAGE RY', 'Voltage R-Y', 'Line-to-Line Voltage L1-L2 (V)', 'LINE-TO-LINE VOLTAGE L1-L2 (V)', 'Generator L1-L2 voltage', 'Line-to-Line Voltage L1-L2', '4,18'],
+  vYB: ['VOLTAGE Y-B', 'V_YB', 'VYB', 'LINE VOLTS (YB)', 'VOLTAGE YB', 'Voltage Y-B', 'Generator L2-L3 voltage'],
+  vBR: ['VOLTAGE B-R', 'V_BR', 'VBR', 'LINE VOLTS (BR)', 'VOLTAGE BR', 'Voltage B-R', 'Generator L3-L1 voltage'],
+  vLLAvg: ['AVG VOLTAGE L-L', 'V_LL_AVG', 'AVG VLL', 'VLL AVG', 'Avg Voltage L-L', 'Line-to-Line Voltage L1-L2 (V)', 'Generator L1-L2 voltage', '4,18'],
+  vLNAvg: ['AVG VOLTAGE L-N', 'V_LN_AVG', 'AVG VLN', 'VLN AVG', 'Avg Voltage L-N', 'Average Voltage Line-to-Neutral (V L-N)', 'AVERAGE VOLTAGE LINE-TO-NEUTRAL (V L-N)', 'Generator L-N voltage average', 'Phase-to-Neutral Voltage (V L-N)', '4,15'],
 
   // Currents
-  // Includes SELEC_EM2M 'Current' (single-phase current mapped to iR)
-  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current', 'R-PHASE CURRENT', 'Current', 'CURRENT', '4,22F'],
-  iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current', 'Y-PHASE CURRENT'],
-  iB: ['3,173', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current', 'B-PHASE CURRENT'],
-  iAvg: ['AVG CURRENT', 'I_AVG', 'IAVG', 'Avg Current', 'AVERAGE CURRENT'],
+  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current', 'R-PHASE CURRENT', 'Current', 'CURRENT', '4,22F', 'Phase L1 Current (A L1)', 'PHASE L1 CURRENT (A L1)', 'Phase L1 Current', 'Generator L1 current', 'Phase Current (A Amperes)', '4,21'],
+  iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current', 'Y-PHASE CURRENT', 'Phase L2 Current (A L2)', 'PHASE L2 CURRENT (A L2)', 'Phase L2 Current', 'Generator L2 current', '4,22'],
+  iB: ['3,173', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current', 'B-PHASE CURRENT', 'Phase L3 Current (A L3)', 'PHASE L3 CURRENT (A L3)', 'Phase L3 Current', 'Generator L3 current', '4,23'],
+  iAvg: ['AVG CURRENT', 'I_AVG', 'IAVG', 'Avg Current', 'AVERAGE CURRENT', 'Phase Current (A Amperes)', 'Generator Average Current'],
 
   // Power Factors
-  pf: ['3,174', 'POWER FACTOR', 'PF', 'SYSTEM PF', 'POWER_FACTOR', 'Power Factor'],
-  pfAvg: ['AVG PF', 'PF_AVG', 'PFAVG', 'Avg PF', 'AVERAGE POWER FACTOR'],
-  pfR: ['PF-R', 'PF_R', 'PFR', 'PF R', 'R-PHASE PF'],
-  pfY: ['PF-Y', 'PF_Y', 'PFY', 'PF Y', 'Y-PHASE PF'],
-  pfB: ['PF-B', 'PF_B', 'PFB', 'PF B', 'B-PHASE PF'],
+  pf: ['3,174', 'POWER FACTOR', 'PF', 'SYSTEM PF', 'POWER_FACTOR', 'Power Factor', 'Power Factor (PF 0.00-1.00)', 'POWER FACTOR (PF 0.00-1.00)', 'Generator average power factor', 'Generator Average Power Factor (PF)', '4,39'],
+  pfAvg: ['AVG PF', 'PF_AVG', 'PFAVG', 'Avg PF', 'AVERAGE POWER FACTOR', 'Generator average power factor', 'Generator Average Power Factor (PF)', 'Power Factor (PF 0.00-1.00)', '4,39'],
 
   // Frequency
-  freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ', 'Frequency'],
+  freq: ['3,153', 'FREQUENCY', 'FREQ', '50HZ', 'F', 'HZ', 'Frequency', 'Frequency (R Phase - Hz)', 'FREQUENCY (R PHASE - HZ)', 'Electrical Frequency (Hz Hertz)', '4,12'],
+
+  // Engine / Generator Parameters
+  batteryVoltage: ['Battery Voltage (V DC)', 'BATTERY VOLTAGE (V DC)', 'Battery Voltage', '4,6'],
+  coolantTemp: ['Coolant Temperature (°C)', 'COOLANT TEMPERATURE (°C)', 'Coolant Temperature', 'Engine Temperature (°C)', '4,3'],
+  oilPressure: ['Engine Oil Pressure (kPa / Bar)', 'ENGINE OIL PRESSURE (KPA / BAR)', 'Engine Oil Pressure', 'Oil Pressure', '4,1'],
+  engineSpeed: ['Engine Speed (RPM)', 'ENGINE SPEED (RPM)', 'Engine Speed', 'RPM', '4,11'],
+  fuelLevel: ['Fuel Tank Level (%)', 'FUEL TANK LEVEL (%)', 'Fuel Tank Level', 'Fuel Level', '4,4'],
 
   // Power Averages
   kvaAvg: ['POWER KVA (AVG)', 'KVA_AVG', 'KVA AVG', 'Power KVA (AVG)'],
   kvarAvg: ['POWER KVAR (AVG)', 'KVAR_AVG', 'KVAR AVG', 'Power KVAR (AVG)'],
 
   // Load Hours & Metrics
-  loadHrs: ['LOAD HRS', 'LOAD_HRS', 'Load Hrs', 'RUNTIME HRS'],
+  loadHrs: ['LOAD HRS', 'LOAD_HRS', 'Load Hrs', 'RUNTIME HRS', 'Engine Run Time (Total Hours)', 'Total Engine Hours (HRS)'],
   loadMin: ['LOAD MIN', 'LOAD_MIN', 'Load Min', 'RUNTIME MIN'],
   noLoadHrs: ['NO LOAD HRS', 'NO_LOAD_HRS', 'No Load Hrs'],
   noLoadMin: ['NO LOAD MIN', 'NO_LOAD_MIN', 'No Load Min'],
-  loadPct: ['LOAD %', 'LOAD_PCT', 'LOAD PCT', 'Load %', 'LOAD PERCENTAGE'],
+  loadPct: ['LOAD %', 'LOAD_PCT', 'LOAD PCT', 'Load %', 'LOAD PERCENTAGE', 'Generator Load Percentage (%)'],
   meterTarget: ['METER TARGET', 'METER_TARGET', 'Meter Target', 'TARGET'],
 
   // Tariffs & Limits
@@ -339,16 +340,22 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
 
       if (
         sName.includes('r-phase volt') || sName === 'voltage-r' || sName === 'voltage r' ||
-        sName === 'voltage ln' || sName.includes('voltage ln') || sName === 'vln' || sName === 'ua' || sName === 'vr'
-      ) canonicalUpdates.vR = val;
-      else if (sName.includes('y-phase volt') || sName === 'voltage-y' || sName === 'voltage y' || sName === 'ub' || sName === 'vy') canonicalUpdates.vY = val;
+        sName === 'voltage ln' || sName.includes('voltage ln') || sName.includes('voltage line-to-neutral') ||
+        sName.includes('average voltage line-to-neutral') || sName === 'vln' || sName === 'ua' || sName === 'vr'
+      ) {
+        canonicalUpdates.vR = val;
+        canonicalUpdates.vLNAvg = val;
+      } else if (sName.includes('y-phase volt') || sName === 'voltage-y' || sName === 'voltage y' || sName === 'ub' || sName === 'vy') canonicalUpdates.vY = val;
       else if (sName.includes('b-phase volt') || sName === 'voltage-b' || sName === 'voltage b' || sName === 'uc' || sName === 'vb') canonicalUpdates.vB = val;
-      else if (
-        sName.includes('r-current') || sName === 'current-r' || sName === 'current r' ||
+      else if (sName.includes('line-to-line voltage') || sName.includes('voltage l1-l2') || sName.includes('l1-l2 voltage') || sName.includes('voltage r-y') || sName === 'vry') {
+        canonicalUpdates.vRY = val;
+        canonicalUpdates.vLLAvg = val;
+      } else if (
+        sName.includes('r-current') || sName === 'current-r' || sName === 'current r' || sName.includes('phase l1 current') || sName.includes('l1 current') ||
         sName === 'current' || sName === 'line amps (r)' || sName === 'ia' || sName === 'ir'
       ) canonicalUpdates.iR = val;
-      else if (sName.includes('y-current') || sName === 'current-y' || sName === 'current y' || sName === 'ib' || sName === 'iy') canonicalUpdates.iY = val;
-      else if (sName.includes('b-current') || sName === 'current-b' || sName === 'current b' || sName === 'ic' || sName === 'ib') canonicalUpdates.iB = val;
+      else if (sName.includes('y-current') || sName === 'current-y' || sName === 'current y' || sName.includes('phase l2 current') || sName.includes('l2 current') || sName === 'ib' || sName === 'iy') canonicalUpdates.iY = val;
+      else if (sName.includes('b-current') || sName === 'current-b' || sName === 'current b' || sName.includes('phase l3 current') || sName.includes('l3 current') || sName === 'ic' || sName === 'ib') canonicalUpdates.iB = val;
       else if (
         sName.includes('max.dmd-kwh') || sName.includes('max.dmd kwh') || sName.includes('max demand kwh')
       ) canonicalUpdates.maxDmdKwh = val;
@@ -356,7 +363,7 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
         sName.includes('max.dmd-kvah') || sName.includes('max.dmd kvah') || sName.includes('max demand kvah')
       ) canonicalUpdates.maxDmdKvah = val;
       else if (
-        sName.includes('total kw') || sName.includes('active power') || sName === 'kw' || sName === 'p'
+        sName.includes('total kw') || sName.includes('active power') || sName.includes('total watts') || sName === 'kw' || sName === 'p'
       ) {
         canonicalUpdates.totalKw = val;
         canonicalUpdates.activePower = val;
@@ -374,16 +381,23 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       ) {
         canonicalUpdates.ebKvah = val;
       } else if (
-        sName.includes('total kva') || sName.includes('apparent power') || sName === 'kva'
+        sName.includes('total kva') || sName.includes('apparent power') || sName.includes('total va') || sName === 'kva'
       ) {
         canonicalUpdates.totalKva = val;
         canonicalUpdates.apparentPower = val;
       } else if (
-        sName.includes('reactive power') || sName === 'kvar' || sName === 'q'
+        sName.includes('reactive power') || sName.includes('total var') || sName === 'kvar' || sName === 'q'
       ) {
         canonicalUpdates.reactivePower = val;
-      } else if (sName === 'power factor' || sName === 'pf') canonicalUpdates.pf = val;
-      else if (sName === 'frequency' || sName === 'freq' || sName === 'hz') canonicalUpdates.freq = val;
+      } else if (sName.includes('power factor') || sName.includes('pf')) {
+        canonicalUpdates.pf = val;
+        canonicalUpdates.pfAvg = val;
+      } else if (sName.includes('frequency') || sName.includes('freq') || sName === 'hz') canonicalUpdates.freq = val;
+      else if (sName.includes('battery voltage')) canonicalUpdates.batteryVoltage = val;
+      else if (sName.includes('coolant')) canonicalUpdates.coolantTemp = val;
+      else if (sName.includes('oil pressure')) canonicalUpdates.oilPressure = val;
+      else if (sName.includes('engine speed') || sName.includes('rpm')) canonicalUpdates.engineSpeed = val;
+      else if (sName.includes('fuel')) canonicalUpdates.fuelLevel = val;
       else if (sName.includes('balance')) canonicalUpdates.balance = val;
       else if (sName.includes('dg kwh')) canonicalUpdates.dgKwh = val;
     });
@@ -410,7 +424,7 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       }
     }
 
-    // Explicit common aliases from industrial MFM & OpenAPI spec samples
+    // Explicit common aliases from industrial MFM, DG Sets & OpenAPI spec samples
     const extraAliases = {
       eq: 'ebKvah',
       ep: 'ebKwh',
@@ -491,7 +505,36 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       totalreactiveenergy: 'reactiveEnergy',
       apparentenergy: 'ebKvah',
       maxdmdkwh: 'maxDmdKwh',
-      maxdmdkvah: 'maxDmdKvah'
+      maxdmdkvah: 'maxDmdKvah',
+      averagevoltagelinetoneutralvln: 'vLNAvg',
+      averagevoltagelinetoneutral: 'vLNAvg',
+      linetolinevoltagel1l2v: 'vRY',
+      linetolinevoltagel1l2: 'vRY',
+      phasel1currental1: 'iR',
+      phasel1current: 'iR',
+      phasel2currental2: 'iY',
+      phasel2current: 'iY',
+      phasel3currental3: 'iB',
+      phasel3current: 'iB',
+      frequencyrphasehz: 'freq',
+      electricalfrequencyhzhertz: 'freq',
+      powerfactorpf000100: 'pf',
+      generatoraveragepowerfactorpf: 'pf',
+      generatoraveragepowerfactor: 'pf',
+      totalactivepowerkwtotalwatts: 'totalKw',
+      activepowerkwkilowatt: 'totalKw',
+      generatorwatts: 'totalKw',
+      generatortotalwatts: 'totalKw',
+      batteryvoltagevdc: 'batteryVoltage',
+      batteryvoltage: 'batteryVoltage',
+      coolanttemperaturec: 'coolantTemp',
+      coolanttemperature: 'coolantTemp',
+      engineoilpressurekpabar: 'oilPressure',
+      engineoilpressure: 'oilPressure',
+      enginespeedrpm: 'engineSpeed',
+      enginespeed: 'engineSpeed',
+      fueltanklevel: 'fuelLevel',
+      fueltanklevelpercent: 'fuelLevel'
     };
 
     for (const [alias, key] of Object.entries(extraAliases)) {

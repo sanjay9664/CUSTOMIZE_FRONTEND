@@ -35,7 +35,45 @@ export const DEVICE_CATEGORIES = [
   'OTHER'
 ];
 
+export const ALLOWED_BACKEND_CATEGORIES = new Set([
+  'ENERGY_METER',
+  'MAIN_ENERGY_METER',
+  'SUB_ENERGY_METER',
+  'UG_TANK',
+  'AG_TANK',
+  'PUMP',
+  'VALVE',
+  'GENERATOR',
+  'LT_PANEL',
+  'FIRE_PUMP',
+  'HVAC_CHILLER',
+  'HVAC_AHU',
+  'HVAC_COOLING_TOWER',
+  'VRV',
+  'AQI_SENSOR',
+  'BREAKER',
+  'STP',
+  'WTP',
+  'LIFT',
+  'LIGHTING',
+  'FIRE_PANEL',
+  'CONTROLLER',
+  'SENSOR',
+  'AC',
+  'OTHER'
+]);
 
+export const normalizeCategoryForBackend = (category) => {
+  if (!category) return 'ENERGY_METER';
+  const upper = String(category).trim().toUpperCase();
+  if (ALLOWED_BACKEND_CATEGORIES.has(upper)) {
+    return upper;
+  }
+  if (upper.includes('SOLAR') || upper.includes('INVERTER') || upper.includes('UPS')) {
+    return 'ENERGY_METER';
+  }
+  return 'OTHER';
+};
 
 export const CATEGORY_LABELS = {
   MAIN_ENERGY_METER: 'Main Energy Meter',
@@ -873,7 +911,50 @@ SOLAR_SYSTEM: {
     { name: 'Estimated Energy Generation (kWh)', required: false },
     { name: 'Solar Generation Forecast (kWh)', required: false },
     { name: 'Solar Curtailment Power (kW)', required: false },
-    { name: 'Solar Curtailment Energy (kWh)', required: false }
+    { name: 'Solar Curtailment Energy (kWh)', required: false },
+
+    // ADDITIONAL METER PARAMETERS
+    { name: 'LOW_BALANCE_CUT', required: false },
+    { name: 'OVERLOAD_TRIP', required: false },
+    { name: 'OVERLOAD_LIMIT_REACHED', required: false },
+    { name: 'CONNECTED_STATUS', required: false },
+    { name: 'FORCE_OFF', required: false },
+
+    { name: 'METER_SRNO', required: false },
+    { name: 'NO_OF_OVERLOAD_CHECK', required: false },
+    { name: 'EB_DG_STATUS', required: false },
+    { name: 'EB_TARIFF', required: false },
+    { name: 'DG_TARIFF', required: false },
+
+    { name: 'EB_R_LOAD_SET', required: false },
+    { name: 'EB_Y_LOAD_SET', required: false },
+    { name: 'EB_B_LOAD_SET', required: false },
+
+    { name: 'DG_R_LOAD_SET', required: false },
+    { name: 'DG_Y_LOAD_SET', required: false },
+    { name: 'DG_B_LOAD_SET', required: false },
+
+    // ADDITIONAL ELECTRICAL PARAMETERS
+    { name: 'AVG_VOLTAGE_L_L', required: false },
+    { name: 'AVERAGE_CURRENT', required: false },
+    { name: 'POWER_KVA_AVG', required: false },
+    { name: 'VOLTAGE_R_N', required: false },
+    { name: 'VOLTAGE_Y_N', required: false },
+    { name: 'VOLTAGE_B_R', required: false },
+
+    { name: 'CURRENT_L1', required: false },
+    { name: 'CURRENT_L2', required: false },
+    { name: 'CURRENT_L3', required: false },
+    { name: 'KW_R', required: false },
+    { name: 'KW_Y', required: false },
+    { name: 'KW_B', required: false },
+
+    { name: 'KWH_R', required: false },
+    { name: 'KWH_Y', required: false },
+    { name: 'KWH_B', required: false },
+    { name: 'PF_R', required: false },
+    { name: 'PF_Y', required: false },
+    { name: 'PF_B', required: false }
   ]
 },
 
