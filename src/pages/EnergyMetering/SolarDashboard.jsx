@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Row, Col, Card, Container, Button, Spinner } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import {
   Sun,
   Battery,
@@ -166,6 +167,7 @@ const SolarDashboard = ({
   dgDevice = null,
   subMeters = []
 }) => {
+  const navigate = useNavigate();
   const { isDark } = useTheme();
   const currentTheme = isDark
     ? {
@@ -265,6 +267,9 @@ const SolarDashboard = ({
   const dgA = isDgConfigured && dgDevice.current !== undefined && dgDevice.current !== null ? Number(dgDevice.current).toFixed(2) : (isDgConfigured ? '0.00' : '—');
   const dgKwh = isDgConfigured && dgDevice.todayKwh !== undefined && dgDevice.todayKwh !== null ? Number(dgDevice.todayKwh).toFixed(2) : '0.00';
   const dgStatus = isDgConfigured ? (dgDevice.status || (dgW > 50 ? 'RUNNING' : 'STANDBY')) : 'Not Configured';
+  const dgFuel = isDgConfigured && dgDevice?.fuelLevel !== undefined && dgDevice?.fuelLevel !== null ? `${dgDevice.fuelLevel}%` : null;
+  const dgBattery = isDgConfigured && dgDevice?.batteryVoltage !== undefined && dgDevice?.batteryVoltage !== null ? `${dgDevice.batteryVoltage} V` : null;
+  const dgCoolant = isDgConfigured && dgDevice?.coolantTemp !== undefined && dgDevice?.coolantTemp !== null ? `${dgDevice.coolantTemp} °C` : null;
 
   // 5. Inflow Totals & Outgoing Distribution Totals
   const totalInflowW = gridW + solarW + dgW;
@@ -600,6 +605,8 @@ const SolarDashboard = ({
 
                   {/* 1.4 DG SET */}
                   <div
+                    onClick={() => navigate('/dg-set')}
+                    title="Click to view Generator Overview & Details"
                     style={{
                       position: 'absolute',
                       left: '20px',
@@ -607,7 +614,7 @@ const SolarDashboard = ({
                       background: currentTheme.cardBg,
                       border: `1px solid ${currentTheme.border}`,
                       borderRadius: '12px',
-                      padding: '14px 18px',
+                      padding: '12px 18px',
                       width: '280px',
                       height: '155px',
                       zIndex: 10,
@@ -615,15 +622,18 @@ const SolarDashboard = ({
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                       boxShadow: currentTheme.shadow,
-                      opacity: isDgConfigured ? 1 : 0.7
+                      opacity: isDgConfigured ? 1 : 0.7,
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease, border-color 0.2s ease'
                     }}
+                    className="submeter-card"
                   >
                     <div className="d-flex w-100">
                       <div className="me-3 d-flex align-items-start justify-content-center" style={{ width: '48px' }}>
                         <Zap color={currentTheme.red} size={42} strokeWidth={1.5} />
                       </div>
-                      <div className="overflow-hidden">
-                        <div className="d-flex align-items-center gap-1.5 mb-1">
+                      <div className="overflow-hidden w-100">
+                        <div className="d-flex align-items-center justify-content-between mb-1">
                           <span className={`fw-bold text-${isDark ? 'white' : 'dark'} text-truncate`} style={{ fontSize: '12.5px', letterSpacing: '0.4px' }}>
                             {dgDevice?.name || 'DG SET'}
                           </span>
@@ -631,19 +641,26 @@ const SolarDashboard = ({
                             <span className="badge bg-secondary text-dark" style={{ fontSize: '9px' }}>UNMAPPED</span>
                           )}
                         </div>
-                        <div style={{ color: currentTheme.red, fontSize: '28px', fontWeight: 'bold', lineHeight: '1.2' }}>
+                        <div style={{ color: currentTheme.red, fontSize: '26px', fontWeight: 'bold', lineHeight: '1.1' }}>
                           {dgW} W
                         </div>
-                        <div className={`mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '11.5px', fontWeight: 600 }}>
+                        <div className={`mt-0.5 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '11px', fontWeight: 600 }}>
                           {dgV} V <span className="text-muted mx-0.5">|</span> {dgA} A
                         </div>
+                        {(dgFuel || dgBattery || dgCoolant) && (
+                          <div className="d-flex align-items-center gap-1 mt-1 overflow-hidden" style={{ fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+                            {dgFuel && <span className="badge bg-dark text-info border border-info border-opacity-25 px-1.5 py-0.5">Fuel: {dgFuel}</span>}
+                            {dgBattery && <span className="badge bg-dark text-warning border border-warning border-opacity-25 px-1.5 py-0.5">Bat: {dgBattery}</span>}
+                            {dgCoolant && <span className="badge bg-dark text-danger border border-danger border-opacity-25 px-1.5 py-0.5">Temp: {dgCoolant}</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <MiniWave color={currentTheme.red} />
-                    <div className="d-flex justify-content-between align-items-end mt-1">
+                    <div className="d-flex justify-content-between align-items-end mt-0.5">
                       <div className="d-flex flex-column">
-                        <span className="text-muted" style={{ fontSize: '11px' }}>Today's Energy</span>
-                        <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>
+                        <span className="text-muted" style={{ fontSize: '10.5px' }}>Today's Energy</span>
+                        <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12.5px' }}>
                           {dgKwh} kWh
                         </span>
                       </div>

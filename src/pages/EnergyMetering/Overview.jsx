@@ -224,6 +224,11 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
     freq,
     todayKwh,
     soc,
+    batteryVoltage: updates.batteryVoltage !== undefined && updates.batteryVoltage !== null ? Number(updates.batteryVoltage).toFixed(1) : null,
+    coolantTemp: updates.coolantTemp !== undefined && updates.coolantTemp !== null ? Number(updates.coolantTemp).toFixed(1) : null,
+    fuelLevel: updates.fuelLevel !== undefined && updates.fuelLevel !== null ? Number(updates.fuelLevel).toFixed(0) : null,
+    oilPressure: updates.oilPressure !== undefined && updates.oilPressure !== null ? Number(updates.oilPressure).toFixed(1) : null,
+    engineSpeed: updates.engineSpeed !== undefined && updates.engineSpeed !== null ? Number(updates.engineSpeed).toFixed(0) : null,
     chargingStatus: updates.batteryChargingStatus || (Number(current) > 0 ? 'Charging' : 'Normal'),
     todayCharge: updates.batteryRuntimeRemaining
       ? `${updates.batteryRuntimeRemaining} min`
