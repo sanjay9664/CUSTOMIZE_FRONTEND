@@ -712,12 +712,17 @@ const SiemensStyleDG = () => {
           isMapped = true;
           mappedField = matchedBackendKey;
           const displayUnit = param.unit || entry.unit || '';
-          if (param.name === 'Battery Voltage') liveVal = `${entry.val.toFixed(1)} V`;
-          else if (param.name === 'Coolant Temperature') liveVal = `${entry.val.toFixed(1)} °C`;
-          else if (param.name === 'Engine Speed' || param.name === 'Running Status') liveVal = `${entry.val.toFixed(0)} RPM`;
-          else if (param.name === 'Fuel Level') liveVal = `${entry.val.toFixed(0)}%`;
-          else if (param.name === 'Generator average power factor') liveVal = `${entry.val.toFixed(2)} pf`;
-          else liveVal = `${entry.val} ${displayUnit}`.trim();
+          const num = Number(entry.val);
+
+          if (!isNaN(num)) {
+            if (param.name === 'Engine Speed' || param.name === 'Running Status' || param.name === 'No of start') {
+              liveVal = `${num.toFixed(0)} ${displayUnit}`.trim();
+            } else {
+              liveVal = `${num.toFixed(2)} ${displayUnit}`.trim();
+            }
+          } else {
+            liveVal = `${entry.val} ${displayUnit}`.trim();
+          }
         }
       }
 
@@ -725,64 +730,64 @@ const SiemensStyleDG = () => {
       if (!isMapped || liveVal === '--') {
         switch (param.name) {
           case 'Battery Voltage':
-            if (data.engine.battery !== null) { liveVal = `${data.engine.battery.toFixed(1)} V`; isMapped = true; }
+            if (data.engine.battery !== null) { liveVal = `${data.engine.battery.toFixed(2)} V`; isMapped = true; }
             break;
           case 'Coolant Temperature':
-            if (data.engine.coolant !== null) { liveVal = `${data.engine.coolant.toFixed(1)} °C`; isMapped = true; }
+            if (data.engine.coolant !== null) { liveVal = `${data.engine.coolant.toFixed(2)} °C`; isMapped = true; }
             break;
           case 'Oil Pressure':
-            if (data.engine.oilPressure !== null) { liveVal = `${data.engine.oilPressure.toFixed(1)} kPA`; isMapped = true; }
+            if (data.engine.oilPressure !== null) { liveVal = `${data.engine.oilPressure.toFixed(2)} kPA`; isMapped = true; }
             break;
           case 'Engine Speed':
             if (data.engine.speed !== null) { liveVal = `${data.engine.speed.toFixed(0)} RPM`; isMapped = true; }
             break;
           case 'Frequency (R Phase)':
-            if (data.engine.freq !== null) { liveVal = `${data.engine.freq.toFixed(1)} Hz`; isMapped = true; }
+            if (data.engine.freq !== null) { liveVal = `${data.engine.freq.toFixed(2)} Hz`; isMapped = true; }
             break;
           case 'Generator L1-L2 voltage':
-            if (data.voltage.ry !== null) { liveVal = `${data.voltage.ry.toFixed(0)} V`; isMapped = true; }
+            if (data.voltage.ry !== null) { liveVal = `${data.voltage.ry.toFixed(2)} V`; isMapped = true; }
             break;
           case 'Generator L1 current':
-            if (data.current.r !== null) { liveVal = `${data.current.r.toFixed(1)} A`; isMapped = true; }
+            if (data.current.r !== null) { liveVal = `${data.current.r.toFixed(2)} A`; isMapped = true; }
             break;
           case 'Generator L2 current':
-            if (data.current.y !== null) { liveVal = `${data.current.y.toFixed(1)} A`; isMapped = true; }
+            if (data.current.y !== null) { liveVal = `${data.current.y.toFixed(2)} A`; isMapped = true; }
             break;
           case 'Generator L3 current':
-            if (data.current.b !== null) { liveVal = `${data.current.b.toFixed(1)} A`; isMapped = true; }
+            if (data.current.b !== null) { liveVal = `${data.current.b.toFixed(2)} A`; isMapped = true; }
             break;
           case 'Generator average power factor':
             if (data.power.pf !== null) { liveVal = `${data.power.pf.toFixed(2)} pf`; isMapped = true; }
             break;
           case 'Engine Run tim':
-            if (data.engine.runtime !== null) { liveVal = `${data.engine.runtime} RPM/HRS`; isMapped = true; }
+            if (data.engine.runtime !== null) { liveVal = `${typeof data.engine.runtime === 'number' ? data.engine.runtime.toFixed(2) : data.engine.runtime} RPM/HRS`; isMapped = true; }
             break;
           case 'No of start':
             if (data.engine.starts !== null) { liveVal = `${data.engine.starts}`; isMapped = true; }
             break;
           case 'Fuel Level':
-            if (data.diesel.level !== null) { liveVal = `${data.diesel.level.toFixed(0)}%`; isMapped = true; }
+            if (data.diesel.level !== null) { liveVal = `${data.diesel.level.toFixed(2)}%`; isMapped = true; }
             break;
           case 'KW Hours':
-            if (data.generation.today !== null) { liveVal = `${data.generation.today} KWH`; isMapped = true; }
+            if (data.generation.today !== null) { liveVal = `${typeof data.generation.today === 'number' ? data.generation.today.toFixed(2) : data.generation.today} KWH`; isMapped = true; }
             break;
           case 'KVA Hours':
-            if (data.generation.kvaHours !== null) { liveVal = `${data.generation.kvaHours} KVAH`; isMapped = true; }
+            if (data.generation.kvaHours !== null) { liveVal = `${typeof data.generation.kvaHours === 'number' ? data.generation.kvaHours.toFixed(2) : data.generation.kvaHours} KVAH`; isMapped = true; }
             break;
           case 'KVAR Hours':
-            if (data.generation.kvarHours !== null) { liveVal = `${data.generation.kvarHours} kVARH`; isMapped = true; }
+            if (data.generation.kvarHours !== null) { liveVal = `${typeof data.generation.kvarHours === 'number' ? data.generation.kvarHours.toFixed(2) : data.generation.kvarHours} kVARH`; isMapped = true; }
             break;
           case 'Generator Total Watts':
-            if (data.power.kw !== null) { liveVal = `${data.power.kw.toFixed(1)} KW`; isMapped = true; }
+            if (data.power.kw !== null) { liveVal = `${data.power.kw.toFixed(2)} KW`; isMapped = true; }
             break;
           case 'Generator total VA':
-            if (data.power.kva !== null) { liveVal = `${data.power.kva.toFixed(1)} KVA`; isMapped = true; }
+            if (data.power.kva !== null) { liveVal = `${data.power.kva.toFixed(2)} KVA`; isMapped = true; }
             break;
           case 'Generator total Var':
-            if (data.power.kvar !== null) { liveVal = `${data.power.kvar.toFixed(1)} KVAR`; isMapped = true; }
+            if (data.power.kvar !== null) { liveVal = `${data.power.kvar.toFixed(2)} KVAR`; isMapped = true; }
             break;
           case 'Generator L-N voltage average':
-            if (data.voltage.rn !== null) { liveVal = `${data.voltage.rn.toFixed(0)} V`; isMapped = true; }
+            if (data.voltage.rn !== null) { liveVal = `${data.voltage.rn.toFixed(2)} V`; isMapped = true; }
             break;
           default:
             break;
@@ -845,7 +850,9 @@ const SiemensStyleDG = () => {
             if (liveVal === '--') {
               const rawVal = typeof mappedField === 'object' ? (mappedField.value || mappedField.currentValue || mappedField.register || mappedField.field || '--') : String(mappedField);
               if (rawVal !== '--' && rawVal !== 'undefined') {
-                liveVal = rawVal.includes(param.unit || '') ? rawVal : `${rawVal} ${param.unit || ''}`.trim();
+                const num = Number(rawVal);
+                const formatted = !isNaN(num) ? num.toFixed(2) : rawVal;
+                liveVal = formatted.includes(param.unit || '') ? formatted : `${formatted} ${param.unit || ''}`.trim();
               }
             }
           }

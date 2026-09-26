@@ -53,7 +53,7 @@ export const formatTelemetryValue = (val, decimals = 2, unit = '') => {
   if (num === null) return String(val);
 
   const formatted = num.toLocaleString('en-IN', {
-    minimumFractionDigits: Number.isInteger(num) && decimals === 0 ? 0 : Math.min(decimals, 2),
+    minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
   });
 
