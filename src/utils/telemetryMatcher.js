@@ -60,33 +60,40 @@ export const extractTelemetryValue = (setting, liveStats) => {
   if (!setting || !liveStats) return null;
 
   const targetModuleId = setting.moduleId ? String(setting.moduleId) : null;
-  const targetField = setting.sochiotFieldName || setting.fieldName;
-
-  if (!targetField) return null;
+  const targetField = setting.sochiotFieldName || setting.fieldName || setting.fieldKey;
+  const targetDisplayNameNorm = normalizeDisplayName(setting.displayName || setting.name);
+  const settingIdStr = setting.id !== undefined && setting.id !== null ? String(setting.id) : null;
 
   let matchedStat = null;
+  let rawValue = undefined;
 
   if (Array.isArray(liveStats)) {
     matchedStat = liveStats.find(s => {
       if (!s) return false;
+      if (settingIdStr && String(s.settingId || s.id || '') === settingIdStr) return true;
+      if (targetField && (s.fieldName === targetField || s.fieldKey === targetField || s.sochiotFieldName === targetField)) return true;
+      if (targetDisplayNameNorm && normalizeDisplayName(s.displayName || s.name) === targetDisplayNameNorm) return true;
       if (targetModuleId) {
         const mId = String(s.moduleId || s.meta?.module_id || s.module_id || '');
-        if (mId && mId === targetModuleId) return true;
+        if (mId && mId === targetModuleId && s.meta && s.meta[targetField] !== undefined) return true;
       }
-      // If no moduleId specified or not matched, check if field exists in meta
-      return Boolean(s.meta && s.meta[targetField] !== undefined);
+      return Boolean(s.meta && targetField && s.meta[targetField] !== undefined);
     });
+
+    if (matchedStat) {
+      rawValue = matchedStat.currentValue !== undefined
+        ? matchedStat.currentValue
+        : (matchedStat.value !== undefined
+            ? matchedStat.value
+            : (matchedStat.meta && targetField ? matchedStat.meta[targetField] : undefined));
+    }
   } else if (typeof liveStats === 'object') {
     matchedStat = liveStats;
-  }
-
-  if (!matchedStat) return null;
-
-  let rawValue = undefined;
-  if (matchedStat.meta && matchedStat.meta[targetField] !== undefined) {
-    rawValue = matchedStat.meta[targetField];
-  } else if (matchedStat[targetField] !== undefined) {
-    rawValue = matchedStat[targetField];
+    if (matchedStat.meta && targetField && matchedStat.meta[targetField] !== undefined) {
+      rawValue = matchedStat.meta[targetField];
+    } else if (targetField && matchedStat[targetField] !== undefined) {
+      rawValue = matchedStat[targetField];
+    }
   }
 
   if (rawValue === undefined || rawValue === null) return null;
