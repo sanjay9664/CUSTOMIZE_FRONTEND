@@ -1,8 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import PageContextBanner from '../components/PageContextBanner';
+import { useSiteStore } from '../context/SiteContext';
+
+const MODULE_HEADER_CONFIG = [
+  { match: /^\/hvac(?:\/|$)|^\/ahu$|^\/cooling-tower$/, title: 'HVAC', icon: Thermometer },
+  { match: /^\/VRV(?:\/|$)/i, title: 'VRV', icon: Wind },
+  { match: /^\/ac(?:\/|$)/i, title: 'AC', icon: Snowflake },
+  // Fire Alarm System is intentionally excluded per the requested exception.
+  { match: /^\/fire-pumps(?:\/|$)/, title: 'Fire', icon: Flame },
+  { match: /^\/ticketing(?:\/|$)/, title: 'Ticketing', icon: ClipboardList },
+  { match: /^\/maintenance(?:\/|$)/, title: 'Maintenance', icon: Wrench },
+  { match: /^\/service(?:\/|$)/, title: 'Service History', icon: History },
+  { match: /^\/help(?:\/|$)/, title: 'Help', icon: LifeBuoy },
+];
 
 const MainLayout = ({ children }) => {
+  const { pathname } = useLocation();
+  const { activeSites, selectedSite, setSelectedSite } = useSiteStore();
   const [collapsed, setCollapsed] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
@@ -58,6 +76,9 @@ const MainLayout = ({ children }) => {
 
   const isExpanded = !collapsed || sidebarHover;
   const sidebarWidth = isExpanded ? '270px' : '64px';
+  const moduleHeader = MODULE_HEADER_CONFIG.find(({ match }) => match.test(pathname));
+  const ModuleIcon = moduleHeader?.icon;
+  const currentSite = selectedSite || activeSites?.[0] || null;
 
   return (
     <div className="scada-container">
@@ -101,6 +122,20 @@ const MainLayout = ({ children }) => {
           </div>
         )}
         <main className="px-2 px-md-3 pb-4">
+          {moduleHeader && (
+            <PageContextBanner
+              title={moduleHeader.title}
+              icon={ModuleIcon ? <ModuleIcon size={20} /> : undefined}
+              siteSelector={activeSites?.length ? {
+                value: currentSite?.id ?? '',
+                options: activeSites.map(site => ({ value: site.id, label: site.name || site.siteName || `Site ${site.id}` })),
+                onChange: siteId => setSelectedSite(activeSites.find(site => String(site.id) === String(siteId)) || null),
+                ariaLabel: 'Select site'
+              } : undefined}
+              variant="scada"
+              className="layout-module-context-banner"
+            />
+          )}
           {children}
         </main>
       </div>

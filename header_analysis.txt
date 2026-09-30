@@ -1,0 +1,1258 @@
+﻿===== AC\ACScheduler.jsx (549 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Container, Row, Col, Card, Badge, Form, Button } from 'react-bootstrap';
+  3: import { Clock, Calendar as CalendarIcon, Settings, Plus, Trash2, Thermometer, Power } from 'lucide-react';
+  4: import { useTheme } from '../../context/ThemeContext';
+  5: 
+  6: const DAYS_OF_WEEK = [
+  7:   { id: 'monday', label: 'Monday' },
+  8:   { id: 'tuesday', label: 'Tuesday' },
+  9:   { id: 'wednesday', label: 'Wednesday' },
+  10:   { id: 'thursday', label: 'Thursday' },
+  --- return() at line 162 ---
+  162:   return (
+  163:     <div className="fade-in p-4 h-100" style={{ background: isDark ? '#0b1121' : '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+  164:       
+  165:       {/* HEADER SECTION */}
+  166:       <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom" style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)' }}>
+  167:         <div>
+  168:           <h4 className={`fw-black mb-1 d-flex align-items-center ${isDark ? 'text-white' : 'text-dark'}`} style={{ letterSpacing: '0.5px' }}>
+  169:             <CalendarIcon className="me-2 text-info" size={24} />
+  170:             Schedule Management
+  171:           </h4>
+  172:           <p className={`${isDark ? 'text-secondary' : 'text-muted'} mb-0`} style={{ fontSize: '11px', letterSpacing: '0.3px' }}>
+  173:             Automate AC operation schedules based on days, holidays, and automated return rules.
+  174:           </p>
+  175:         </div>
+  176:         <div className="d-flex align-items-center gap-3">
+  177:           <Form.Select 
+  178:             value={selectedAC}
+  179:             onChange={(e) => setSelectedAC(e.target.value)}
+  180:             className="fw-bold shadow-sm"
+  181:             style={{ 
+  182:               width: '200px', 
+
+===== AC\CassetteAC.jsx (111 lines) =====
+  1: import React, { useState } from 'react';
+  2: import { Row, Col, Card, Badge, Form, Button } from 'react-bootstrap';
+  3: import { Wind, Thermometer, Droplets, Zap, Power, Fan, Settings, LayoutGrid } from 'lucide-react';
+  4: 
+  5: const MOCK_CASSETTE_ACS = [
+  6:   { id: 2, name: 'Conference Room AC', location: '1st Floor', status: 'ON', mode: 'Cool', setTemp: 20, roomTemp: 21.0, fanSpeed: 'Auto', powerUsage: 2.1, louvers: 'Swing' },
+  7:   { id: 3, name: 'Server Room AC 1', location: 'Ground Floor', status: 'ON', mode: 'Cool', setTemp: 18, roomTemp: 18.5, fanSpeed: 'High', powerUsage: 2.5, louvers: 'Fixed' },
+  8:   { id: 6, name: 'Reception Area', location: 'Ground Floor', status: 'OFF', mode: 'Fan', setTemp: 23, roomTemp: 24.5, fanSpeed: 'Low', powerUsage: 0.0, louvers: 'Fixed' }
+  9: ];
+  10: 
+  --- return() at line 27 ---
+  27:   return (
+  28:     <div className="fade-in p-4 h-100" style={{ background: '#0b1121', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+  29:       <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+  30:         <h4 className="text-white fw-black mb-1 d-flex align-items-center" style={{ letterSpacing: '1px' }}>
+  31:           <LayoutGrid className="me-2 text-info" size={28} />
+  32:           CASSETTE AC CONTROL
+  33:         </h4>
+  34:       </div>
+  35: 
+  36:       <Row className="g-4">
+  37:         {units.map((unit) => (
+  38:           <Col lg={4} md={6} key={unit.id}>
+  39:             <Card className="border-0 shadow-lg h-100 overflow-hidden" style={{ background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+  40:               <div className="position-absolute" style={{ top: 0, left: 0, right: 0, height: '4px', background: unit.status === 'ON' ? '#10b981' : '#ef4444' }}></div>
+  41:               <Card.Body className="p-4">
+  42:                 <div className="d-flex justify-content-between align-items-start mb-3">
+  43:                   <div>
+  44:                     <h6 className="text-white fw-bold mb-1">{unit.name}</h6>
+  45:                     <div className="text-secondary" style={{ fontSize: '11px', letterSpacing: '1px' }}>{unit.location.toUpperCase()}</div>
+  46:                   </div>
+  47:                   <button 
+
+===== AC\SplitAC.jsx (105 lines) =====
+  1: import React, { useState } from 'react';
+  2: import { Row, Col, Card, Badge, Form, Button } from 'react-bootstrap';
+  3: import { Wind, Thermometer, Droplets, Zap, Power, Fan, Settings } from 'lucide-react';
+  4: 
+  5: const MOCK_SPLIT_ACS = [
+  6:   { id: 1, name: 'Main Office Split AC', location: '1st Floor', status: 'ON', mode: 'Cool', setTemp: 22, roomTemp: 23.5, fanSpeed: 'High', powerUsage: 1.2 },
+  7:   { id: 4, name: 'Manager Cabin', location: '1st Floor', status: 'OFF', mode: 'Fan', setTemp: 24, roomTemp: 26.0, fanSpeed: 'Low', powerUsage: 0.0 },
+  8:   { id: 5, name: 'HR Department', location: 'Ground Floor', status: 'ON', mode: 'Cool', setTemp: 21, roomTemp: 22.0, fanSpeed: 'Auto', powerUsage: 1.8 }
+  9: ];
+  10: 
+  --- return() at line 27 ---
+  27:   return (
+  28:     <div className="fade-in p-4 h-100" style={{ background: '#0b1121', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+  29:       <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+  30:         <h4 className="text-white fw-black mb-1 d-flex align-items-center" style={{ letterSpacing: '1px' }}>
+  31:           <Wind className="me-2 text-info" size={28} />
+  32:           SPLIT AC CONTROL
+  33:         </h4>
+  34:       </div>
+  35: 
+  36:       <Row className="g-4">
+  37:         {units.map((unit) => (
+  38:           <Col lg={4} md={6} key={unit.id}>
+  39:             <Card className="border-0 shadow-lg h-100 overflow-hidden" style={{ background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+  40:               <div className="position-absolute" style={{ top: 0, left: 0, right: 0, height: '4px', background: unit.status === 'ON' ? '#10b981' : '#ef4444' }}></div>
+  41:               <Card.Body className="p-4">
+  42:                 <div className="d-flex justify-content-between align-items-start mb-3">
+  43:                   <div>
+  44:                     <h6 className="text-white fw-bold mb-1">{unit.name}</h6>
+  45:                     <div className="text-secondary" style={{ fontSize: '11px', letterSpacing: '1px' }}>{unit.location.toUpperCase()}</div>
+  46:                   </div>
+  47:                   <button 
+
+===== AlarmSystem\Active.jsx (142 lines) =====
+  1: import React from 'react';
+  2: import { Row, Col, Card, Table, Button, Badge } from 'react-bootstrap';
+  3: import { ShieldAlert, CheckCircle, Clock, Filter } from 'lucide-react';
+  4: import DataTable from '../../components/DataTable';
+  5: import StatusBadge from '../../components/StatusBadge';
+  6: import PdfButton from '../../components/PdfButton';
+  7: 
+  8: const ActiveAlarms = () => {
+  9:   const alarms = [
+  10:     {
+  --- return() at line 44 ---
+  44:   return (
+  45:     <div className="fade-in">
+  46:       <div className="page-header">
+  47:         <div>
+  48:           <h2 className="mb-1 text-white">Active Alarms</h2>
+  49:           <p className="text-muted">Real-time system faults and warnings requiring attention.</p>
+  50:         </div>
+  51:         <div className="d-flex gap-2">
+  52:           <Button variant="outline-secondary" size="sm" className="d-flex align-items-center">
+  53:             <Filter size={16} className="me-2" /> Filter
+  54:           </Button>
+  55:           <PdfButton />
+  56:           <Button variant="info" size="sm">ACK All Alarms</Button>
+  57:         </div>
+  58:       </div>
+  59: 
+  60:       <Card className="scada-card border-0 mb-4">
+  61:         <Card.Body className="p-0">
+  62:           <div className="table-responsive">
+  63:             <Table className="scada-table mb-0" hover>
+  64:               <thead>
+
+===== AlarmSystem\AlarmConfig.jsx (2386 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Container, Row, Col, Card, Form, Button, Table, Badge, Spinner } from 'react-bootstrap';
+  3: import { FiPlus, FiMail, FiBell, FiCheckCircle, FiXCircle, FiInbox, FiEdit2, FiTrash2, FiX, FiChevronRight, FiZap, FiAlertCircle, FiMessageSquare } from 'react-icons/fi';
+  4: import { useTheme } from '../../context/ThemeContext';
+  5: import RuleEditModal from './RuleEditModal';
+  6: import { 
+  7:   loginToSochiot, 
+  8:   getSochiotUserMe, 
+  9:   getSochiotZoneData, 
+  10:   getSochiotLocationData,
+  --- return() at line 216 ---
+  216:     return () => window.removeEventListener('storage-update', updateConfig);
+  217:   }, []);
+  218: 
+  219:   const getVisibleCategories = () => {
+  220:     if (Object.keys(modulesConfig).length === 0 || isSuperAdmin) return Object.keys(ALARM_TEMPLATES);
+  221:     return Object.keys(ALARM_TEMPLATES).filter(cat => {
+  222:       if (cat === 'Fire System') return modulesConfig['Fire'] !== false;
+  223:       return modulesConfig[cat] !== false;
+  224:     });
+  225:   };
+  226:   const visibleCategories = getVisibleCategories();
+  227: 
+  228:   const [adminSelectedCategory, setAdminSelectedCategory] = useState(visibleCategories.length > 0 ? visibleCategories[0] : Object.keys(ALARM_TEMPLATES)[0]);
+  229:   const defaultSub = SUB_CATEGORIES[visibleCategories.length > 0 ? visibleCategories[0] : Object.keys(ALARM_TEMPLATES)[0]];
+  230:   const [adminSubCategory, setAdminSubCategory] = useState(defaultSub ? defaultSub[0] : '');
+  231:   
+  232:   const [adminAlarmValues, setAdminAlarmValues] = useState(() => {
+  233:     // Initialize with defaults from templates
+  234:     const initial = {};
+  235:     Object.entries(ALARM_TEMPLATES).forEach(([cat, alarms]) => {
+  236:       const subs = SUB_CATEGORIES[cat] || [cat];
+
+===== AlarmSystem\MessageTemplateSetting.jsx (262 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Container, Row, Col, Form, Button, Table } from 'react-bootstrap';
+  3: import { FiTrash2, FiEdit2 } from 'react-icons/fi';
+  4: import { useTheme } from '../../context/ThemeContext';
+  5: 
+  6: const deduplicateTemplates = (list) => {
+  7:   if (!Array.isArray(list)) return [];
+  8:   const seen = new Set();
+  9:   return list.filter(item => {
+  10:     const key = `${item.name?.trim()}-${item.content?.trim()}`;
+  --- return() at line 94 ---
+  94:   return (
+  95:     <Container fluid className="py-4" style={{ backgroundColor: pageBg, minHeight: '100vh', color: textColor }}>
+  96:       {/* Header */}
+  97:       <div className="mb-4">
+  98:         <h2 style={{ fontWeight: '700', margin: 0 }}>Message Template Settings</h2>
+  99:         <small style={{ color: subTextColor }}>Configure and manage alarm message templates for the BMS Alarm notifications</small>
+  100:       </div>
+  101: 
+  102:       {/* Success/Error Message */}
+  103:       {saveMsg && (
+  104:         <div style={{
+  105:           padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', fontSize: '13px', fontWeight: '600',
+  106:           background: saveMsg.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+  107:           color: saveMsg.type === 'success' ? '#10b981' : '#ef4444',
+  108:           border: `1px solid ${saveMsg.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+  109:         }}>
+  110:           {saveMsg.text}
+  111:         </div>
+  112:       )}
+  113: 
+  114:       <Row className="g-4">
+
+===== EnergyMetering\PDFReport.jsx (303 lines) =====
+  1: import React, { useState, useEffect, useMemo } from 'react';
+  2: import { Row, Col, Card, Form, Table, Button, Badge } from 'react-bootstrap';
+  3: import { FileText, Download, Calendar, ClipboardList, RefreshCw, Zap, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+  4: import PdfButton from '../../components/PdfButton';
+  5: import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
+  6: 
+  7: const EnergyPDFReport = () => {
+  8:   const [templates, setTemplates] = useState([]);
+  9:   const [filter, setFilter] = useState({
+  10:     dateRange: 'today',
+  --- return() at line 125 ---
+  125:   return (
+  126:     <div className="energy-reports-page fade-in p-3 p-md-4">
+  127: 
+  128:       {/* FILTER CONTROL CARD */}
+  129:       <Card className="scada-card border-0 mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderRadius: '16px' }}>
+  130:         <Card.Body className="p-3 p-md-4">
+  131:           <h6 className="mb-3 fw-bold text-white d-flex align-items-center gap-2 fs-13 text-uppercase text-secondary">
+  132:             <Calendar className="text-info" size={16} /> Report Parameters & Filters
+  133:           </h6>
+  134: 
+  135:           <Row className="g-3 align-items-end">
+  136:             <Col md={filter.dateRange === 'custom' ? 3 : 4}>
+  137:               <Form.Group>
+  138:                 <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Target Meter</Form.Label>
+  139:                 <Form.Select
+  140:                   className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
+  141:                   value={filter.meterId}
+  142:                   onChange={(e) => setFilter({ ...filter, meterId: e.target.value })}
+  143:                 >
+  144:                   <option value="all">Main Incomer Feed Grid</option>
+  145:                   {energyMeters.map(m => (
+
+===== EnergyMetering\SolarDashboard.jsx (962 lines) =====
+  1: import React, { useState, useEffect, useRef, useMemo } from 'react';
+  2: import { Row, Col, Card, Container, Button, Spinner } from 'react-bootstrap';
+  3: import { useNavigate } from 'react-router-dom';
+  4: import {
+  5:   Sun,
+  6:   Battery,
+  7:   BatteryCharging,
+  8:   Zap,
+  9:   RefreshCw,
+  10:   Building2,
+  --- return() at line 120 ---
+  120:   return (
+  121:     <>
+  122:       <defs>
+  123:         <marker id={markerId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+  124:           <path d="M 0 0 L 8 4 L 0 8 z" fill={color} />
+  125:         </marker>
+  126:       </defs>
+  127:       <path d={path} fill="none" stroke={color} strokeWidth="2" strokeOpacity="0.35" markerEnd={`url(#${markerId})`} />
+  128:       {flowing && (
+  129:         <path
+  130:           d={path}
+  131:           fill="none"
+  132:           stroke={color}
+  133:           strokeWidth="3"
+  134:           strokeDasharray="8 8"
+  135:           style={{
+  136:             filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.3))',
+  137:             animation: `dashFlow ${reverse ? 'reverse' : 'normal'} 1.5s linear infinite`
+  138:           }}
+  139:         />
+  140:       )}
+
+===== FirePumps\HeaderPressure.jsx (138 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Container, Row, Col, Card } from 'react-bootstrap';
+  3: import { motion } from 'framer-motion';
+  4: import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+  5: import { Activity } from 'lucide-react';
+  6: 
+  7: const generateMockData = () => {
+  8:   const data = [];
+  9:   let time = new Date();
+  10:   time.setHours(time.getHours() - 2);
+  --- return() at line 50 ---
+  50:     return () => clearInterval(interval);
+  51:   }, []);
+  52: 
+  53:   return (
+  54:     <Container fluid className="py-4 px-lg-4" style={{ fontFamily: "'Inter', sans-serif" }}>
+  55:       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 d-flex align-items-center gap-3">
+  56:         <Activity size={32} className="text-info" />
+  57:         <h3 className="fw-bold text-white mb-0">Header Pressure Trends</h3>
+  58:       </motion.div>
+  59: 
+  60:       <Row className="g-4 mb-4">
+  61:         <Col md={6}>
+  62:           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="h-100">
+  63:             <Card className="glass-card border-0 p-4 h-100">
+  64:               <h5 className="text-white fw-bold mb-3 d-flex align-items-center gap-2">
+  65:                 <div style={{width: 12, height: 12, borderRadius: '50%', background: '#ef4444'}}></div>
+  66:                 Current Hydrant Pressure
+  67:               </h5>
+  68:               <div className="d-flex align-items-baseline gap-2">
+  69:                 <h1 className="display-4 fw-bold text-danger mb-0">{data[data.length-1].Hydrant}</h1>
+  70:                 <span className="text-muted fs-5 fw-semibold">kg/cmA²</span>
+
+===== FirePumps\JockeyMain.jsx (159 lines) =====
+  1: import React, { useState } from 'react';
+  2: import { Container, Row, Col, Card, Form, Badge } from 'react-bootstrap';
+  3: import { motion } from 'framer-motion';
+  4: import { Settings, RefreshCw, Sliders } from 'lucide-react';
+  5: 
+  6: const JockeyMain = () => {
+  7:   const [settings, setSettings] = useState({
+  8:     hydrantJockeyCutIn: 7.0,
+  9:     hydrantJockeyCutOut: 8.5,
+  10:     sprinklerJockeyCutIn: 8.0,
+  --- return() at line 66 ---
+  66:   return (
+  67:     <Container fluid className="py-4 px-lg-4" style={{ fontFamily: "'Inter', sans-serif" }}>
+  68:       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 d-flex align-items-center gap-3">
+  69:         <Settings size={32} className="text-info" />
+  70:         <h3 className="fw-bold text-white mb-0">Jockey & Main Logic Settings</h3>
+  71:       </motion.div>
+  72: 
+  73:       <Row className="g-4 mb-4">
+  74:         <Col lg={4}>
+  75:           <SettingCard 
+  76:             title="Hydrant Jockey Logic" 
+  77:             cutIn={settings.hydrantJockeyCutIn} 
+  78:             cutOut={settings.hydrantJockeyCutOut} 
+  79:             mode={settings.jockeyMode}
+  80:             onModeChange={(m) => handleSettingChange('jockeyMode', m)}
+  81:             delay={0.1}
+  82:           />
+  83:         </Col>
+  84:         <Col lg={4}>
+  85:           <SettingCard 
+  86:             title="Sprinkler Jockey Logic" 
+
+===== FirePumps\PumpStatus.jsx (154 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Container, Row, Col, Card, Table, Badge } from 'react-bootstrap';
+  3: import { motion } from 'framer-motion';
+  4: import { Activity, Zap, Power, AlertTriangle, CheckCircle2 } from 'lucide-react';
+  5: 
+  6: const PumpStatus = () => {
+  7:   const [pumps, setPumps] = useState([
+  8:     { id: 1, name: 'Sprinkler Jockey Pump', mode: 'Auto', status: 'Running', voltage: 242.6, current: 5.2, power: 1.2, runtime: '12h 45m', trip: false },
+  9:     { id: 2, name: 'Hydrant Jockey Pump', mode: 'Auto', status: 'Standby', voltage: 241.2, current: 0.0, power: 0.0, runtime: '45h 10m', trip: false },
+  10:     { id: 3, name: 'Master Pump 1', mode: 'Manual', status: 'Off', voltage: 0.0, current: 0.0, power: 0.0, runtime: '120h 00m', trip: false },
+  --- return() at line 25 ---
+  25:     return () => clearInterval(interval);
+  26:   }, []);
+  27: 
+  28:   const getStatusBadge = (status, trip) => {
+  29:     if (trip) return <Badge bg="danger" className="px-3 py-2 rounded-pill">Tripped</Badge>;
+  30:     switch (status) {
+  31:       case 'Running': return <Badge bg="success" className="px-3 py-2 rounded-pill d-flex align-items-center gap-1"><Activity size={14}/> Running</Badge>;
+  32:       case 'Standby': return <Badge bg="warning" text="dark" className="px-3 py-2 rounded-pill">Standby</Badge>;
+  33:       case 'Off': return <Badge bg="secondary" className="px-3 py-2 rounded-pill">Off</Badge>;
+  34:       default: return <Badge bg="secondary">{status}</Badge>;
+  35:     }
+  36:   };
+  37: 
+  38:   const getModeBadge = (mode) => {
+  39:     return mode === 'Auto' ? 
+  40:       <Badge bg="info" className="px-2 py-1">Auto</Badge> : 
+  41:       <Badge bg="light" text="dark" className="px-2 py-1">Manual</Badge>;
+  42:   };
+  43: 
+  44:   return (
+  45:     <Container fluid className="py-4 px-lg-4" style={{ fontFamily: "'Inter', sans-serif" }}>
+
+===== LTPanel\BreakerStatus.jsx (159 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Row, Col, Card, Badge, Table, Form, InputGroup } from 'react-bootstrap';
+  3: import { Power, ShieldAlert, CheckCircle2, Search, Filter } from 'lucide-react';
+  4: 
+  5: const BreakerStatus = () => {
+  6:   const [time, setTime] = useState(new Date());
+  7: 
+  8:   const [breakers, setBreakers] = useState([
+  9:     { id: 'BRK-001', location: 'LT Room 1', type: 'ACB', rating: '1200A', load: 85, spring: 'Charged', trips: 0, status: 'ON' },
+  10:     { id: 'BRK-002', location: 'LT Room 1', type: 'ACB', rating: '1200A', load: 45, spring: 'Charged', trips: 1, status: 'ON' },
+  --- return() at line 26 ---
+  26:     return () => clearInterval(timer);
+  27:   }, []);
+  28: 
+  29:   const stats = {
+  30:     total: breakers.length,
+  31:     on: breakers.filter(b => b.status === 'ON').length,
+  32:     off: breakers.filter(b => b.status === 'OFF').length,
+  33:     trip: breakers.filter(b => b.status === 'TRIP').length
+  34:   };
+  35: 
+  36:   return (
+  37:     <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
+  38:       {/* HEADER SECTION */}
+  39:       <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+  40:         <div>
+  41:           <div className="d-flex align-items-center gap-3 mb-2">
+  42:             <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+  43:               <div className="rounded-circle" style={{ width: '8px', height: '8px', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
+  44:               <span className="text-success fw-bold fs-9 uppercase tracking-widest">LIVE SYNC</span>
+  45:             </div>
+  46:             <div className="text-secondary fw-bold fs-9 uppercase px-3 py-1 rounded-pill" style={{ background: 'rgba(255,255,255,0.05)' }}>
+
+===== LTPanel\IncomingOutgoing.jsx (144 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Row, Col, Card, Badge, Table } from 'react-bootstrap';
+  3: import { Zap, Activity, ArrowDownRight, ArrowUpRight, TrendingUp } from 'lucide-react';
+  4: 
+  5: const IncomingOutgoing = () => {
+  6:   const [time, setTime] = useState(new Date());
+  7: 
+  8:   const [incomers, setIncomers] = useState([
+  9:     { id: 'INC-1', name: 'Main Transformer Incomer', voltage: 415, current: 850, kw: 600, pf: 0.99, status: 'Healthy' },
+  10:     { id: 'INC-2', name: 'DG Backup Incomer', voltage: 0, current: 0, kw: 0, pf: 0.0, status: 'Standby' }
+  --- return() at line 34 ---
+  34:     return () => clearInterval(timer);
+  35:   }, []);
+  36: 
+  37:   return (
+  38:     <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
+  39:       {/* HEADER SECTION */}
+  40:       <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom" style={{ borderColor: 'var(--scada-border)' }}>
+  41:         <div>
+  42:           <div className="d-flex align-items-center gap-3 mb-2">
+  43:             <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+  44:               <div className="rounded-circle" style={{ width: '8px', height: '8px', background: '#10b981', boxShadow: '0 0 8px #10b981' }}></div>
+  45:               <span className="text-success fw-bold fs-9 uppercase tracking-widest">LIVE SYNC</span>
+  46:             </div>
+  47:             <div className="text-body-secondary fw-bold fs-9 uppercase px-3 py-1 rounded-pill" style={{ background: 'var(--scada-card)', border: '1px solid var(--scada-border)' }}>
+  48:               {time.toLocaleTimeString()}
+  49:             </div>
+  50:           </div>
+  51:           <h2 className="fw-bold mb-1 d-flex align-items-center text-uppercase tracking-wide" style={{ color: 'var(--scada-text)' }}>
+  52:             <TrendingUp className="me-2 text-info" size={28} />
+  53:             Incoming & Outgoing Feeders
+  54:           </h2>
+
+===== LTPanel\LTRoom.jsx (241 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Row, Col, Card, Badge, ProgressBar } from 'react-bootstrap';
+  3: import { Zap, Activity, Power, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+  4: import { useParams } from 'react-router-dom';
+  5: 
+  6: const LTRoom = ({ roomNumber: propRoomNumber }) => {
+  7:   const { id } = useParams();
+  8:   const roomNumber = propRoomNumber || id || '1';
+  9: 
+  10:   const [time, setTime] = useState(new Date());
+  --- return() at line 51 ---
+  51:     return () => clearInterval(timer);
+  52:   }, []);
+  53: 
+  54:   const getStatusColor = (status) => {
+  55:     switch (status) {
+  56:       case 'ON': return '#10b981';
+  57:       case 'OFF': return '#64748b';
+  58:       case 'TRIP': return '#ef4444';
+  59:       default: return '#fbbf24';
+  60:     }
+  61:   };
+  62: 
+  63:   return (
+  64:     <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
+  65:       {/* HEADER SECTION */}
+  66:       <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+  67:         <div>
+  68:           <div className="d-flex align-items-center gap-3 mb-2">
+  69:             <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+  70:               <div className="rounded-circle" style={{ width: '8px', height: '8px', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
+  71:               <span className="text-success fw-bold fs-9 uppercase tracking-widest">LIVE SYNC</span>
+
+===== LTPanel\LTRoom1.jsx (232 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Row, Col, Card, Badge, ProgressBar } from 'react-bootstrap';
+  3: import { Zap, Activity, Power, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+  4: 
+  5: const LTRoom1 = () => {
+  6:   const [time, setTime] = useState(new Date());
+  7:   
+  8:   // Simulated data state for Room 1
+  9:   const [metrics, setMetrics] = useState({
+  10:     voltage: { r: 235, y: 234, b: 236 },
+  --- return() at line 46 ---
+  46:     return () => clearInterval(timer);
+  47:   }, []);
+  48: 
+  49:   const getStatusColor = (status) => {
+  50:     switch (status) {
+  51:       case 'ON': return '#10b981';
+  52:       case 'OFF': return '#64748b';
+  53:       case 'TRIP': return '#ef4444';
+  54:       default: return '#fbbf24';
+  55:     }
+  56:   };
+  57: 
+  58:   return (
+  59:     <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
+  60:       {/* HEADER SECTION */}
+  61:       <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+  62:         <div>
+  63:           <div className="d-flex align-items-center gap-3 mb-2">
+  64:             <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+  65:               <div className="rounded-circle" style={{ width: '8px', height: '8px', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
+  66:               <span className="text-success fw-bold fs-9 uppercase tracking-widest">LIVE SYNC</span>
+
+===== LTPanel\LTRoom2.jsx (230 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Row, Col, Card, Badge, ProgressBar } from 'react-bootstrap';
+  3: import { Zap, Activity, Power, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+  4: 
+  5: const LTRoom2 = () => {
+  6:   const [time, setTime] = useState(new Date());
+  7:   
+  8:   // Simulated data state for Room 2
+  9:   const [metrics, setMetrics] = useState({
+  10:     voltage: { r: 232, y: 233, b: 234 },
+  --- return() at line 44 ---
+  44:     return () => clearInterval(timer);
+  45:   }, []);
+  46: 
+  47:   const getStatusColor = (status) => {
+  48:     switch (status) {
+  49:       case 'ON': return '#10b981';
+  50:       case 'OFF': return '#64748b';
+  51:       case 'TRIP': return '#ef4444';
+  52:       default: return '#fbbf24';
+  53:     }
+  54:   };
+  55: 
+  56:   return (
+  57:     <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
+  58:       {/* HEADER SECTION */}
+  59:       <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+  60:         <div>
+  61:           <div className="d-flex align-items-center gap-3 mb-2">
+  62:             <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+  63:               <div className="rounded-circle" style={{ width: '8px', height: '8px', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
+  64:               <span className="text-success fw-bold fs-9 uppercase tracking-widest">LIVE SYNC</span>
+
+===== LTPanel\LTRoom3.jsx (234 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Row, Col, Card, Badge, ProgressBar } from 'react-bootstrap';
+  3: import { Zap, Activity, Power, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+  4: 
+  5: const LTRoom3 = () => {
+  6:   const [time, setTime] = useState(new Date());
+  7:   
+  8:   // Simulated data state for Room 3
+  9:   const [metrics, setMetrics] = useState({
+  10:     voltage: { r: 236, y: 235, b: 238 },
+  --- return() at line 48 ---
+  48:     return () => clearInterval(timer);
+  49:   }, []);
+  50: 
+  51:   const getStatusColor = (status) => {
+  52:     switch (status) {
+  53:       case 'ON': return '#10b981';
+  54:       case 'OFF': return '#64748b';
+  55:       case 'TRIP': return '#ef4444';
+  56:       default: return '#fbbf24';    
+  57:     }
+  58:   };
+  59: 
+  60:   return (
+  61:     <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
+  62:       {/* HEADER SECTION */}
+  63:       <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+  64:         <div>
+  65:           <div className="d-flex align-items-center gap-3 mb-2">
+  66:             <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+  67:               <div className="rounded-circle" style={{ width: '8px', height: '8px', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
+  68:               <span className="text-success fw-bold fs-9 uppercase tracking-widest">LIVE SYNC</span>
+
+===== VRV\ControlPanel.jsx (328 lines) =====
+  1: import React, { useState } from 'react';
+  2: import { Row, Col, Card, Form, Button, Badge, ProgressBar } from 'react-bootstrap';
+  3: import { Settings, Power, Thermometer, Wind, Droplets, Fan, Activity, Zap, ShieldAlert, CheckCircle2, RotateCw, Gauge, Snowflake, Sun } from 'lucide-react';
+  4: import './VRVOverview.css';
+  5: 
+  6: const units = ['Common', 'Lobby', 'Office', 'Conference', 'Warehouse', 'Laboratory'];
+  7: 
+  8: const getModeIcon = (mode) => {
+  9:   switch (mode) {
+  10:     case 'Cool': return <Snowflake size={18} />;
+  --- return() at line 56 ---
+  56:   return (
+  57:     <div className="fade-in p-2 VRV-full-panel">
+  58:       {/* Header */}
+  59:       <div className="page-header d-flex justify-content-between align-items-center mb-4">
+  60:         <div>
+  61:           <h2 className="mb-1 text-white d-flex align-items-center"><Settings className="me-2 text-info" /> Detailed Control Panel</h2>
+  62:           <p className="text-secondary fs-7">Advanced monitoring and telemetry for individual VRV units</p>
+  63:         </div>
+  64:         <div className="d-flex align-items-center gap-3">
+  65:           <span className="text-secondary fw-bold text-uppercase fs-8">Select Unit:</span>
+  66:           <Form.Select
+  67:             className="scada-select fw-bold py-2 border-info"
+  68:             value={selectedUnit}
+  69:             onChange={(e) => setSelectedUnit(e.target.value)}
+  70:             style={{ minWidth: '200px' }}
+  71:           >
+  72:             {units.map(u => <option key={u} value={u}>{u} Unit</option>)}
+  73:           </Form.Select>
+  74:         </div>
+  75:       </div>
+  76: 
+
+===== VRV\HumanSensor.jsx (801 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Row, Col, Card, Form, Button, Badge } from 'react-bootstrap';
+  3: import { User, Activity, Clock, ShieldCheck, Target, Power, Maximize, Settings, Wifi, Zap, Crosshair, MapPin, Radio } from 'lucide-react';
+  4: import './VRVOverview.css';
+  5: 
+  6: const HumanSensor = () => {
+  7:   const [selectedUnit, setSelectedUnit] = useState('Lobby');
+  8:   const [sensorEnabled, setSensorEnabled] = useState(true);
+  9:   const [autoPowerLink, setAutoPowerLink] = useState(true);
+  10:   const [detectionRange, setDetectionRange] = useState(8); // meters (1-15)
+  --- return() at line 69 ---
+  69:     return () => clearInterval(interval);
+  70:   }, [sensorEnabled, detectionRange]);
+  71: 
+  72:   const handleApplyConfig = () => {
+  73:     const saved = localStorage.getItem('VRVRoomsState');
+  74:     let rooms = [];
+  75:     if (saved) {
+  76:       rooms = JSON.parse(saved);
+  77:     } else {
+  78:       // Fallback if Overview was never visited
+  79:       rooms = [
+  80:         { id: 1, name: 'Common', currentTemp: 26.0, setTemp: 26.0, state: 'ON', mode: 'Cool', fanSpeed: 'Auto', faultCode: null, occupied: true, sensorEnabled: true, autoPowerLink: true, detectionRange: 5, offDelayTime: 15 },
+  81:         { id: 2, name: 'Lobby', currentTemp: 20.0, setTemp: 29.5, state: 'ON', mode: 'Cool', fanSpeed: 'High', faultCode: null, occupied: false, sensorEnabled: true, autoPowerLink: true, detectionRange: 8, offDelayTime: 10 },
+  82:         { id: 3, name: 'Office', currentTemp: 20.0, setTemp: 29.5, state: 'ON', mode: 'Heat', fanSpeed: 'Middle', faultCode: null, occupied: true, sensorEnabled: false, autoPowerLink: false, detectionRange: 3, offDelayTime: 30 },
+  83:         { id: 4, name: 'Conference', currentTemp: null, setTemp: 24.0, state: 'OFF', mode: 'Cool', fanSpeed: 'Auto', faultCode: null, occupied: false, sensorEnabled: true, autoPowerLink: true, detectionRange: 10, offDelayTime: 5 },
+  84:         { id: 5, name: 'Warehouse', currentTemp: 15.5, setTemp: 26.0, state: 'ON', mode: 'Cool', fanSpeed: 'Low', faultCode: null, occupied: false, sensorEnabled: true, autoPowerLink: false, detectionRange: 15, offDelayTime: 60 },
+  85:         { id: 6, name: 'Laboratory', currentTemp: 15.5, setTemp: 26.0, state: 'ON', mode: 'Heat', fanSpeed: 'Auto', faultCode: 'E11', occupied: true, sensorEnabled: true, autoPowerLink: true, detectionRange: 6, offDelayTime: 20 },
+  86:       ];
+  87:     }
+  88:     
+  89:     // Update the specific room
+
+===== VRV\Schedule.jsx (391 lines) =====
+  1: import React, { useState } from 'react';
+  2: import { Row, Col, Card, Button, Form, Badge, Tabs, Tab } from 'react-bootstrap';
+  3: import { Calendar, Clock, Plus, Trash2, Power, Thermometer, CalendarDays, RefreshCcw, ShieldAlert, MonitorUp, Settings } from 'lucide-react';
+  4: import './VRVOverview.css';
+  5: 
+  6: const initialSchedules = {
+  7:   Monday: [{ id: 1, start: '08:00', end: '18:00', temp: 24, state: 'ON' }],
+  8:   Tuesday: [{ id: 2, start: '08:00', end: '18:00', temp: 24, state: 'ON' }],
+  9:   Wednesday: [{ id: 3, start: '08:00', end: '18:00', temp: 24, state: 'ON' }],
+  10:   Thursday: [{ id: 4, start: '08:00', end: '18:00', temp: 24, state: 'ON' }],
+  --- return() at line 67 ---
+  67:   return (
+  68:     <div className="fade-in p-2 VRV-full-panel">
+  69:       <div className="page-header d-flex justify-content-between align-items-center mb-4">
+  70:         <div>
+  71:           <h2 className="mb-1 text-white d-flex align-items-center"><Calendar className="me-2 text-info" /> Schedule Management</h2>
+  72:           <p className="text-secondary fs-7">Automate VRV operation schedules based on days, holidays, and automated return rules.</p>
+  73:         </div>
+  74:         <Button variant="info" className="px-4 fw-bold">Save All Schedules</Button>
+  75:       </div>
+  76: 
+  77:       <div className="scada-glass-tabs mb-4">
+  78:         <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k)} className="border-secondary border-opacity-25">
+  79:           <Tab eventKey="daily" title={<span><Clock size={16} className="me-2" /> Daily & Weekly</span>}></Tab>
+  80:           <Tab eventKey="annual" title={<span><CalendarDays size={16} className="me-2" /> Annual & Holidays</span>}></Tab>
+  81:           <Tab eventKey="advanced" title={<span><Settings size={16} className="me-2" /> Advanced Rules</span>}></Tab>
+  82:         </Tabs>
+  83:       </div>
+  84: 
+  85:       {activeTab === 'daily' && (
+  86:         <Row className="g-4">
+  87:           <Col lg={3}>
+
+===== VRV\TempHumidity.jsx (515 lines) =====
+  1: import React, { useState, useMemo } from 'react';
+  2: import { Row, Col, Card, Badge } from 'react-bootstrap';
+  3: import { Thermometer, Droplets, Activity, Wind, Leaf, Sparkles } from 'lucide-react';
+  4: import './VRVOverview.css';
+  5: 
+  6: const metricsConfig = {
+  7:   TEMP: { label: 'Temperature', shortLabel: 'Temp', unit: 'Deg.C', color: '#fbbf24', icon: Thermometer, min: 0, max: 50 },
+  8:   HUMIDITY: { label: 'Humidity', shortLabel: 'Humidity', unit: '%', color: '#38bdf8', icon: Droplets, min: 0, max: 100 },
+  9:   CO2: { label: 'CO2', shortLabel: 'CO2', unit: 'PPM', color: '#ec4899', icon: Wind, min: 300, max: 2000 },
+  10:   TVOC: { label: 'TVOC', shortLabel: 'TVOC', unit: 'PPM', color: '#a855f7', icon: Activity, min: 0, max: 500 },
+  --- return() at line 25 ---
+  25:   return (
+  26:     <div className="d-flex flex-column align-items-center justify-content-center w-100" style={{ height: '135px', marginTop: '-5px' }}>
+  27:       <svg viewBox="0 -10 200 170" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+  28:         <defs>
+  29:           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+  30:             <feGaussianBlur stdDeviation="1" result="blur" />
+  31:             <feComposite in="SourceGraphic" in2="blur" operator="over" />
+  32:           </filter>
+  33:           <filter id="shadow">
+  34:             <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.5" />
+  35:           </filter>
+  36:         </defs>
+  37: 
+  38:         {/* Background Arc */}
+  39:         <path
+  40:           d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+  41:           fill="none"
+  42:           stroke="rgba(255,255,255,0.05)"
+  43:           strokeWidth="12"
+  44:           strokeLinecap="round"
+  45:         />
+
+===== WaterManagement\Overview.jsx (363 lines) =====
+  1: import React from 'react';
+  2: import { Row, Col, Card, ProgressBar, Badge } from 'react-bootstrap';
+  3: import { Droplets, Waves, Gauge, ArrowRight, LayoutGrid, TowerControl as Control, Activity, ShieldCheck, Zap, AlertTriangle, Info, ToggleRight, Settings } from 'lucide-react';
+  4: import { useNavigate } from 'react-router-dom';
+  5: import PdfButton from '../../components/PdfButton';
+  6: 
+  7: const WaterOverview = () => {
+  8:   const navigate = useNavigate();
+  9:   const [hoverData, setHoverData] = React.useState({ ag: null, ug: null });
+  10: 
+  --- return() at line 60 ---
+  60:   return (
+  61:     <div className="fade-in">
+  62:       {/* --- GATEWAY MONITOR (NEW) --- */}
+  63:       <div className="page-header d-flex justify-content-between align-items-center mb-4">
+  64:       <div>
+  65:           <h2 className="mb-1 text-white fw-bold">Hydraulic Master Overview</h2>
+  66:           <p className="text-secondary fs-7">Enterprise-wide water distribution, pressure, and asset health monitoring.</p>
+  67:            <PdfButton />
+  68:         </div>
+  69:       <div className="gateway-monitor mb-4 p-3 rounded-4 bg-dark bg-opacity-40 border border-secondary border-opacity-10 d-flex gap-4 align-items-center">
+  70:             <div className="d-flex align-items-center gap-3 pe-4 border-end border-secondary border-opacity-20">
+  71:                 <div className="p-2 rounded-circle bg-success bg-opacity-10">
+  72:                     <Activity className="text-success" size={20} />
+  73:                 </div>
+  74:                 <div>
+  75:                     <small className="text-muted d-block fs-10 fw-bold uppercase letter-spacing-1">Gateways Online</small>
+  76:                     <span className="text-white fs-5 fw-black">14 <Badge bg="success" className="ms-2 fs-11 bg-opacity-10 text-success border border-success border-opacity-20">ACTIVE</Badge></span>
+  77:                 </div>
+  78:             </div>
+  79:             <div className="d-flex align-items-center gap-3 pe-4 border-end border-secondary border-opacity-20">
+  80:                 <div className="p-2 rounded-circle bg-danger bg-opacity-10">
+
+===== Configuration\Templates.jsx (5970 lines) =====
+  1: import React, { useState, useEffect, useMemo, useRef } from 'react';
+  2: import { Row, Col, Card, Form, Button, Badge, Modal } from 'react-bootstrap';
+  3: import { Save, Settings, Database, Activity, Zap, Droplets, LayoutGrid, CheckCircle2, ChevronRight, Layers, History, Eye, Info, X, Home, ArrowDownCircle, ArrowUpCircle, MapPin, AlertTriangle, Wind, Thermometer } from 'lucide-react';
+  4: import { loginToSochiot, getSochiotUserMe, getSochiotLocationData, getSochiotDeviceDetails, getSochiotZoneData } from '../../services/authService';
+  5: 
+  6: const ConfigTemplates = () => {
+  7:   const [selectedCategory, setSelectedCategory] = useState('Water Management');
+  8:   const [selectedModule, setSelectedModule] = useState('AG Tank');
+  9:   const [savedTemplates, setSavedTemplates] = useState(() => {
+  10:     const saved = localStorage.getItem('scada_templates');
+  --- return() at line 507 ---
+  507:               return (list || []).map(org => ({
+  508:                 name: org.name,
+  509:                 id: org.id,
+  510:                 clients: (org.consumers || org.customerVOS || org.clients || []).map(client => ({
+  511:                   name: client.name,
+  512:                   id: client.id,
+  513:                   zones: (client.zoneVOS || client.zones || []).map(zone => ({
+  514:                     name: zone.name,
+  515:                     id: zone.id,
+  516:                     subZones: (zone.subZoneVOS || zone.subZoneVos || zone.subZones || []).map(sz => ({
+  517:                       name: sz.name,
+  518:                       id: sz.id,
+  519:                       locations: (sz.locationVOS || sz.locationVos || sz.locations || []).map(loc => ({
+  520:                         name: loc.name,
+  521:                         id: loc.id,
+  522:                         type: loc.locationType
+  523:                       }))
+  524:                     })),
+  525:                     locations: (zone.locationVOS || zone.locationVos || zone.locations || []).map(loc => ({
+  526:                       name: loc.name,
+  527:                       id: loc.id,
+
+===== Admin\AuditLogViewer.jsx (356 lines) =====
+  1: import React, { useState, useEffect, useMemo } from 'react';
+  2: import { Container, Row, Col, Card, Table, Badge, Form, Button, Spinner, InputGroup } from 'react-bootstrap';
+  3: import {
+  4:   Shield, Search, Filter, RefreshCcw, Download, 
+  5:   LogIn, LogOut, UserPlus, ShieldCheck, Key,
+  6:   Smartphone, AlertTriangle, RotateCcw, Globe, Clock,
+  7:   ChevronLeft, ChevronRight, Activity
+  8: } from 'lucide-react';
+  9: import { motion } from 'framer-motion';
+  10: 
+  --- return() at line 134 ---
+  134:   return (
+  135:     <div className="audit-log-viewer p-4">
+  136:       {/* Header */}
+  137:       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+  138:         <div className="audit-header d-flex align-items-center justify-content-between mb-4">
+  139:           <div className="d-flex align-items-center gap-3">
+  140:             <div className="audit-icon-glow">
+  141:               <Shield size={24} />
+  142:             </div>
+  143:             <div>
+  144:               <h4 className="header-title mb-0">Enterprise Audit Logs</h4>
+  145:               <small className="text-muted">Security & compliance event tracking</small>
+  146:             </div>
+  147:           </div>
+  148:           <div className="d-flex gap-2">
+  149:             <Button variant="outline-secondary" size="sm" onClick={fetchLogs} className="audit-btn">
+  150:               <RefreshCcw size={14} className="me-1" /> Refresh
+  151:             </Button>
+  152:             <Button variant="outline-info" size="sm" onClick={exportCSV} className="audit-btn">
+  153:               <Download size={14} className="me-1" /> Export CSV
+  154:             </Button>
+
+===== Admin\UserManagement.jsx (897 lines) =====
+  1: import React, { useState, useEffect, useMemo, useRef } from 'react';
+  2: import { Container, Row, Col, Card, Table, Button, Modal, Form, Badge, Spinner, Tabs, Tab, InputGroup } from 'react-bootstrap';
+  3: import { useNavigate } from 'react-router-dom';
+  4: import { 
+  5:   UserPlus, Shield, Settings, Trash2, Eye, EyeOff, Save, 
+  6:   Search, Edit, ShieldCheck, Mail, Lock, User, 
+  7:   LayoutDashboard, Droplets, Activity, Database, Bell, Zap, 
+  8:   ShieldAlert, ClipboardList, PenTool, History, Gauge, Building2, Sliders, ChevronDown,
+  9:   Clock, Copy, Check, Send, Link2, RefreshCw, XCircle, UserCheck
+  10: } from 'lucide-react';
+  --- return() at line 94 ---
+  94:     return () => document.removeEventListener('mousedown', handleClickOutside);
+  95:   }, []);
+  96: 
+  97:   useEffect(() => {
+  98:     fetchUsers();
+  99:   }, [tenantId]);
+  100: 
+  101:   useEffect(() => {
+  102:     const params = new URLSearchParams(window.location.search);
+  103:     if (params.get('tab') === 'roles' && users.length > 0 && !selectedUser) {
+  104:       handleAction(users[0], 'configure');
+  105:     }
+  106:   }, [users]);
+  107: 
+  108:   // Real API Fetch with local storage fallback & sync
+  109:   const fetchUsers = async () => {
+  110:     setLoading(true);
+  111:     let userList = [];
+  112:     try {
+  113:       const endpoint = `${API_BASE_URL}/users`;
+  114:       const response = await fetch(endpoint, { headers: getAuthHeaders() });
+
+===== Settings\Settings.jsx (1143 lines) =====
+  1: import React, { useState } from 'react';
+  2: import { Row, Col, Card, Form, Badge, Table, Modal, Button, Nav, Tab, ProgressBar } from 'react-bootstrap';
+  3: import {
+  4:   Settings as SettingsIcon,
+  5:   Shield,
+  6:   Save,
+  7:   RotateCcw,
+  8:   Building2,
+  9:   Layers,
+  10:   Box,
+  --- return() at line 275 ---
+  275:   return (
+  276:     <div className="fade-in p-3">
+  277:       {/* HEADER SECTION */}
+  278:       <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+  279:         <div>
+  280:           <div className="d-flex align-items-center gap-2 mb-1">
+  281:             <Badge bg="info" className="bg-opacity-10 text-info border border-info border-opacity-20 px-3 py-1 fw-bold fs-11">
+  282:               THINGSBOARD CLOUD IOT ENGINE v4.2
+  283:             </Badge>
+  284:             <span className="text-slate-400 fs-11">System & IoT Entity Configurator</span>
+  285:           </div>
+  286:           <h2 className="mb-0 text-white fw-bold">System & Entity Management</h2>
+  287:         </div>
+  288: 
+  289:         <div className="d-flex gap-2 align-items-center flex-wrap">
+  290:           <Button variant="outline-info" size="sm" className="fw-bold fs-11 d-flex align-items-center gap-1 me-2" onClick={() => navigate('/admin/manage-users')}>
+  291:             <UserCheck size={16} /> User & Hierarchy Settings
+  292:           </Button>
+  293: 
+  294:           {saveStatus && <Badge bg="success" className="d-flex align-items-center px-3 py-2 fade-in">{saveStatus}</Badge>}
+  295:           <button onClick={handleResetDefaults} className="btn-scada-outline d-flex align-items-center gap-2">
+
+===== Settings\SettingsIndex.jsx (787 lines) =====
+  1: import React, { useState, useEffect, useCallback } from 'react';
+  2: import { Container, Nav, Row, Col, Button, Spinner, Form } from 'react-bootstrap';
+  3: import { useLocation, useNavigate } from 'react-router-dom';
+  4: import {
+  5:   Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu,
+  6:   Building, Grid, Terminal, Zap, Sliders, FileText, Plus, ArrowRight,
+  7:   Globe, Layers, BarChart3, BellRing, Radio, RefreshCw
+  8: } from 'lucide-react';
+  9: import GlobalSettings from './GlobalSettings';
+  10: import UserAdministration from './UserAdministration';
+  --- return() at line 215 ---
+  215:   return (
+  216:     <div className="settings-page-wrapper" style={{ backgroundColor: 'var(--scada-bg)', minHeight: '100vh' }}>
+  217:       <style>{`
+  218:         body.light-mode .settings-page-wrapper {
+  219:           background-color: var(--scada-bg, #e2e8f0) !important;
+  220:         }
+  221:         body.light-mode .settings-tabs-header {
+  222:           background-color: #ffffff !important;
+  223:           border-color: #cbd5e1 !important;
+  224:         }
+  225:         body.light-mode .settings-tab-link.active-tab {
+  226:           background-color: #f1f5f9 !important;
+  227:           color: #0284c7 !important;
+  228:           border-bottom-color: #0284c7 !important;
+  229:         }
+  230:         body.light-mode .settings-tab-link.inactive-tab {
+  231:           color: #64748b !important;
+  232:         }
+  233:         body.light-mode .settings-tab-link.inactive-tab:hover {
+  234:           color: #334155 !important;
+  235:           background-color: #f8fafc !important;
+
+===== Settings\SiteManagement.jsx (2062 lines) =====
+  1: import React, { useState, useEffect, useCallback, useMemo } from 'react';
+  2: import { Container, Row, Col, Badge, Button, Form, Spinner, OverlayTrigger, Tooltip, Modal } from 'react-bootstrap';
+  3: import { useNavigate } from 'react-router-dom';
+  4: import {
+  5:   MapPin, Plus, Building2, Activity, AlertTriangle, Zap,
+  6:   Eye, RefreshCw, Search, LayoutGrid, List, ChevronRight,
+  7:   Globe, Server, Clock, Edit3, Power, CheckCircle, XCircle,
+  8:   ArrowUpDown, ArrowUp, ArrowDown, X, Navigation, Filter,
+  9:   SlidersHorizontal, CheckCircle2, Radio, ArrowRight, Layers
+  10: } from 'lucide-react';
+  --- return() at line 193 ---
+  193:       return () => clearTimeout(t);
+  194:     }
+  195:   }, [message]);
+  196: 
+  197:   // Create Site Handler
+  198:   const handleCreateSite = async (e) => {
+  199:     if (e && e.preventDefault) e.preventDefault();
+  200:     if (!createForm.name?.trim()) {
+  201:       setCreateModalError('Site name is required.');
+  202:       return;
+  203:     }
+  204:     setSubmitting(true);
+  205:     setCreateModalError(null);
+  206: 
+  207:     const createPayload = {
+  208:       name: createForm.name.trim(),
+  209:       address: createForm.address?.trim() || '',
+  210:       city: createForm.city?.trim() || null,
+  211:       state: createForm.state?.trim() || null,
+  212:       pincode: createForm.pincode?.trim() || null,
+  213:       latitude: createForm.latitude !== '' && createForm.latitude != null ? Number(createForm.latitude) : null,
+
+===== Settings\UserAdministration.jsx (2236 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Container, Row, Col, Card, Badge, Button, Form, Modal, InputGroup, Spinner, Alert } from 'react-bootstrap';
+  3: import {
+  4:   Users, UserPlus, Search, Edit, Trash2, Eye, RefreshCcw,
+  5:   CheckCircle, XCircle, Globe, Shield, User, Building2, MapPin, Key, Layers, Mail,
+  6:   UserCheck, Building, AlertTriangle, Send, MailCheck, Copy, Check, Link2, Clock, ExternalLink, ShieldAlert
+  7: } from 'lucide-react';
+  8: import { getApiUrl } from '../../utils/apiConfig';
+  9: 
+  10: const API_BASE_URL = getApiUrl();
+  --- return() at line 373 ---
+  373:       return () => clearTimeout(timer);
+  374:     }
+  375:   }, [message]);
+  376: 
+  377:   // Filter users based on search & filters
+  378:   const filteredUsers = users.filter(user => {
+  379:     const matchesSearch = (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  380:                           (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  381:                           (user.id || '').toLowerCase().includes(searchTerm.toLowerCase());
+  382:     const matchesRole = roleFilter === 'ALL' || user.role === roleFilter || (roleFilter === 'VIEWER' && user.role === 'USER');
+  383:     const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
+  384:     return matchesSearch && matchesRole && matchesStatus;
+  385:   });
+  386: 
+  387:   // Filter invitations based on search & filters
+  388:   const filteredInvitations = invitations.filter(inv => {
+  389:     const matchesSearch = (inv.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  390:                           (inv.token || '').toLowerCase().includes(searchTerm.toLowerCase());
+  391:     const matchesRole = roleFilter === 'ALL' || inv.role === roleFilter;
+  392:     const matchesStatus = statusFilter === 'ALL' || inv.status === statusFilter || 
+  393:                           (statusFilter === 'ACTIVE' && inv.status === 'PENDING') ||
+
+===== Settings\UserSettings.jsx (1622 lines) =====
+  1: import React, { useState } from 'react';
+  2: import { Row, Col, Card, Badge, Button, Form, Modal, Table } from 'react-bootstrap';
+  3: import {
+  4:   Users, Building2, Layers, MapPin, UserCheck, ShieldCheck,
+  5:   Plus, Trash2, Edit, Check, ArrowRight, ChevronRight, Key, Sparkles,
+  6:   Zap, Eye, Bell, Settings as SettingsIcon, Crown, User, Lock, Mail, CheckSquare,
+  7:   ChevronDown, Folder, FolderOpen, CheckCircle, XCircle, Globe, Shield
+  8: } from 'lucide-react';
+  9: import PasswordInput from '../../components/PasswordInput';
+  10: 
+  --- return() at line 376 ---
+  376:   return (
+  377:     <div className="fade-in p-3">
+  378:       {/* HEADER */}
+  379:       <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+  380:         <div>
+  381:           <div className="d-flex align-items-center gap-2 mb-1">
+  382:             <Badge bg="info" className="px-3 py-1 fw-bold fs-11 tracking-wider uppercase border-0 text-dark">
+  383:               7-STEP HIERARCHY & CREDENTIAL MANAGER
+  384:             </Badge>
+  385:             {saveMsg && <Badge bg="success" className="fs-11 px-3 py-1 fade-in text-white">{saveMsg}</Badge>}
+  386:           </div>
+  387:           <h2 className="mb-0 text-white fw-bold">User & Hierarchy Settings</h2>
+  388:           <p className="text-slate-300 fs-12 mb-0">Multi-tenant hierarchy manager starting from SuperAdmin & Company level down to Operators.</p>
+  389:         </div>
+  390:       </div>
+  391: 
+  392:       {/* â"?â"? SLEEK UNIFIED HORIZONTAL STEPPER BAR â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"?â"? */}
+  393:       <div className="p-2 mb-4 rounded-4 bg-dark-glass border border-white border-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2">
+  394:         {stepsMeta.map((s, idx) => (
+  395:           <React.Fragment key={s.num}>
+  396:             <button
+
+===== Settings\AssetManagement.jsx (2257 lines) =====
+  1: import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+  2: import { Container, Row, Col, Badge, Button, Form, Spinner, InputGroup, OverlayTrigger, Tooltip, Pagination, Dropdown } from 'react-bootstrap';
+  3: import { useSearchParams } from 'react-router-dom';
+  4: import {
+  5:   Sliders, Plus, Building2, Activity, AlertTriangle, RefreshCw,
+  6:   Search, List, ChevronRight, ChevronDown, Layers,
+  7:   Edit3, Trash2, Eye, GitFork, CornerDownRight, Cpu, CheckCircle2,
+  8:   Filter, X, ShieldAlert, ArrowUpDown, ArrowUp, ArrowDown,
+  9:   Box, MapPin, MoreVertical, Wrench, Calendar
+  10: } from 'lucide-react';
+  --- return() at line 577 ---
+  577:     return (
+  578:       <div key={node.id} className={`tree-node-wrapper ${depth === 0 ? 'tree-root-wrapper' : ''}`}>
+  579:         <div
+  580:           className={`tree-node-row ${depth > 0 ? 'tree-node-child' : 'tree-node-root'}`}
+  581:           style={{
+  582:             paddingLeft: `${16 + depth * 32}px`,
+  583:             paddingRight: 16,
+  584:             paddingTop: depth === 0 ? 12 : 10,
+  585:             paddingBottom: depth === 0 ? 12 : 10,
+  586:             cursor: hasChildren ? 'pointer' : 'default',
+  587:             borderLeft: depth > 0 ? `3px solid ${accent.accent}33` : 'none',
+  588:           }}
+  589:           onClick={() => {
+  590:             if (hasChildren) toggleNodeExpand(String(node.id));
+  591:           }}
+  592:         >
+  593:           <div className="d-flex align-items-center flex-grow-1 min-w-0" style={{ gap: '12px' }}>
+  594:             {/* Expand/Collapse chevron */}
+  595:             {hasChildren ? (
+  596:               <button
+  597:                 type="button"
+
+===== Settings\DeviceManagement.jsx (1280 lines) =====
+  1: import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+  2: import { Container, Row, Col, Badge, Button, Form, Spinner, InputGroup, Pagination, Dropdown } from 'react-bootstrap';
+  3: import { useSearchParams, useNavigate } from 'react-router-dom';
+  4: import {
+  5:   Cpu, Plus, RefreshCw, Search, Filter, X, Eye, Edit3, Trash2,
+  6:   Box, MapPin, Activity, CheckCircle2, AlertTriangle, Layers, Zap,
+  7:   MoreVertical, ExternalLink, ChevronRight, Droplets, Flame, Wind,
+  8:   Snowflake, ShieldAlert, Sliders, Radio, ArrowUpRight
+  9: } from 'lucide-react';
+  10: import { useSiteStore } from '../../context/SiteContext';
+  --- return() at line 134 ---
+  134:     return () => { isMounted = false; };
+  135:   }, []);
+  136: 
+  137:   useEffect(() => {
+  138:     let isMounted = true;
+  139:     const fetchAssetsData = async () => {
+  140:       try {
+  141:         const siteIdParam = selectedSiteFilter !== 'ALL' ? selectedSiteFilter : null;
+  142:         const res = await bmsService.getAssets(siteIdParam, { limit: 500 });
+  143:         if (isMounted) {
+  144:           const list = normalizeList(res, 'assets');
+  145:           setAssets(list);
+  146:         }
+  147:       } catch (err) {
+  148:         if (isMounted) {
+  149:           if (selectedSiteFilter !== 'ALL') {
+  150:             setAssets(allAssets.filter(a => String(a.siteId) === String(selectedSiteFilter)));
+  151:           } else {
+  152:             setAssets(allAssets);
+  153:           }
+  154:         }
+
+===== Settings\GlobalSettings.jsx (303 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { Container, Row, Col, Card, Badge, Button, Toast, ToastContainer } from 'react-bootstrap';
+  3: import {
+  4:   ShieldCheck, Settings, Eye, EyeOff, Save, RotateCcw,
+  5:   LayoutDashboard, Droplets, Activity, Database, Bell, Zap,
+  6:   ShieldAlert, ClipboardList, PenTool, History, Gauge, Wind, Thermometer
+  7: } from 'lucide-react';
+  8: 
+  9: const ALL_MODULES = [
+  10:   { key: 'Dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, subItems: [] },
+  --- return() at line 123 ---
+  123:   return (
+  124:     <Container fluid className="global-settings-wrapper py-4 px-lg-4" style={{ backgroundColor: 'var(--scada-bg)', minHeight: '100vh', color: 'var(--scada-text)' }}>
+  125:       <style>{`
+  126:         body.light-mode .global-settings-wrapper {
+  127:           background-color: var(--scada-bg, #e2e8f0) !important;
+  128:           color: #0f172a !important;
+  129:         }
+  130:         body.light-mode .global-settings-card {
+  131:           background-color: #ffffff !important;
+  132:           border: 1.5px solid #0284c7 !important;
+  133:           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  134:         }
+  135:         body.light-mode .module-card-box {
+  136:           background-color: #f8fafc !important;
+  137:           border: 1px solid #cbd5e1 !important;
+  138:           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  139:         }
+  140:         body.light-mode .module-card-title {
+  141:           color: #0f172a !important;
+  142:           font-weight: 700 !important;
+  143:         }
+
+===== Settings\ManageOrganisation.jsx (452 lines) =====
+  1: import React from 'react';
+  2: import { Card, Spinner } from 'react-bootstrap';
+  3: import { CheckCircle, AlertTriangle } from 'lucide-react';
+  4: import useManageOrganisation, { formatDate, getAuthHeaders, API_BASE_URL } from './OrganizationHub/hooks/useManageOrganisation';
+  5: import ManageOrganisationHeader from './OrganizationHub/components/ManageOrganisationHeader';
+  6: import ManageOrganisationModals from './OrganizationHub/components/ManageOrganisationModals';
+  7: import OrganizationSection from './OrganizationHub/sections/OrganizationSection';
+  8: import LocationSection from './OrganizationHub/sections/LocationSection';
+  9: import BuildingSection from './OrganizationHub/sections/BuildingSection';
+  10: import AssetSection from './OrganizationHub/sections/AssetSection';
+  --- return() at line 22 ---
+  22:   return (
+  23:     <div className="manage-organisation-page px-1 px-md-2 py-1 w-100">
+  24:       <style>{`
+  25:         .manage-organisation-page {
+  26:           min-height: auto;
+  27:           margin: 0 !important;
+  28:           padding: 0.35rem 0.25rem !important;
+  29:           transition: background-color 0.3s ease, color 0.3s ease;
+  30:         }
+  31: 
+  32:         .dropdown-menu {
+  33:           background-color: #0f172a !important;
+  34:           border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  35:           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  36:           border-radius: 8px !important;
+  37:           padding: 6px !important;
+  38:         }
+  39: 
+  40:         .device-action-btn {
+  41:           width: 32px !important;
+  42:           height: 32px !important;
+
+===== SuperAdmin\SuperAdminConfig.jsx (689 lines) =====
+  1: import React, { useState, useEffect, useMemo } from 'react';
+  2: import { Card, Button, Spinner, Container, Row, Col, Alert, Badge, Form, InputGroup, Tabs, Tab, Table, Modal } from 'react-bootstrap';
+  3: import {
+  4:   ShieldCheck, Save, ToggleRight, ToggleLeft, Layers3, Eye, EyeOff,
+  5:   Search, Filter, RefreshCcw, CheckCircle2, XCircle, ChevronRight,
+  6:   LayoutDashboard, Settings, Bell, Zap, Droplets, Activity, Database,
+  7:   ShieldAlert, ClipboardList, PenTool, History, Gauge, Lock, Users,
+  8:   Building2, UserPlus, Trash2, Edit, ExternalLink, Sliders, Thermometer, Wind
+  9: } from 'lucide-react';
+  10: import { motion, AnimatePresence } from 'framer-motion';
+  --- return() at line 434 ---
+  434:   return (
+  435:     <Container fluid className="py-4 px-lg-5 super-admin-modern">
+  436:       <div className="admin-header-card mb-4">
+  437:         <Row className="align-items-center">
+  438:           <Col md={8}>
+  439:             <div className="d-flex align-items-center gap-3">
+  440:               <div className="admin-icon-glow"><ShieldCheck size={32} /></div>
+  441:               <div>
+  442:                 <h2 className="header-title mb-1">Super Admin Console</h2>
+  443:                 <p className="header-subtitle mb-0">Manage multi-tenant organizations and system permissions.</p>
+  444:               </div>
+  445:             </div>
+  446:           </Col>
+  447:           <Col md={4} className="text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+  448:             <Button variant="outline-info" className="rounded-pill px-3" onClick={fetchInitialData}>
+  449:               <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
+  450:             </Button>
+  451:             <Button variant="info" className="rounded-pill px-4" onClick={() => { setTenantFormData({ name: '', description: '', adminName: '', adminEmail: '', adminPassword: '' }); setShowTenantModal(true); }}>
+  452:               <Building2 size={18} className="me-2" /> Add New Tenant
+  453:             </Button>
+  454:           </Col>
+
+===== Help\Feedback.jsx (487 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { 
+  3:   MessageSquare, Star, Send, CheckCircle2, Clock, 
+  4:   AlertCircle, Sparkles, Filter, FileText, UploadCloud, ThumbsUp, RefreshCw 
+  5: } from 'lucide-react';
+  6: 
+  7: const Feedback = () => {
+  8:   const [activeTab, setActiveTab] = useState('new'); // 'new' | 'history'
+  9:   const [formData, setFormData] = useState({
+  10:     title: '',
+  --- return() at line 142 ---
+  142:   return (
+  143:     <div className="p-3 p-md-4 min-vh-100 scada-help-page">
+  144:       <div className="container-fluid max-w-6xl">
+  145:         
+  146:         {/* Header Section */}
+  147:         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3 scada-page-header">
+  148:           <div className="d-flex align-items-center gap-3">
+  149:             <div 
+  150:               className="p-2.5 rounded-3 d-flex align-items-center justify-content-center"
+  151:               style={{ backgroundColor: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }}
+  152:             >
+  153:               <MessageSquare size={24} />
+  154:             </div>
+  155:             <div>
+  156:               <h3 className="fw-bold mb-0 scada-page-title">Help & Feedback Center</h3>
+  157:               <p className="mb-0 small scada-page-subtitle">Share your experience, report issues, or suggest new SCADA features</p>
+  158:             </div>
+  159:           </div>
+  160: 
+  161:           {/* Navigation Tabs */}
+  162:           <div className="d-flex p-1 rounded-3 scada-tab-bar">
+
+===== Help\PolicyCondition.jsx (264 lines) =====
+  1: import React, { useState, useEffect } from 'react';
+  2: import { 
+  3:   ShieldCheck, FileText, Lock, AlertTriangle, 
+  4:   Search, CheckCircle, Printer, Download, Eye, BookOpen 
+  5: } from 'lucide-react';
+  6: 
+  7: const PolicyCondition = () => {
+  8:   const [activeTab, setActiveTab] = useState('terms'); // 'terms' | 'privacy' | 'security' | 'sla'
+  9:   const [searchQuery, setSearchQuery] = useState('');
+  10:   const [accepted, setAccepted] = useState(false);
+  --- return() at line 32 ---
+  32:   return (
+  33:     <div className="p-3 p-md-4 min-vh-100 scada-help-page">
+  34:       <div className="container-fluid max-w-6xl">
+  35:         
+  36:         {/* Header Section */}
+  37:         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3 scada-page-header">
+  38:           <div className="d-flex align-items-center gap-3">
+  39:             <div 
+  40:               className="p-2.5 rounded-3 d-flex align-items-center justify-content-center"
+  41:               style={{ backgroundColor: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8' }}
+  42:             >
+  43:               <ShieldCheck size={26} />
+  44:             </div>
+  45:             <div>
+  46:               <h3 className="fw-bold mb-0 scada-page-title">Policy & Terms Condition</h3>
+  47:               <p className="mb-0 small scada-page-subtitle">Building Management System (BMS) SCADA Governance & Operational Guidelines</p>
+  48:             </div>
+  49:           </div>
+  50: 
+  51:           <div className="d-flex align-items-center gap-2">
+  52:             <button 
+
