@@ -206,13 +206,17 @@ const SiemensStyleDG = () => {
   useEffect(() => {
     if (Array.isArray(storeSites) && storeSites.length > 0) {
       setSites(storeSites);
-      if (!selectedSiteId || !storeSites.some(s => String(s.id || s.siteId) === String(selectedSiteId))) {
-        const initialSite = selectedSite?.id ? String(selectedSite.id) : String(storeSites[0].id || storeSites[0].siteId);
-        setSelectedSiteId(initialSite);
-        localStorage.setItem('selected_dg_site_id', initialSite);
-        if (setSelectedSite && !selectedSite) {
-          setSelectedSite(storeSites[0]);
-        }
+      const globalSiteId = selectedSite?.id || selectedSite?.siteId || selectedSite?._id;
+      const globalSite = storeSites.find(site => String(site.id || site.siteId || site._id) === String(globalSiteId));
+      const savedSite = storeSites.find(site => String(site.id || site.siteId || site._id) === String(selectedSiteId));
+      const initialSite = globalSite || savedSite || storeSites[0];
+      const initialId = String(initialSite.id || initialSite.siteId || initialSite._id);
+      if (String(selectedSiteId) !== initialId) {
+        setSelectedSiteId(initialId);
+        localStorage.setItem('selected_dg_site_id', initialId);
+      }
+      if (setSelectedSite && String(globalSiteId || '') !== initialId) {
+        setSelectedSite(initialSite);
       }
       return;
     }
@@ -253,9 +257,10 @@ const SiemensStyleDG = () => {
       const sitesList = Array.from(siteMap.values());
       setSites(sitesList);
       if (sitesList.length > 0) {
-        const initialId = (selectedSiteId && sitesList.some(s => String(s.id) === String(selectedSiteId)))
-          ? selectedSiteId
-          : sitesList[0].id;
+        const globalSiteId = selectedSite?.id || selectedSite?.siteId || selectedSite?._id;
+        const initialId = sitesList.some(site => String(site.id) === String(globalSiteId))
+          ? String(globalSiteId)
+          : (selectedSiteId && sitesList.some(site => String(site.id) === String(selectedSiteId)) ? selectedSiteId : sitesList[0].id);
         setSelectedSiteId(initialId);
         localStorage.setItem('selected_dg_site_id', initialId);
         if (setSelectedSite) {
@@ -266,15 +271,17 @@ const SiemensStyleDG = () => {
     loadSites();
   }, [storeSites, selectedSite, selectedSiteId, setSelectedSite]);
 
-  // Keep selected site synchronized with available sites
+  // The site selector lives in the shared app header; keep the DG data filter in sync with it.
   useEffect(() => {
-    if (sites.length > 0 && selectedSiteId) {
-      const match = sites.find(s => String(s.id || s.siteId) === String(selectedSiteId));
-      if (match && setSelectedSite && selectedSite?.id !== match.id) {
-        setSelectedSite(match);
-      }
+    const globalSiteId = selectedSite?.id || selectedSite?.siteId || selectedSite?._id;
+    if (!globalSiteId || !sites.length) return;
+    const siteId = String(globalSiteId);
+    if (!sites.some(site => String(site.id || site.siteId || site._id) === siteId)) return;
+    if (String(selectedSiteId) !== siteId) {
+      setSelectedSiteId(siteId);
+      localStorage.setItem('selected_dg_site_id', siteId);
     }
-  }, [sites, selectedSiteId, setSelectedSite, selectedSite]);
+  }, [selectedSite?.id, selectedSite?.siteId, selectedSite?._id, sites, selectedSiteId]);
 
   // 2. Load Generator Devices for selectedSiteId (Category: GENERATOR)
   useEffect(() => {

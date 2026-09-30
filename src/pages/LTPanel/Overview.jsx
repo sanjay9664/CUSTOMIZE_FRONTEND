@@ -5,11 +5,9 @@ import {
   Gauge, ShieldCheck, CheckCircle2, AlertTriangle, RefreshCw, Radio, LayoutDashboard,
   Search, Filter, ArrowDownRight, ArrowUpRight, TrendingUp, Layers
 } from 'lucide-react';
-import HierarchySelector from '../../components/HierarchySelector';
 
 const LTOverview = () => {
   const [time, setTime] = useState(new Date());
-  const [selectedDevice, setSelectedDevice] = useState(null);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'overview', 'breakers', 'feeders', 'rooms'
   const [searchBreaker, setSearchBreaker] = useState('');
 
@@ -93,16 +91,6 @@ const LTOverview = () => {
 
   return (
     <div className="fade-in p-3 h-100 d-flex flex-column" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
-      <HierarchySelector
-        moduleTitle="LT PANEL"
-        accentColor="#fbbf24"
-        deviceCategory="LT_PANEL"
-        assetType="LT_ROOM"
-        deviceLabel="LT PANEL"
-        deviceBasePath="/lt-panel/device"
-        icon={<LayoutDashboard size={13} />}
-        onDeviceSelect={(dev) => setSelectedDevice(dev)}
-      />
       {/* HEADER SECTION */}
       <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-secondary border-opacity-25">
         <div>

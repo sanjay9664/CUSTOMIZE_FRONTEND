@@ -516,24 +516,6 @@ const ACOverview = () => {
           </div>
         </div>
         
-        {/* SUMMARY WIDGET */}
-        <div className="d-flex align-items-center gap-3">
-          <Button 
-            className="rounded-pill fw-bold d-flex align-items-center border-0 shadow-none text-white" 
-            style={{ background: '#0ea5e9', padding: '10px 24px', letterSpacing: '0.3px', transition: 'all 0.3s ease' }} 
-            onClick={() => setShowGroupModal(true)}
-          >
-            <Settings size={18} className="me-2"/> Manage Groups
-          </Button>
-          <Button 
-            variant="outline-secondary" 
-            className="rounded-pill fw-bold d-flex align-items-center bg-transparent" 
-            style={{ padding: '10px 24px', borderColor: isDark ? '#334155' : '#cbd5e1', color: isDark ? '#94a3b8' : '#64748b', letterSpacing: '0.3px', transition: 'all 0.3s ease' }} 
-            onClick={() => navigate('/ac/schedule')}
-          >
-            <Clock size={18} className="me-2"/> Global Schedule
-          </Button>
-        </div>
       </div>
 
       <Row className="g-4 mb-5">

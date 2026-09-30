@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Badge, Nav } from 'react-bootstrap';
-import { Activity, Zap, Snowflake, TrendingUp, Thermometer, List, Clock, Gauge } from 'lucide-react';
+import { Row, Col, Card, Nav } from 'react-bootstrap';
+import { Zap, Snowflake, TrendingUp, Thermometer, Clock, Gauge } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ChartTooltip, ResponsiveContainer, Legend
@@ -115,42 +115,6 @@ const Chiller = () => {
 
   return (
     <div className="chiller-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
-      {/* Page Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-start scada-card p-4 rounded-4 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
-        <div className="pe-4">
-          <h2 className="fw-black tracking-wider mb-3 d-flex align-items-center gap-3" style={{ color: 'var(--scada-text)', textShadow: '0 0 15px rgba(255,255,255,0.2)' }}>
-            <Activity className="text-info" size={32} />
-            Chiller Monitoring System
-          </h2>
-          <p className="opacity-75 fs-14 lh-lg max-w-3xl mb-4" style={{ color: 'var(--scada-text)' }}>
-            Monitor your <span className="text-info fw-bold">chiller plant performance</span> in real time by tracking critical energy and thermal parameters. Improve efficiency, reduce energy costs, and maintain optimal cooling performance through continuous system insights.
-          </p>
-          <div className="d-flex flex-wrap gap-4">
-            {[
-              "Chilled water inlet temperature",
-              "Chilled water outlet temperature",
-              "Power consumption (energy drawn)",
-              "Cooling effect measurement",
-              "Specific Energy Consumption (SEC)"
-            ].map((item, i) => (
-              <div key={i} className="d-flex align-items-center gap-2 opacity-75 fs-13 fw-bold" style={{ color: 'var(--scada-text)' }}>
-                <List size={16} className="text-info opacity-75" />
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Status Indicators */}
-        <div className="d-flex flex-column align-items-end gap-3" style={{ minWidth: '150px' }}>
-          <Badge bg="info" className="p-2 px-3 rounded-pill fw-bold tracking-widest bg-opacity-25 border border-info text-info">AUTO MODE</Badge>
-          <div className="d-flex align-items-center gap-2">
-            <div className="spinner-grow spinner-grow-sm text-success" style={{ width: '0.8rem', height: '0.8rem' }} role="status"></div>
-            <span className="text-success fw-bold fs-12 tracking-wider text-uppercase">System Online</span>
-          </div>
-        </div>
-      </div>
-
       <Row className="g-4 mb-4" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
         {/* DIAGRAM SECTION */}
         <Col xl={8}>
