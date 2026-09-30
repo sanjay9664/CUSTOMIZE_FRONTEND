@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Row, Col, Card, Container, Button, Spinner, Alert } from 'react-bootstrap';
 import { Zap, RefreshCw, AlertTriangle, Clock, Layers, Building2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PageContextBanner from '../../components/PageContextBanner';
 import { useSiteStore } from '../../context/SiteContext';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
@@ -241,6 +241,8 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
 };
 
 const EnergyMeteringOverview = () => {
+  const { pathname } = useLocation();
+  const isDailyDprRoute = pathname.startsWith('/daily-dpr');
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const { sites: allSites, selectedSite, setSelectedSite } = useSiteStore();
@@ -533,8 +535,8 @@ const EnergyMeteringOverview = () => {
 
   return (
     <div className="energy-overview-page p-3 p-md-4" style={{ background: isDark ? '#0a101d' : '#f8fafc', minHeight: '100vh', color: isDark ? '#e2e8f0' : '#1e293b' }}>
-      {/* ── 1. Reusable PageContextBanner (Header Ribbon - Site Selector Only) ── */}
-      <PageContextBanner
+      {/* The shared layout supplies the compact Daily DPR header on this alias route. */}
+      {!isDailyDprRoute && <PageContextBanner
         title="Energy Metering Overview"
         subtitle={selectedSiteName ? `Site: ${selectedSiteName}` : undefined}
         icon={<Zap className={scadaData.hasAnyDevice ? "text-warning" : "text-secondary"} size={22} />}
@@ -565,7 +567,7 @@ const EnergyMeteringOverview = () => {
         enableFullscreen={true}
         variant="scada"
         className="main-meter-context-banner"
-      />
+      />}
 
       {/* ── 2. Error State with Retry ── */}
       {fetchError && !devicesLoading && (

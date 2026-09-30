@@ -198,7 +198,7 @@ const MotorsOverview = () => {
   const [liveEventsMap, setLiveEventsMap] = useState({});
 
   // 1. Dynamic Site Store & Backend Sites
-  const { sites: contextSites, activeSites } = useSiteStore();
+  const { sites: contextSites, activeSites, selectedSite } = useSiteStore();
   const [sites, setSites] = useState([]);
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [selectedSiteName, setSelectedSiteName] = useState('');
@@ -217,6 +217,13 @@ const MotorsOverview = () => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!selectedSite?.id) return;
+    const nextSiteId = String(selectedSite.id);
+    setSelectedSiteId(current => current === nextSiteId ? current : nextSiteId);
+    try { localStorage.setItem('motors_selected_site', nextSiteId); } catch (err) {}
+  }, [selectedSite?.id]);
 
   // â”€â”€ Load Sites Correctly â”€â”€
   useEffect(() => {
@@ -563,7 +570,8 @@ const MotorsOverview = () => {
   }, [devices, liveEventsMap]);
 
   return (
-    <div className="motors-page-wrapper p-3 p-md-4 fade-in">      <Row className="g-3 mb-4">
+    <div className="motors-page-wrapper p-3 p-md-4 fade-in">
+      <Row className="g-3 mb-4">
         <Col xl={2} lg={4} md={6}>
           <div className="kpi-card">
             <div className="d-flex justify-content-between align-items-start mb-2">

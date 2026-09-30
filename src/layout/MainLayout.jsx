@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Bell, LayoutDashboard, Zap } from 'lucide-react';
+import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import PageContextBanner from '../components/PageContextBanner';
@@ -8,8 +8,10 @@ import { useSiteStore } from '../context/SiteContext';
 
 const MODULE_HEADER_CONFIG = [
   { match: /^\/water-management(?:\/|$)/, title: 'Water Management', icon: Droplets },
-  { match: /^\/lt-panel\/(?!overview(?:\/|$))/, title: 'LT Panel', icon: LayoutDashboard },
-  { match: /^\/transformer\/(?!overview(?:\/|$))/, title: 'Transformer', icon: Zap },
+  { match: /^\/motors(?:\/|$)/, title: 'Motors', icon: Activity },
+  { match: /^\/daily-dpr(?:\/|$)/, title: 'Daily DPR', icon: Gauge },
+  { match: /^\/lt-panel(?:\/|$)/, title: 'LT Panel', icon: LayoutDashboard },
+  { match: /^\/transformer(?:\/|$)/, title: 'Transformer', icon: Zap },
   { match: /^\/hvac(?:\/|$)|^\/ahu$|^\/cooling-tower$/, title: 'HVAC', icon: Thermometer },
   { match: /^\/VRV(?:\/|$)/i, title: 'VRV', icon: Wind },
   { match: /^\/ac(?:\/|$)/i, title: 'AC', icon: Snowflake },
@@ -27,6 +29,10 @@ const MainLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
+
+  useEffect(() => {
+    if (!selectedSite && activeSites?.length) setSelectedSite(activeSites[0]);
+  }, [activeSites, selectedSite, setSelectedSite]);
 
   useEffect(() => {
     setIsImpersonating(!!localStorage.getItem('impersonator_backup_role'));
