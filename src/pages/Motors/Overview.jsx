@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Row, Col, Card, Badge, Table, Button, Modal, Form, Spinner } from 'react-bootstrap';
 import { 
   Zap, Activity, Gauge, Thermometer, Wind, 
@@ -218,7 +218,7 @@ const MotorsOverview = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // ── Load Sites Correctly ──
+  // â”€â”€ Load Sites Correctly â”€â”€
   useEffect(() => {
     const loadSites = async () => {
       const siteMap = new Map();
@@ -286,7 +286,7 @@ const MotorsOverview = () => {
     loadSites();
   }, []);
 
-  // ── Load Assets for Selected Site ──
+  // â”€â”€ Load Assets for Selected Site â”€â”€
   useEffect(() => {
     if (!selectedSiteId) return;
     const loadAssets = async () => {
@@ -322,7 +322,7 @@ const MotorsOverview = () => {
     loadAssets();
   }, [selectedSiteId, sites]);
 
-  // ── Load Devices for Selected Site & Asset ──
+  // â”€â”€ Load Devices for Selected Site & Asset â”€â”€
   useEffect(() => {
     if (!selectedSiteId) return;
     const loadDevices = async () => {
@@ -394,7 +394,7 @@ const MotorsOverview = () => {
     loadDevices();
   }, [selectedSiteId, sites]);
 
-  // ── Poll Live Device Events / Telemetry (Using User's per-device endpoint to avoid 400 Batch errors) ──
+  // â”€â”€ Poll Live Device Events / Telemetry (Using User's per-device endpoint to avoid 400 Batch errors) â”€â”€
   useEffect(() => {
     if (!selectedSiteId || !devices || devices.length === 0) return;
     const fetchTelemetry = async () => {
@@ -486,7 +486,7 @@ const MotorsOverview = () => {
     setShowDetailsModal(true);
   };
 
-  // ── Dynamic KPIs calculated purely from real backend devices & live telemetry ──
+  // â”€â”€ Dynamic KPIs calculated purely from real backend devices & live telemetry â”€â”€
   const kpiStats = useMemo(() => {
     const total = devices.length;
     let operationalCount = 0;
@@ -519,7 +519,7 @@ const MotorsOverview = () => {
     };
   }, [devices, liveEventsMap]);
 
-  // ── Dynamic Starter Controllers Matrix (Built from live real devices) ──
+  // â”€â”€ Dynamic Starter Controllers Matrix (Built from live real devices) â”€â”€
   const startersData = useMemo(() => {
     return filteredMotors.map((m, idx) => {
       const live = liveEventsMap[m.id] || {};
@@ -535,13 +535,13 @@ const MotorsOverview = () => {
         type: live.starterType || (idx % 2 === 0 ? 'VFD Controller' : 'DOL Starter'),
         freq: `${freq} Hz`,
         speed: `${speed} RPM`,
-        temp: `${live['Motor Temperature'] ?? live.tempC ?? 0}°C`,
+        temp: `${live['Motor Temperature'] ?? live.tempC ?? 0}Â°C`,
         status: isFault ? 'FAULT' : isOp ? 'RUNNING' : 'STANDBY'
       };
     });
   }, [filteredMotors, liveEventsMap]);
 
-  // ── Dynamic Pump Room Facility Distribution ──
+  // â”€â”€ Dynamic Pump Room Facility Distribution â”€â”€
   const facilityDistribution = useMemo(() => {
     const groups = {};
     devices.forEach(d => {
@@ -563,151 +563,7 @@ const MotorsOverview = () => {
   }, [devices, liveEventsMap]);
 
   return (
-    <div className="motors-page-wrapper p-3 p-md-4 fade-in">
-      {/* ═════════════════════════════════════════════════════════════
-          TOP HEADER TITLE BAR
-          ═════════════════════════════════════════════════════════════ */}
-      <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
-        <div>
-          <div className="d-flex align-items-center gap-2 mb-1">
-            <span className="live-node-badge">
-              <span className="live-node-dot" />
-              NODE_TX_STABLE
-            </span>
-            <span className="clock-badge font-monospace">
-              {time.toLocaleTimeString()}
-            </span>
-          </div>
-          <h1 className="header-title mb-0">
-            Systems <span className="text-cyan-glow">Motorization</span> Hub
-          </h1>
-          <p className="header-subtitle mb-0">
-            Monitor + Control + Optimize &nbsp;|&nbsp; Real-time Motor Operations
-          </p>
-        </div>
-
-        <div className="d-flex align-items-center gap-2">
-          <Button className="btn-scada-glass">
-            <RefreshCw size={14} className="me-2" /> RE-CALIBRATE
-          </Button>
-          <Button className="btn-scada-primary">
-            <Download size={14} className="me-2" /> EXPORT LOGS
-          </Button>
-        </div>
-      </div>
-
-      {/* ═════════════════════════════════════════════════════════════
-          TOP CASCADED SELECTOR BAR (SITE, ASSETS, DEVICE)
-          "DROP DOWN SAHI SE MAP KARO"
-          ═════════════════════════════════════════════════════════════ */}
-      <div className="top-selector-container mb-4">
-        <Row className="g-3 align-items-stretch">
-          {/* 1. SITE SELECTOR */}
-          <Col lg={3} md={6}>
-            <div className="selector-card">
-              <div className="selector-header">
-                <div className="selector-icon-box text-cyan">
-                  <Building size={16} />
-                </div>
-                <span className="selector-label">Site</span>
-              </div>
-              <Form.Select 
-                className="selector-dropdown"
-                value={selectedSiteId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedSiteId(val);
-                  try { localStorage.setItem('motors_selected_site', val); } catch (err) {}
-                }}
-              >
-                {sites.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </Form.Select>
-              <div className="selector-subtext">Select site location</div>
-            </div>
-          </Col>
-
-          {/* 2. ASSETS SELECTOR */}
-          <Col lg={3} md={6}>
-            <div className="selector-card">
-              <div className="selector-header">
-                <div className="selector-icon-box text-blue">
-                  <Folder size={16} />
-                </div>
-                <span className="selector-label">Assets</span>
-              </div>
-              <Form.Select 
-                className="selector-dropdown"
-                value={selectedAssetId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedAssetId(val);
-                  try { localStorage.setItem('motors_selected_asset', val); } catch (err) {}
-                }}
-              >
-                <option value="ALL">All PUMP_ROOM Assets</option>
-                {assets.map(a => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </Form.Select>
-              <div className="selector-subtext">Select asset group</div>
-            </div>
-          </Col>
-
-          {/* 3. DEVICE SELECTOR */}
-          <Col lg={3} md={6}>
-            <div className="selector-card">
-              <div className="selector-header">
-                <div className="selector-icon-box text-emerald">
-                  <Cpu size={16} />
-                </div>
-                <span className="selector-label">Device</span>
-              </div>
-              <Form.Select 
-                className="selector-dropdown"
-                value={selectedDeviceId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedDeviceId(val);
-                  try { localStorage.setItem('motors_selected_device', val); } catch (err) {}
-                }}
-              >
-                <option value="ALL">Motors (All Devices)</option>
-                {devices.map(m => (
-                  <option key={m.id} value={m.id}>{m.name} ({m.id})</option>
-                ))}
-              </Form.Select>
-              <div className="selector-subtext">Select motor device</div>
-            </div>
-          </Col>
-
-          {/* 4. VIEW MOTORS BUTTON CARD */}
-          <Col lg={3} md={6}>
-            <div className="selector-card btn-card d-flex flex-column justify-content-between">
-              <button 
-                className="view-motors-action-btn"
-                onClick={() => {
-                  const el = document.getElementById('motors-grid-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                <Search size={16} />
-                <span>VIEW MOTORS</span>
-                <ArrowRight size={16} />
-              </button>
-              <div className="selector-subtext text-center mt-2">
-                Select site, asset and device to view motors
-              </div>
-            </div>
-          </Col>
-        </Row>
-      </div>
-
-      {/* ═════════════════════════════════════════════════════════════
-          5 KPI SUMMARY STATS ROW
-          ═════════════════════════════════════════════════════════════ */}
-      <Row className="g-3 mb-4">
+    <div className="motors-page-wrapper p-3 p-md-4 fade-in">      <Row className="g-3 mb-4">
         <Col xl={2} lg={4} md={6}>
           <div className="kpi-card">
             <div className="d-flex justify-content-between align-items-start mb-2">
@@ -773,7 +629,7 @@ const MotorsOverview = () => {
               <div className="kpi-icon-box text-rose bg-rose-subtle">
                 <TrendingUp size={18} />
               </div>
-              <span className="critical-alarm-badge">● {kpiStats.activeAlarms} Alarms</span>
+              <span className="critical-alarm-badge">â— {kpiStats.activeAlarms} Alarms</span>
             </div>
             <div className="kpi-label">Active Alarms</div>
             <div className="kpi-value font-monospace text-rose">{kpiStats.activeAlarms}</div>
@@ -781,9 +637,9 @@ const MotorsOverview = () => {
         </Col>
       </Row>
 
-      {/* ═════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           NAVIGATION TABS BAR & REALTIME STATUS
-          ═════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className="d-flex flex-column flex-md-row align-items-center justify-content-between mb-4 p-2 rounded-3 nav-tabs-container gap-3">
         <div className="d-flex flex-wrap align-items-center gap-2">
           {[
@@ -813,9 +669,9 @@ const MotorsOverview = () => {
         </div>
       </div>
 
-      {/* ═════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           MOTORS GRID SECTION
-          ═════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div id="motors-grid-section">
         {(activeTab === 'all' || activeTab === 'units') && (
           <Row className="g-4 mb-5">
@@ -849,9 +705,9 @@ const MotorsOverview = () => {
         )}
       </div>
 
-      {/* ═════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           VFD & DOL STARTERS MATRIX TABLE
-          ═════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {(activeTab === 'all' || activeTab === 'vfd') && (
         <div className="mb-5">
           <div className="d-flex align-items-center justify-content-between mb-3">
@@ -912,9 +768,9 @@ const MotorsOverview = () => {
         </div>
       )}
 
-      {/* ═════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           PUMP ROOMS SUMMARY SECTION
-          ═════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {(activeTab === 'all' || activeTab === 'rooms') && (
         <div className="mb-5">
           <h4 className="text-heading-adaptive fw-black uppercase tracking-wide mb-3 d-flex align-items-center gap-2">
@@ -952,9 +808,9 @@ const MotorsOverview = () => {
         </div>
       )}
 
-      {/* ═════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           DIAGNOSTICS MODAL
-          ═════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <Modal show={showDiagModal} onHide={() => setShowDiagModal(false)} centered size="lg" className="scada-dark-modal">
         <Modal.Header closeButton className="border-bottom border-white border-opacity-10 bg-black">
           <Modal.Title className="text-white fw-black font-monospace fs-5">
@@ -967,21 +823,21 @@ const MotorsOverview = () => {
             <Col md={6}>
               <div className="diag-stat-box p-3 rounded-3 bg-black border border-white border-opacity-10">
                 <small className="text-secondary d-block">BEARING TEMPERATURE</small>
-                <div className="fs-3 text-cyan fw-bold">42.5 °C</div>
+                <div className="fs-3 text-cyan fw-bold">42.5 Â°C</div>
                 <small className="text-emerald">Within Normal Limits</small>
               </div>
             </Col>
             <Col md={6}>
               <div className="diag-stat-box p-3 rounded-3 bg-black border border-white border-opacity-10">
                 <small className="text-secondary d-block">WINDING RESISTANCE</small>
-                <div className="fs-3 text-emerald fw-bold">1.42 Ω</div>
+                <div className="fs-3 text-emerald fw-bold">1.42 Î©</div>
                 <small className="text-emerald">Optimal Balance</small>
               </div>
             </Col>
             <Col md={6}>
               <div className="diag-stat-box p-3 rounded-3 bg-black border border-white border-opacity-10">
                 <small className="text-secondary d-block">INSULATION RESISTANCE (MEGGER)</small>
-                <div className="fs-3 text-amber fw-bold">120 MΩ</div>
+                <div className="fs-3 text-amber fw-bold">120 MÎ©</div>
                 <small className="text-secondary">Next inspection in 45 days</small>
               </div>
             </Col>
@@ -1001,9 +857,9 @@ const MotorsOverview = () => {
         </Modal.Body>
       </Modal>
 
-      {/* ═════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           DETAILS MODAL
-          ═════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} centered size="md" className="scada-dark-modal">
         <Modal.Header closeButton className="border-bottom border-white border-opacity-10 bg-black">
           <Modal.Title className="text-white fw-black font-monospace fs-5">
@@ -1043,9 +899,9 @@ const MotorsOverview = () => {
         </Modal.Body>
       </Modal>
 
-      {/* ═════════════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           CUSTOM SCADA STYLES (LARGE MOTOR HUD + COMPACT TELEMETRY TILES)
-          ═════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <style dangerouslySetInnerHTML={{ __html: `
         .motors-page-wrapper {
           background: #060b17;
@@ -1140,9 +996,9 @@ const MotorsOverview = () => {
           box-shadow: 0 6px 25px rgba(14, 165, 233, 0.6);
         }
 
-        /* ═════════════════════════════════════════════════════════════
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
            TOP SELECTOR CARDS
-           ═════════════════════════════════════════════════════════════ */
+           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
         .top-selector-container { position: relative; }
 
         .selector-card {
@@ -1237,9 +1093,9 @@ const MotorsOverview = () => {
           box-shadow: 0 6px 30px rgba(14, 165, 233, 0.7);
         }
 
-        /* ═════════════════════════════════════════════════════════════
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
            KPI CARDS
-           ═════════════════════════════════════════════════════════════ */
+           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
         .kpi-card {
           background: rgba(15, 23, 42, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.07);
@@ -1334,9 +1190,9 @@ const MotorsOverview = () => {
           background: linear-gradient(90deg, #38bdf8, #10b981);
         }
 
-        /* ═════════════════════════════════════════════════════════════
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
            MOTOR CARDS: LARGE MOTOR HUD + SMALL COMPACT TELEMETRY TILES
-           ═════════════════════════════════════════════════════════════ */
+           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
         .motor-card-scada {
           background: linear-gradient(145deg, #0a1124 0%, #030816 100%);
           border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -1425,7 +1281,7 @@ const MotorsOverview = () => {
           animation: pulse 1.5s infinite;
         }
 
-        /* ── LARGE MOTOR GRAPHIC HUD (BADA MOTOR IMAGE) ── */
+        /* â”€â”€ LARGE MOTOR GRAPHIC HUD (BADA MOTOR IMAGE) â”€â”€ */
         .hud-visualizer-wrapper-large {
           position: relative;
           width: 220px; height: 220px;
@@ -1501,7 +1357,7 @@ const MotorsOverview = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.6);
         }
 
-        /* ── COMPACT TELEMETRY TILES (TILES SMALL KARO) ── */
+        /* â”€â”€ COMPACT TELEMETRY TILES (TILES SMALL KARO) â”€â”€ */
         .telemetry-heading-small {
           font-size: 0.65rem;
           font-weight: 900;
@@ -1669,9 +1525,9 @@ const MotorsOverview = () => {
 
         .text-heading-adaptive { color: #ffffff; }
 
-        /* ═════════════════════════════════════════════════════════════
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
            SOOTHING & EYE-COMFORTABLE LIGHT MODE THEME (ANTI-GLARE EXECUTIVE)
-           ═════════════════════════════════════════════════════════════ */
+           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
         .light-mode .motors-page-wrapper,
         html[data-theme="light"] .motors-page-wrapper {
           background: #edf2f7 !important;

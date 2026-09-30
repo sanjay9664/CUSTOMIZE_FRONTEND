@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy } from 'lucide-react';
+import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Bell, LayoutDashboard, Zap } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import PageContextBanner from '../components/PageContextBanner';
 import { useSiteStore } from '../context/SiteContext';
 
 const MODULE_HEADER_CONFIG = [
+  { match: /^\/water-management(?:\/|$)/, title: 'Water Management', icon: Droplets },
+  { match: /^\/lt-panel\/(?!overview(?:\/|$))/, title: 'LT Panel', icon: LayoutDashboard },
+  { match: /^\/transformer\/(?!overview(?:\/|$))/, title: 'Transformer', icon: Zap },
   { match: /^\/hvac(?:\/|$)|^\/ahu$|^\/cooling-tower$/, title: 'HVAC', icon: Thermometer },
   { match: /^\/VRV(?:\/|$)/i, title: 'VRV', icon: Wind },
   { match: /^\/ac(?:\/|$)/i, title: 'AC', icon: Snowflake },
-  // Fire Alarm System is intentionally excluded per the requested exception.
+  { match: /^\/alarm-system(?:\/|$)/, title: 'Alarm System', icon: Bell },
   { match: /^\/fire-pumps(?:\/|$)/, title: 'Fire', icon: Flame },
   { match: /^\/ticketing(?:\/|$)/, title: 'Ticketing', icon: ClipboardList },
   { match: /^\/maintenance(?:\/|$)/, title: 'Maintenance', icon: Wrench },

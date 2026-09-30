@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Nav, Badge } from 'react-bootstrap';
-import { Activity, Wind, RefreshCw, TrendingUp, Clock, Zap, Snowflake } from 'lucide-react';
+import { Row, Col, Card, Nav } from 'react-bootstrap';
+import { RefreshCw, TrendingUp, Clock, Zap, Snowflake } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as ChartTooltip, ResponsiveContainer, Legend
@@ -73,25 +73,6 @@ const AHU = () => {
 
   return (
     <div className="ahu-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
-      {/* Page Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-start scada-card p-4 rounded-4 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
-        <div className="pe-4">
-          <div className="d-flex align-items-center gap-3 mb-2">
-            <div className="p-2 bg-info bg-opacity-10 rounded-3">
-              <Wind className="text-info" size={24} />
-            </div>
-            <h4 className="mb-0 fw-black tracking-tight" style={{ color: 'var(--scada-text)' }}>Air Handling Unit (AHU)</h4>
-          </div>
-          <p className="text-muted fs-14 mb-0 mt-3" style={{ maxWidth: '900px', lineHeight: '1.6' }}>
-            The <strong style={{ color: 'var(--scada-text)' }}>AHU Control System</strong> monitors and regulates air circulation, filtration, cooling, and heating across the facility. Real-time telemetry ensures optimal indoor air quality (IAQ), temperature compliance, and energy efficiency.
-          </p>
-        </div>
-        <div className="d-flex flex-column gap-2 text-end">
-          <Badge bg="success" className="px-3 py-2 rounded-pill fw-bold tracking-wider">SYSTEM ONLINE</Badge>
-          <Badge bg="primary" className="px-3 py-2 rounded-pill fw-bold tracking-wider">COOLING MODE</Badge>
-        </div>
-      </div>
-
       <style>
         {`
           @keyframes spin-fan {

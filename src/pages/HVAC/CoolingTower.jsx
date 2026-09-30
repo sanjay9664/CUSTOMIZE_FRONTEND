@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Card, Nav, Badge } from 'react-bootstrap';
-import { Activity, Thermometer, Wind, RefreshCw, Zap, TrendingUp, List } from 'lucide-react';
+import { Row, Col, Card, Nav } from 'react-bootstrap';
+import { Thermometer, Wind, RefreshCw, Zap, TrendingUp, List } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ChartTooltip, ResponsiveContainer, Legend
@@ -9,16 +9,11 @@ import {
 const CoolingTower = () => {
   const [graphTimeRange, setGraphTimeRange] = useState('DAY');
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isRunning, setIsRunning] = useState(true);
 
   const fanRotationRef = useRef(0);
   const fanVelocityRef = useRef(15); // Current rotational velocity (balanced fast)
   const targetVelocityRef = useRef(15); // Target velocity
   const requestRef = useRef();
-
-  useEffect(() => {
-    targetVelocityRef.current = isRunning ? 15 : 0;
-  }, [isRunning]);
 
   useEffect(() => {
     const animate = () => {
@@ -126,34 +121,6 @@ const CoolingTower = () => {
 
   return (
     <div className="cooling-tower-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
-      {/* Page Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-start scada-card p-4 rounded-4 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
-        <div className="pe-4">
-          <div className="d-flex align-items-center gap-3 mb-2">
-            <div className="p-2 bg-info bg-opacity-10 rounded-3">
-              <Activity className="text-info" size={24} />
-            </div>
-            <h4 className="mb-0 fw-black tracking-tight" style={{ color: 'var(--scada-text)' }}>Cooling Tower Monitoring System</h4>
-          </div>
-          <p className="text-muted fs-14 mb-0 mt-3" style={{ maxWidth: '900px', lineHeight: '1.6' }}>
-            The <strong style={{ color: 'var(--scada-text)' }}>Cooling Tower Monitoring System</strong> provides real-time visibility into thermal performance, water circulation efficiency, and energy consumption of cooling tower operations. It helps optimize heat rejection, reduce energy waste, and ensure stable HVAC system performance through continuous monitoring and analytics.
-          </p>
-        </div>
-        <div className="d-flex flex-column gap-2 text-end align-items-end">
-          <div className="d-flex gap-2">
-            <Badge bg={isRunning ? "success" : "danger"} className="px-3 py-2 rounded-pill fw-bold tracking-wider">{isRunning ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}</Badge>
-            <Badge bg="info" className="px-3 py-2 rounded-pill fw-bold tracking-wider">AUTO MODE</Badge>
-          </div>
-          <button
-            onClick={() => setIsRunning(!isRunning)}
-            className={`btn mt-2 fw-bold rounded-pill text-white shadow ${isRunning ? 'bg-danger hover-darken' : 'bg-success hover-darken'}`}
-            style={{ border: 'none', padding: '8px 24px', letterSpacing: '1px', transition: 'all 0.3s' }}
-          >
-            {isRunning ? '■ STOP FAN' : '▶ START FAN'}
-          </button>
-        </div>
-      </div>
-
       <style>
         {`
           /* Keeping empty block in case other keyframes are added later, or remove entirely if unused */

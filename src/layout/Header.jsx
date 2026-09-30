@@ -1,7 +1,6 @@
 import React from 'react';
-import { Menu, Search, User, Bell, LayoutGrid, Sun, Building2, Shield, Users, Building, ChevronDown, MapPin, Sliders, UserPlus, Settings } from 'lucide-react';
+import { Menu, Search, User, Bell, Sun } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +8,6 @@ import logo from "../assets/logo.png";
 
 const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonating = false }) => {
   const { isDark, toggleTheme } = useTheme();
-  const navigate = useNavigate();
   const { userRole, logout } = useAuth();
 
   return (
@@ -43,35 +41,6 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
       </div>
 
       <div className="header-right d-flex align-items-center">
-        {/* Quick Organisation Management Menu */}
-        <Dropdown align="end" className="me-3">
-          <Dropdown.Toggle 
-            variant="info" 
-            size="sm" 
-            className="fw-bold d-flex align-items-center gap-2 text-dark px-3 py-1 border-0 shadow-sm rounded-pill custom-toggle"
-            style={{ background: 'linear-gradient(135deg, #06b6d4, #0284c7)' }}
-          >
-            <Building2 size={16} />
-            <span>Organisation Hub</span>
-            <ChevronDown size={14} />
-          </Dropdown.Toggle>
-
-          <Dropdown.Menu className="bg-dark border-secondary shadow-lg mt-2 p-2" style={{ minWidth: '220px', borderRadius: '12px' }}>
-            <Dropdown.Item className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2" onClick={() => navigate('/admin/manage-users')}>
-              <Users size={16} className="text-emerald-400" />
-              <span>Users</span>
-            </Dropdown.Item>
-            <Dropdown.Item className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2" onClick={() => navigate('/admin/manage-users?tab=roles')}>
-              <Shield size={16} className="text-amber-400" />
-              <span>Manage Roles</span>
-            </Dropdown.Item>
-            <Dropdown.Item className="text-white hover-bg-secondary rounded-2 py-2 d-flex align-items-center gap-2" onClick={() => navigate('/manage-organisation')}>
-              <Building2 size={16} className="text-cyan-400" />
-              <span>Manage Organisation</span>
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
-
         {/* Toggle Theme Button */}
         <Button 
           variant="custom" 
@@ -87,10 +56,6 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           <Bell size={20} />
           <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ marginTop: '8px', marginLeft: '-8px' }}></span>
         </Button>
-        <Button variant="link" className="text-muted p-2 me-3">
-          <LayoutGrid size={20} />
-        </Button>
-        
         {/* User Profile */}
         <Dropdown align="end">
           <Dropdown.Toggle variant="link" className="d-flex align-items-center text-white text-decoration-none p-0 border-0 custom-toggle">
