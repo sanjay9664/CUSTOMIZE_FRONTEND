@@ -251,9 +251,9 @@ const EnergyMeteringOverview = () => {
   // Site selection state
   const [selectedSiteId, setSelectedSiteId] = useState(() => {
     return (
+      (selectedSite?.id ? String(selectedSite.id) : '') ||
       localStorage.getItem('selected_energy_overview_site_id') ||
       localStorage.getItem('selected_main_meter_site_id') ||
-      (selectedSite?.id ? String(selectedSite.id) : '') ||
       ''
     );
   });
@@ -268,22 +268,21 @@ const EnergyMeteringOverview = () => {
   // Active request tracking to prevent race conditions during rapid site changes
   const activeRequestIdRef = useRef(0);
 
-  // Synchronize selected site with available sites
+  // Keep the page filter synchronized with the shared header site selection.
   useEffect(() => {
-    if (Array.isArray(allSites) && allSites.length > 0) {
-      const match = allSites.find(s => String(s.id || s.siteId || s._id) === String(selectedSiteId));
-      if (!match) {
-        const firstId = String(allSites[0].id || allSites[0].siteId || allSites[0]._id);
-        setSelectedSiteId(firstId);
-        localStorage.setItem('selected_energy_overview_site_id', firstId);
-        if (setSelectedSite) setSelectedSite(allSites[0]);
-      } else {
-        if (setSelectedSite && selectedSite?.id !== match.id) {
-          setSelectedSite(match);
-        }
-      }
+    if (!Array.isArray(allSites) || allSites.length === 0) return;
+    const globalSiteId = selectedSite?.id || selectedSite?.siteId || selectedSite?._id;
+    const globalMatch = allSites.find(site => String(site.id || site.siteId || site._id) === String(globalSiteId));
+    const savedMatch = allSites.find(site => String(site.id || site.siteId || site._id) === String(selectedSiteId));
+    const targetSite = globalMatch || savedMatch || allSites[0];
+    const targetId = String(targetSite.id || targetSite.siteId || targetSite._id);
+
+    if (String(selectedSiteId) !== targetId) {
+      setSelectedSiteId(targetId);
+      localStorage.setItem('selected_energy_overview_site_id', targetId);
     }
-  }, [allSites, selectedSiteId, setSelectedSite, selectedSite]);
+    if (!globalMatch && setSelectedSite) setSelectedSite(targetSite);
+  }, [allSites, selectedSite?.id, selectedSite?.siteId, selectedSite?._id, selectedSiteId, setSelectedSite]);
 
   // Site selector configuration for the PageContextBanner
   const siteSelector = useMemo(() => {

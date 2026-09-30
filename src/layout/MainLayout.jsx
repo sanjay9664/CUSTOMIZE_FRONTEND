@@ -3,10 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import PageContextBanner from '../components/PageContextBanner';
 import { useSiteStore } from '../context/SiteContext';
 
 const MODULE_HEADER_CONFIG = [
+  { match: /^\/energy-metering(?:\/|$)/, title: 'Energy Metering', icon: Zap },
+  { match: /^\/dg-set(?:\/|$)/, title: 'DG Set', icon: Activity },
   { match: /^\/water-management(?:\/|$)/, title: 'Water Management', icon: Droplets },
   { match: /^\/motors(?:\/|$)/, title: 'Motors', icon: Activity },
   { match: /^\/daily-dpr(?:\/|$)/, title: 'Daily DPR', icon: Gauge },
@@ -21,6 +22,7 @@ const MODULE_HEADER_CONFIG = [
   { match: /^\/maintenance(?:\/|$)/, title: 'Maintenance', icon: Wrench },
   { match: /^\/service(?:\/|$)/, title: 'Service History', icon: History },
   { match: /^\/help(?:\/|$)/, title: 'Help', icon: LifeBuoy },
+  { match: /^\/aqi-sensor(?:\/|$)/, title: 'AQI Sensor', icon: Wind },
 ];
 
 const MainLayout = ({ children }) => {
@@ -92,7 +94,17 @@ const MainLayout = ({ children }) => {
   return (
     <div className="scada-container">
       <Sidebar collapsed={collapsed} onClose={() => setCollapsed(true)} onOpen={() => setCollapsed(false)} onHoverChange={setSidebarHover} />
-      <Header collapsed={collapsed} toggleSidebar={toggleSidebar} sidebarWidth={sidebarWidth} isImpersonating={isImpersonating} />
+      <Header
+        collapsed={collapsed}
+        toggleSidebar={toggleSidebar}
+        sidebarWidth={sidebarWidth}
+        isImpersonating={isImpersonating}
+        moduleHeader={moduleHeader}
+        moduleIcon={ModuleIcon}
+        activeSites={activeSites}
+        selectedSite={currentSite}
+        setSelectedSite={setSelectedSite}
+      />
 
       <div 
         className={`scada-main-content w-100`}
@@ -130,27 +142,14 @@ const MainLayout = ({ children }) => {
             </button>
           </div>
         )}
-        <main className="px-2 px-md-3 pb-4">
-          {moduleHeader && (
-            <PageContextBanner
-              title={moduleHeader.title}
-              icon={ModuleIcon ? <ModuleIcon size={20} /> : undefined}
-              siteSelector={activeSites?.length ? {
-                value: currentSite?.id ?? '',
-                options: activeSites.map(site => ({ value: site.id, label: site.name || site.siteName || `Site ${site.id}` })),
-                onChange: siteId => setSelectedSite(activeSites.find(site => String(site.id) === String(siteId)) || null),
-                ariaLabel: 'Select site'
-              } : undefined}
-              variant="scada"
-              className="layout-module-context-banner"
-            />
-          )}
+        <main className={`px-2 px-md-3 pb-4 ${moduleHeader ? 'single-module-header-page' : ''}`}>
           {children}
         </main>
       </div>
 
       {/* Responsive: On mobile remove sidebar margin */}
       <style dangerouslySetInnerHTML={{ __html: `
+        .single-module-header-page .page-context-banner { display: none !important; }
         @media (max-width: 992px) {
           .scada-main-content { margin-left: 0 !important; }
         }
