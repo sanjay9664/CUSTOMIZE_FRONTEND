@@ -1,0 +1,269 @@
+.chiller-dashboard {
+  padding: clamp(8px, 1.1vw, 16px) !important;
+  font-size: 13px;
+}
+
+.chiller-main-row {
+  align-items: stretch;
+}
+
+.chiller-diagram-container {
+  min-height: 440px;
+  background-image: radial-gradient(ellipse at 50% 48%, rgba(14, 165, 233, 0.09), transparent 54%);
+}
+
+.chiller-metrics-top,
+.chiller-metrics-bottom {
+  gap: clamp(6px, 0.75vw, 12px);
+}
+
+.chiller-metrics-top {
+  padding: clamp(10px, 1.15vw, 18px) !important;
+}
+
+.chiller-metrics-bottom {
+  padding: 0 clamp(12px, 1.5vw, 24px) clamp(12px, 1.25vw, 20px) !important;
+}
+
+.chiller-metric-tile {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: clamp(7px, 0.8vw, 12px);
+  min-width: 0;
+  min-height: clamp(60px, 6.1vw, 78px);
+  padding: clamp(7px, 0.7vw, 11px) !important;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(2, 8, 23, 0.18), inset 0 0 18px rgba(56, 189, 248, 0.035) !important;
+}
+
+.chiller-metric-icon {
+  display: flex;
+  flex: 0 0 clamp(28px, 3vw, 40px);
+  width: clamp(28px, 3vw, 40px);
+  height: clamp(28px, 3vw, 40px);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 50%;
+  background: rgba(2, 132, 199, 0.12);
+}
+
+.chiller-metric-icon svg {
+  width: clamp(16px, 1.5vw, 21px);
+  height: clamp(16px, 1.5vw, 21px);
+}
+
+.chiller-metric-copy {
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.chiller-metric-label {
+  overflow: hidden;
+  font-size: clamp(8px, 0.62vw, 10px);
+  letter-spacing: 0.045em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chiller-metric-value {
+  margin-top: 4px;
+  font-size: clamp(13px, 1.12vw, 18px);
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.chiller-metrics-bottom .chiller-metric-tile {
+  max-width: 34%;
+}
+
+.chiller-efficiency-value {
+  font-size: clamp(16px, 1.5vw, 23px);
+}
+
+.chiller-stat-card {
+  min-height: 76px;
+  margin-bottom: clamp(7px, 0.7vw, 10px) !important;
+  padding: clamp(9px, 0.85vw, 13px) !important;
+}
+
+.chiller-stat-icon {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.chiller-stat-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.chiller-stat-label {
+  font-size: clamp(8px, 0.65vw, 10px);
+  letter-spacing: 0.07em;
+}
+
+.chiller-stat-value {
+  font-size: clamp(15px, 1.15vw, 19px);
+  line-height: 1.1;
+}
+
+.chiller-stat-unit {
+  font-size: clamp(9px, 0.72vw, 11px);
+}
+
+.chiller-analytics-card .nav-link {
+  padding: 5px 17px !important;
+  font-size: 10px !important;
+}
+
+.chiller-dashboard .flow-label {
+  font-size: 12px;
+}
+
+@media (max-width: 1199.98px) {
+  .chiller-diagram-container {
+    height: clamp(470px, 64vh, 610px) !important;
+  }
+
+  .chiller-analytics-card {
+    min-height: 440px;
+  }
+
+  .chiller-metric-label {
+    font-size: clamp(8px, 0.9vw, 10px);
+  }
+
+  .chiller-metric-value {
+    font-size: clamp(13px, 1.45vw, 18px);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .chiller-dashboard {
+    padding: 8px !important;
+  }
+
+  .chiller-diagram-container {
+    height: 540px !important;
+    min-height: 540px;
+  }
+
+  .chiller-metrics-top {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chiller-metric-tile {
+    min-height: 62px;
+    padding: 7px !important;
+  }
+
+  .chiller-metric-icon {
+    flex-basis: 30px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .chiller-metric-label {
+    font-size: 8px;
+  }
+
+  .chiller-metric-value {
+    font-size: 13px;
+  }
+
+  .chiller-metrics-bottom {
+    padding: 0 8px 10px !important;
+  }
+
+  .chiller-metrics-bottom .chiller-metric-tile {
+    max-width: 38%;
+  }
+
+  .chiller-metrics-bottom .chiller-metric-tile:nth-child(2) {
+    padding: 8px 5px !important;
+  }
+
+  .chiller-efficiency-value {
+    font-size: 14px;
+  }
+
+  .chiller-stat-card {
+    min-height: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chiller-diagram-container {
+    height: 500px !important;
+    min-height: 500px;
+  }
+
+  .chiller-metric-icon {
+    display: none;
+  }
+
+  .chiller-metric-label {
+    font-size: 7px;
+  }
+
+  .chiller-metric-value {
+    font-size: 11px;
+  }
+
+  .chiller-metrics-bottom .chiller-metric-label {
+    white-space: normal;
+  }
+
+  .chiller-metrics-bottom .chiller-metric-value {
+    font-size: 10px;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 28%"],
+  .chiller-dashboard .position-absolute[style*="top: 63%"] {
+    transform: none !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 28%"] {
+    top: 46% !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 63%"] {
+    top: 59% !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 28%"][style*="left"] {
+    left: 3% !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 28%"][style*="right"] {
+    right: 3% !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 63%"][style*="left"] {
+    left: 3% !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 63%"][style*="right"] {
+    right: 3% !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 28%"] > div,
+  .chiller-dashboard .position-absolute[style*="top: 63%"] > div {
+    font-size: 9px !important;
+    text-align: left !important;
+  }
+
+  .chiller-dashboard .position-absolute[style*="top: 28%"] > div + div,
+  .chiller-dashboard .position-absolute[style*="top: 63%"] > div + div {
+    font-size: 11px !important;
+  }
+
+  .chiller-dashboard .position-absolute.top-50 {
+    top: 53% !important;
+    width: 50% !important;
+  }
+}
