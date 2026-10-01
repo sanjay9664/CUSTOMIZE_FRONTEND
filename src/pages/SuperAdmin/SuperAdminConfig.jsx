@@ -41,6 +41,7 @@ const defaultConfig = {
   showMaintenance: true,
   showServiceHistory: true,
   showDailyDPR: true,
+  showAuditLog: true,
   showEnergyMetering: true,
   showHVAC: true,
   showAC: true,
@@ -63,6 +64,7 @@ const moduleDetails = {
   showMaintenance: { label: 'Maintenance', icon: <PenTool size={18} />, subItems: ['Scheduled', 'Pending Tasks', 'PDF Report'] },
   showServiceHistory: { label: 'Service History', icon: <History size={18} />, subItems: ['Equipment-wise', 'Service Records', 'PDF Report'] },
   showDailyDPR: { label: 'Daily DPR', icon: <Gauge size={18} />, subItems: ['Data Aggregation', 'Daily Logs', 'PDF Report'] },
+  showAuditLog: { label: 'Audit Log', icon: <ShieldCheck size={18} />, subItems: ['Overview', 'System Logs', 'Security Events'] },
   showSettingTemplates: { label: 'Setting Templates', icon: <Settings size={18} />, subItems: [] },
 };
 

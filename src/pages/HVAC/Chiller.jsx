@@ -193,12 +193,12 @@ const Chiller = () => {
             </div>
 
             {/* Center Chiller Image from Public Folder */}
-            <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ zIndex: 2, width: '40%', maxWidth: '380px' }}>
+            <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ zIndex: 2, width: '56%', maxWidth: '520px' }}>
               <img 
-                src="/chiller.png" 
+                src="/chiller_transparent.png" 
                 alt="Chiller System" 
                 className="img-fluid drop-shadow-glow" 
-                style={{ mixBlendMode: 'screen', filter: 'contrast(1.2) brightness(1.2)' }} 
+                style={{ filter: 'contrast(1.05)' }} 
                 onLoad={() => setImageLoaded(true)}
               />
             </div>

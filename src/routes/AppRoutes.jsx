@@ -193,14 +193,9 @@ const AppRoutes = () => {
 
       {/* User Settings — accessible to all logged-in users */}
       <Route path="/admin/manage-users" element={<UserManagement />} />
-      <Route 
-        path="/admin/audit-logs" 
-        element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN']}>
-            <AuditLogViewer />
-          </ProtectedRoute>
-        } 
-      />
+      <Route path="/admin/audit-logs" element={<AuditLogViewer />} />
+      <Route path="/audit-logs" element={<AuditLogViewer />} />
+      <Route path="/audit-logs/*" element={<AuditLogViewer />} />
 
       {/* Maintenance & Service History */}
       <Route path="/maintenance" element={<MaintenancePage />} />
@@ -249,12 +244,14 @@ const AppRoutes = () => {
       <Route path="/ac/schedule" element={<ACScheduler />} />
       <Route path="/ac/report" element={<PlaceholderPage title="AC PDF Reports" />} />
 
-      {/* Fire */}
+      {/* ACMS / Fire & Life Safety Systems */}
+      <Route path="/acms" element={<Navigate to="/fire-pumps/overview" replace />} />
+      <Route path="/acms/overview" element={<FireOverview />} />
       <Route path="/fire-pumps/overview" element={<FireOverview />} />
       <Route path="/fire-pumps/status" element={<PumpStatus />} />
       <Route path="/fire-pumps/pressure" element={<HeaderPressure />} />
       <Route path="/fire-pumps/jockey" element={<JockeyMain />} />
-      <Route path="/fire-pumps/report" element={<PlaceholderPage title="Fire Pumps PDF Reports" />} />
+      <Route path="/fire-pumps/report" element={<PlaceholderPage title="ACMS / Fire Pumps PDF Reports" />} />
 
       {/* Help & Support */}
       <Route path="/help" element={<Navigate to="/help/feedback" replace />} />
