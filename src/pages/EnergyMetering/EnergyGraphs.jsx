@@ -60,7 +60,8 @@ const EnergyGraphs = () => {
   // Sites state
   const [routeSites, setRouteSites] = useState([]);
   const [selectedSiteId, setSelectedSiteId] = useState(() => {
-    return localStorage.getItem('selected_main_meter_site_id') || '';
+    const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+    return globalId || localStorage.getItem('selected_main_meter_site_id') || '';
   });
 
   // Devices state
@@ -172,20 +173,26 @@ const EnergyGraphs = () => {
     return [];
   }, [routeSites, sites]);
 
-  // Synchronize initial selected site
+  // Synchronize local site filter with global selectedSite from SiteContext
   useEffect(() => {
-    if (allSites.length > 0) {
-      const match = allSites.find(s => String(s.id || s.siteId || s._id) === String(selectedSiteId));
-      if (!match) {
-        const firstId = String(allSites[0].id || allSites[0].siteId || allSites[0]._id);
-        setSelectedSiteId(firstId);
-        localStorage.setItem('selected_main_meter_site_id', firstId);
-        if (setSelectedSite) setSelectedSite(allSites[0]);
-      } else {
-        if (setSelectedSite && selectedSite?.id !== match.id) setSelectedSite(match);
+    if (!allSites || allSites.length === 0) return;
+
+    const globalSiteId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+    if (globalSiteId) {
+      if (String(selectedSiteId) !== globalSiteId) {
+        setSelectedSiteId(globalSiteId);
+        localStorage.setItem('selected_main_meter_site_id', globalSiteId);
       }
+    } else {
+      const match = allSites.find(s => String(s.id ?? s.siteId ?? s._id ?? '') === String(selectedSiteId)) || allSites[0];
+      const matchId = String(match.id ?? match.siteId ?? match._id ?? '');
+      if (String(selectedSiteId) !== matchId) {
+        setSelectedSiteId(matchId);
+        localStorage.setItem('selected_main_meter_site_id', matchId);
+      }
+      if (setSelectedSite) setSelectedSite(match);
     }
-  }, [allSites, selectedSiteId, setSelectedSite, selectedSite]);
+  }, [selectedSite, allSites, setSelectedSite]);
 
   // 2. Fetch devices for selected site
   useEffect(() => {
@@ -559,16 +566,17 @@ const EnergyGraphs = () => {
         }))
       : [{ value: '1', label: 'Main Facility Site' }];
 
-    const currentVal = selectedSiteId || siteOptions[0]?.value;
+    const currentVal = String(selectedSiteId || siteOptions[0]?.value || '');
 
     return {
       value: currentVal,
       options: siteOptions,
       onChange: (newId) => {
-        if (!newId || newId === selectedSiteId) return;
-        setSelectedSiteId(newId);
-        localStorage.setItem('selected_main_meter_site_id', String(newId));
-        const found = allSites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
+        const idStr = String(newId);
+        if (!idStr || idStr === String(selectedSiteId)) return;
+        setSelectedSiteId(idStr);
+        localStorage.setItem('selected_main_meter_site_id', idStr);
+        const found = allSites?.find(s => String(s.id ?? s._id ?? s.siteId ?? '') === idStr);
         if (found && setSelectedSite) setSelectedSite(found);
       },
       ariaLabel: 'Select Site'

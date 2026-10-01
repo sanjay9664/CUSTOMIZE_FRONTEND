@@ -7,8 +7,10 @@ import { useDeviceStatus } from '../../services/DeviceStatusContext';
 import { getAuthHeaders, normalizeList, apiClient } from '../../services/apiClient';
 import { getApiUrl } from '../../utils/apiConfig';
 import { io } from 'socket.io-client';
+import { useSiteStore } from '../../context/SiteContext';
 
 const AgTank = () => {
+  const { selectedSite, setSelectedSite } = useSiteStore();
   const [sectorFilter, setSectorFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showConfig, setShowConfig] = useState(false);
@@ -152,7 +154,9 @@ const AgTank = () => {
       const sitesList = Array.from(siteMap.values());
       setSites(sitesList);
       if (sitesList.length > 0) {
+        const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
         setSelectedSiteId(prev => {
+          if (globalId && sitesList.some(s => String(s.id) === globalId)) return globalId;
           if (prev && sitesList.some(s => String(s.id) === String(prev))) return prev;
           return sitesList[0].id;
         });
@@ -161,6 +165,17 @@ const AgTank = () => {
 
     loadSites();
   }, []);
+
+  // Synchronize with global selectedSite from SiteContext
+  useEffect(() => {
+    if (!selectedSite) return;
+    const globalId = String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '');
+    if (globalId && globalId !== String(selectedSiteId)) {
+      setSelectedSiteId(globalId);
+      setSelectedAssetId('');
+      setSelectedDeviceId('');
+    }
+  }, [selectedSite, selectedSiteId]);
 
   // 2. Fetch Assets when Site selection changes & AUTO-SELECT first asset
   useEffect(() => {
@@ -1590,9 +1605,14 @@ const AgTank = () => {
                 size="sm"
                 value={selectedSiteId}
                 onChange={(e) => {
-                  setSelectedSiteId(e.target.value);
+                  const newId = e.target.value;
+                  setSelectedSiteId(newId);
                   setSelectedAssetId('');
                   setSelectedDeviceId('');
+                  const found = sites.find(s => String(s.id) === String(newId));
+                  if (found && setSelectedSite) {
+                    setSelectedSite(found);
+                  }
                 }}
                 className="bg-transparent text-white border-0 fs-13 fw-bold focus-none shadow-none"
                 style={{ minWidth: 180, cursor: 'pointer', color: '#fff' }}

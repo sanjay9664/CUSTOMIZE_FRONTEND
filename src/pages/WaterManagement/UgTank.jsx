@@ -6,9 +6,11 @@ import { getSochiotDeviceDetails } from '../../services/authService';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
 import { io } from 'socket.io-client';
 import apiClient, { normalizeList } from '../../services/apiClient';
+import { useSiteStore } from '../../context/SiteContext';
 
 const UgTank = () => {
   const { getOverallStatus } = useDeviceStatus();
+  const { selectedSite, setSelectedSite } = useSiteStore();
   const [activeStation, setActiveStation] = useState(1);
   const [controlMode, setControlMode] = useState('REMOTE');
   const [pulseTrigger, setPulseTrigger] = useState(0);
@@ -83,12 +85,29 @@ const UgTank = () => {
       const siteList = Array.from(siteMap.values());
       setSites(siteList);
       if (siteList.length > 0 && !selectedSiteId) {
-        setSelectedSiteId(siteList[0].id);
-        setSelectedSiteName(siteList[0].name);
+        const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+        const initialSite = (globalId && siteList.find(s => String(s.id) === globalId)) || siteList[0];
+        setSelectedSiteId(initialSite.id);
+        setSelectedSiteName(initialSite.name);
+        if (!selectedSite && setSelectedSite) setSelectedSite(initialSite);
       }
     };
     loadSites();
   }, []);
+
+  // Synchronize with global selectedSite from SiteContext
+  useEffect(() => {
+    if (!selectedSite) return;
+    const globalId = String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '');
+    if (globalId && globalId !== String(selectedSiteId)) {
+      setSelectedSiteId(globalId);
+      const match = sites.find(s => String(s.id) === globalId);
+      if (match) setSelectedSiteName(match.name);
+      else if (selectedSite.name) setSelectedSiteName(selectedSite.name);
+      setSelectedAssetId('');
+      setSelectedDeviceId('ALL');
+    }
+  }, [selectedSite, sites, selectedSiteId]);
 
   // 2. Load Assets for selectedSiteId
   useEffect(() => {
@@ -1090,9 +1109,15 @@ const UgTank = () => {
                 size="sm"
                 value={selectedSiteId}
                 onChange={(e) => {
-                  setSelectedSiteId(e.target.value);
+                  const newId = e.target.value;
+                  setSelectedSiteId(newId);
                   setSelectedAssetId('');
                   setSelectedDeviceId('');
+                  const found = sites.find(s => String(s.id) === String(newId));
+                  if (found) {
+                    setSelectedSiteName(found.name);
+                    if (setSelectedSite) setSelectedSite(found);
+                  }
                 }}
                 className="bg-transparent text-white border-0 fs-13 fw-bold focus-none shadow-none"
                 style={{ minWidth: 180, cursor: 'pointer', color: '#fff' }}

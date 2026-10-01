@@ -36,7 +36,7 @@ const HierarchySelector = ({
   selectedDeviceId: externalDeviceId
 }) => {
   const navigate = useNavigate();
-  const { sites: contextSites, activeSites } = useSiteStore();
+  const { sites: contextSites, activeSites, selectedSite } = useSiteStore();
 
   // ── All available sites ──
   const allSites = useMemo(() => {
@@ -47,7 +47,11 @@ const HierarchySelector = ({
     return s;
   }, [activeSites, contextSites]);
 
-  const [selectedSiteId, setSelectedSiteId] = useState(() => allSites.length > 0 ? allSites[0].id : null);
+  const [selectedSiteId, setSelectedSiteId] = useState(() => {
+    const globalId = selectedSite ? (selectedSite.id ?? selectedSite.siteId ?? selectedSite._id) : null;
+    if (globalId) return globalId;
+    return allSites.length > 0 ? allSites[0].id : null;
+  });
   const [devices, setDevices] = useState([]);
   const [assets, setAssets] = useState([]);
   const [selectedAssetId, setSelectedAssetId] = useState(null);
@@ -56,10 +60,15 @@ const HierarchySelector = ({
 
   const activeDeviceId = externalDeviceId ?? internalDeviceId;
 
-  // Auto-select first site
+  // Auto-select first site or synchronize with global selectedSite
   useEffect(() => {
-    if (!selectedSiteId && allSites.length > 0) setSelectedSiteId(allSites[0].id);
-  }, [allSites]);
+    const globalId = selectedSite ? (selectedSite.id ?? selectedSite.siteId ?? selectedSite._id) : null;
+    if (globalId && String(globalId) !== String(selectedSiteId)) {
+      setSelectedSiteId(globalId);
+    } else if (!selectedSiteId && allSites.length > 0) {
+      setSelectedSiteId(allSites[0].id);
+    }
+  }, [allSites, selectedSite, selectedSiteId]);
 
   // Fetch devices & assets when site changes
   useEffect(() => {

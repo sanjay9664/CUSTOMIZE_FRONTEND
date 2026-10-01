@@ -54,11 +54,19 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
               <select
                 className="global-site-select"
                 aria-label="Select site"
-                value={getSiteId(selectedSite)}
-                onChange={event => setSelectedSite?.(activeSites.find(site => String(getSiteId(site)) === event.target.value) || null)}
+                value={String(getSiteId(selectedSite) || '')}
+                onChange={event => {
+                  const val = event.target.value;
+                  const match = activeSites.find(site => String(getSiteId(site)) === String(val));
+                  if (match && setSelectedSite) {
+                    setSelectedSite(match);
+                  }
+                }}
               >
                 {activeSites.map(site => (
-                  <option key={getSiteId(site)} value={getSiteId(site)}>{site.name || site.siteName || `Site ${getSiteId(site)}`}</option>
+                  <option key={String(getSiteId(site))} value={String(getSiteId(site))}>
+                    {site.name || site.siteName || `Site ${getSiteId(site)}`}
+                  </option>
                 ))}
               </select>
               <ChevronDown size={14} className="global-site-chevron" />
