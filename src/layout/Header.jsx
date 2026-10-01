@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, User, Bell, Sun, Building2, ChevronDown } from 'lucide-react';
+import { Menu, Search, User, Bell, Sun, Moon, Building2, ChevronDown, Settings, LogOut, FileText, Check, ShieldCheck, BellRing } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,7 @@ import logo from "../assets/logo.png";
 const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonating = false, moduleHeader, moduleIcon: ModuleIcon, activeSites = [], selectedSite, setSelectedSite }) => {
   const { isDark, toggleTheme } = useTheme();
   const { userRole, logout } = useAuth();
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const getSiteId = site => site?.id ?? site?.siteId ?? site?._id ?? '';
 
   return (
@@ -53,11 +54,19 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
               <select
                 className="global-site-select"
                 aria-label="Select site"
-                value={getSiteId(selectedSite)}
-                onChange={event => setSelectedSite?.(activeSites.find(site => String(getSiteId(site)) === event.target.value) || null)}
+                value={String(getSiteId(selectedSite) || '')}
+                onChange={event => {
+                  const val = event.target.value;
+                  const match = activeSites.find(site => String(getSiteId(site)) === String(val));
+                  if (match && setSelectedSite) {
+                    setSelectedSite(match);
+                  }
+                }}
               >
                 {activeSites.map(site => (
-                  <option key={getSiteId(site)} value={getSiteId(site)}>{site.name || site.siteName || `Site ${getSiteId(site)}`}</option>
+                  <option key={String(getSiteId(site))} value={String(getSiteId(site))}>
+                    {site.name || site.siteName || `Site ${getSiteId(site)}`}
+                  </option>
                 ))}
               </select>
               <ChevronDown size={14} className="global-site-chevron" />
@@ -67,49 +76,124 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
       )}
 
       <div className="header-right d-flex align-items-center">
-        {/* Toggle Theme Button */}
-        <Button 
-          variant="custom" 
-          size="sm" 
-          onClick={toggleTheme} 
-          className="theme-toggle-btn me-3" 
-        >
-          {isDark ? <Sun size={14}/> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>}
-          <span>{isDark ? 'LIGHT MODE' : 'DARK MODE'}</span>
-        </Button>
-        
-        <Button variant="link" className="text-muted p-2 me-2 position-relative">
-          <Bell size={20} />
-          <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ marginTop: '8px', marginLeft: '-8px' }}></span>
-        </Button>
-        {/* User Profile */}
-        <Dropdown align="end">
-          <Dropdown.Toggle variant="link" className="d-flex align-items-center text-white text-decoration-none p-0 border-0 custom-toggle">
-            <div className="user-avatar bg-info rounded-circle d-flex align-items-center justify-content-center me-2" style={{ width: '24px', height: '24px' }}>
-              <User size={14} className="text-dark" />
+        {/* Settings Dropdown with Embedded Notifications & Theme Switch */}
+        <Dropdown align="end" className="settings-dropdown-wrapper">
+          <Dropdown.Toggle 
+            variant="custom" 
+            className="settings-toggle-btn d-flex align-items-center gap-2 text-decoration-none border-0"
+            id="header-settings-toggle"
+          >
+            <div className="settings-icon-circle d-flex align-items-center justify-content-center">
+              <Settings size={16} className="settings-gear-icon" />
             </div>
-            <div className="user-info d-none d-sm-block text-start">
-              <p className="mb-0 text-white fw-bold" style={{ fontSize: '11px', lineHeight: '1.1' }}>
-                {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : 
-                 userRole?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User'}
-              </p>
-              <p className="mb-0 text-muted uppercase tracking-tighter" style={{ fontSize: '9px', lineHeight: '1.1' }}>
-                {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' :
-                 userRole?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator'}
-              </p>
-            </div>
+            <span className="settings-toggle-text fw-bold">Settings</span>
+            <ChevronDown size={14} className="settings-chevron-icon opacity-75" />
           </Dropdown.Toggle>
 
-          <Dropdown.Menu className="bg-dark border-secondary mt-2 shadow">
-            <Dropdown.Item className="text-white hover-bg-secondary">Profile</Dropdown.Item>
-            <Dropdown.Item className="text-white hover-bg-secondary">Logs</Dropdown.Item>
-            <Dropdown.Divider className="bg-secondary" />
-            <Dropdown.Item 
-              className="text-danger hover-bg-secondary fw-bold"
-              onClick={logout}
-            >
-              Sign Out
-            </Dropdown.Item>
+          <Dropdown.Menu className="settings-dropdown-menu mt-2 p-0 shadow-lg border">
+            {/* Header User Profile Card */}
+            <div className="settings-user-header p-3 border-bottom d-flex align-items-center gap-3">
+              <div className="settings-avatar-box rounded-circle d-flex align-items-center justify-content-center">
+                <User size={18} />
+              </div>
+              <div className="flex-grow-1 overflow-hidden">
+                <div className="d-flex align-items-center gap-2">
+                  <span className="settings-user-name fw-bold text-truncate">
+                    {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : 
+                     userRole?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User'}
+                  </span>
+                  <span className="settings-online-badge">Online</span>
+                </div>
+                <div className="settings-user-role text-muted small text-truncate">
+                  {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' :
+                   userRole?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator'}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 d-flex flex-column gap-3">
+              {/* Theme Mode Switcher */}
+              <div className="settings-section">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <span className="settings-section-title">Theme Mode</span>
+                  <span className="settings-active-pill">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+                </div>
+                <div className="theme-toggle-segmented d-flex p-1 rounded-3">
+                  <button 
+                    type="button"
+                    className={`theme-segment-btn flex-grow-1 d-flex align-items-center justify-content-center gap-2 py-1.5 px-2 rounded-2 ${!isDark ? 'active' : ''}`}
+                    onClick={() => { if (isDark) toggleTheme(); }}
+                  >
+                    <Sun size={14} />
+                    <span className="fw-semibold">Light</span>
+                  </button>
+                  <button 
+                    type="button"
+                    className={`theme-segment-btn flex-grow-1 d-flex align-items-center justify-content-center gap-2 py-1.5 px-2 rounded-2 ${isDark ? 'active' : ''}`}
+                    onClick={() => { if (!isDark) toggleTheme(); }}
+                  >
+                    <Moon size={14} />
+                    <span className="fw-semibold">Dark</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Notifications Setting */}
+              <div className="settings-section">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <span className="settings-section-title">Notifications</span>
+                  <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-0.5 rounded-pill" style={{ fontSize: '10px' }}>
+                    3 Alerts
+                  </span>
+                </div>
+                <div className="settings-interactive-card p-2.5 rounded-3 d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2.5">
+                    <div className="settings-card-icon rounded-2 p-1.5 d-flex align-items-center justify-content-center">
+                      <BellRing size={16} className="text-warning" />
+                    </div>
+                    <div>
+                      <div className="fw-semibold settings-item-text" style={{ fontSize: '12px' }}>System Alarms & Alerts</div>
+                      <div className="text-muted" style={{ fontSize: '10px' }}>
+                        {notificationsEnabled ? 'Active & Receiving Live' : 'Muted'}
+                      </div>
+                    </div>
+                  </div>
+                  <Form.Check 
+                    type="switch"
+                    id="settings-notification-toggle"
+                    checked={notificationsEnabled}
+                    onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                    className="settings-custom-switch mb-0"
+                  />
+                </div>
+              </div>
+
+              {/* Navigation Items */}
+              <div className="settings-nav-links d-flex flex-column gap-1">
+                <button type="button" className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100">
+                  <User size={15} className="text-info" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Profile</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
+                </button>
+                <button type="button" className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100">
+                  <FileText size={15} className="text-primary" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Activity & Audit Logs</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>View</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Dropdown Footer / Sign Out */}
+            <div className="p-2 border-top">
+              <button 
+                type="button"
+                className="settings-signout-btn d-flex align-items-center justify-content-center gap-2 w-100 py-2 rounded-2 border-0 fw-bold"
+                onClick={logout}
+              >
+                <LogOut size={15} />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </Dropdown.Menu>
         </Dropdown>
       </div>
@@ -123,6 +207,19 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           border-color: var(--scada-accent) !important;
           box-shadow: none;
           color: white;
+        }
+        body.light-mode .scada-header .header-left .btn-link {
+          color: #0f172a !important;
+        }
+        body.light-mode .scada-header .input-group-text {
+          background-color: #e2e8f0 !important;
+          border-color: #cbd5e1 !important;
+          color: #475569 !important;
+        }
+        body.light-mode .scada-header .form-control {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
         }
         .leading-tight { line-height: 1.1; }
         .fs-8 { font-size: 0.62rem; }
@@ -243,6 +340,230 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
 
         body.dark-mode .manage-card-desc {
           color: #94a3b8;
+        }
+
+        /* ── SETTINGS DROPDOWN & TOGGLE ── */
+        .settings-dropdown-wrapper .custom-toggle::after,
+        .settings-dropdown-wrapper .dropdown-toggle::after {
+          display: none !important;
+        }
+
+        .settings-toggle-btn {
+          padding: 6px 14px !important;
+          border-radius: 20px !important;
+          background: rgba(255, 255, 255, 0.07) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          color: #f8fafc !important;
+          transition: all 0.22s ease !important;
+        }
+
+        body.light-mode .settings-toggle-btn {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #0f172a !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+        }
+
+        .settings-toggle-btn:hover {
+          background: rgba(56, 189, 248, 0.15) !important;
+          border-color: #38bdf8 !important;
+          color: #38bdf8 !important;
+        }
+
+        body.light-mode .settings-toggle-btn:hover {
+          background: #f1f5f9 !important;
+          border-color: #0284c7 !important;
+          color: #0284c7 !important;
+        }
+
+        .settings-gear-icon {
+          transition: transform 0.35s ease;
+        }
+
+        .settings-toggle-btn:hover .settings-gear-icon {
+          transform: rotate(45deg);
+        }
+
+        .settings-dropdown-menu {
+          min-width: 330px !important;
+          border-radius: 16px !important;
+          overflow: hidden !important;
+          background: #0f172a !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55) !important;
+        }
+
+        body.light-mode .settings-dropdown-menu {
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12) !important;
+        }
+
+        .settings-user-header {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        body.light-mode .settings-user-header {
+          background: #f8fafc;
+          border-color: #e2e8f0 !important;
+        }
+
+        .settings-avatar-box {
+          width: 38px;
+          height: 38px;
+          background: #0284c7;
+          color: #ffffff;
+        }
+
+        .settings-user-name {
+          color: #f8fafc;
+          font-size: 13px;
+        }
+
+        body.light-mode .settings-user-name {
+          color: #0f172a;
+        }
+
+        .settings-online-badge {
+          background: rgba(34, 197, 94, 0.15);
+          color: #22c55e;
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          font-size: 9px;
+          font-weight: 700;
+          padding: 1px 6px;
+          border-radius: 12px;
+          text-transform: uppercase;
+        }
+
+        .settings-section-title {
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #94a3b8;
+        }
+
+        body.light-mode .settings-section-title {
+          color: #64748b;
+        }
+
+        .settings-active-pill {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 10px;
+          background: rgba(56, 189, 248, 0.12);
+          color: #38bdf8;
+        }
+
+        body.light-mode .settings-active-pill {
+          background: #e0f2fe;
+          color: #0284c7;
+        }
+
+        .theme-toggle-segmented {
+          background: #1e293b;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        body.light-mode .theme-toggle-segmented {
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+        }
+
+        .theme-segment-btn {
+          border: none;
+          background: transparent;
+          color: #94a3b8;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-size: 12px;
+        }
+
+        body.light-mode .theme-segment-btn {
+          color: #64748b;
+        }
+
+        .theme-segment-btn.active {
+          background: #0284c7 !important;
+          color: #ffffff !important;
+          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+        }
+
+        body.light-mode .theme-segment-btn.active {
+          background: #0f172a !important;
+          color: #ffffff !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .settings-interactive-card {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        body.light-mode .settings-interactive-card {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+        }
+
+        .settings-card-icon {
+          background: rgba(245, 158, 11, 0.15);
+        }
+
+        body.light-mode .settings-card-icon {
+          background: #fef3c7;
+        }
+
+        .settings-item-text {
+          color: #f8fafc;
+        }
+
+        body.light-mode .settings-item-text {
+          color: #0f172a;
+        }
+
+        .settings-menu-link {
+          color: #e2e8f0;
+          transition: all 0.18s ease;
+          cursor: pointer;
+        }
+
+        body.light-mode .settings-menu-link {
+          color: #334155;
+        }
+
+        .settings-menu-link:hover {
+          background: rgba(255, 255, 255, 0.06) !important;
+          color: #38bdf8 !important;
+        }
+
+        body.light-mode .settings-menu-link:hover {
+          background: #f1f5f9 !important;
+          color: #0284c7 !important;
+        }
+
+        .settings-signout-btn {
+          background: rgba(239, 68, 68, 0.12);
+          color: #ef4444;
+          transition: all 0.2s ease;
+          font-size: 13px;
+        }
+
+        .settings-signout-btn:hover {
+          background: #ef4444 !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        body.light-mode .settings-signout-btn {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        body.light-mode .settings-signout-btn:hover {
+          background: #dc2626 !important;
+          color: #ffffff !important;
         }
 
         @media (max-width: 768px) {

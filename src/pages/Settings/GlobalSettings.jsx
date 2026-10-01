@@ -24,6 +24,7 @@ const ALL_MODULES = [
   { key: 'Maintenance', label: 'Maintenance', icon: <PenTool size={18} />, subItems: ['Scheduled', 'Pending Tasks', 'PDF Report'], configKey: 'showMaintenance' },
   { key: 'Service History', label: 'Service History', icon: <History size={18} />, subItems: ['Equipment-wise', 'Service Records', 'PDF Report'], configKey: 'showServiceHistory' },
   { key: 'Daily DPR', label: 'Daily DPR', icon: <Gauge size={18} />, subItems: ['Data Aggregation', 'Daily Logs', 'PDF Report'], configKey: 'showDailyDPR' },
+  { key: 'Audit Log', label: 'Audit Log', icon: <ShieldCheck size={18} />, subItems: ['Overview', 'System Logs', 'Security Events'], configKey: 'showAuditLog' },
   { key: 'Setting Templates', label: 'Setting Templates', icon: <Settings size={18} />, subItems: [] },
 ];
 
@@ -43,6 +44,7 @@ const GlobalSettings = () => {
       "Maintenance": true,
       "Service History": true,
       "Daily DPR": true,
+      "Audit Log": true,
       "Energy Metering": true,
       "VRV": true,
       "AQI Sensor": true,

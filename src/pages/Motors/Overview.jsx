@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Row, Col, Card, Badge, Table, Button, Modal, Form, Spinner } from 'react-bootstrap';
 import { 
   Zap, Activity, Gauge, Thermometer, Wind, 
@@ -219,11 +219,11 @@ const MotorsOverview = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedSite?.id) return;
-    const nextSiteId = String(selectedSite.id);
-    setSelectedSiteId(current => current === nextSiteId ? current : nextSiteId);
-    try { localStorage.setItem('motors_selected_site', nextSiteId); } catch (err) {}
-  }, [selectedSite?.id]);
+    const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+    if (!globalId) return;
+    setSelectedSiteId(current => current === globalId ? current : globalId);
+    try { localStorage.setItem('motors_selected_site', globalId); } catch (err) {}
+  }, [selectedSite]);
 
   // â”€â”€ Load Sites Correctly â”€â”€
   useEffect(() => {

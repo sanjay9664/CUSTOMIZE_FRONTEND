@@ -14,7 +14,7 @@ const ALL_SCADA_MODULES = [
   'HVAC', 'VRV', 'AC', 'AQI Sensor',
   'Water Management', 'Motors',
   'Fire', 'Alarm System',
-  'Ticketing', 'Maintenance', 'Service History', 'Daily DPR',
+  'Ticketing', 'Maintenance', 'Service History', 'Daily DPR', 'Audit Log',
   'Setting Templates'
 ];
 

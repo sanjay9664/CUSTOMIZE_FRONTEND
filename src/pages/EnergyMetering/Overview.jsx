@@ -271,18 +271,23 @@ const EnergyMeteringOverview = () => {
   // Keep the page filter synchronized with the shared header site selection.
   useEffect(() => {
     if (!Array.isArray(allSites) || allSites.length === 0) return;
-    const globalSiteId = selectedSite?.id || selectedSite?.siteId || selectedSite?._id;
-    const globalMatch = allSites.find(site => String(site.id || site.siteId || site._id) === String(globalSiteId));
-    const savedMatch = allSites.find(site => String(site.id || site.siteId || site._id) === String(selectedSiteId));
-    const targetSite = globalMatch || savedMatch || allSites[0];
-    const targetId = String(targetSite.id || targetSite.siteId || targetSite._id);
-
-    if (String(selectedSiteId) !== targetId) {
-      setSelectedSiteId(targetId);
-      localStorage.setItem('selected_energy_overview_site_id', targetId);
+    const globalSiteId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+    if (globalSiteId) {
+      if (String(selectedSiteId) !== globalSiteId) {
+        setSelectedSiteId(globalSiteId);
+        localStorage.setItem('selected_energy_overview_site_id', globalSiteId);
+      }
+    } else {
+      const savedMatch = allSites.find(site => String(site.id ?? site.siteId ?? site._id ?? '') === String(selectedSiteId));
+      const targetSite = savedMatch || allSites[0];
+      const targetId = String(targetSite.id ?? targetSite.siteId ?? targetSite._id ?? '');
+      if (String(selectedSiteId) !== targetId) {
+        setSelectedSiteId(targetId);
+        localStorage.setItem('selected_energy_overview_site_id', targetId);
+      }
+      if (setSelectedSite) setSelectedSite(targetSite);
     }
-    if (!globalMatch && setSelectedSite) setSelectedSite(targetSite);
-  }, [allSites, selectedSite?.id, selectedSite?.siteId, selectedSite?._id, selectedSiteId, setSelectedSite]);
+  }, [selectedSite, allSites, setSelectedSite]);
 
   // Site selector configuration for the PageContextBanner
   const siteSelector = useMemo(() => {

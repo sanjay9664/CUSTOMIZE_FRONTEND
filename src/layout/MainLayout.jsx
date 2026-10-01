@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge } from 'lucide-react';
+import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge, FileText } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useSiteStore } from '../context/SiteContext';
@@ -11,6 +11,7 @@ const MODULE_HEADER_CONFIG = [
   { match: /^\/water-management(?:\/|$)/, title: 'Water Management', icon: Droplets },
   { match: /^\/motors(?:\/|$)/, title: 'Motors', icon: Activity },
   { match: /^\/daily-dpr(?:\/|$)/, title: 'Daily DPR', icon: Gauge },
+  { match: /^\/audit-logs(?:\/|$)|^\/admin\/audit-logs(?:\/|$)/, title: 'Audit Log', icon: FileText },
   { match: /^\/lt-panel(?:\/|$)/, title: 'LT Panel', icon: LayoutDashboard },
   { match: /^\/transformer(?:\/|$)/, title: 'Transformer', icon: Zap },
   { match: /^\/hvac(?:\/|$)|^\/ahu$|^\/cooling-tower$/, title: 'HVAC', icon: Thermometer },
