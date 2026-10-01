@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ChartTooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import './Chiller.css';
 
 const Chiller = () => {
   const [timeRange, setTimeRange] = useState('DAY');
@@ -77,36 +78,35 @@ const Chiller = () => {
   };
 
   const Tile = ({ title, value, bg, border, text, icon }) => (
-    <div 
-      className="d-flex flex-column justify-content-center align-items-center px-3 py-2 rounded scada-tile"
+    <div
+      className="chiller-metric-tile rounded scada-tile"
       style={{ 
         backgroundColor: bg || 'rgba(0,0,0,0.4)', 
         border: border ? `1px solid ${border}` : '1px solid rgba(255,255,255,0.1)',
-        minWidth: '180px',
         backdropFilter: 'blur(8px)',
         boxShadow: border ? `0 0 15px ${border}22 inset` : 'none'
       }}
     >
-      <div className="fs-12 fw-bold tracking-widest mb-1 text-uppercase text-center" style={{ color: border ? text : 'rgba(255,255,255,0.7)' }}>{title}</div>
-      <div className="fs-4 fw-black d-flex align-items-center justify-content-center gap-2" style={{ color: text || '#fff' }}>
-        {icon && <span style={{ opacity: 0.8 }}>{icon}</span>}
-        {value}
+      {icon && <span className="chiller-metric-icon">{icon}</span>}
+      <div className="chiller-metric-copy">
+        <div className="chiller-metric-label fw-bold text-uppercase" style={{ color: border ? text : 'rgba(255,255,255,0.7)' }}>{title}</div>
+        <div className="chiller-metric-value fw-black" style={{ color: text || '#fff' }}>{value}</div>
       </div>
     </div>
   );
 
   const StatCard = ({ title, value, unit, icon, colorHex }) => (
-    <div className="d-flex align-items-center justify-content-between p-3 mb-3 rounded-4 scada-tile" style={{ background: `linear-gradient(90deg, ${colorHex}15 0%, transparent 100%)`, border: `1px solid ${colorHex}30`, borderLeft: `4px solid ${colorHex}` }}>
+    <div className="chiller-stat-card d-flex align-items-center justify-content-between p-3 mb-3 rounded-4 scada-tile" style={{ background: `linear-gradient(90deg, ${colorHex}15 0%, transparent 100%)`, border: `1px solid ${colorHex}30`, borderLeft: `4px solid ${colorHex}` }}>
 
       <div className="d-flex align-items-center gap-3 w-100">
-        <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px', background: `${colorHex}20`, color: colorHex }}>
+        <div className="chiller-stat-icon rounded-circle d-flex align-items-center justify-content-center" style={{ background: `${colorHex}20`, color: colorHex }}>
           {icon}
         </div>
         <div className="flex-grow-1 text-end">
-          <div className="fw-bold fs-12 tracking-wider mb-1 text-uppercase" style={{ color: colorHex, opacity: 0.8 }}>{title}</div>
+          <div className="chiller-stat-label fw-bold tracking-wider mb-1 text-uppercase" style={{ color: colorHex, opacity: 0.9 }}>{title}</div>
           <div className="d-flex align-items-baseline justify-content-end gap-1">
-            <h4 className="mb-0 fw-black tracking-tight" style={{ color: colorHex }}>{value}</h4>
-            {unit && <small className="fw-bold fs-13" style={{ color: colorHex, opacity: 0.8 }}>{unit}</small>}
+            <div className="chiller-stat-value fw-black tracking-tight" style={{ color: colorHex }}>{value}</div>
+            {unit && <small className="chiller-stat-unit fw-bold" style={{ color: colorHex, opacity: 0.9 }}>{unit}</small>}
           </div>
         </div>
       </div>
@@ -114,14 +114,14 @@ const Chiller = () => {
   );
 
   return (
-    <div className="chiller-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
-      <Row className="g-4 mb-4" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
+    <div className="chiller-wrapper chiller-dashboard h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
+      <Row className="g-3 mb-3 chiller-main-row" style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.4s ease-in-out' }}>
         {/* DIAGRAM SECTION */}
         <Col xl={8}>
-          <div className="chiller-diagram-container position-relative w-100 rounded-4 overflow-hidden border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', height: '650px' }}>
+          <div className="chiller-diagram-container position-relative w-100 rounded-4 overflow-hidden border shadow-lg" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)', height: 'clamp(440px, 68vh, 650px)' }}>
             
             {/* Top Row Tiles */}
-            <div className="d-flex justify-content-between align-items-start position-absolute w-100 px-4 pt-4" style={{ top: 0, left: 0, zIndex: 11 }}>
+            <div className="chiller-metrics-top d-flex justify-content-between align-items-start position-absolute w-100 px-4 pt-4" style={{ top: 0, left: 0, zIndex: 11 }}>
               <Tile title="CHILLED WATER INLET" value="31.36 °C" bg="#0c4a6e" border="#0ea5e9" text="#fff" icon={<Thermometer size={18} className="text-info" />} />
               <Tile title="POWER DRAWN" value="135.4 kW" border="#eab308" text="#eab308" icon={<Zap size={18} />} />
               <Tile title="COOLING EFFECT" value="115.0 TR" border="#22d3ee" text="#22d3ee" icon={<Snowflake size={18} />} />
@@ -129,10 +129,10 @@ const Chiller = () => {
             </div>
 
             {/* Bottom Row Tiles */}
-            <div className="d-flex justify-content-between align-items-end position-absolute w-100 px-5 pb-4" style={{ bottom: 0, left: 0, zIndex: 11 }}>
+            <div className="chiller-metrics-bottom d-flex justify-content-between align-items-end position-absolute w-100 px-5 pb-4" style={{ bottom: 0, left: 0, zIndex: 11 }}>
               <Tile title="CONDENSER OUTLET" value="35.20 °C" bg="#450a0a" border="#ef4444" text="#fff" icon={<Thermometer size={18} className="text-danger" />} />
               <div className="rounded-3 px-4 py-3 text-center shadow-lg" style={{ backgroundColor: '#a855f7', border: '2px solid #d8b4fe' }}>
-                <h3 className="text-white fw-black m-0 tracking-wider">1.18 kW/TR</h3>
+                <h3 className="chiller-efficiency-value text-white fw-black m-0 tracking-wider">1.18 kW/TR</h3>
               </div>
               <Tile title="CONDENSER INLET" value="29.10 °C" bg="#422006" border="#eab308" text="#fff" icon={<Thermometer size={18} className="text-warning" />} />
             </div>
@@ -208,8 +208,8 @@ const Chiller = () => {
 
         {/* PERFORMANCE ANALYTICS SECTION */}
         <Col xl={4}>
-          <div className="scada-card h-100 rounded-4 p-4 border d-flex flex-column" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
-            <div className="d-flex justify-content-center mb-5">
+          <div className="chiller-analytics-card scada-card h-100 rounded-4 p-3 p-xl-4 border d-flex flex-column" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
+            <div className="d-flex justify-content-center mb-4">
               <Nav variant="pills" className="p-1 rounded-pill border" style={{ backgroundColor: 'var(--scada-accent-bg)', borderColor: 'var(--scada-border)' }}>
                 <Nav.Item>
                   <Nav.Link 
