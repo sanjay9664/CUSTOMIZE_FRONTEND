@@ -27,16 +27,8 @@ const EnergyPDFReport = () => {
     } catch (err) {
       console.error('Failed to load templates:', err);
     }
-
-    fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setTemplates(data);
-        }
-      })
-      .catch(err => console.warn('Could not fetch templates from backend:', err));
   }, []);
+
 
   const energyMeters = useMemo(() => {
     return templates.filter(t =>

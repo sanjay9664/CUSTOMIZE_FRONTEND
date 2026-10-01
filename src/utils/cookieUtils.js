@@ -66,22 +66,24 @@ const safeStorageRemove = (key) => {
 
 export const getAuthToken = () => {
   return (
+    safeStorageGet('token') ||
+    safeStorageGet('accessToken') ||
+    safeStorageGet('access_token') ||
     inMemoryAccessToken ||
     getCookie('access_token') ||
     getCookie('token') ||
-    safeStorageGet('token') ||
-    safeStorageGet('access_token') ||
     safeStorageGet('sochiot_token') ||
+    safeStorageGet('auth_token') ||
     null
   );
 };
 
 export const getRefreshToken = () => {
   return (
+    safeStorageGet('refreshToken') ||
+    safeStorageGet('refresh_token') ||
     getCookie('refresh_token') ||
     getCookie('refreshToken') ||
-    safeStorageGet('refresh_token') ||
-    safeStorageGet('refreshToken') ||
     null
   );
 };
@@ -159,6 +161,9 @@ export const setAuthCookies = ({ token, refreshToken, userRole, userData }) => {
 export const setAuthSession = ({ token, refreshToken, userRole, userData }) => {
   if (token) {
     setMemoryToken(token);
+    safeStorageSet('token', token);
+    safeStorageSet('accessToken', token);
+    safeStorageSet('access_token', token);
   }
   setAuthCookies({ token, refreshToken, userRole, userData });
 
@@ -170,12 +175,6 @@ export const setAuthSession = ({ token, refreshToken, userRole, userData }) => {
     safeStorageSet('refreshToken', refreshToken);
   }
   safeStorageSet('isAuthenticated', 'true');
-
-  // Remove redundant raw JWT tokens from localStorage to minimize XSS attack surface
-  safeStorageRemove('token');
-  safeStorageRemove('access_token');
-  safeStorageRemove('sochiot_token');
-  safeStorageRemove('auth_token');
 };
 
 export const clearAuthCookies = () => {
@@ -198,6 +197,7 @@ export const clearAuthSession = () => {
 
   // Clear local storage and session storage immediately
   safeStorageRemove('token');
+  safeStorageRemove('accessToken');
   safeStorageRemove('access_token');
   safeStorageRemove('refresh_token');
   safeStorageRemove('refreshToken');

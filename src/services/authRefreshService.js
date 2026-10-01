@@ -41,8 +41,14 @@ export const performTokenRefresh = async (force = false) => {
     const currentRefreshToken = getRefreshToken();
 
     if (!currentRefreshToken && !currentAccessToken) {
+      console.warn('[AuthRefresh] performTokenRefresh called but NO access token and NO refresh token found. Returning null without logout.');
       return null;
     }
+
+    console.info(
+      `[AuthRefresh] Attempting token refresh at ${AUTH_ENDPOINTS.refresh}`,
+      { hasAccessToken: !!currentAccessToken, hasRefreshToken: !!currentRefreshToken, force }
+    );
 
     try {
       const response = await fetch(AUTH_ENDPOINTS.refresh, {
@@ -54,6 +60,8 @@ export const performTokenRefresh = async (force = false) => {
         },
         body: JSON.stringify(currentRefreshToken ? { refreshToken: currentRefreshToken } : {})
       });
+
+      console.info(`[AuthRefresh] Refresh endpoint responded: HTTP ${response.status}`);
 
       if (response.ok) {
         const resData = await response.json();
@@ -72,16 +80,18 @@ export const performTokenRefresh = async (force = false) => {
             userData
           });
 
+          console.info('[AuthRefresh] Token refreshed successfully.');
           return newAccessToken;
         }
       } else if (response.status === 401 || response.status === 403) {
         // Refresh token is expired or revoked
-        console.warn('[AuthRefresh] Refresh token expired or revoked. Logging out...');
         clearAuthSession();
         if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
         return null;
+      } else {
+        console.warn(`[AuthRefresh] Unexpected HTTP ${response.status} from refresh endpoint. Session NOT cleared.`);
       }
     } catch (err) {
       console.warn('[AuthRefresh] Network error during token refresh:', err);
@@ -94,6 +104,7 @@ export const performTokenRefresh = async (force = false) => {
 
   return activeRefreshPromise;
 };
+
 
 const handleVisibilityOrFocus = () => {
   if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;

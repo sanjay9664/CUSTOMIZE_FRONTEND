@@ -7,7 +7,7 @@
  * 3. Reactively catches 401 Unauthorized responses, triggers performTokenRefresh(true),
  *    and retries the original request with the renewed token.
  */
-import { getAuthToken, isTokenExpiringSoon, clearAuthSession } from '../utils/cookieUtils';
+import { getAuthToken, isTokenExpiringSoon } from '../utils/cookieUtils';
 import { performTokenRefresh } from './authRefreshService';
 
 const withUpdatedAuthHeader = (existingHeaders, token) => {
@@ -68,18 +68,25 @@ export const installGlobalFetchInterceptor = () => {
                         url.includes('/auth/forgot-password') ||
                         url.includes('/auth/reset-password');
 
-    // 1. Proactive Refresh Check before outgoing authenticated requests
+    // 1. Proactive Refresh Check & Token Attachment before outgoing authenticated requests
     if (isApiRequest && !isAuthRoute) {
-      const currentToken = getAuthToken();
+      let currentToken = getAuthToken();
       if (currentToken && isTokenExpiringSoon(currentToken, 30)) {
         try {
           const freshToken = await performTokenRefresh(true);
           if (freshToken) {
-            currentInit.headers = withUpdatedAuthHeader(currentInit.headers, freshToken);
+            currentToken = freshToken;
           }
         } catch (e) {
           // Fall through and let request proceed if refresh errors
         }
+      }
+
+      // Automatically attach Bearer token if not already attached
+      if (currentToken && !hasAuthHeader) {
+        currentInit.headers = withUpdatedAuthHeader(currentInit.headers, currentToken);
+      } else if (currentToken && hasAuthHeader && isTokenExpiringSoon(currentToken, 30)) {
+        currentInit.headers = withUpdatedAuthHeader(currentInit.headers, currentToken);
       }
     }
 
@@ -97,9 +104,11 @@ export const installGlobalFetchInterceptor = () => {
 
     // 2. Reactive 401 Interceptor: If backend responds 401, perform token refresh and retry once
     if (response && response.status === 401 && isApiRequest && !isAuthRoute) {
+      console.warn(`[FetchInterceptor] 401 received for: ${url} — attempting token refresh`);
       try {
         const renewedToken = await performTokenRefresh(true);
         if (renewedToken) {
+          console.info(`[FetchInterceptor] Token refreshed, retrying: ${url}`);
           const retryInit = {
             ...currentInit,
             headers: withUpdatedAuthHeader(currentInit.headers, renewedToken),
@@ -107,12 +116,11 @@ export const installGlobalFetchInterceptor = () => {
           };
 
           return await nativeFetch(input, retryInit);
-        } else {
-          clearAuthSession();
-          if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
-            window.location.href = '/login';
-          }
         }
+        // If refresh fails, return the 401 as-is — do NOT force logout here.
+        // A single failing API call does not mean the session is invalid;
+        // the page can handle the error, and bootstrapAuth will re-validate on next load.
+        console.warn(`[FetchInterceptor] Token refresh returned null for 401 on ${url}. Returning 401 to caller (no forced logout).`);
       } catch (refreshErr) {
         console.warn('[FetchInterceptor] 401 retry failed:', refreshErr);
       }

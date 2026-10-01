@@ -11,14 +11,15 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import PasswordInput from '../../components/PasswordInput';
 import { getApiUrl } from '../../utils/apiConfig';
+import { getAuthToken } from '../../utils/cookieUtils';
 
 const API_BASE_URL = getApiUrl();
 
 const getAuthHeaders = () => {
-  let token = localStorage.getItem('token') || 
-              localStorage.getItem('sochiot_token') || 
-              localStorage.getItem('auth_token') || 
-              localStorage.getItem('access_token') || 'bms-dev-token-admin';
+  const token = getAuthToken() || 
+                localStorage.getItem('token') || 
+                localStorage.getItem('accessToken') || 
+                localStorage.getItem('auth_token') || '';
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
@@ -561,10 +562,12 @@ const UserManagement = () => {
             <Form.Group className="mb-3"><Form.Label>Email Address</Form.Label><Form.Control type="email" className="scada-input" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required /></Form.Group>
             <Form.Group className="mb-3"><Form.Label>{formData.id ? 'New Password (Optional)' : 'Default Password'}</Form.Label><PasswordInput className="scada-input" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required={!formData.id} /></Form.Group>
             <Form.Group className="mb-3"><Form.Label>Assigned Role</Form.Label>
-              <Form.Select className="scada-input" value={formData.role || 'USER'} onChange={(e) => setFormData({...formData, role: e.target.value})}>
-                <option value="USER">Field User / Operator</option>
-                <option value="ADMIN">Administrator</option>
-                <option value="VIEWER">Viewer</option>
+              <Form.Select className="scada-input" value={formData.role || 'VIEWER'} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="MANAGER">MANAGER</option>
+                <option value="OPERATOR">OPERATOR</option>
+                <option value="VIEWER">VIEWER</option>
               </Form.Select>
             </Form.Group>
           </Modal.Body>
@@ -602,9 +605,11 @@ const UserManagement = () => {
                 value={inviteFormData.role} 
                 onChange={(e) => setInviteFormData({...inviteFormData, role: e.target.value})}
               >
-                <option value="USER">Field User / Operator</option>
-                <option value="ADMIN">Administrator</option>
-                <option value="VIEWER">Viewer</option>
+                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="MANAGER">MANAGER</option>
+                <option value="OPERATOR">OPERATOR</option>
+                <option value="VIEWER">VIEWER</option>
               </Form.Select>
             </Form.Group>
             <Form.Group className="mb-3">

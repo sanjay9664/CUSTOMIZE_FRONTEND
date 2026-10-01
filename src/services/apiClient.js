@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 export const getAuthHeaders = () => {
-  const token = getAuthToken() || '';
+  const token = (typeof localStorage !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('accessToken')) : null) || getAuthToken() || '';
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

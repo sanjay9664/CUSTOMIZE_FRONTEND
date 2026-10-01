@@ -82,7 +82,7 @@ const QUICK_ACTIONS = [
 // ── SYSTEM CONFIG CARDS ──────────────────────────────────────────────────
 const SYSTEM_CARDS = [
   { key: 'global', title: 'Global Settings', description: 'Module visibility, feature toggles & system preferences', icon: Settings, color: '#f59e0b', path: '/settings?tab=global', isGlobal: true },
-  { key: 'users', title: 'User Administration', description: 'Manage users, invitations, roles & permissions', icon: Users, color: '#06b6d4', path: '/admin/manage-users', isUsers: true },
+  { key: 'users', title: 'User Administration', description: 'Manage users, invitations, roles & permissions', icon: Users, color: '#06b6d4', path: '/settings?tab=users', isUsers: true },
   { key: 'commands', title: 'Device Commands', description: 'Remote Modbus/BACnet commands & execution', icon: Terminal, color: '#64748b', tab: 'commands' },
 ];
 
@@ -103,7 +103,7 @@ const SettingsIndex = () => {
     if (location.search.includes('tab=zone') || location.search.includes('tab=area')) return 'location';
     if (location.search.includes('tab=telemetry') || location.search.includes('tab=report') || location.search.includes('tab=alarm')) return 'report_group';
     if (location.search.includes('tab=device')) return 'device';
-    if (location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users')) return 'users';
+    if (location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users') || location.search.includes('tab=users')) return 'users';
     if (location.pathname.includes('/manage-organisation')) return 'org';
     return 'hub';
   });
@@ -111,6 +111,8 @@ const SettingsIndex = () => {
   useEffect(() => {
     if (location.search.includes('tab=global') || location.pathname.includes('/global-settings')) {
       setActiveTab('global');
+    } else if (location.search.includes('tab=users') || location.pathname.includes('/settings/users') || location.pathname.includes('/admin/users')) {
+      setActiveTab('users');
     } else if (location.search.includes('tab=asset')) {
       setActiveTab('assets');
     } else if (location.search.includes('tab=building')) {
@@ -123,8 +125,6 @@ const SettingsIndex = () => {
       setActiveTab('report_group');
     } else if (location.search.includes('tab=device')) {
       setActiveTab('device');
-    } else if (location.pathname.includes('/settings/users')) {
-      navigate('/admin/manage-users', { replace: true });
     } else if (location.pathname.includes('/manage-organisation')) {
       setActiveTab('org');
     } else if (location.pathname === '/settings' && !location.search) {
@@ -202,7 +202,7 @@ const SettingsIndex = () => {
     setActiveTab(tab);
     if (tab === 'hub') navigate('/settings');
     else if (tab === 'global') navigate('/settings');
-    else if (tab === 'users') navigate('/admin/manage-users');
+    else if (tab === 'users') navigate('/settings?tab=users');
     else if (tab === 'org') navigate('/manage-organisation');
     else if (tab === 'location') navigate('/manage-organisation?tab=zone');
     else if (tab === 'device') navigate('/manage-organisation?tab=device');
@@ -778,6 +778,8 @@ const SettingsIndex = () => {
         <AssetManagement />
       ) : activeTab === 'devices' ? (
         <DeviceManagement />
+      ) : activeTab === 'users' ? (
+        <UserAdministration />
       ) : null}
     </div>
   );

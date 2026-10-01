@@ -63,11 +63,11 @@ export const login = createAsyncThunk('auth/login', async ({ identifier, passwor
       return rejectWithValue(result?.error?.message || result?.message || 'Invalid username/email or password');
     }
 
-    const data = result?.data || result;
+    const data = result?.data?.data || result?.data || result;
     const user = sanitizeUserData(data?.user) || {};
     const userRole = user.role || 'ADMIN';
 
-    // Persist securely to cookie / memory token session (not in global Redux state tree)
+    // Persist securely to cookie, localStorage, & memory token session
     setAuthSession({
       token: data?.accessToken || data?.token || '',
       refreshToken: data?.refreshToken || '',
