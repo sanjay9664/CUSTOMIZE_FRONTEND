@@ -4,8 +4,6 @@ import { Download, Calendar, ClipboardList, RefreshCw, Zap, FileSpreadsheet, Bui
 import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
 import { useSiteStore } from '../../context/SiteContext';
 import { apiClient, normalizeList } from '../../services/apiClient';
-import { bmsService } from '../../services/bmsService';
-import { mapLatestEventsToTelemetry } from './utils/energyTelemetry';
 
 const EnergyPDFReport = () => {
   const { sites = [], activeSites = [], selectedSite, setSelectedSite } = useSiteStore();
@@ -37,9 +35,11 @@ const EnergyPDFReport = () => {
     return currentSite?.name || currentSite?.siteName || (allSites[0]?.name ? allSites[0].name : 'STORE-1');
   }, [currentSite, allSites]);
 
+  // Filter state strictly matching user API requirements:
+  // deviceId=3/9, startDate=YYYY-MM-DDT00:00:00Z, endDate=YYYY-MM-DDT23:59:59Z, interval=DAILY|MIN_15|HOURLY
   const [filter, setFilter] = useState({
-    dateRange: 'today',
-    siteId: selectedSiteId,
+    deviceId: '3',
+    interval: 'DAILY',
     startDate: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   });
@@ -49,150 +49,181 @@ const EnergyPDFReport = () => {
   const [siteDevices, setSiteDevices] = useState([]);
   const [reportData, setReportData] = useState([]);
 
-  // Ref to track last fetched parameters and avoid duplicate API queries
-  const fetchedKeyRef = useRef('');
+  // Sequence ref to ignore stale out-of-order network responses
+  const activeRequestRef = useRef(0);
 
-  // Helper to convert filter dates and interval to ISO strings matching GET /api/v1/reports/energy spec
-  const resolveDateParams = useCallback((rangeKey, customStart, customEnd) => {
-    const now = new Date();
-    let startISO = '';
-    let endISO = now.toISOString();
-    let interval = 'HOURLY';
+  // 1. Fetch site devices on site change to resolve available meter IDs (e.g. deviceId: 3, 9)
+  useEffect(() => {
+    let isMounted = true;
+    const loadSiteDevices = async () => {
+      if (!selectedSiteId) return;
+      try {
+        const res = await apiClient.get('/devices', { siteId: String(selectedSiteId) }).catch(() => null);
+        const list = normalizeList(res, 'devices');
 
-    if (rangeKey === 'today') {
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      startISO = todayStart.toISOString();
-      interval = 'HOURLY';
-    } else if (rangeKey === 'yesterday') {
-      const yStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
-      const yEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
-      startISO = yStart.toISOString();
-      endISO = yEnd.toISOString();
-      interval = 'HOURLY';
-    } else if (rangeKey === '7days') {
-      const d7 = new Date(now.getTime() - 7 * 86400000);
-      startISO = d7.toISOString();
-      interval = 'DAILY';
-    } else if (rangeKey === '30days') {
-      const d30 = new Date(now.getTime() - 30 * 86400000);
-      startISO = d30.toISOString();
-      interval = 'DAILY';
-    } else if (rangeKey === 'custom') {
-      startISO = customStart ? new Date(`${customStart}T00:00:00.000Z`).toISOString() : new Date(now.getTime() - 7 * 86400000).toISOString();
-      endISO = customEnd ? new Date(`${customEnd}T23:59:59.999Z`).toISOString() : now.toISOString();
-      interval = 'DAILY';
+        if (isMounted && list && list.length > 0) {
+          // Prioritize ENERGY_METER devices
+          const energyMeters = list.filter(d =>
+            d.category === 'ENERGY_METER' ||
+            d.category === 'MAIN_ENERGY_METER' ||
+            (d.name && /meter|energy/i.test(d.name))
+          );
+          const devicesToUse = energyMeters.length > 0 ? energyMeters : list;
+          setSiteDevices(devicesToUse);
+
+          setFilter(prev => {
+            const exists = devicesToUse.some(d => String(d.id || d.deviceId) === String(prev.deviceId));
+            if (!exists) {
+              const defaultDevId = String(devicesToUse[0].id || devicesToUse[0].deviceId || '3');
+              return { ...prev, deviceId: defaultDevId };
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        console.warn('Error fetching devices for site:', err);
+      }
+    };
+
+    loadSiteDevices();
+    return () => { isMounted = false; };
+  }, [selectedSiteId]);
+
+  // Resolve target meter display name
+  const selectedMeterName = useMemo(() => {
+    const dev = siteDevices.find(d => String(d.id || d.deviceId) === String(filter.deviceId));
+    if (dev) {
+      return dev.name || dev.deviceName || `Meter (ID: ${dev.id || dev.deviceId})`;
     }
+    return filter.deviceId ? `Normal Meter (ID: ${filter.deviceId})` : selectedSiteName;
+  }, [siteDevices, filter.deviceId, selectedSiteName]);
 
-    return { startDate: startISO, endDate: endISO, interval };
-  }, []);
+  // 2. Fetch energy report cleanly without request spam or 401s
+  // Calls GET /api/v1/reports/energy with Bearer token authentication
+  const fetchEnergyReport = useCallback(async (currentFilter) => {
+    if (!currentFilter?.deviceId) return;
 
-  // Primary API execution function:
-  // Hits GET /api/v1/reports/energy?deviceId=123&startDate=...&endDate=...&interval=HOURLY
-  // and GET /api/v1/reports/energy as requested. Strictly zero dummy data.
-  const fetchEnergyReportData = useCallback(async (siteId, currentFilter = filter) => {
-    if (!siteId) return;
+    const requestId = ++activeRequestRef.current;
     setLoading(true);
+
     try {
-      const targetSiteId = String(siteId);
+      const devId = currentFilter.deviceId;
+      const startISO = `${currentFilter.startDate}T00:00:00Z`;
+      const endISO = `${currentFilter.endDate}T23:59:59Z`;
+      const intervalVal = currentFilter.interval || 'DAILY';
 
-      // 1. Resolve devices for the selected site
-      let devicesList = siteDevices;
-      if (!devicesList || devicesList.length === 0) {
-        const devRes = await apiClient.get('/devices', {
-          siteId: targetSiteId,
-          category: 'MAIN_ENERGY_METER',
-          include: 'settings,rules,profile'
-        }).catch(() => null);
+      const queryParams = {
+        deviceId: String(devId),
+        startDate: startISO,
+        endDate: endISO,
+        interval: intervalVal
+      };
 
-        devicesList = normalizeList(devRes, 'devices');
-        if (!devicesList || devicesList.length === 0) {
-          const fallbackRes = await apiClient.get('/devices', { siteId: targetSiteId }).catch(() => null);
-          devicesList = normalizeList(fallbackRes, 'devices');
-        }
-        setSiteDevices(devicesList || []);
+      // Call internal authenticated API route (/api/v1/reports/energy)
+      // Never call external URL directly in browser to avoid 401s
+      const reportRes = await apiClient.get('/reports/energy', queryParams).catch((err) => {
+        console.warn('Failed to load energy report:', err);
+        return null;
+      });
+
+      // Discard stale response if another request was triggered
+      if (requestId !== activeRequestRef.current) {
+        return;
       }
 
-      const targetDevice = devicesList && devicesList.length > 0 ? devicesList[0] : null;
-      const targetDeviceId = targetDevice ? String(targetDevice.id || targetDevice.deviceId || '') : null;
-
-      // 2. Resolve query parameters for Energy Report API
-      const { startDate, endDate, interval } = resolveDateParams(
-        currentFilter.dateRange,
-        currentFilter.startDate,
-        currentFilter.endDate
-      );
-
-      // 3. Hit the Energy Report APIs specified by user:
-      // Endpoint 1: GET /api/v1/reports/energy?deviceId=123&startDate=...&endDate=...&interval=HOURLY
-      let reportRes = null;
-      if (targetDeviceId) {
-        reportRes = await bmsService.getEnergyReports({
-          deviceId: String(targetDeviceId),
-          startDate,
-          endDate,
-          interval
-        }).catch(() => null);
+      // Extract records: backend returns { success: true, data: { deviceId, data: [...] } }
+      let rawRecords = [];
+      if (Array.isArray(reportRes?.data?.data)) {
+        rawRecords = reportRes.data.data;
+      } else if (Array.isArray(reportRes?.data)) {
+        rawRecords = reportRes.data;
+      } else if (Array.isArray(reportRes?.data?.records)) {
+        rawRecords = reportRes.data.records;
+      } else if (Array.isArray(reportRes?.records)) {
+        rawRecords = reportRes.records;
+      } else if (Array.isArray(reportRes?.items)) {
+        rawRecords = reportRes.items;
+      } else if (Array.isArray(reportRes)) {
+        rawRecords = reportRes;
       }
 
-      // Endpoint 2: GET /api/v1/reports/energy (general query)
-      if (!reportRes || (Array.isArray(reportRes?.data) && reportRes.data.length === 0)) {
-        const generalRes = await bmsService.getEnergyReports({
-          startDate,
-          endDate,
-          interval
-        }).catch(() => null);
-        if (generalRes) {
-          reportRes = generalRes;
-        }
-      }
-
-      // Parse records returned from /reports/energy
-      const rawRecords = Array.isArray(reportRes?.data)
-        ? reportRes.data
-        : (Array.isArray(reportRes?.data?.records)
-          ? reportRes.data.records
-          : (Array.isArray(reportRes?.records)
-            ? reportRes.records
-            : (Array.isArray(reportRes?.items)
-              ? reportRes.items
-              : (Array.isArray(reportRes) ? reportRes : null))));
+      const currentDeviceObj = siteDevices.find(d => String(d.id || d.deviceId) === String(devId));
+      const meterDisplayName = currentDeviceObj?.name || `Meter #${devId}`;
 
       if (rawRecords && rawRecords.length > 0) {
-        // Map records directly from GET /api/v1/reports/energy
+        const pad = (n) => String(n).padStart(2, '0');
+
         const parsedRows = rawRecords.map((item, idx) => {
-          const rawTime = item.timestamp || item.time || item.date || item.createdAt || item.recordedAt;
-          let dateStr = '';
+          const startInstant = item.windowStart || item.timestamp || item.time || item.date || item.createdAt;
+          const endInstant = item.windowEnd || item.recordedAt || startInstant;
+
+          let dateCol = '';
           let lastUpdatedStr = '';
-          if (rawTime) {
-            const d = new Date(rawTime);
-            dateStr = !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : String(rawTime);
-            lastUpdatedStr = !isNaN(d.getTime())
-              ? `${dateStr} ${d.toLocaleTimeString('en-IN', { hour12: true })}`
-              : String(rawTime);
+
+          if (startInstant) {
+            const startDateObj = new Date(startInstant);
+            const endDateObj = endInstant ? new Date(endInstant) : startDateObj;
+
+            const yyyy = startDateObj.getFullYear();
+            const mm = pad(startDateObj.getMonth() + 1);
+            const dd = pad(startDateObj.getDate());
+            const dateOnly = `${dd}-${mm}-${yyyy}`;
+
+            const startHH = pad(startDateObj.getHours());
+            const startMM = pad(startDateObj.getMinutes());
+            const endHH = pad(endDateObj.getHours());
+            const endMM = pad(endDateObj.getMinutes());
+
+            if (intervalVal === 'DAILY') {
+              dateCol = dateOnly;
+              lastUpdatedStr = `${dateOnly} 23:59:59`;
+            } else {
+              dateCol = `${dateOnly} ${startHH}:${startMM} - ${endHH}:${endMM}`;
+              lastUpdatedStr = `${pad(endDateObj.getDate())}-${pad(endDateObj.getMonth() + 1)}-${endDateObj.getFullYear()} ${endHH}:${endMM}:00`;
+            }
           } else {
-            dateStr = new Date().toISOString().split('T')[0];
-            lastUpdatedStr = `${dateStr} ${new Date().toLocaleTimeString('en-IN', { hour12: true })}`;
+            dateCol = currentFilter.startDate;
+            lastUpdatedStr = `${currentFilter.endDate} 23:59:59`;
           }
 
-          const kwh = item.kwh ?? item.consumption ?? item.activeEnergy ?? item.ebKwh ?? item.totalKwh;
-          const kw = item.kw ?? item.demand ?? item.peakDemand ?? item.activePower ?? item.totalKw;
-          const kvah = item.kvah ?? item.apparentEnergy ?? item.ebKvah ?? item.totalKvah;
-          const pf = item.pf ?? item.powerFactor ?? item.avgPf ?? item.pfAvg;
+          // Active Energy (kWh)
+          const kwhRaw = item.energyDelta != null
+            ? item.energyDelta
+            : (item.closingEnergy != null && item.openingEnergy != null
+              ? Math.max(0, item.closingEnergy - item.openingEnergy)
+              : (item.consumption ?? item.kwh ?? item.activeEnergy ?? item.energy ?? 0));
+          const kwhNum = Number(kwhRaw) || 0;
+
+          // Active Power (kW)
+          const kwRaw = item.demandMax ?? item.peakDemand ?? item.demand ?? item.powerKw ?? item.kw ?? item.activePower ?? 0;
+          const kwNum = Number(kwRaw) || 0;
+
+          // Power Factor (PF)
+          const pfRaw = item.pfAvg ?? item.powerFactor ?? item.pf ?? item.avgPf ?? 0.99;
+          const pfNum = Number(pfRaw) || 0.99;
+
+          // Apparent Energy (kVAh)
+          const kvahRaw = item.kvahDelta != null
+            ? item.kvahDelta
+            : (item.closingKvah != null && item.openingKvah != null
+              ? Math.max(0, item.closingKvah - item.openingKvah)
+              : (item.apparentEnergy ?? item.kvah ?? (kwhNum > 0 && pfNum > 0 ? kwhNum / pfNum : 0)));
+          const kvahNum = Number(kvahRaw) || 0;
+
+          const refCode = item.id || `REP-EM-${idx + 1}`;
 
           return {
-            id: item.id || item.refId || `REP-EM-${dateStr.replace(/-/g, '')}-${idx + 1}`,
-            date: dateStr,
-            meter: item.meterName || item.deviceName || item.targetFeedNode || targetDevice?.name || selectedSiteName,
-            kwh: kwh !== undefined && kwh !== null ? `${Number(kwh).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh` : '0.00 kWh',
-            kw: kw !== undefined && kw !== null ? `${Number(kw).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kW` : '0.00 kW',
-            kvah: kvah !== undefined && kvah !== null
-              ? `${Number(kvah).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kVAh`
-              : (kwh && pf && Number(pf) > 0 ? `${(Number(kwh) / Number(pf)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kVAh` : '0.00 kVAh'),
-            pf: pf !== undefined && pf !== null ? Number(pf).toFixed(2) : '1.00',
+            id: String(refCode),
+            date: dateCol,
+            meter: meterDisplayName,
+            kwh: `${kwhNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh`,
+            kw: `${kwNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kW`,
+            kvah: `${kvahNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kVAh`,
+            pf: pfNum.toFixed(2),
             lastUpdated: lastUpdatedStr,
-            rawKwh: Number(kwh) || 0,
-            rawKw: Number(kw) || 0,
-            rawKvah: Number(kvah) || 0
+            rawKwh: kwhNum,
+            rawKw: kwNum,
+            rawKvah: kvahNum
           };
         });
 
@@ -200,130 +231,65 @@ const EnergyPDFReport = () => {
         return;
       }
 
-      // If report response is a single summary object
-      if (reportRes?.data && typeof reportRes.data === 'object' && !Array.isArray(reportRes.data)) {
-        const summary = reportRes.data;
-        const kwh = summary.kwh ?? summary.consumption ?? summary.totalKwh ?? summary.activeEnergy;
-        const kw = summary.kw ?? summary.peakDemand ?? summary.demand ?? summary.activePower;
-        const kvah = summary.kvah ?? summary.apparentEnergy ?? summary.totalKvah;
-        const pf = summary.pf ?? summary.avgPf ?? summary.powerFactor;
+      // If backend only returned summary object
+      const summaryObj = reportRes?.data?.summary || (reportRes?.data && !Array.isArray(reportRes.data) && reportRes.data);
+      if (summaryObj && (summaryObj.totalEnergyConsumed != null || summaryObj.kwh != null)) {
+        const kwhNum = Number(summaryObj.totalEnergyConsumed ?? summaryObj.kwh ?? summaryObj.consumption ?? 0);
+        const kwNum = Number(summaryObj.demandMax ?? summaryObj.peakDemand ?? summaryObj.kw ?? 0);
+        const pfNum = Number(summaryObj.pfAvg ?? summaryObj.powerFactor ?? summaryObj.pf ?? 0.99);
+        const kvahNum = Number(summaryObj.kvahDelta ?? summaryObj.totalKvah ?? (kwhNum > 0 && pfNum > 0 ? kwhNum / pfNum : 0));
 
-        if (kwh !== undefined || kw !== undefined) {
-          const dateStr = new Date().toISOString().split('T')[0];
-          const summaryRow = {
-            id: `REP-EM-${dateStr.replace(/-/g, '')}-1`,
-            date: dateStr,
-            meter: targetDevice?.name || selectedSiteName,
-            kwh: kwh !== undefined && kwh !== null ? `${Number(kwh).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh` : '0.00 kWh',
-            kw: kw !== undefined && kw !== null ? `${Number(kw).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kW` : '0.00 kW',
-            kvah: kvah !== undefined && kvah !== null ? `${Number(kvah).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kVAh` : '0.00 kVAh',
-            pf: pf !== undefined && pf !== null ? Number(pf).toFixed(2) : '1.00',
-            lastUpdated: `${dateStr} ${new Date().toLocaleTimeString('en-IN', { hour12: true })}`,
-            rawKwh: Number(kwh) || 0,
-            rawKw: Number(kw) || 0,
-            rawKvah: Number(kvah) || 0
-          };
-          setReportData([summaryRow]);
-          return;
-        }
+        const summaryRow = {
+          id: 'REP-EM-1',
+          date: `${currentFilter.startDate} to ${currentFilter.endDate}`,
+          meter: meterDisplayName,
+          kwh: `${kwhNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh`,
+          kw: `${kwNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kW`,
+          kvah: `${kvahNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kVAh`,
+          pf: pfNum.toFixed(2),
+          lastUpdated: `${currentFilter.endDate} 23:59:59`,
+          rawKwh: kwhNum,
+          rawKw: kwNum,
+          rawKvah: kvahNum
+        };
+        setReportData([summaryRow]);
+        return;
       }
 
-      // 4. Live telemetry fallback: check GET /devices/:id/events/latest if reports query returned empty
-      if (targetDeviceId) {
-        const eventsRes = await bmsService.getDeviceEventsLatest(targetDeviceId, targetSiteId).catch(() => null);
-        if (eventsRes) {
-          const mapped = mapLatestEventsToTelemetry(eventsRes, targetDevice);
-          const updates = mapped?.updates || {};
-          const lastEventTime = mapped?.lastEventTime;
-
-          const kwh = updates.ebKwh ?? updates.cumulativekWh ?? updates.ep;
-          const kw = updates.totalKw ?? updates.activePower ?? updates.kw;
-          const kvah = updates.ebKvah ?? updates.apparentEnergy ?? updates.eq;
-          const pf = updates.pf ?? updates.pfAvg ?? updates.powerFactor;
-          const vR = updates.vR ?? updates.vLNAvg;
-
-          const hasRealData = Boolean(
-            (kwh !== undefined && kwh !== null && !isNaN(Number(kwh)) && Number(kwh) > 0) ||
-            (kw !== undefined && kw !== null && !isNaN(Number(kw)) && Number(kw) > 0) ||
-            (kvah !== undefined && kvah !== null && !isNaN(Number(kvah)) && Number(kvah) > 0) ||
-            (pf !== undefined && pf !== null && !isNaN(Number(pf)) && Number(pf) > 0) ||
-            (vR !== undefined && vR !== null && Number(vR) > 0) ||
-            lastEventTime
-          );
-
-          if (hasRealData) {
-            const formatTime = (ts) => {
-              if (!ts) {
-                const now = new Date();
-                return `${now.toISOString().split('T')[0]} ${now.toLocaleTimeString('en-IN', { hour12: true })}`;
-              }
-              const ms = ts > 1e12 ? ts : ts * 1000;
-              const d = new Date(ms);
-              return `${d.toISOString().split('T')[0]} ${d.toLocaleTimeString('en-IN', { hour12: true })}`;
-            };
-
-            const dateStr = lastEventTime
-              ? new Date(lastEventTime > 1e12 ? lastEventTime : lastEventTime * 1000).toISOString().split('T')[0]
-              : new Date().toISOString().split('T')[0];
-
-            const realRow = {
-              id: `REP-EM-${dateStr.replace(/-/g, '')}-${targetDevice.id || 1}`,
-              date: dateStr,
-              meter: targetDevice.name || selectedSiteName,
-              kwh: kwh !== undefined && kwh !== null ? `${Number(kwh).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh` : '0.00 kWh',
-              kw: kw !== undefined && kw !== null ? `${Number(kw).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kW` : '0.00 kW',
-              kvah: kvah !== undefined && kvah !== null
-                ? `${Number(kvah).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kVAh`
-                : (kwh && pf && Number(pf) > 0 ? `${(Number(kwh) / Number(pf)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kVAh` : '0.00 kVAh'),
-              pf: pf !== undefined && pf !== null ? Number(pf).toFixed(2) : (updates.pfR ? Number(updates.pfR).toFixed(2) : '1.00'),
-              lastUpdated: formatTime(lastEventTime),
-              rawKwh: Number(kwh) || 0,
-              rawKw: Number(kw) || 0,
-              rawKvah: Number(kvah) || 0
-            };
-            setReportData([realRow]);
-            return;
-          }
-        }
-      }
-
-      // No data recorded -> Strictly empty ledger (ZERO DUMMY DATA)
+      // Zero dummy data when no records returned
       setReportData([]);
     } catch (err) {
       console.warn('Error fetching energy report:', err);
       setReportData([]);
     } finally {
-      setLoading(false);
+      if (requestId === activeRequestRef.current) {
+        setLoading(false);
+      }
     }
-  }, [siteDevices, selectedSiteName, filter, resolveDateParams]);
+  }, [siteDevices]);
 
-  // Trigger API when selected site changes (runs once per site change, preventing duplicate requests)
+  // Single trigger: fetch report strictly when filter parameters change (single request flow)
   useEffect(() => {
-    const key = `${selectedSiteId}_${filter.dateRange}_${filter.startDate}_${filter.endDate}`;
-    if (selectedSiteId && fetchedKeyRef.current !== key) {
-      fetchedKeyRef.current = key;
-      setFilter(prev => ({ ...prev, siteId: String(selectedSiteId) }));
-      fetchEnergyReportData(selectedSiteId);
+    if (filter.deviceId) {
+      fetchEnergyReport(filter);
     }
-  }, [selectedSiteId, filter.dateRange, filter.startDate, filter.endDate, fetchEnergyReportData]);
+  }, [filter.deviceId, filter.interval, filter.startDate, filter.endDate, fetchEnergyReport]);
 
-  // When user changes the Target Meter dropdown below:
-  // Synchronizes with SiteContext; useEffect triggers the clean request.
-  const handleSiteSelectionChange = (e) => {
+  // Target Meter selection
+  const handleDeviceSelectionChange = (e) => {
     const val = e.target.value;
-    setFilter(prev => ({ ...prev, siteId: val }));
-
-    const foundSite = allSites.find(s => String(s.id ?? s.siteId ?? s._id) === String(val));
-    if (foundSite && setSelectedSite) {
-      setSelectedSite(foundSite);
-    }
+    setFilter(prev => ({ ...prev, deviceId: val }));
   };
 
-  // Re-fetch energy report on clicking Generate Report
+  // Interval selection: MIN_15 | HOURLY | DAILY
+  const handleIntervalChange = (val) => {
+    setFilter(prev => ({ ...prev, interval: val }));
+  };
+
+  // Manual Generate Report re-trigger
   const handleGenerate = async () => {
     setGenerating(true);
-    fetchedKeyRef.current = '';
-    await fetchEnergyReportData(filter.siteId || selectedSiteId, filter);
+    await fetchEnergyReport(filter);
     setGenerating(false);
   };
 
@@ -341,7 +307,7 @@ const EnergyPDFReport = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Energy_Report_${selectedSiteName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.dateRange}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Energy_Report_${selectedMeterName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.interval}_${filter.startDate}_to_${filter.endDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -359,10 +325,10 @@ const EnergyPDFReport = () => {
 
     generateUserCustomPdfReport({
       title: 'Energy Telemetry & Metering Report',
-      subtitle: `Target Feed: ${selectedSiteName}`,
+      subtitle: `Target: ${selectedMeterName} • Interval: ${filter.interval}`,
       siteName: selectedSiteName,
-      targetMeter: selectedSiteName,
-      dateRange: filter.dateRange === 'custom' ? `${filter.startDate} to ${filter.endDate}` : `Interval: ${filter.dateRange.toUpperCase()}`,
+      targetMeter: selectedMeterName,
+      dateRange: `${filter.startDate} to ${filter.endDate} (${filter.interval})`,
       kpis: [
         { label: 'Active Energy', value: `${totalKwh.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`, unit: 'kWh' },
         { label: 'Peak Active Power', value: `${maxKw.toFixed(1)}`, unit: 'kW' },
@@ -390,7 +356,7 @@ const EnergyPDFReport = () => {
         r.pf,
         r.lastUpdated
       ]),
-      fileName: `Energy_Report_${selectedSiteName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.dateRange}_${new Date().toISOString().split('T')[0]}.pdf`
+      fileName: `Energy_Report_${selectedMeterName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.interval}_${filter.startDate}_to_${filter.endDate}.pdf`
     });
   };
 
@@ -406,86 +372,100 @@ const EnergyPDFReport = () => {
             </h6>
             <div className="d-flex align-items-center gap-2">
               {loading && (
-                <span className="text-info fs-12 d-flex align-items-center gap-1.5 me-2">
+                <span className="text-info fs-12 d-flex align-items-center gap-2 me-2">
                   <Spinner animation="border" size="sm" /> Querying Energy Report...
                 </span>
               )}
-              <Badge bg="info" className="bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1 rounded-pill d-flex align-items-center gap-1.5 fs-11 fw-semibold">
+              <Badge bg="info" className="bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1 rounded-pill d-flex align-items-center gap-2 fs-11 fw-semibold">
                 <Building2 size={13} />
-                Selected: {selectedSiteName}
+                Selected: {selectedMeterName}
               </Badge>
             </div>
           </div>
 
           <Row className="g-3 align-items-end">
-            <Col md={filter.dateRange === 'custom' ? 3 : 4}>
+            {/* TARGET METER */}
+            <Col md={3}>
               <Form.Group>
                 <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Target Meter</Form.Label>
                 <Form.Select
                   className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2 fw-semibold"
-                  value={String(filter.siteId || selectedSiteId)}
-                  onChange={handleSiteSelectionChange}
+                  value={String(filter.deviceId || '')}
+                  onChange={handleDeviceSelectionChange}
                   aria-label="Target Meter"
                 >
-                  {allSites.map(s => {
-                    const sId = String(s.id ?? s.siteId ?? s._id);
-                    const sName = s.name || s.siteName || `Site #${sId}`;
-                    return (
-                      <option key={sId} value={sId}>
-                        {sName}
-                      </option>
-                    );
-                  })}
+                  {siteDevices.length > 0 ? (
+                    siteDevices.map(d => {
+                      const dId = String(d.id || d.deviceId || '');
+                      const dName = d.name || d.deviceName || `Meter #${dId}`;
+                      return (
+                        <option key={dId} value={dId}>
+                          {dName} (ID: {dId})
+                        </option>
+                      );
+                    })
+                  ) : (
+                    allSites.map(s => {
+                      const sId = String(s.id ?? s.siteId ?? s._id);
+                      const sName = s.name || s.siteName || `Site #${sId}`;
+                      return (
+                        <option key={sId} value={sId}>
+                          {sName}
+                        </option>
+                      );
+                    })
+                  )}
                 </Form.Select>
               </Form.Group>
             </Col>
 
-            <Col md={filter.dateRange === 'custom' ? 3 : 4}>
+            {/* SELECT INTERVAL (15 Minutes, Hourly, Daily) */}
+            <Col md={3}>
               <Form.Group>
-                <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Interval Presets</Form.Label>
+                <Form.Label className="text-warning fw-bold fs-12 mb-1 d-flex align-items-center gap-2 text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                  <Clock size={14} className="text-warning" /> Select Interval
+                </Form.Label>
                 <Form.Select
-                  className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
-                  value={filter.dateRange}
-                  onChange={(e) => setFilter({ ...filter, dateRange: e.target.value })}
-                  aria-label="Interval Presets"
+                  className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2 fw-semibold"
+                  value={filter.interval}
+                  onChange={(e) => handleIntervalChange(e.target.value)}
+                  aria-label="Select Interval"
                 >
-                  <option value="today">Today (Real-time snapshots)</option>
-                  <option value="yesterday">Yesterday</option>
-                  <option value="7days">Last 7 Days</option>
-                  <option value="30days">Last 30 Days</option>
-                  <option value="custom">Custom Date Range</option>
+                  <option value="MIN_15">15 Minutes</option>
+                  <option value="HOURLY">Hourly</option>
+                  <option value="DAILY">Daily</option>
                 </Form.Select>
               </Form.Group>
             </Col>
 
-            {filter.dateRange === 'custom' && (
-              <>
-                <Col md={2}>
-                  <Form.Group>
-                    <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Start Date</Form.Label>
-                    <Form.Control
-                      type="date"
-                      className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
-                      value={filter.startDate}
-                      onChange={(e) => setFilter({ ...filter, startDate: e.target.value })}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={2}>
-                  <Form.Group>
-                    <Form.Label className="text-secondary fw-semibold fs-12 mb-1">End Date</Form.Label>
-                    <Form.Control
-                      type="date"
-                      className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
-                      value={filter.endDate}
-                      onChange={(e) => setFilter({ ...filter, endDate: e.target.value })}
-                    />
-                  </Form.Group>
-                </Col>
-              </>
-            )}
+            {/* START DATE */}
+            <Col md={2}>
+              <Form.Group>
+                <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Start Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
+                  value={filter.startDate}
+                  onChange={(e) => setFilter(prev => ({ ...prev, startDate: e.target.value }))}
+                />
+              </Form.Group>
+            </Col>
 
-            <Col md={filter.dateRange === 'custom' ? 2 : 4} className="d-grid">
+            {/* END DATE */}
+            <Col md={2}>
+              <Form.Group>
+                <Form.Label className="text-secondary fw-semibold fs-12 mb-1">End Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2"
+                  value={filter.endDate}
+                  onChange={(e) => setFilter(prev => ({ ...prev, endDate: e.target.value }))}
+                />
+              </Form.Group>
+            </Col>
+
+            {/* GENERATE REPORT BUTTON */}
+            <Col md={2} className="d-grid">
               <Button
                 onClick={handleGenerate}
                 disabled={generating || loading}
@@ -493,7 +473,7 @@ const EnergyPDFReport = () => {
                 className="rounded-pill py-2 fw-bold text-white shadow-sm d-flex align-items-center justify-content-center gap-2"
               >
                 {generating ? <RefreshCw className="animate-spin" size={16} /> : <Zap size={16} />}
-                {generating ? 'Compiling Report...' : 'Generate Report'}
+                {generating ? 'Compiling...' : 'Generate Report'}
               </Button>
             </Col>
           </Row>
@@ -510,9 +490,9 @@ const EnergyPDFReport = () => {
               </h6>
               <small className="text-secondary">
                 {reportData.length > 0 ? (
-                  <>Showing {reportData.length} recorded interval{reportData.length > 1 ? 's' : ''} for <strong className="text-info">{selectedSiteName}</strong>.</>
+                  <>Showing {reportData.length} recorded interval{reportData.length > 1 ? 's' : ''} for <strong className="text-info">{selectedMeterName}</strong> (Interval: {filter.interval}).</>
                 ) : (
-                  <>Showing 0 recorded intervals for <strong className="text-secondary">{selectedSiteName}</strong> (No report data).</>
+                  <>Showing 0 recorded intervals for <strong className="text-secondary">{selectedMeterName}</strong> (No report data).</>
                 )}
               </small>
             </div>
@@ -522,7 +502,7 @@ const EnergyPDFReport = () => {
                 size="sm"
                 disabled={reportData.length === 0}
                 onClick={handleDownloadExcel}
-                className="rounded-pill px-3 py-1.5 text-success border-success border-opacity-50 d-flex align-items-center gap-1.5 fs-12 fw-semibold"
+                className="rounded-pill px-3 py-1.5 text-success border-success border-opacity-50 d-flex align-items-center gap-2 fs-12 fw-semibold"
                 title="Export report as Excel spreadsheet"
               >
                 <FileSpreadsheet size={15} /> Export Excel
@@ -532,7 +512,7 @@ const EnergyPDFReport = () => {
                 size="sm"
                 disabled={reportData.length === 0}
                 onClick={handleDownloadPdf}
-                className="rounded-pill px-3 py-1.5 text-white fw-bold d-flex align-items-center gap-1.5 fs-12 shadow-sm"
+                className="rounded-pill px-3 py-1.5 text-white fw-bold d-flex align-items-center gap-2 fs-12 shadow-sm"
                 title="Download professional PDF report"
               >
                 <Download size={15} /> Download PDF
@@ -546,7 +526,7 @@ const EnergyPDFReport = () => {
                 <AlertCircle className="mx-auto mb-2 text-warning opacity-75 d-block" size={32} />
                 <h6 className="text-white fw-bold mb-1">No Telemetry Report Recorded</h6>
                 <p className="fs-12 mb-0 text-secondary">
-                  Target <strong className="text-info">{selectedSiteName}</strong> does not have recorded telemetry data for this interval. Dummy data generation is disabled.
+                  Target <strong className="text-info">{selectedMeterName}</strong> does not have recorded telemetry data for interval <span className="text-warning fw-semibold">{filter.interval}</span> ({filter.startDate} to {filter.endDate}). Dummy data generation is disabled.
                 </p>
               </div>
             </div>
@@ -562,7 +542,12 @@ const EnergyPDFReport = () => {
                     <th className="py-3 text-end">Active Power (kW)</th>
                     <th className="py-3 text-end">Apparent Energy (kVAh)</th>
                     <th className="py-3 text-center">Power Factor (PF)</th>
-                    <th className="py-3 text-end px-3">Last Updated Time</th>
+                    <th className="py-3 text-end px-3">
+                      <span className="d-inline-flex align-items-center justify-content-end gap-2">
+                        <Clock size={12} className="text-secondary opacity-75" />
+                        <span>Last Updated Time</span>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -583,9 +568,11 @@ const EnergyPDFReport = () => {
                       <td className="py-3 text-center text-secondary font-monospace">
                         {row.pf}
                       </td>
-                      <td className="py-3 text-end text-info fw-semibold font-monospace px-3 fs-12" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        <Clock size={12} className="text-secondary me-1.5" />
-                        {row.lastUpdated}
+                      <td className="py-3 text-end px-3 font-monospace fs-12" style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                        <span className="d-inline-flex align-items-center justify-content-end gap-2 text-info fw-semibold">
+                          <Clock size={13} className="text-secondary opacity-75 flex-shrink-0" />
+                          <span>{row.lastUpdated}</span>
+                        </span>
                       </td>
                     </tr>
                   ))}
