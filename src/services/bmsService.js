@@ -156,6 +156,7 @@ export const bmsService = {
     );
     return apiClient.get(`/sites/${siteId}/devices/${deviceId}/telemetry/snapshots`, cleanParams);
   },
+  getEnergyReports: (params = {}) => apiClient.get('/reports/energy', params),
 
   // Sochiot Platform Token Service
   getSochiotAccessToken: () => apiClient.get('/auth/Access-token')
