@@ -24,9 +24,24 @@ const AgTank = () => {
   const activeRequestIdRef = useRef(0);
 
   // ── SITE & STORE INTEGRATION ──────────────────────────────────────────────
-  const { sites: storeSites, selectedSite, setSelectedSite } = useSiteStore();
-  const [sites, setSites] = useState([]);
+  const { sites: storeSites, activeSites, selectedSite, setSelectedSite } = useSiteStore();
+
+  const getSiteId = useCallback((s) => String(s?.id ?? s?.siteId ?? s?._id ?? ''), []);
+  const getSiteName = useCallback((s) => s?.name || s?.siteName || s?.label || (getSiteId(s) ? `Site #${getSiteId(s)}` : 'Select Site'), [getSiteId]);
+
+  const [fetchedSites, setFetchedSites] = useState([]);
+
+  const sites = useMemo(() => {
+    if (Array.isArray(activeSites) && activeSites.length > 0) return activeSites;
+    if (Array.isArray(storeSites) && storeSites.length > 0) return storeSites;
+    if (fetchedSites.length > 0) return fetchedSites;
+    return [];
+  }, [activeSites, storeSites, fetchedSites]);
+
+  // Site selection state synchronized with SiteContext & Header
   const [selectedSiteId, setSelectedSiteId] = useState(() => {
+    const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+    if (globalId) return globalId;
     return localStorage.getItem('selected_agtank_site_id') || '';
   });
 
@@ -61,59 +76,62 @@ const AgTank = () => {
 
   // ── 1. SYNC REAL SITES ────────────────────────────────────────────────────
   useEffect(() => {
-    if (Array.isArray(storeSites) && storeSites.length > 0) {
-      setSites(storeSites);
-      if (!selectedSiteId || !storeSites.some(s => String(s.id || s.siteId) === String(selectedSiteId))) {
-        const initialSite = selectedSite?.id ? String(selectedSite.id) : String(storeSites[0].id || storeSites[0].siteId);
-        setSelectedSiteId(initialSite);
-        localStorage.setItem('selected_agtank_site_id', initialSite);
-        if (setSelectedSite && !selectedSite) {
-          setSelectedSite(storeSites[0]);
-        }
-      }
-      return;
-    }
-
+    if (sites.length > 0) return;
     const loadSites = async () => {
       try {
         const res = await apiClient.get('/sites').catch(() => null);
         const list = normalizeList(res, 'sites');
         if (Array.isArray(list) && list.length > 0) {
-          const clean = list
-            .filter(s => s && (s.id || s.siteId || s.name))
-            .map(s => ({
-              id: String(s.id || s.siteId || s._id),
-              name: String(s.name || s.label || s.title || s.id).trim()
-            }));
-          setSites(clean);
-          if (clean.length > 0) {
-            const initialId = (selectedSiteId && clean.some(s => String(s.id) === String(selectedSiteId)))
-              ? selectedSiteId
-              : clean[0].id;
-            setSelectedSiteId(initialId);
-            localStorage.setItem('selected_agtank_site_id', initialId);
-            if (setSelectedSite) {
-              setSelectedSite(clean.find(s => String(s.id) === String(initialId)) || clean[0]);
-            }
+          setFetchedSites(list);
+          if (!selectedSiteId) {
+            const firstId = getSiteId(list[0]);
+            setSelectedSiteId(firstId);
+            localStorage.setItem('selected_agtank_site_id', firstId);
+            if (setSelectedSite) setSelectedSite(list[0]);
           }
         }
       } catch (err) {
         console.warn('[AgTank] Sites fetch warning:', err);
       }
     };
-
     loadSites();
-  }, [storeSites, selectedSite, selectedSiteId, setSelectedSite]);
+  }, [sites.length, selectedSiteId, setSelectedSite, getSiteId]);
 
-  // Keep site context synchronized
+  // Downward sync: When selectedSite in Header / Context changes, update selectedSiteId
   useEffect(() => {
-    if (sites.length > 0 && selectedSiteId) {
-      const match = sites.find(s => String(s.id) === String(selectedSiteId));
-      if (match && setSelectedSite && selectedSite?.id !== match.id) {
-        setSelectedSite(match);
+    if (!selectedSite) {
+      if (sites.length > 0 && !selectedSiteId) {
+        const initial = sites[0];
+        const initialId = getSiteId(initial);
+        setSelectedSiteId(initialId);
+        localStorage.setItem('selected_agtank_site_id', initialId);
+        if (setSelectedSite) setSelectedSite(initial);
       }
+      return;
     }
-  }, [sites, selectedSiteId, setSelectedSite, selectedSite]);
+
+    const globalId = getSiteId(selectedSite);
+    if (globalId && String(globalId) !== String(selectedSiteId)) {
+      setSelectedSiteId(globalId);
+      localStorage.setItem('selected_agtank_site_id', globalId);
+    }
+  }, [selectedSite, sites, selectedSiteId, setSelectedSite, getSiteId]);
+
+  // Listen for global bms_site_changed event from Header
+  useEffect(() => {
+    const handleSiteEvent = (e) => {
+      const site = e.detail;
+      if (site) {
+        const siteId = getSiteId(site);
+        if (siteId && siteId !== String(selectedSiteId)) {
+          setSelectedSiteId(siteId);
+          localStorage.setItem('selected_agtank_site_id', siteId);
+        }
+      }
+    };
+    window.addEventListener('bms_site_changed', handleSiteEvent);
+    return () => window.removeEventListener('bms_site_changed', handleSiteEvent);
+  }, [selectedSiteId, getSiteId]);
 
   // ── 2. FETCH AG TANK DEVICES FOR SELECTED SITE ────────────────────────────
   const fetchAgTankDevices = useCallback(async () => {
@@ -343,19 +361,22 @@ const AgTank = () => {
   };
 
   // ── 6. SELECTOR CONFIGURATIONS FOR PAGECONTEXTBANNER ──────────────────────
+  const handleSiteChange = (newSiteId) => {
+    const sId = String(newSiteId);
+    setSelectedSiteId(sId);
+    localStorage.setItem('selected_agtank_site_id', sId);
+    const matched = sites.find(s => getSiteId(s) === sId);
+    if (matched && setSelectedSite) setSelectedSite(matched);
+    setSelectedDeviceId('ALL');
+  };
+
   const siteSelector = {
-    value: selectedSiteId,
+    value: String(selectedSiteId || ''),
     options: sites.map(s => ({
-      value: String(s.id),
-      label: s.name || `Site #${s.id}`
+      value: getSiteId(s),
+      label: getSiteName(s)
     })),
-    onChange: (newSiteId) => {
-      setSelectedSiteId(newSiteId);
-      localStorage.setItem('selected_agtank_site_id', newSiteId);
-      const matched = sites.find(s => String(s.id) === String(newSiteId));
-      if (matched && setSelectedSite) setSelectedSite(matched);
-      setSelectedDeviceId('ALL');
-    },
+    onChange: handleSiteChange,
     placeholder: 'Select Site / Location',
     icon: <Building2 size={16} className="text-info" />
   };
@@ -365,7 +386,7 @@ const AgTank = () => {
     options: [
       { value: 'ALL', label: `ALL (${devices.length} Configured Tanks)` },
       ...devices.map(d => ({
-        value: String(d.id || d.deviceId),
+        value: String(d.id || d.deviceId || d.bmsDeviceId),
         label: d.name || d.deviceName || `Tank #${d.id}`
       }))
     ],

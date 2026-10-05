@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Row, Col, Card, Badge, Form, Button, Modal, Table } from 'react-bootstrap';
 import { 
   Wind, Thermometer, Droplets, Zap, Power, Settings, Fan, MapPin, 
@@ -10,8 +10,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { useSiteStore } from '../../context/SiteContext';
 import { useNavigate } from 'react-router-dom';
 import apiClient, { normalizeList } from '../../services/apiClient';
-import { bmsService } from '../../services/bmsService';
-import { isCategoryMatch } from '../../constants/deviceTemplates';
 import { getDeviceTemplateSettings, extractTelemetryValue } from '../../utils/telemetryMatcher';
 
 // --- 12 INITIAL AC UNITS MATCHING DASHBOARD SCREENSHOT ---
@@ -447,133 +445,24 @@ const RealisticAC = ({ unit, liveCurrentL1, liveTemp, isLarge = false }) => {
 const ACOverview = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
-  const { sites: allSites, selectedSite, setSelectedSite } = useSiteStore();
+  const { selectedSite, sites } = useSiteStore();
 
-  // Site selection state synchronized with SiteContext & Header (matches Energy Metering pattern)
-  const [selectedSiteId, setSelectedSiteId] = useState(() => {
-    const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
-    if (globalId) return globalId;
-    try {
-      const stored = localStorage.getItem('scada_selected_site');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const pid = String(parsed?.id ?? parsed?.siteId ?? parsed?._id ?? '');
-        if (pid) return pid;
-      }
-    } catch (e) {}
-    const saved = localStorage.getItem('selected_ac_site_id');
-    if (saved) return saved;
-    if (allSites && allSites.length > 0) {
-      return String(allSites[0].id ?? allSites[0].siteId ?? allSites[0]._id ?? '');
+  // Derive the currently-selected site ID exactly like Energy Metering does
+  const selectedSiteId = useMemo(() => {
+    if (selectedSite) {
+      const id = String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '');
+      if (id) return id;
+    }
+    if (sites && sites.length > 0) {
+      const first = sites[0];
+      return String(first.id ?? first.siteId ?? first._id ?? '');
     }
     return '';
-  });
+  }, [selectedSite, sites]);
 
-  // Keep site filter synchronized with shared header site selection
-  useEffect(() => {
-    if (!Array.isArray(allSites) || allSites.length === 0) return;
-    const globalSiteId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
-    if (globalSiteId) {
-      if (String(selectedSiteId) !== globalSiteId) {
-        setSelectedSiteId(globalSiteId);
-        localStorage.setItem('selected_ac_site_id', globalSiteId);
-      }
-    } else {
-      const savedMatch = allSites.find(s => String(s.id ?? s.siteId ?? s._id ?? '') === String(selectedSiteId));
-      const targetSite = savedMatch || allSites[0];
-      const targetId = String(targetSite?.id ?? targetSite?.siteId ?? targetSite?._id ?? '');
-      if (targetId && String(selectedSiteId) !== targetId) {
-        setSelectedSiteId(targetId);
-        localStorage.setItem('selected_ac_site_id', targetId);
-      }
-      if (setSelectedSite && targetSite) {
-        setSelectedSite(targetSite);
-      }
-    }
-  }, [selectedSite, allSites, setSelectedSite, selectedSiteId]);
-
-  // Synchronize when site is switched via Header dropdown (bms_site_changed event)
-  useEffect(() => {
-    const handleSiteChange = (e) => {
-      const site = e.detail;
-      if (site) {
-        const siteId = String(site.id ?? site.siteId ?? site._id ?? '');
-        if (siteId && siteId !== String(selectedSiteId)) {
-          setSelectedSiteId(siteId);
-          localStorage.setItem('selected_ac_site_id', siteId);
-        }
-      }
-    };
-    window.addEventListener('bms_site_changed', handleSiteChange);
-    return () => window.removeEventListener('bms_site_changed', handleSiteChange);
-  }, [selectedSiteId]);
-
-  // Current display name for the selected site
-  const currentSiteName = useMemo(() => {
-    if (selectedSite?.name || selectedSite?.siteName) {
-      return selectedSite.name || selectedSite.siteName;
-    }
-    const match = allSites?.find(s => String(s.id ?? s.siteId ?? s._id ?? '') === String(selectedSiteId));
-    return match?.name || match?.siteName || 'this site';
-  }, [selectedSite, allSites, selectedSiteId]);
-
-  // Strict helper: verifies whether a device record actually belongs to the selected site
-  const isDeviceMappedToSite = useCallback((dev, site, siteId) => {
-    if (!dev) return false;
-    if (!site && !siteId) return true;
-
-    const validSiteIds = new Set();
-    const validSiteNames = new Set();
-
-    if (siteId) validSiteIds.add(String(siteId).trim().toLowerCase());
-
-    const resolvedSite = site || (Array.isArray(allSites) ? allSites.find(s => String(s.id ?? s.siteId ?? s._id ?? '') === String(siteId)) : null);
-    if (resolvedSite) {
-      if (resolvedSite.id !== undefined && resolvedSite.id !== null) validSiteIds.add(String(resolvedSite.id).trim().toLowerCase());
-      if (resolvedSite.siteId !== undefined && resolvedSite.siteId !== null) validSiteIds.add(String(resolvedSite.siteId).trim().toLowerCase());
-      if (resolvedSite._id !== undefined && resolvedSite._id !== null) validSiteIds.add(String(resolvedSite._id).trim().toLowerCase());
-
-      const name = resolvedSite.name || resolvedSite.siteName || resolvedSite.label || resolvedSite.title;
-      if (name) validSiteNames.add(String(name).trim().toLowerCase());
-    }
-
-    // Extract all candidate site IDs from the device
-    const devSiteIds = [
-      dev.siteId,
-      dev.site_id,
-      dev.site?.id,
-      dev.site?.siteId,
-      dev.site?._id,
-      dev.building?.siteId,
-      dev.asset?.siteId
-    ].filter(v => v !== null && v !== undefined && String(v).trim() !== '').map(v => String(v).trim().toLowerCase());
-
-    // Extract all candidate site names from the device
-    const devSiteNames = [
-      dev.siteName,
-      dev.site_name,
-      dev.site?.name,
-      dev.site?.siteName,
-      typeof dev.site === 'string' ? dev.site : null,
-      dev.buildingName,
-      dev.building?.name,
-      dev.mapping?.globalHierarchy?.site,
-      dev.mapping?.globalHierarchy?.building
-    ].filter(v => typeof v === 'string' && v.trim() !== '').map(v => v.trim().toLowerCase());
-
-    // If the device has ANY site ID attached, check if it matches:
-    if (devSiteIds.length > 0) {
-      return devSiteIds.some(id => validSiteIds.has(id) || validSiteNames.has(id));
-    }
-
-    // If the device has ANY site Name attached, check if it matches:
-    if (devSiteNames.length > 0) {
-      return devSiteNames.some(name => validSiteNames.has(name) || validSiteIds.has(name));
-    }
-
-    // If device has NO site ID and NO site name whatsoever, it is unmapped -> reject so it doesn't leak
-    return false;
-  }, [allSites]);
+  // Helper: extract siteId from a raw device object
+  const getDeviceSiteId = (dev) =>
+    dev?.siteId ?? dev?.site_id ?? dev?.site?.id ?? dev?.site?.siteId ?? dev?.site?._id ?? null;
 
   const [units, setUnits] = useState(() => {
     try {
@@ -815,7 +704,7 @@ const ACOverview = () => {
   };
 
   // 1. Fetch Registered Devices for the currently-selected site (AC category)
-  //    Pattern mirrors Energy Metering: pass siteId to query, filter strictly client-side.
+  //    Pattern mirrors Energy Metering: pass siteId to every query, filter client-side.
   useEffect(() => {
     // Clear stale devices immediately so cards from the previous site disappear right away
     setRegisteredDevices([]);
@@ -826,58 +715,53 @@ const ACOverview = () => {
     let isMounted = true;
     const loadRegisteredDevices = async () => {
       try {
-        const targetSite = String(selectedSiteId);
+        // --- Primary: fetch AC devices scoped to this site ---
+        const [siteRes, genericRes] = await Promise.all([
+          apiClient.get(`/sites/${selectedSiteId}/devices`, {
+            category: 'AC',
+            include: 'settings,rules,profile'
+          }).catch(() => null),
+          apiClient.get('/devices', {
+            siteId: String(selectedSiteId),
+            category: 'AC',
+            include: 'settings,rules,profile'
+          }).catch(() => null)
+        ]);
+
         const deviceMap = new Map();
-
-        // Query site-scoped endpoints (primary) matching Energy Metering pattern
-        const fetchTasks = [
-          bmsService.getSiteDevices(targetSite, { category: 'AC', include: 'settings,rules,profile', limit: 200 }).catch(() => null),
-          bmsService.getSiteDevices(targetSite, { include: 'settings,rules,profile', limit: 200 }).catch(() => null),
-          apiClient.get(`/sites/${targetSite}/devices`, { category: 'AC', include: 'settings,rules,profile' }).catch(() => null),
-          apiClient.get(`/sites/${targetSite}/devices`, { include: 'settings,rules,profile' }).catch(() => null),
-          apiClient.get('/devices', { siteId: targetSite, category: 'AC', include: 'settings,rules,profile', limit: 200 }).catch(() => null)
-        ];
-
-        const results = await Promise.allSettled(fetchTasks);
-
-        if (!isMounted) return;
-
-        results.forEach(res => {
-          if (res.status === 'fulfilled' && res.value) {
-            const items = normalizeList(res.value, 'devices');
-            if (Array.isArray(items)) {
-              items.forEach(d => {
-                const id = String(d.id ?? d.deviceId ?? '');
-                if (id && !deviceMap.has(id)) {
-                  deviceMap.set(id, d);
-                }
-              });
-            }
+        [siteRes, genericRes].forEach(res => {
+          const items = normalizeList(res, 'devices');
+          if (Array.isArray(items)) {
+            items.forEach(d => {
+              const id = String(d.id ?? d.deviceId ?? '');
+              if (id && !deviceMap.has(id)) deviceMap.set(id, d);
+            });
           }
         });
 
-        // Strict category filter + strict site mapping filter: never leak devices from other sites
-        let list = Array.from(deviceMap.values()).filter(d => {
-          // 1. Must be AC category
-          const cat = String(d.category || d.profile?.category || d.deviceCategory || '').toUpperCase();
-          const name = String(d.name || d.deviceName || '').toUpperCase();
-          const isAcCat = isCategoryMatch(cat, 'AC') ||
-                          cat === 'AC' ||
-                          cat === 'AIR_CONDITIONER' ||
-                          cat === 'HVAC' ||
-                          cat.includes('AIR') ||
-                          cat.includes('CONDITIONER') ||
-                          name.includes('AC ') ||
-                          name.startsWith('AC_') ||
-                          name.includes('AIR CONDITIONER');
+        let list = Array.from(deviceMap.values());
 
-          if (!isAcCat) return false;
+        // --- Fallback: site-scoped all-devices, then filter by AC category client-side ---
+        if (list.length === 0) {
+          const fallRes = await apiClient.get('/devices', {
+            siteId: String(selectedSiteId),
+            include: 'settings,rules,profile'
+          }).catch(() => null);
+          const allItems = normalizeList(fallRes, 'devices');
+          list = allItems.filter(d => {
+            const cat = String(d.category || d.profile?.category || '').toUpperCase();
+            return cat === 'AC' || cat === 'AIR_CONDITIONER' || cat.includes('AIR') || cat.includes('CONDITIONER');
+          });
+        }
 
-          // 2. Strict site mapping: MUST belong to the selected site
-          return isDeviceMappedToSite(d, selectedSite, selectedSiteId);
+        // --- Strict client-side siteId filter: never show devices from a different site ---
+        list = list.filter(d => {
+          const devSiteId = getDeviceSiteId(d);
+          if (devSiteId === null || devSiteId === undefined) return true; // no siteId field → trust the API scoping
+          return String(devSiteId) === String(selectedSiteId);
         });
 
-        // Populate settings for each device if missing
+        // --- Populate settings for each device if missing ---
         if (list.length > 0) {
           list = await Promise.all(list.map(async (dev) => {
             if (!dev.settings || dev.settings.length === 0) {
@@ -891,7 +775,7 @@ const ACOverview = () => {
         }
 
         if (isMounted) {
-          setRegisteredDevices(list);
+          setRegisteredDevices(list); // may be empty — that is correct for unmapped sites
         }
       } catch (err) {
         console.warn('Error fetching registered AC devices:', err);
@@ -900,7 +784,7 @@ const ACOverview = () => {
 
     loadRegisteredDevices();
     return () => { isMounted = false; };
-  }, [selectedSiteId, selectedSite, isDeviceMappedToSite]);
+  }, [selectedSiteId]);
 
   // 2. Poll Real-time Telemetry Events from Device (/events/latest)
   useEffect(() => {
@@ -1447,7 +1331,7 @@ const ACOverview = () => {
           <p className="text-secondary mb-4 mx-auto" style={{ maxWidth: '400px', fontSize: '14px', lineHeight: 1.65 }}>
             No AC devices are registered for{' '}
             <strong className="text-info">
-              {currentSiteName}
+              {selectedSite?.name || selectedSite?.siteName || 'this site'}
             </strong>.
             Register AC devices in Device Management to see them here.
           </p>
