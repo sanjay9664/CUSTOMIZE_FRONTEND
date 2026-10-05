@@ -125,7 +125,8 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
         ...dgDevices.map((dev, idx) => ({
           title: dev.name || `DG Set-${idx + 1}`,
           path: `/dg-set/device/${dev.id}`
-        }))
+        })),
+        { title: "Report", path: "/dg-set/report" }
       ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
     // LT Panel
     { title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? modulesConfig["LT Panel"] === false : false,
@@ -148,9 +149,17 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       ].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? (s.title === 'Reports' ? (submodulesConfig.showAQISensor?.['PDF Report'] ?? true) : true)) },
     // Water & Utilities
     { title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? modulesConfig["Water Management"] === false : false,
-      subItems: [{ title: "Overview", path: "/water-management/overview" }, { title: "AG TANK", path: "/water-management/ag-pump" }, { title: "UG TANK", path: "/water-management/ug-pump" }].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
+      subItems: [
+        { title: "Overview", path: "/water-management/overview" },
+        { title: "AG TANK", path: "/water-management/ag-pump" },
+        { title: "UG TANK", path: "/water-management/ug-pump" },
+        { title: "Report", path: "/water-management/report" }
+      ].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
     { title: "Motors", icon: <Activity size={20} />, disabled: modulesConfig ? modulesConfig["Motors"] === false : false,
-      subItems: [{ title: "Overview", path: "/motors/overview" }].filter(s => submodulesConfig.showMotors?.[s.title] ?? true) },
+      subItems: [
+        { title: "Overview", path: "/motors/overview" },
+        { title: "Report", path: "/motors/report" }
+      ].filter(s => submodulesConfig.showMotors?.[s.title] ?? true) },
     // Safety & Life Safety Systems (ACMS)
     { title: "ACMS", icon: <ShieldAlert size={20} />, disabled: modulesConfig ? (modulesConfig["ACMS"] === false && modulesConfig["Fire"] === false) : false,
       subItems: [

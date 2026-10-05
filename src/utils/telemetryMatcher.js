@@ -59,20 +59,41 @@ export const getSettingByDisplayName = (deviceOrSettings, targetDisplayName) => 
 export const extractTelemetryValue = (setting, liveStats) => {
   if (!setting || !liveStats) return null;
 
+  // Unpack liveStats if wrapped in an object like { data: ... }, { fields: ... }, { events: ... }
+  let targetStats = liveStats;
+  if (!Array.isArray(targetStats) && typeof targetStats === 'object') {
+    if (Array.isArray(targetStats.fields)) targetStats = targetStats.fields;
+    else if (Array.isArray(targetStats.data)) targetStats = targetStats.data;
+    else if (Array.isArray(targetStats.events)) targetStats = targetStats.events;
+    else if (Array.isArray(targetStats.results)) targetStats = targetStats.results;
+    else if (targetStats.data && typeof targetStats.data === 'object') {
+      if (Array.isArray(targetStats.data.fields)) targetStats = targetStats.data.fields;
+      else if (Array.isArray(targetStats.data.events)) targetStats = targetStats.data.events;
+    }
+  }
+
   const targetModuleId = setting.moduleId ? String(setting.moduleId) : null;
-  const targetField = setting.sochiotFieldName || setting.fieldName || setting.fieldKey;
+  const targetField = setting.sochiotFieldName || setting.fieldName || setting.fieldKey || setting.eventField;
+  const targetFieldClean = targetField ? String(targetField).trim().replace(/,/g, '.') : '';
   const targetDisplayNameNorm = normalizeDisplayName(setting.displayName || setting.name);
   const settingIdStr = setting.id !== undefined && setting.id !== null ? String(setting.id) : null;
 
   let matchedStat = null;
   let rawValue = undefined;
 
-  if (Array.isArray(liveStats)) {
-    matchedStat = liveStats.find(s => {
+  if (Array.isArray(targetStats)) {
+    matchedStat = targetStats.find(s => {
       if (!s) return false;
-      if (settingIdStr && String(s.settingId || s.id || '') === settingIdStr) return true;
-      if (targetField && (s.fieldName === targetField || s.fieldKey === targetField || s.sochiotFieldName === targetField)) return true;
-      if (targetDisplayNameNorm && normalizeDisplayName(s.displayName || s.name) === targetDisplayNameNorm) return true;
+      // 1. Match by setting id
+      if (settingIdStr && (String(s.settingId || s.id || '') === settingIdStr)) return true;
+      // 2. Match by normalized display name
+      const sNameNorm = normalizeDisplayName(s.displayName || s.name || s.label);
+      if (targetDisplayNameNorm && sNameNorm && sNameNorm === targetDisplayNameNorm) return true;
+      // 3. Match by fieldName / key with comma/dot normalization
+      const sKey = String(s.fieldName || s.fieldKey || s.sochiotFieldName || s.key || '').trim();
+      const sKeyClean = sKey.replace(/,/g, '.');
+      if (targetFieldClean && sKeyClean && (sKeyClean.toLowerCase() === targetFieldClean.toLowerCase() || sKey.toLowerCase() === String(targetField).toLowerCase())) return true;
+      // 4. Match by module id & meta
       if (targetModuleId) {
         const mId = String(s.moduleId || s.meta?.module_id || s.module_id || '');
         if (mId && mId === targetModuleId && s.meta && s.meta[targetField] !== undefined) return true;
@@ -85,14 +106,18 @@ export const extractTelemetryValue = (setting, liveStats) => {
         ? matchedStat.currentValue
         : (matchedStat.value !== undefined
             ? matchedStat.value
-            : (matchedStat.meta && targetField ? matchedStat.meta[targetField] : undefined));
+            : (matchedStat.lastValue !== undefined
+                ? matchedStat.lastValue
+                : (matchedStat.meta && targetField ? matchedStat.meta[targetField] : undefined)));
     }
-  } else if (typeof liveStats === 'object') {
-    matchedStat = liveStats;
+  } else if (typeof targetStats === 'object') {
+    matchedStat = targetStats;
     if (matchedStat.meta && targetField && matchedStat.meta[targetField] !== undefined) {
       rawValue = matchedStat.meta[targetField];
     } else if (targetField && matchedStat[targetField] !== undefined) {
       rawValue = matchedStat[targetField];
+    } else if (targetFieldClean && matchedStat[targetFieldClean] !== undefined) {
+      rawValue = matchedStat[targetFieldClean];
     }
   }
 
@@ -103,10 +128,15 @@ export const extractTelemetryValue = (setting, liveStats) => {
 
   let finalValue = isNumber ? numericValue : rawValue;
 
-  // Apply multiplier if defined in meta
-  const multiplier = setting.meta?.multiplier || setting.multiplier;
-  if (isNumber && multiplier && !isNaN(Number(multiplier))) {
-    finalValue = finalValue * Number(multiplier);
+  // Apply multiplier if defined in meta, guarding against double-scaling already converted decimals
+  const multiplier = setting.meta?.multiplier ?? setting.multiplier;
+  if (isNumber && multiplier !== undefined && multiplier !== null && !isNaN(Number(multiplier))) {
+    const multNum = Number(multiplier);
+    if (multNum !== 1) {
+      if (Number.isInteger(numericValue) || multNum > 1) {
+        finalValue = finalValue * multNum;
+      }
+    }
   }
 
   // Check threshold alarms

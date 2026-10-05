@@ -6,8 +6,11 @@ const Dashboard = lazy(() => import('../pages/Dashboard'));
 const WaterOverview = lazy(() => import('../pages/WaterManagement/Overview'));
 const AgTank = lazy(() => import('../pages/WaterManagement/AgTank'));
 const UgTank = lazy(() => import('../pages/WaterManagement/UgTank'));
+const WaterReport = lazy(() => import('../pages/WaterManagement/WaterReport'));
 const MotorsOverview = lazy(() => import('../pages/Motors/Overview'));
+const MotorReport = lazy(() => import('../pages/Motors/MotorReport'));
 const DGSetOverview = lazy(() => import('../pages/DGSet/Overview'));
+const DGReport = lazy(() => import('../pages/DGSet/DGReport'));
 const AlarmOverview = lazy(() => import('../pages/AlarmSystem/Overview'));
 const ActiveAlarms = lazy(() => import('../pages/AlarmSystem/Active'));
 const AlarmConfig = lazy(() => import('../pages/AlarmSystem/AlarmConfig'));
@@ -127,14 +130,14 @@ const AppRoutes = () => {
       <Route path="/water-management/ug-pump" element={<UgTank />} />
       <Route path="/water-management/domestic" element={<PlaceholderPage title="Domestic / Flushing" />} />
       <Route path="/water-management/level" element={<PlaceholderPage title="OHT / UG Level Monitoring" />} />
-      <Route path="/water-management/report" element={<PlaceholderPage title="Water Management PDF Reports" />} />
+      <Route path="/water-management/report" element={<WaterReport />} />
 
       {/* Motors */}
       <Route path="/motors/overview" element={<MotorsOverview />} />
       <Route path="/motors/room1" element={<PlaceholderPage title="Pump Room 1" />} />
       <Route path="/motors/room2" element={<PlaceholderPage title="Pump Room 2" />} />
       <Route path="/motors/status" element={<PlaceholderPage title="VFD / DOL Status" />} />
-      <Route path="/motors/report" element={<PlaceholderPage title="Motors PDF Reports" />} />
+      <Route path="/motors/report" element={<MotorReport />} />
 
       {/* DG Set */}
       <Route path="/dg-set/overview" element={<DGSetOverview />} />
@@ -145,7 +148,7 @@ const AppRoutes = () => {
       <Route path="/dg-set/dg3" element={<DGSetOverview />} />
       <Route path="/dg-set/fuel" element={<PlaceholderPage title="Fuel Level Monitoring" />} />
       <Route path="/dg-set/runtime" element={<PlaceholderPage title="Runtime / Diesel Consumption" />} />
-      <Route path="/dg-set/report" element={<PlaceholderPage title="DG Set PDF Reports" />} />
+      <Route path="/dg-set/report" element={<DGReport />} />
 
       {/* Configuration Templates */}
       <Route path="/config/templates" element={<Navigate to="/dashboard" replace />} />
