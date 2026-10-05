@@ -311,7 +311,8 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
           isCommand: Boolean(s.isCommand),
           commandAlias: s.commandAlias || null,
           isReadable: s.isReadable !== false,
-          isDisplayed: s.isDisplayed !== false,
+          isDisplayed: s.isDisplayed !== false && s.showOnDashboard !== false,
+          showOnDashboard: s.isDisplayed !== false && s.showOnDashboard !== false,
           graphable: s.graphable !== false,
           isActive: s.isActive !== false,
           displayOrder: s.displayOrder !== undefined && s.displayOrder !== null ? s.displayOrder : 0,
@@ -353,6 +354,8 @@ export const useOrgDevices = ({ showToast, setLoading, selectedAssetFilter, sele
         graphable: true,
         isTelemetry: true,
         isCumulative: defaultParam ? /(kwh|kvah|kvarh|energy|consumption|m3)/i.test(defaultParam.name || '') : false,
+        isDisplayed: true,
+        showOnDashboard: true,
         isActive: true
       }];
     };

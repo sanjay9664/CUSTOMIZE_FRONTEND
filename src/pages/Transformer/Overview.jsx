@@ -4,24 +4,12 @@ import { Zap, Thermometer, Gauge, Activity, Layers, ShieldCheck, AlertCircle, Re
 import ScadaCard from '../../components/ScadaCard';
 import StatusBadge from '../../components/StatusBadge';
 import PdfButton from '../../components/PdfButton';
-import HierarchySelector from '../../components/HierarchySelector';
 
 const TransformerOverview = () => {
-  const [selectedDevice, setSelectedDevice] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
 
   return (
     <div className="fade-in p-3" style={{ background: 'var(--scada-bg)', color: 'var(--scada-text)', minHeight: '100vh' }}>
-      <HierarchySelector
-        moduleTitle="TRANSFORMER"
-        accentColor="#fb923c"
-        deviceCategory="ENERGY_METER"
-        deviceLabel="TRANSFORMER"
-        deviceBasePath="/transformer/device"
-        icon={<Zap size={13} />}
-        onDeviceSelect={(dev) => setSelectedDevice(dev)}
-      />
-
       <div className="page-header d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-25">
         <div>
           <h2 className="mb-1 fw-bold text-uppercase" style={{ color: 'var(--scada-text)' }}>

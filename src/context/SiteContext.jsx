@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const SiteContext = createContext();
 
@@ -33,8 +33,37 @@ export const SiteProvider = ({ children }) => {
     } catch (e) {}
     return [];
   });
-  const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedSite, setSelectedSiteState] = useState(() => {
+    try {
+      const stored = localStorage.getItem('scada_selected_site');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.id ?? parsed.siteId ?? parsed._id)) return parsed;
+      }
+    } catch (e) {}
+    return null;
+  });
   const [loading, setLoading] = useState(false);
+
+  const setSelectedSite = useCallback((site) => {
+    setSelectedSiteState(site);
+    try {
+      if (site) {
+        localStorage.setItem('scada_selected_site', JSON.stringify(site));
+        const siteId = String(site.id ?? site.siteId ?? site._id ?? '');
+        if (siteId) {
+          localStorage.setItem('selected_main_meter_site_id', siteId);
+          localStorage.setItem('selected_sub_meter_site_id', siteId);
+          localStorage.setItem('selected_energy_overview_site_id', siteId);
+          localStorage.setItem('selected_dg_site_id', siteId);
+          localStorage.setItem('motors_selected_site', siteId);
+        }
+      } else {
+        localStorage.removeItem('scada_selected_site');
+      }
+    } catch (e) {}
+    window.dispatchEvent(new CustomEvent('bms_site_changed', { detail: site }));
+  }, []);
 
   // Global Sochiot Location & Scope State (inspired by ismartaccess-frontend-v2 locationReducer)
   const [sochiotUserLocation, setSochiotUserLocation] = useState(null);
@@ -190,6 +219,16 @@ export const SiteProvider = ({ children }) => {
       }
     };
 
+    const handleSiteChanged = (e) => {
+      if (e.detail) {
+        setSelectedSiteState(prev => {
+          const prevId = prev ? String(prev.id ?? prev.siteId ?? prev._id ?? '') : '';
+          const newId = String(e.detail.id ?? e.detail.siteId ?? e.detail._id ?? '');
+          return prevId === newId ? prev : e.detail;
+        });
+      }
+    };
+
     const handleStorage = (e) => {
       if ((e.key === 'scada_sites_db' || e.key === 'tb_sites') && e.newValue) {
         try {
@@ -197,19 +236,53 @@ export const SiteProvider = ({ children }) => {
           if (Array.isArray(parsed)) setSites(parsed);
         } catch (err) {}
       }
+      if (e.key === 'scada_selected_site' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && (parsed.id ?? parsed.siteId ?? parsed._id)) {
+            setSelectedSiteState(parsed);
+          }
+        } catch (err) {}
+      }
     };
 
     window.addEventListener('bms_sites_updated', handleSitesUpdated);
     window.addEventListener('bms_site_created', handleSiteCreated);
+    window.addEventListener('bms_site_changed', handleSiteChanged);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('bms_sites_updated', handleSitesUpdated);
       window.removeEventListener('bms_site_created', handleSiteCreated);
+      window.removeEventListener('bms_site_changed', handleSiteChanged);
       window.removeEventListener('storage', handleStorage);
     };
   }, [fetchSites]);
 
-  const activeSites = sites.filter(s => s && s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
+  const activeSites = useMemo(() => {
+    return sites.filter(s => s && s.status !== 'INACTIVE' && s.status !== 'DISABLED' && s.isActive !== false && !s.deletedAt);
+  }, [sites]);
+
+  // Synchronize selectedSite if not set yet and activeSites are loaded
+  useEffect(() => {
+    if (!activeSites || activeSites.length === 0) return;
+
+    const currentId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+    if (!currentId) {
+      try {
+        const stored = localStorage.getItem('scada_selected_site');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const parsedId = String(parsed?.id ?? parsed?.siteId ?? parsed?._id ?? '');
+          const match = activeSites.find(s => String(s.id ?? s.siteId ?? s._id ?? '') === parsedId);
+          if (match) {
+            setSelectedSite(match);
+            return;
+          }
+        }
+      } catch (e) {}
+      setSelectedSite(activeSites[0]);
+    }
+  }, [activeSites, selectedSite, setSelectedSite]);
 
   return (
     <SiteContext.Provider

@@ -1740,52 +1740,95 @@ body.light-mode .hover-bg-blue:hover {
 
 
 /* =========================================================
-   HVAC DIAGRAM FIXES FOR LIGHT MODE (Chiller, AHU, Cooling Tower)
+   HVAC DIAGRAMS FULL LIGHT MODE (Chiller, AHU, Cooling Tower)
    ========================================================= */
 
-/* 
-   Since the 3D images have baked-in solid black backgrounds, 
-   we CANNOT invert them or put them on a white background without them looking like x-rays.
-   SOLUTION: Keep the diagram containers as "Dark Mode Islands" even in Light Mode.
-*/
-
-/* Keep diagram containers dark */
+/* Light mode diagram containers - Pure white/light canvas with zero dark blue */
 body.light-mode .chiller-diagram-container,
 body.light-mode .ahu-diagram-container,
 body.light-mode .cooling-diagram-container {
-    background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Revert images to normal (remove inversion) */
+/* Revert images to clean normal rendering */
 body.light-mode .chiller-diagram-container img,
 body.light-mode .ahu-diagram-container img,
 body.light-mode .cooling-diagram-container img {
-    filter: contrast(1.1) brightness(0.9) !important;
-    mix-blend-mode: screen !important; /* Restore screen mode so black background hides in dark container */
-}
-body.light-mode .chiller-diagram-container img {
-    filter: contrast(1.2) brightness(1.2) !important;
+    filter: contrast(1.05) brightness(1.0) !important;
+    mix-blend-mode: normal !important;
 }
 
-/* Force tiles/cards inside the diagram to be dark so white text shows up properly */
+/* Light mode telemetry tiles */
 body.light-mode .chiller-diagram-container .scada-tile,
-body.light-mode .ahu-diagram-container .position-absolute.p-3,
-body.light-mode .cooling-diagram-container .position-absolute.p-3,
-body.light-mode .ahu-diagram-container .position-absolute.start-50,
-body.light-mode .cooling-diagram-container .position-absolute.start-50 {
-    background: rgba(15, 23, 42, 0.85) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    color: #fff !important;
+body.light-mode .ahu-diagram-container .scada-tile,
+body.light-mode .cooling-diagram-container .scada-tile,
+body.light-mode .ahu-diagram-container .ahu-telemetry-label-card,
+body.light-mode .cooling-diagram-container .cooling-telemetry-card {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Force text inside the dark island to remain white */
-body.light-mode .chiller-diagram-container .text-white,
-body.light-mode .ahu-diagram-container .text-white,
-body.light-mode .cooling-diagram-container .text-white,
-body.light-mode .chiller-diagram-container [style*="color: var(--scada-text)"],
-body.light-mode .ahu-diagram-container [style*="color: var(--scada-text)"] {
-    color: #fff !important;
+/* Light mode tile headers and text */
+body.light-mode .ahu-diagram-container .ahu-telemetry-label-card .fs-11,
+body.light-mode .cooling-diagram-container .cooling-card-title,
+body.light-mode .chiller-diagram-container .chiller-metric-label {
+    color: #1e293b !important;
+    border-bottom-color: #e2e8f0 !important;
+    font-weight: 700 !important;
+}
+
+body.light-mode .ahu-diagram-container .fw-black,
+body.light-mode .cooling-diagram-container .fw-black,
+body.light-mode .chiller-diagram-container .chiller-metric-value {
+    color: #0f172a !important;
+}
+
+/* Accents in light mode */
+body.light-mode .ahu-diagram-container .text-info,
+body.light-mode .cooling-diagram-container .text-info,
+body.light-mode .cooling-diagram-container .cooling-card-label {
+    color: #0284c7 !important;
+}
+body.light-mode .ahu-diagram-container .text-success,
+body.light-mode .cooling-diagram-container .text-success,
+body.light-mode .cooling-diagram-container .cooling-status-on {
+    color: #059669 !important;
+}
+body.light-mode .ahu-diagram-container .text-danger,
+body.light-mode .cooling-diagram-container .text-danger,
+body.light-mode .cooling-diagram-container .cooling-status-off {
+    color: #dc2626 !important;
+}
+body.light-mode .ahu-diagram-container .text-muted,
+body.light-mode .cooling-diagram-container .text-muted {
+    color: #64748b !important;
+}
+
+/* Light mode overlay badges */
+body.light-mode .ahu-diagram-container .rounded-pill,
+body.light-mode .cooling-diagram-container .cooling-last-sync-badge {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #334155 !important;
+}
+
+body.light-mode .ahu-diagram-container .start-50,
+body.light-mode .cooling-diagram-container .cooling-kpi-overlay {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+    color: #0f172a !important;
+}
+
+/* SVG Flow lines text in light mode */
+body.light-mode .chiller-diagram-container svg text,
+body.light-mode .ahu-diagram-container svg text,
+body.light-mode .cooling-diagram-container svg text {
+    text-shadow: 1px 1px 2px #fff, -1px -1px 2px #fff, 0px 0px 6px #fff !important;
 }
 
 /* Fix specific center badge in Chiller */
@@ -1807,7 +1850,7 @@ body.light-mode .cooling-diagram-container svg text {
 /* Ensure small muted texts stay visible in the dark island */
 body.light-mode .ahu-diagram-container .text-muted,
 body.light-mode .cooling-diagram-container .text-muted {
-    color: rgba(255, 255, 255, 0.5) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
 }
 
 

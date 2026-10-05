@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
 import { FileText, Download, Calendar, MapPin, User, FileCheck, CheckCircle2, Zap } from 'lucide-react';
 import { generateUserCustomPdfReport } from '../utils/pdfReportGenerator';
@@ -15,6 +15,28 @@ const UserPdfReportModal = ({ show, onHide, sites = [], assets = [] }) => {
     includeKpis: true,
     notes: 'All physical assets, telemetry sensors, and power distribution systems operating within standard threshold limits.'
   });
+
+  useEffect(() => {
+    if (show && sites && sites.length > 0) {
+      const activeStored = localStorage.getItem('scada_selected_site');
+      let targetId = '';
+      if (activeStored) {
+        try {
+          const parsed = JSON.parse(activeStored);
+          if (parsed && (parsed.id || parsed.siteId || parsed._id)) {
+            const found = sites.find(s => String(s.id ?? s.siteId ?? s._id) === String(parsed.id ?? parsed.siteId ?? parsed._id));
+            if (found) targetId = String(found.id ?? found.siteId ?? found._id);
+          }
+        } catch (e) {}
+      }
+      if (!targetId && sites[0]) {
+        targetId = String(sites[0].id ?? sites[0].siteId ?? sites[0]._id);
+      }
+      if (targetId) {
+        setFormData(prev => ({ ...prev, siteId: targetId }));
+      }
+    }
+  }, [show, sites]);
 
   const [generating, setGenerating] = useState(false);
 

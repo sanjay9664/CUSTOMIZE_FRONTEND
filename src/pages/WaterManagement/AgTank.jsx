@@ -6,6 +6,23 @@ import {
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';
+
+import { getSochiotDeviceDetails } from '../../services/authService';
+import { useDeviceStatus } from '../../services/DeviceStatusContext';
+import { getAuthHeaders, normalizeList, apiClient } from '../../services/apiClient';
+import { getApiUrl } from '../../utils/apiConfig';
+import { io } from 'socket.io-client';
+import { useSiteStore } from '../../context/SiteContext';
+
+const AgTank = () => {
+  const { selectedSite, setSelectedSite } = useSiteStore();
+  const [sectorFilter, setSectorFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [showConfig, setShowConfig] = useState(false);
+  const [tempDomesticCount, setTempDomesticCount] = useState(24);
+  const [domesticCount, setDomesticCount] = useState(24);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
 import { useSiteStore } from '../../context/SiteContext';
 import bmsService from '../../services/bmsService';
 import { apiClient, normalizeList } from '../../services/apiClient';
@@ -20,6 +37,7 @@ import AgTankDetailModal from './components/AgTankDetailModal';
 import AgTankSkeleton from './components/AgTankSkeleton';
 
 const AgTank = () => {
+
   const pageRef = useRef(null);
   const activeRequestIdRef = useRef(0);
 
@@ -97,15 +115,66 @@ const AgTank = () => {
             }
           }
         }
+
+
+        const hierarchySel = localStorage.getItem('global_hierarchy_selection');
+        if (hierarchySel) {
+          const parsed = JSON.parse(hierarchySel);
+          const name = String(parsed.building || parsed.client || parsed.organization || '').trim();
+          if (name && isRealSiteName(name)) {
+            siteMap.set(name, { id: name, name });
+          }
+        }
+
+        const savedTemplates = localStorage.getItem('scada_templates');
+        if (savedTemplates) {
+          const templates = JSON.parse(savedTemplates);
+          templates.forEach(t => {
+            const siteName = t.mapping?.globalHierarchy?.building || t.mapping?.globalHierarchy?.client || t.mapping?.globalHierarchy?.organization || t.site || t.siteName;
+            if (siteName && isRealSiteName(String(siteName)) && !siteMap.has(String(siteName))) {
+              siteMap.set(String(siteName), { id: String(siteName), name: String(siteName) });
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('LocalStorage sites parse notice:', e);
+      }
+
+      const sitesList = Array.from(siteMap.values());
+      setSites(sitesList);
+      if (sitesList.length > 0) {
+        const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+        setSelectedSiteId(prev => {
+          if (globalId && sitesList.some(s => String(s.id) === globalId)) return globalId;
+          if (prev && sitesList.some(s => String(s.id) === String(prev))) return prev;
+          return sitesList[0].id;
+        });
+
       } catch (err) {
         console.warn('[AgTank] Sites fetch warning:', err);
+
       }
     };
 
     loadSites();
   }, [storeSites, selectedSite, selectedSiteId, setSelectedSite]);
 
+
+  // Synchronize with global selectedSite from SiteContext
+  useEffect(() => {
+    if (!selectedSite) return;
+    const globalId = String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '');
+    if (globalId && globalId !== String(selectedSiteId)) {
+      setSelectedSiteId(globalId);
+      setSelectedAssetId('');
+      setSelectedDeviceId('');
+    }
+  }, [selectedSite, selectedSiteId]);
+
+  // 2. Fetch Assets when Site selection changes & AUTO-SELECT first asset
+
   // Keep site context synchronized
+
   useEffect(() => {
     if (sites.length > 0 && selectedSiteId) {
       const match = sites.find(s => String(s.id) === String(selectedSiteId));
@@ -413,6 +482,51 @@ const AgTank = () => {
             <div className="hud-value text-white">{isLoading ? '-' : stats.total}</div>
             <div className="fs-10 text-secondary">Configured</div>
           </div>
+
+        </div>
+        <div className="d-flex gap-2">
+          <Button variant="info" size="sm" className="d-flex align-items-center fw-bold shadow-sm" onClick={toggleFullscreen}>
+            {isFullscreen ? <Minimize size={16} className="me-2" /> : <Maximize size={16} className="me-2" />}
+            {isFullscreen ? 'NORMAL VIEW' : 'EXPAND VIEW'}
+          </Button>
+          <Button variant="outline-info" size="sm" className="d-flex align-items-center" onClick={() => setShowConfig(true)}>
+            <Settings size={16} className="me-2" /> Sector Config
+          </Button>
+          <PdfButton />
+        </div>
+      </div>
+
+      {/* 3-TIER HIERARCHICAL CASCADED SELECTOR BAR: Site -> Asset -> Device */}
+      <div className="p-3 mb-4 rounded-4 bg-dark bg-opacity-40 border border-white border-opacity-10 shadow-lg">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div className="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
+            {/* 1. Site Selector Dropdown */}
+            <div className="d-flex align-items-center gap-2 bg-dark bg-opacity-80 px-3 py-2 rounded-3 border border-secondary border-opacity-40 shadow-sm">
+              <Building2 size={18} className="text-info" />
+              <Form.Select
+                size="sm"
+                value={selectedSiteId}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSelectedSiteId(newId);
+                  setSelectedAssetId('');
+                  setSelectedDeviceId('');
+                  const found = sites.find(s => String(s.id) === String(newId));
+                  if (found && setSelectedSite) {
+                    setSelectedSite(found);
+                  }
+                }}
+                className="bg-transparent text-white border-0 fs-13 fw-bold focus-none shadow-none"
+                style={{ minWidth: 180, cursor: 'pointer', color: '#fff' }}
+              >
+                <option value="" className="bg-dark text-white">Select Site / Location</option>
+                {sites.map(s => (
+                  <option key={s.id} value={String(s.id)} className="bg-dark text-white">
+                    {s.name || s.label || `Site #${s.id}`}
+                  </option>
+                ))}
+              </Form.Select>
+
         </Col>
         <Col xs={6} sm={4} md={2}>
           <div className="p-3 rounded-4 hud-stat-card" style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
@@ -433,6 +547,7 @@ const AgTank = () => {
             <div className="hud-label">AVG WATER LEVEL</div>
             <div className="hud-value text-info">
               {isLoading ? '-' : (stats.avgLevel !== null ? `${stats.avgLevel}%` : '--')}
+
             </div>
             <div className="fs-10 text-secondary">Mean Liquid Depth</div>
           </div>

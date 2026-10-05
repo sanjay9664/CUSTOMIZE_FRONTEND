@@ -1,0 +1,1351 @@
+/* =========================================================
+   ACMS - Automated Critical Monitoring System (Fire & Safety)
+   Enterprise SCADA / BMS Industrial IoT Design System
+   ========================================================= */
+
+:root {
+  --acms-bg-base: #070D18;
+  --acms-bg-surface: #0B1220;
+  --acms-bg-card: #111A2B;
+  --acms-bg-card-hover: #152238;
+  --acms-border: rgba(255, 255, 255, 0.08);
+  --acms-border-focus: rgba(239, 51, 64, 0.4);
+  --acms-red: #EF3340;
+  --acms-red-bright: #FF3B4A;
+  --acms-red-glow: rgba(239, 51, 64, 0.25);
+  --acms-cyan: #06C7F5;
+  --acms-blue: #168CE0;
+  --acms-green: #16B978;
+  --acms-amber: #F59E0B;
+  --acms-purple: #6D5CE7;
+  --acms-text-main: #F1F5F9;
+  --acms-text-muted: #94A3B8;
+  --acms-text-dim: #64748B;
+}
+
+.acms-main {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--acms-bg-base);
+  min-height: 100vh;
+  color: var(--acms-text-main);
+  box-sizing: border-box;
+}
+
+/* ── KPI Health Chips Bar ── */
+.acms-health-chips-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.acms-kpi-chip {
+  background: rgba(17, 26, 43, 0.85);
+  border: 1px solid var(--acms-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--acms-text-muted);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+.acms-kpi-chip strong {
+  color: var(--acms-text-main);
+  font-family: 'JetBrains Mono', monospace, monospace;
+}
+
+/* ── Top Navigation Bar (Sticky, Compact, Glowing Active State) ── */
+.acms-nav-container {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(7, 13, 24, 0.95);
+  backdrop-filter: blur(12px);
+  padding: 8px 0 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.acms-tabs-bar {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 5px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.acms-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--acms-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.acms-tab-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.acms-tab-btn.active {
+  background: linear-gradient(135deg, rgba(239, 51, 64, 0.22) 0%, rgba(17, 26, 43, 0.95) 100%);
+  color: #FFFFFF;
+  border: 1px solid var(--acms-red);
+  box-shadow: 0 0 18px rgba(239, 51, 64, 0.35), inset 0 0 12px rgba(239, 51, 64, 0.15);
+}
+
+.acms-tab-btn.active.blue {
+  background: linear-gradient(135deg, rgba(22, 140, 224, 0.22) 0%, rgba(17, 26, 43, 0.95) 100%);
+  border-color: var(--acms-blue);
+  box-shadow: 0 0 18px rgba(22, 140, 224, 0.35);
+}
+
+.acms-tab-btn.active.cyan {
+  background: linear-gradient(135deg, rgba(6, 199, 245, 0.22) 0%, rgba(17, 26, 43, 0.95) 100%);
+  border-color: var(--acms-cyan);
+  box-shadow: 0 0 18px rgba(6, 199, 245, 0.35);
+}
+
+.acms-tab-btn.active.purple {
+  background: linear-gradient(135deg, rgba(109, 92, 231, 0.22) 0%, rgba(17, 26, 43, 0.95) 100%);
+  border-color: var(--acms-purple);
+  box-shadow: 0 0 18px rgba(109, 92, 231, 0.35);
+}
+
+.acms-tab-btn .item-count-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--acms-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  margin-left: 2px;
+}
+
+.acms-tab-btn.active .item-count-badge {
+  background: rgba(239, 51, 64, 0.4);
+  color: #FFFFFF;
+}
+
+/* ── Clause Banner (Matching Reference Image) ── */
+.acms-clause-banner {
+  position: relative;
+  background: linear-gradient(90deg, #0d1527 0%, #101c33 45%, #0f1a2e 100%);
+  border: 1px solid rgba(239, 51, 64, 0.35);
+  border-radius: 14px;
+  padding: 16px 24px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(239, 51, 64, 0.06);
+}
+
+.acms-clause-banner.blue-theme {
+  border-color: rgba(22, 140, 224, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(22, 140, 224, 0.06);
+}
+
+.acms-clause-banner.cyan-theme {
+  border-color: rgba(6, 199, 245, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(6, 199, 245, 0.06);
+}
+
+.acms-clause-banner.purple-theme {
+  border-color: rgba(109, 92, 231, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(109, 92, 231, 0.06);
+}
+
+.acms-banner-icon-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(239, 51, 64, 0.35) 0%, rgba(17, 26, 43, 0.8) 100%);
+  border: 2px solid var(--acms-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  box-shadow: 0 0 16px var(--acms-red-glow);
+  flex-shrink: 0;
+}
+
+.acms-banner-icon-badge.blue {
+  background: radial-gradient(circle, rgba(22, 140, 224, 0.35) 0%, rgba(17, 26, 43, 0.8) 100%);
+  border-color: var(--acms-blue);
+  box-shadow: 0 0 16px rgba(22, 140, 224, 0.3);
+}
+
+.acms-banner-icon-badge.cyan {
+  background: radial-gradient(circle, rgba(6, 199, 245, 0.35) 0%, rgba(17, 26, 43, 0.8) 100%);
+  border-color: var(--acms-cyan);
+  box-shadow: 0 0 16px rgba(6, 199, 245, 0.3);
+}
+
+.acms-banner-icon-badge.purple {
+  background: radial-gradient(circle, rgba(109, 92, 231, 0.35) 0%, rgba(17, 26, 43, 0.8) 100%);
+  border-color: var(--acms-purple);
+  box-shadow: 0 0 16px rgba(109, 92, 231, 0.3);
+}
+
+.acms-water-backdrop {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 360px;
+  pointer-events: none;
+  opacity: 0.85;
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  mask-image: linear-gradient(to left, rgba(0, 0, 0, 1) 40%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 1) 40%, transparent 100%);
+}
+
+.acms-supervision-pill {
+  background: rgba(22, 185, 120, 0.15);
+  border: 1px solid rgba(22, 185, 120, 0.4);
+  color: #34D399;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 12px rgba(22, 185, 120, 0.2);
+}
+
+.acms-supervision-pill.danger {
+  background: rgba(239, 51, 64, 0.15);
+  border-color: rgba(239, 51, 64, 0.45);
+  color: #FF5A66;
+  box-shadow: 0 0 14px rgba(239, 51, 64, 0.25);
+}
+
+.acms-supervision-pill.blue {
+  background: rgba(22, 140, 224, 0.15);
+  border-color: rgba(22, 140, 224, 0.45);
+  color: #60A5FA;
+  box-shadow: 0 0 14px rgba(22, 140, 224, 0.25);
+}
+
+.acms-supervision-pill.cyan {
+  background: rgba(6, 199, 245, 0.15);
+  border-color: rgba(6, 199, 245, 0.45);
+  color: #38BDF8;
+  box-shadow: 0 0 14px rgba(6, 199, 245, 0.25);
+}
+
+.acms-supervision-pill.purple {
+  background: rgba(109, 92, 231, 0.15);
+  border-color: rgba(109, 92, 231, 0.45);
+  color: #A78BFA;
+  box-shadow: 0 0 14px rgba(109, 92, 231, 0.25);
+}
+
+.acms-dot-pulse-green {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16B978;
+  box-shadow: 0 0 8px #16B978;
+  animation: acmsPulseGreen 1.8s infinite ease-in-out;
+}
+
+.acms-dot-pulse-red {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acms-red);
+  box-shadow: 0 0 8px var(--acms-red);
+  animation: acmsPulseRed 1.8s infinite ease-in-out;
+}
+
+@keyframes acmsPulseGreen {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+@keyframes acmsPulseRed {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* ── Main Dashboard 3-Column Cards Grid ── */
+.acms-grid-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.acms-grid-container-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.acms-grid-container-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .acms-grid-container,
+  .acms-grid-container-4col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .acms-grid-container,
+  .acms-grid-container-2col,
+  .acms-grid-container-4col {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* ── Industrial SCADA Card ── */
+.acms-scada-card {
+  position: relative;
+  background: var(--acms-bg-card);
+  border: 1px solid var(--acms-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 275px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.acms-scada-card:hover {
+  background: var(--acms-bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(239, 51, 64, 0.08);
+  transform: translateY(-2px);
+}
+
+.acms-scada-card.border-red-glow {
+  border-color: rgba(239, 51, 64, 0.3);
+}
+.acms-scada-card.border-amber-glow {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.acms-scada-card.border-cyan-glow {
+  border-color: rgba(6, 199, 245, 0.3);
+}
+.acms-scada-card.border-purple-glow {
+  border-color: rgba(109, 92, 231, 0.3);
+}
+.acms-scada-card.border-blue-glow {
+  border-color: rgba(22, 140, 224, 0.3);
+}
+
+/* Card Header Layout (Clean Row without overlap) */
+.acms-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.acms-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acms-card-equipment-visual-inline {
+  width: 58px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Clause Badges */
+.acms-clause-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3.5px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.acms-clause-badge.red {
+  background: rgba(239, 51, 64, 0.18);
+  color: #FF5A66;
+  border: 1px solid rgba(239, 51, 64, 0.35);
+}
+
+.acms-clause-badge.amber {
+  background: rgba(245, 158, 11, 0.18);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.acms-clause-badge.cyan {
+  background: rgba(6, 199, 245, 0.18);
+  color: #38BDF8;
+  border: 1px solid rgba(6, 199, 245, 0.35);
+}
+
+.acms-clause-badge.purple {
+  background: rgba(109, 92, 231, 0.18);
+  color: #A78BFA;
+  border: 1px solid rgba(109, 92, 231, 0.35);
+}
+
+.acms-clause-badge.blue {
+  background: rgba(22, 140, 224, 0.18);
+  color: #60A5FA;
+  border: 1px solid rgba(22, 140, 224, 0.35);
+}
+
+/* Status Pill Badges (Top Right of Cards) */
+.acms-status-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.acms-status-chip.running {
+  background: rgba(22, 185, 120, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(22, 185, 120, 0.45);
+  box-shadow: 0 0 10px rgba(22, 185, 120, 0.2);
+}
+
+.acms-status-chip.standby {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.acms-status-chip.stopped {
+  background: rgba(239, 51, 64, 0.15);
+  color: #FF5A66;
+  border: 1px solid rgba(239, 51, 64, 0.45);
+  box-shadow: 0 0 10px rgba(239, 51, 64, 0.2);
+}
+
+.acms-status-chip.power-on {
+  background: rgba(22, 185, 120, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(22, 185, 120, 0.45);
+}
+
+.acms-status-chip.power-off {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94A3B8;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+}
+
+.acms-status-chip.pressure {
+  background: rgba(239, 51, 64, 0.15);
+  color: #FF5A66;
+  border: 1px solid rgba(239, 51, 64, 0.45);
+}
+
+.acms-status-chip.cyan {
+  background: rgba(6, 199, 245, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(6, 199, 245, 0.45);
+}
+
+/* Card Title (Unclipped, Full Width, Clear Contrast) */
+.acms-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 14px 0;
+  line-height: 1.35;
+  width: 100%;
+}
+
+/* Parameter Rows inside Card Body */
+.acms-param-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.acms-param-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.acms-param-row:last-child {
+  border-bottom: none;
+}
+
+.acms-param-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--acms-text-muted);
+  font-weight: 500;
+}
+
+.acms-param-label svg {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.acms-param-value {
+  font-weight: 700;
+  color: #F1F5F9;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  text-align: right;
+}
+
+.acms-param-value.highlight-green {
+  color: #16B978;
+}
+
+.acms-param-value.highlight-amber {
+  color: #F59E0B;
+}
+
+.acms-param-value.highlight-red {
+  color: #FF3B4A;
+}
+
+.acms-param-value.highlight-cyan {
+  color: #06C7F5;
+}
+
+.acms-param-value.highlight-blue {
+  color: #38BDF8;
+}
+
+/* Action Control Buttons (Bottom of Cards) */
+.acms-action-btn-red {
+  width: 100%;
+  background: var(--acms-red);
+  border: 1px solid #FF5A66;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(239, 51, 64, 0.35);
+  cursor: pointer;
+}
+
+.acms-action-btn-red:hover {
+  background: #DC2626;
+  box-shadow: 0 4px 16px rgba(239, 51, 64, 0.5);
+  transform: translateY(-1px);
+}
+
+.acms-action-btn-amber {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--acms-amber);
+  color: #FBBF24;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.acms-action-btn-amber:hover {
+  background: rgba(245, 158, 11, 0.15);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+  color: #FFFFFF;
+}
+
+.acms-action-btn-dark {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #E2E8F0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.acms-action-btn-dark:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+/* Tank Progress Bar */
+.acms-tank-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.acms-tank-bar-track {
+  flex-grow: 1;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.acms-tank-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0284C7 0%, #06C7F5 100%);
+  box-shadow: 0 0 8px rgba(6, 199, 245, 0.4);
+}
+
+/* Pressure Bar Meter */
+.acms-pressure-meter-track {
+  width: 90px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0 8px;
+}
+
+.acms-pressure-meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #EF3340 0%, #FF3B4A 100%);
+  box-shadow: 0 0 8px rgba(239, 51, 64, 0.5);
+}
+
+.acms-pressure-meter-fill.cyan {
+  background: linear-gradient(90deg, #0284C7 0%, #06C7F5 100%);
+  box-shadow: 0 0 8px rgba(6, 199, 245, 0.5);
+}
+
+/* Equipment Footer Info Pill */
+.acms-footer-pill {
+  background: rgba(6, 199, 245, 0.08);
+  border: 1px solid rgba(6, 199, 245, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #38BDF8;
+}
+
+.acms-footer-pill.green {
+  background: rgba(22, 185, 120, 0.08);
+  border-color: rgba(22, 185, 120, 0.25);
+  color: #34D399;
+}
+
+/* ── Equipment High-Definition Visual Box ── */
+.acms-equip-icon-box {
+  width: 56px;
+  height: 40px;
+  border-radius: 8px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, rgba(11, 18, 32, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.acms-equip-icon-box.red {
+  border-color: rgba(239, 51, 64, 0.3);
+  box-shadow: inset 0 0 8px rgba(239, 51, 64, 0.15), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.acms-equip-icon-box.amber {
+  border-color: rgba(245, 158, 11, 0.3);
+  box-shadow: inset 0 0 8px rgba(245, 158, 11, 0.15), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.acms-equip-icon-box.cyan {
+  border-color: rgba(6, 199, 245, 0.3);
+  box-shadow: inset 0 0 8px rgba(6, 199, 245, 0.15), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.acms-equip-icon-box.blue {
+  border-color: rgba(22, 140, 224, 0.3);
+  box-shadow: inset 0 0 8px rgba(22, 140, 224, 0.15), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.acms-equip-icon-box.purple {
+  border-color: rgba(109, 92, 231, 0.3);
+  box-shadow: inset 0 0 8px rgba(109, 92, 231, 0.15), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.acms-equip-icon-box:hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Ultra-Smooth Centered Impeller & Fan Rotation ── */
+@keyframes scadaSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scada-spin {
+  animation: scadaSpin 1.4s infinite linear !important;
+  transform-box: fill-box !important;
+  transform-origin: center !important;
+  will-change: transform;
+}
+
+@keyframes scadaBlink {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0; transform: scale(1.8); }
+}
+
+.scada-blink {
+  animation: scadaBlink 2s infinite ease-in-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* =========================================================
+   CLAUSE 3 (b) HYDRANT SYSTEM 3-COLUMN INTERACTIVE DASHBOARD
+   ========================================================= */
+
+.acms-hydrant-layout {
+  display: grid;
+  grid-template-columns: 320px 1.15fr 1.35fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1480px) {
+  .acms-hydrant-layout {
+    grid-template-columns: 300px 1fr 1.25fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .acms-hydrant-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Left List of 9 Monitored Items */
+.acms-hydrant-nav-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+
+.acms-hydrant-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(17, 26, 43, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  width: 100%;
+  gap: 8px;
+  min-width: 0;
+}
+
+.acms-hydrant-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(3px);
+}
+
+.acms-hydrant-nav-item.active {
+  background: linear-gradient(90deg, rgba(239, 51, 64, 0.25) 0%, rgba(17, 26, 43, 0.98) 100%);
+  border-color: #EF3340;
+  box-shadow: 0 0 14px rgba(239, 51, 64, 0.35), inset 0 0 10px rgba(239, 51, 64, 0.12);
+}
+
+.acms-hydrant-item-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94A3B8;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+
+.acms-hydrant-nav-item.active .acms-hydrant-item-num {
+  background: #EF3340;
+  color: #FFFFFF;
+}
+
+.acms-hydrant-nav-item .acms-status-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* Center Building Isometric Canvas Card */
+.acms-building-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Water Flow Animation through pipelines */
+@keyframes waterFlowUpward {
+  from {
+    stroke-dashoffset: 48;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.water-flow-active {
+  stroke-dasharray: 8 6;
+  animation: waterFlowUpward 0.9s linear infinite;
+}
+
+.water-flow-inactive {
+  stroke: #334155 !important;
+  stroke-dasharray: none !important;
+  opacity: 0.35;
+}
+
+/* Building Floor Interactive Rows */
+.acms-floor-row {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.acms-floor-row:hover rect.floor-bg {
+  fill: rgba(56, 189, 248, 0.12) !important;
+}
+
+.acms-floor-row.active rect.floor-bg {
+  fill: rgba(239, 51, 64, 0.2) !important;
+  stroke: #EF3340 !important;
+  stroke-width: 1.5 !important;
+}
+
+/* Floor Info Popover */
+.acms-floor-popup {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(11, 18, 32, 0.95);
+  border: 1px solid rgba(6, 199, 245, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(6, 199, 245, 0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  z-index: 25;
+  backdrop-filter: blur(10px);
+  min-width: 210px;
+  animation: fadeInPop 0.2s ease-out;
+}
+
+@keyframes fadeInPop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Horizontal Pressure Gauge */
+.acms-pressure-horizontal-gauge {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.acms-gauge-track {
+  height: 9px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #EF4444 0%, #EF4444 35%, #F59E0B 35%, #F59E0B 60%, #10B981 60%, #10B981 85%, #06C7F5 85%, #06C7F5 100%);
+  position: relative;
+  margin: 14px 0 8px 0;
+}
+
+.acms-gauge-needle {
+  position: absolute;
+  top: -6px;
+  width: 14px;
+  height: 22px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.acms-gauge-needle-head {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 0 10px #06C7F5;
+  border: 2px solid #06C7F5;
+}
+
+.acms-gauge-needle-pin {
+  width: 2px;
+  height: 10px;
+  background: #FFFFFF;
+}
+
+/* Right Status Cards 2-col Grid */
+.acms-hydrant-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.acms-hydrant-status-grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .acms-hydrant-status-grid,
+  .acms-hydrant-status-grid-3col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-compact-status-card {
+  background: #111A2B;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.acms-compact-status-card:hover {
+  background: #152238;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.acms-compact-status-card.highlighted {
+  border-color: #EF3340;
+  box-shadow: 0 0 16px rgba(239, 51, 64, 0.25), inset 0 0 8px rgba(239, 51, 64, 0.08);
+}
+
+/* Card Telemetry 2x2 Grid */
+.acms-card-telemetry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 10px 0;
+}
+
+.acms-telemetry-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acms-telemetry-item .label {
+  font-size: 10.5px;
+  color: #94A3B8;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.acms-telemetry-item .value {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+/* Compact Card Action Bar */
+.acms-card-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}
+
+.acms-micro-toggle-btn {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 5px;
+  transition: all 0.15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #E2E8F0;
+  cursor: pointer;
+}
+
+.acms-micro-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #FFFFFF;
+}
+
+.acms-micro-toggle-btn.danger {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #F87171;
+}
+
+.acms-micro-toggle-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #FFFFFF;
+}
+
+.acms-micro-toggle-btn.warning {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #FBBF24;
+}
+
+.acms-micro-toggle-btn.warning:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #F59E0B;
+  color: #FFFFFF;
+}
+
+/* Supervision Pills & Badges */
+.acms-supervision-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(239, 51, 64, 0.15);
+  border: 1px solid rgba(239, 51, 64, 0.4);
+  color: #FF7B84;
+}
+
+.acms-supervision-pill.danger {
+  background: rgba(239, 51, 64, 0.18);
+  border-color: rgba(239, 51, 64, 0.5);
+  color: #FFA3A8;
+  box-shadow: 0 0 14px rgba(239, 51, 64, 0.25);
+}
+
+.acms-dot-pulse-red {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 8px #EF4444;
+  display: inline-block;
+  animation: pulseDotRed 1.5s infinite;
+}
+
+@keyframes pulseDotRed {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+/* Fullscreen / Expanded SCADA Modal */
+.acms-fullscreen-scada-modal .modal-dialog {
+  max-width: 95vw !important;
+  margin: 1.5rem auto;
+}
+
+.acms-scada-modal-content {
+  background: #070D18 !important;
+  border: 1px solid rgba(6, 199, 245, 0.35) !important;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(6, 199, 245, 0.15) !important;
+  border-radius: 14px !important;
+  color: #FFFFFF !important;
+  overflow: hidden;
+}
+
+.acms-modal-scada-layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .acms-modal-scada-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-modal-inspector-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.acms-floor-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.acms-floor-nav-btn {
+  background: rgba(17, 26, 43, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #CBD5E1;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.acms-floor-nav-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38BDF8;
+  color: #FFFFFF;
+}
+
+.acms-floor-nav-btn.active {
+  background: linear-gradient(135deg, rgba(239, 51, 64, 0.3) 0%, rgba(17, 26, 43, 0.95) 100%);
+  border-color: #EF3340;
+  color: #FFFFFF;
+  box-shadow: 0 0 10px rgba(239, 51, 64, 0.3);
+}
+
+/* =========================================================
+   3-COLUMN SCADA DASHBOARD LAYOUTS FOR CLAUSES C THROUGH H
+   ========================================================= */
+
+.acms-scada-3col-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 1.45fr minmax(320px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1440px) {
+  .acms-scada-3col-layout {
+    grid-template-columns: minmax(290px, 1fr) 1.3fr minmax(290px, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .acms-scada-3col-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Center Building Card Canvas */
+.acms-building-canvas-card {
+  background: linear-gradient(180deg, #0C1527 0%, #070D18 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.acms-building-canvas-card:hover {
+  border-color: rgba(6, 199, 245, 0.3);
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(6, 199, 245, 0.08);
+}
+
+/* 3D Tank Cylinder Graphic in Cards */
+.acms-tank-preview-box {
+  background: rgba(11, 18, 32, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+/* Pressure Range Meter (Clause 3.d Sprinkler) */
+.acms-pressure-range-wrapper {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.acms-pressure-range-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #EF4444 0%, #F59E0B 50%, #06C7F5 65%, #10B981 75%, #3B82F6 100%);
+  width: 100%;
+  margin: 18px 0 10px 0;
+}
+
+.acms-range-marker {
+  position: absolute;
+  top: -24px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.acms-range-marker.current {
+  top: -28px;
+  font-size: 12px;
+  z-index: 5;
+}
+
+.acms-range-marker-pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #FFF;
+  margin-top: 3px;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Keyframe Animations */
+@keyframes scadaMistSpray {
+  0% { opacity: 0.3; transform: scaleY(0.7); }
+  50% { opacity: 0.95; transform: scaleY(1.05); }
+  100% { opacity: 0.3; transform: scaleY(0.7); }
+}
+
+.scada-spray-mist {
+  animation: scadaMistSpray 1.4s infinite ease-in-out;
+  transform-origin: top center;
+}
+
+@keyframes scadaSoundwave {
+  0% { r: 6; opacity: 0.9; }
+  100% { r: 24; opacity: 0; }
+}
+
+.scada-soundwave-ring {
+  animation: scadaSoundwave 1.6s infinite cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+
+@keyframes scadaAirflow {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.scada-airflow-flow {
+  stroke-dasharray: 6 4;
+  animation: scadaAirflow 0.8s linear infinite;
+}
+
+@keyframes scadaMcpStrobe {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; fill: #EF4444; }
+}
+
+.scada-mcp-alarm-strobe {
+  animation: scadaMcpStrobe 0.6s infinite ease-in-out;
+}
+
+
+

@@ -1,11 +1,41 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge, FileText } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useSiteStore } from '../context/SiteContext';
+
+const MODULE_HEADER_CONFIG = [
+  { match: /^\/energy-metering(?:\/|$)/, title: 'Energy Metering', icon: Zap },
+  { match: /^\/dg-set(?:\/|$)/, title: 'DG Set', icon: Activity },
+  { match: /^\/water-management(?:\/|$)/, title: 'Water Management', icon: Droplets },
+  { match: /^\/motors(?:\/|$)/, title: 'Motors', icon: Activity },
+  { match: /^\/daily-dpr(?:\/|$)/, title: 'Daily DPR', icon: Gauge },
+  { match: /^\/audit-logs(?:\/|$)|^\/admin\/audit-logs(?:\/|$)/, title: 'Audit Log', icon: FileText },
+  { match: /^\/lt-panel(?:\/|$)/, title: 'LT Panel', icon: LayoutDashboard },
+  { match: /^\/transformer(?:\/|$)/, title: 'Transformer', icon: Zap },
+  { match: /^\/hvac(?:\/|$)|^\/ahu$|^\/cooling-tower$/, title: 'HVAC', icon: Thermometer },
+  { match: /^\/VRV(?:\/|$)/i, title: 'VRV', icon: Wind },
+  { match: /^\/ac(?:\/|$)/i, title: 'AC', icon: Snowflake },
+  { match: /^\/alarm-system(?:\/|$)/, title: 'Alarm System', icon: Bell },
+  { match: /^\/fire-pumps(?:\/|$)/, title: 'Fire', icon: Flame },
+  { match: /^\/ticketing(?:\/|$)/, title: 'Ticketing', icon: ClipboardList },
+  { match: /^\/maintenance(?:\/|$)/, title: 'Maintenance', icon: Wrench },
+  { match: /^\/service(?:\/|$)/, title: 'Service History', icon: History },
+  { match: /^\/help(?:\/|$)/, title: 'Help', icon: LifeBuoy },
+  { match: /^\/aqi-sensor(?:\/|$)/, title: 'AQI Sensor', icon: Wind },
+];
 
 const MainLayout = ({ children }) => {
+  const { pathname } = useLocation();
+  const { activeSites, selectedSite, setSelectedSite } = useSiteStore();
   const [collapsed, setCollapsed] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
+
+  useEffect(() => {
+    if (!selectedSite && activeSites?.length) setSelectedSite(activeSites[0]);
+  }, [activeSites, selectedSite, setSelectedSite]);
 
   useEffect(() => {
     setIsImpersonating(!!localStorage.getItem('impersonator_backup_role'));
@@ -58,11 +88,24 @@ const MainLayout = ({ children }) => {
 
   const isExpanded = !collapsed || sidebarHover;
   const sidebarWidth = isExpanded ? '270px' : '64px';
+  const moduleHeader = MODULE_HEADER_CONFIG.find(({ match }) => match.test(pathname));
+  const ModuleIcon = moduleHeader?.icon;
+  const currentSite = selectedSite || activeSites?.[0] || null;
 
   return (
     <div className="scada-container">
       <Sidebar collapsed={collapsed} onClose={() => setCollapsed(true)} onOpen={() => setCollapsed(false)} onHoverChange={setSidebarHover} />
-      <Header collapsed={collapsed} toggleSidebar={toggleSidebar} sidebarWidth={sidebarWidth} isImpersonating={isImpersonating} />
+      <Header
+        collapsed={collapsed}
+        toggleSidebar={toggleSidebar}
+        sidebarWidth={sidebarWidth}
+        isImpersonating={isImpersonating}
+        moduleHeader={moduleHeader}
+        moduleIcon={ModuleIcon}
+        activeSites={activeSites}
+        selectedSite={currentSite}
+        setSelectedSite={setSelectedSite}
+      />
 
       <div 
         className={`scada-main-content w-100`}
@@ -100,13 +143,14 @@ const MainLayout = ({ children }) => {
             </button>
           </div>
         )}
-        <main className="px-2 px-md-3 pb-4">
+        <main className={`px-2 px-md-3 pb-4 ${moduleHeader ? 'single-module-header-page' : ''}`}>
           {children}
         </main>
       </div>
 
       {/* Responsive: On mobile remove sidebar margin */}
       <style dangerouslySetInnerHTML={{ __html: `
+        .single-module-header-page .page-context-banner { display: none !important; }
         @media (max-width: 992px) {
           .scada-main-content { margin-left: 0 !important; }
         }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Row, Col, Card, Container, Button, Spinner, Alert } from 'react-bootstrap';
 import { Zap, RefreshCw, AlertTriangle, Clock, Layers, Building2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PageContextBanner from '../../components/PageContextBanner';
 import { useSiteStore } from '../../context/SiteContext';
 import { useDeviceStatus } from '../../services/DeviceStatusContext';
@@ -241,6 +241,8 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
 };
 
 const EnergyMeteringOverview = () => {
+  const { pathname } = useLocation();
+  const isDailyDprRoute = pathname.startsWith('/daily-dpr');
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const { sites: allSites, selectedSite, setSelectedSite } = useSiteStore();
@@ -249,9 +251,9 @@ const EnergyMeteringOverview = () => {
   // Site selection state
   const [selectedSiteId, setSelectedSiteId] = useState(() => {
     return (
+      (selectedSite?.id ? String(selectedSite.id) : '') ||
       localStorage.getItem('selected_energy_overview_site_id') ||
       localStorage.getItem('selected_main_meter_site_id') ||
-      (selectedSite?.id ? String(selectedSite.id) : '') ||
       ''
     );
   });
@@ -266,22 +268,26 @@ const EnergyMeteringOverview = () => {
   // Active request tracking to prevent race conditions during rapid site changes
   const activeRequestIdRef = useRef(0);
 
-  // Synchronize selected site with available sites
+  // Keep the page filter synchronized with the shared header site selection.
   useEffect(() => {
-    if (Array.isArray(allSites) && allSites.length > 0) {
-      const match = allSites.find(s => String(s.id || s.siteId || s._id) === String(selectedSiteId));
-      if (!match) {
-        const firstId = String(allSites[0].id || allSites[0].siteId || allSites[0]._id);
-        setSelectedSiteId(firstId);
-        localStorage.setItem('selected_energy_overview_site_id', firstId);
-        if (setSelectedSite) setSelectedSite(allSites[0]);
-      } else {
-        if (setSelectedSite && selectedSite?.id !== match.id) {
-          setSelectedSite(match);
-        }
+    if (!Array.isArray(allSites) || allSites.length === 0) return;
+    const globalSiteId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+    if (globalSiteId) {
+      if (String(selectedSiteId) !== globalSiteId) {
+        setSelectedSiteId(globalSiteId);
+        localStorage.setItem('selected_energy_overview_site_id', globalSiteId);
       }
+    } else {
+      const savedMatch = allSites.find(site => String(site.id ?? site.siteId ?? site._id ?? '') === String(selectedSiteId));
+      const targetSite = savedMatch || allSites[0];
+      const targetId = String(targetSite.id ?? targetSite.siteId ?? targetSite._id ?? '');
+      if (String(selectedSiteId) !== targetId) {
+        setSelectedSiteId(targetId);
+        localStorage.setItem('selected_energy_overview_site_id', targetId);
+      }
+      if (setSelectedSite) setSelectedSite(targetSite);
     }
-  }, [allSites, selectedSiteId, setSelectedSite, selectedSite]);
+  }, [selectedSite, allSites, setSelectedSite]);
 
   // Site selector configuration for the PageContextBanner
   const siteSelector = useMemo(() => {
@@ -533,8 +539,8 @@ const EnergyMeteringOverview = () => {
 
   return (
     <div className="energy-overview-page p-3 p-md-4" style={{ background: isDark ? '#0a101d' : '#f8fafc', minHeight: '100vh', color: isDark ? '#e2e8f0' : '#1e293b' }}>
-      {/* ── 1. Reusable PageContextBanner (Header Ribbon - Site Selector Only) ── */}
-      <PageContextBanner
+      {/* The shared layout supplies the compact Daily DPR header on this alias route. */}
+      {!isDailyDprRoute && <PageContextBanner
         title="Energy Metering Overview"
         subtitle={selectedSiteName ? `Site: ${selectedSiteName}` : undefined}
         icon={<Zap className={scadaData.hasAnyDevice ? "text-warning" : "text-secondary"} size={22} />}
@@ -565,7 +571,7 @@ const EnergyMeteringOverview = () => {
         enableFullscreen={true}
         variant="scada"
         className="main-meter-context-banner"
-      />
+      />}
 
       {/* ── 2. Error State with Retry ── */}
       {fetchError && !devicesLoading && (

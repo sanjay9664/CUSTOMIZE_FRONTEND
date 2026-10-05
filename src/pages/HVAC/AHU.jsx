@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Nav, Badge } from 'react-bootstrap';
-import { Activity, Wind, RefreshCw, TrendingUp, Clock, Zap, Snowflake } from 'lucide-react';
+import { Row, Col, Card, Nav } from 'react-bootstrap';
+import { RefreshCw, TrendingUp, Clock, Zap, Snowflake } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as ChartTooltip, ResponsiveContainer, Legend
@@ -60,12 +60,12 @@ const AHU = () => {
   };
 
   const LabelCard = ({ title, data, top, left, right, bottom, labelColor = 'text-info' }) => (
-    <div className="position-absolute p-3 rounded-4 shadow-lg ahu-telemetry-label-card" style={{ top, left, right, bottom, backgroundColor: 'var(--scada-card)', border: '1px solid var(--scada-border)', backdropFilter: 'blur(4px)', minWidth: '160px', zIndex: 10 }}>
-      <div className={`fs-11 fw-bold text-uppercase mb-2 border-bottom border-white border-opacity-25 pb-1 tracking-wider`} style={{ color: 'var(--scada-text)' }}>{title}</div>
+    <div className="position-absolute p-3 rounded-4 shadow-lg ahu-telemetry-label-card" style={{ top, left, right, bottom, background: 'rgba(15, 23, 42, 0.88)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', minWidth: '160px', zIndex: 10 }}>
+      <div className="fs-11 fw-bold text-white text-opacity-75 text-uppercase mb-2 border-bottom border-white border-opacity-25 pb-1 tracking-wider">{title}</div>
       {data.map((item, i) => (
-        <div key={i} className="fs-13 mb-1 d-flex justify-content-between gap-3 align-items-center" style={{ color: 'var(--scada-text)' }}>
+        <div key={i} className="fs-13 text-white mb-1 d-flex justify-content-between gap-3 align-items-center">
           <span className={labelColor}>{item.label}</span> 
-          <span className="fw-black fs-5" style={{ color: 'var(--scada-text)' }}>{item.value}</span>
+          <span className="fw-black fs-5 text-white">{item.value}</span>
         </div>
       ))}
     </div>
@@ -73,25 +73,6 @@ const AHU = () => {
 
   return (
     <div className="ahu-wrapper p-4 h-100 d-flex flex-column" style={{ background: 'transparent', minHeight: '100vh', overflowY: 'auto' }}>
-      {/* Page Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-start scada-card p-4 rounded-4 border" style={{ backgroundColor: 'var(--scada-card)', borderColor: 'var(--scada-border)' }}>
-        <div className="pe-4">
-          <div className="d-flex align-items-center gap-3 mb-2">
-            <div className="p-2 bg-info bg-opacity-10 rounded-3">
-              <Wind className="text-info" size={24} />
-            </div>
-            <h4 className="mb-0 fw-black tracking-tight" style={{ color: 'var(--scada-text)' }}>Air Handling Unit (AHU)</h4>
-          </div>
-          <p className="text-muted fs-14 mb-0 mt-3" style={{ maxWidth: '900px', lineHeight: '1.6' }}>
-            The <strong style={{ color: 'var(--scada-text)' }}>AHU Control System</strong> monitors and regulates air circulation, filtration, cooling, and heating across the facility. Real-time telemetry ensures optimal indoor air quality (IAQ), temperature compliance, and energy efficiency.
-          </p>
-        </div>
-        <div className="d-flex flex-column gap-2 text-end">
-          <Badge bg="success" className="px-3 py-2 rounded-pill fw-bold tracking-wider">SYSTEM ONLINE</Badge>
-          <Badge bg="primary" className="px-3 py-2 rounded-pill fw-bold tracking-wider">COOLING MODE</Badge>
-        </div>
-      </div>
-
       <style>
         {`
           @keyframes spin-fan {
@@ -119,10 +100,10 @@ const AHU = () => {
             {/* Center AHU Image */}
             <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ zIndex: 2, width: '95%', maxWidth: '900px' }}>
               <img 
-                src="/ahu_v3.png" 
+                src="/ahu_transparent.png" 
                 alt="AHU Machine" 
                 className="img-fluid drop-shadow-glow" 
-                style={{ filter: 'contrast(1.1) brightness(0.85)' }} 
+                style={{ filter: 'contrast(1.05)' }} 
                 onLoad={() => setImageLoaded(true)}
               />
               
@@ -212,8 +193,7 @@ const AHU = () => {
             <LabelCard title="Cooling Coil" data={[{label: 'Valve', value: '45%'}, {label: 'Chilled Wtr', value: '7.2 °C'}]} top="46%" left="2%" />
             <LabelCard title="Heating Coil" data={[{label: 'Valve', value: '0%'}, {label: 'Hot Wtr', value: '---'}]} top="64%" left="2%" />
             <LabelCard title="Supply Fan" data={[{label: 'Status', value: 'ON'}, {label: 'VFD', value: '42 Hz'}]} top="82%" left="2%" />
-            
-            {/* Right Side Cards */}
+                        {/* Right Side Cards */}
             <LabelCard title="Exhaust Damper" data={[{label: 'Position', value: '15%'}, {label: 'Flow', value: '800 CFM'}]} top="8%" right="2%" />
             <LabelCard title="Return Air" data={[{label: 'Temp', value: '24.2 °C'}, {label: 'Hum', value: '55%'}, {label: 'CO2', value: '620 ppm'}]} top="26%" right="2%" />
             <LabelCard title="Supply Air" data={[{label: 'Temp', value: '14.5 °C'}, {label: 'Hum', value: '88%'}, {label: 'Static', value: '450 Pa'}]} top="46%" right="2%" />
@@ -221,30 +201,30 @@ const AHU = () => {
             <LabelCard title="Motor Diag." data={[{label: 'Vibration', value: '0.8 mm/s'}, {label: 'Current', value: '12.4 A'}]} top="82%" right="2%" />
 
             {/* Last Sync Overlay */}
-            <div className="position-absolute p-3 rounded-4 shadow-lg" style={{ top: '3%', right: '2%', backgroundColor: 'var(--scada-card)', backdropFilter: 'blur(4px)', border: '1px solid var(--scada-border)', zIndex: 10 }}>
+            <div className="position-absolute py-1 px-3 rounded-pill shadow-sm" style={{ top: '14px', right: '24px', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', zIndex: 10 }}>
               <div className="d-flex align-items-center gap-2">
-                <RefreshCw size={14} className="text-info" />
-                <div className="fs-12 fw-bold tracking-wider" style={{ color: 'var(--scada-text)' }}>LAST SYNC: 07-APR-2026 14:52</div>
+                <RefreshCw size={12} className="text-info" />
+                <div className="fs-11 fw-bold tracking-wider text-white text-opacity-75">LAST SYNC: 07-APR-2026 14:52</div>
               </div>
             </div>
 
             {/* KPI Bottom Overlay */}
-            <div className="position-absolute start-50 translate-middle-x p-4 rounded-4 shadow-lg d-flex gap-5 align-items-center justify-content-center" style={{ bottom: '4%', backgroundColor: 'var(--scada-card)', border: '1px solid var(--scada-border)', backdropFilter: 'blur(8px)', zIndex: 10, minWidth: '500px' }}>
+            <div className="position-absolute start-50 translate-middle-x p-4 rounded-4 shadow-lg d-flex gap-5 align-items-center justify-content-center" style={{ bottom: '4%', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', zIndex: 10, minWidth: '500px' }}>
               <div className="pe-4 border-end border-secondary border-opacity-25">
-                <div className="fs-12 fw-bold text-uppercase mb-1 tracking-wider" style={{ color: 'var(--scada-text)' }}>Key Performance Index</div>
+                <div className="fs-12 fw-bold text-uppercase mb-1 tracking-wider text-white text-opacity-75">Key Performance Index</div>
                 <div className="text-info fs-10 text-uppercase">AHU Efficiency</div>
               </div>
               <div className="text-center">
                 <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Total Airflow</div>
-                <div className="fs-3 fw-black" style={{ color: 'var(--scada-text)' }}>12,500 <span className="fs-6 text-muted">CFM</span></div>
+                <div className="fs-3 fw-black text-white">12,500 <span className="fs-6 text-muted">CFM</span></div>
               </div>
               <div className="text-center">
                 <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Cooling Load</div>
-                <div className="fs-3 fw-black" style={{ color: 'var(--scada-text)' }}>85 <span className="fs-6 text-muted">kW</span></div>
+                <div className="fs-3 fw-black text-white">85 <span className="fs-6 text-muted">kW</span></div>
               </div>
               <div className="text-center">
                 <div className="fs-11 text-muted mb-1 text-uppercase fw-bold">Power Draw</div>
-                <div className="fs-3 fw-black" style={{ color: 'var(--scada-text)' }}>14.2 <span className="fs-6 text-muted">kW</span></div>
+                <div className="fs-3 fw-black text-white">14.2 <span className="fs-6 text-muted">kW</span></div>
               </div>
             </div>
 
@@ -265,15 +245,15 @@ const AHU = () => {
                 {graphTimeRange === 'CUSTOM' && (
                   <input 
                     type="date" 
-                    className="form-control form-control-sm bg-dark text-white border-white border-opacity-25 rounded-pill px-3 shadow-none" 
-                    style={{ fontSize: '12px' }}
+                    className="form-control form-control-sm rounded-pill px-3 shadow-none" 
+                    style={{ backgroundColor: 'var(--scada-accent-bg, rgba(0,0,0,0.2))', color: 'var(--scada-text)', borderColor: 'var(--scada-border)', fontSize: '12px' }} 
                   />
                 )}
-                <Nav variant="pills" className="flex-nowrap bg-dark bg-opacity-50 p-1 rounded-pill border border-white border-opacity-5">
+                <Nav variant="pills" className="flex-nowrap p-1 rounded-pill border" style={{ backgroundColor: 'var(--scada-accent-bg, rgba(0,0,0,0.2))', borderColor: 'var(--scada-border)' }}>
                   {['DAY', 'WEEK', 'MONTH', 'YEAR', 'CUSTOM'].map(range => (
                     <Nav.Item key={range}>
                       <Nav.Link 
-                        className={`rounded-pill px-3 py-1 fs-11 fw-bold text-uppercase tracking-wider ${graphTimeRange === range ? 'bg-info text-dark' : 'text-muted'}`}
+                        className={`rounded-pill px-3 py-1 fs-11 fw-bold text-uppercase tracking-wider ${graphTimeRange === range ? 'bg-info text-dark shadow-sm' : 'text-muted'}`}
                         onClick={() => setGraphTimeRange(range)}
                       >
                         {range}

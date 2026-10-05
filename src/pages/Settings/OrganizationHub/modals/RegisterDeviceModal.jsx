@@ -1247,18 +1247,19 @@ const RegisterDeviceModal = ({
                 <table className="table-wizard-custom" style={{ overflow: 'visible' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '22%' }}>Display Name</th>
-                      <th style={{ width: '24%' }}>Gateway &amp; Device</th>
-                      <th style={{ width: '18%' }}>Module ID</th>
-                      <th style={{ width: '18%' }}>Event Field</th>
-                      <th style={{ width: '18%' }}>Threshold Limits</th>
-                      <th style={{ width: '40px' }} className="text-center"></th>
+                      <th style={{ width: '21%' }}>Display Name</th>
+                      <th style={{ width: '23%' }}>Gateway &amp; Device</th>
+                      <th style={{ width: '16%' }}>Module ID</th>
+                      <th style={{ width: '16%' }}>Event Field</th>
+                      <th style={{ width: '16%' }}>Threshold Limits</th>
+                      <th style={{ width: '65px' }} className="text-center">Show</th>
+                      <th style={{ width: '38px' }} className="text-center"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {dynamicTemplateFields.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-4 text-slate-400 fs-13">
+                        <td colSpan={7} className="text-center py-4 text-slate-400 fs-13">
                           <div className="d-flex flex-column align-items-center justify-content-center gap-1">
                             <span className="fw-medium text-slate-300">No telemetry fields added yet.</span>
                             <span className="fs-12 text-slate-500">Click <strong>+ Add Field</strong> below to add and configure device telemetry fields.</span>
@@ -1661,7 +1662,61 @@ const RegisterDeviceModal = ({
                           })()}
                         </td>
 
-                        {/* 6. Remove action */}
+                        {/* 6. Show / Display Toggle */}
+                        <td className="text-center align-middle" style={{ width: '65px' }}>
+                          {(() => {
+                            const isFieldDisplayed = f.isDisplayed !== false && f.showOnDashboard !== false;
+                            return (
+                              <div className="d-flex align-items-center justify-content-center">
+                                <div
+                                  onClick={() => {
+                                    const copy = [...dynamicTemplateFields];
+                                    copy[idx] = {
+                                      ...copy[idx],
+                                      isDisplayed: !isFieldDisplayed,
+                                      showOnDashboard: !isFieldDisplayed
+                                    };
+                                    setDynamicTemplateFields(copy);
+                                  }}
+                                  title={isFieldDisplayed ? "Field is shown on Dashboard (Click to hide)" : "Field is hidden from Dashboard (Click to show)"}
+                                  style={{
+                                    width: '44px',
+                                    height: '24px',
+                                    borderRadius: '12px',
+                                    background: isFieldDisplayed 
+                                      ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)' 
+                                      : '#1e293b',
+                                    border: isFieldDisplayed 
+                                      ? '1.5px solid #38bdf8' 
+                                      : '1.5px solid rgba(255, 255, 255, 0.15)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: isFieldDisplayed ? 'flex-end' : 'flex-start',
+                                    padding: '2px 3px',
+                                    cursor: 'pointer',
+                                    boxShadow: isFieldDisplayed 
+                                      ? '0 0 10px rgba(6, 182, 212, 0.55)' 
+                                      : 'inset 0 1px 3px rgba(0,0,0,0.5)',
+                                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: '16px',
+                                      height: '16px',
+                                      borderRadius: '50%',
+                                      background: isFieldDisplayed ? '#ffffff' : '#64748b',
+                                      boxShadow: isFieldDisplayed ? '0 1px 4px rgba(0,0,0,0.4)' : 'none',
+                                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+
+                        {/* 7. Remove action */}
                         <td className="text-center">
                           <Button
                             variant="link"
@@ -1735,6 +1790,8 @@ const RegisterDeviceModal = ({
                           graphable: true,
                           isTelemetry: true,
                           isCumulative: nextParam ? isCumulativeMetric({ displayName: nextParam.name, unit: nextParam.unit }) : false,
+                          isDisplayed: true,
+                          showOnDashboard: true,
                           isActive: true
                         }
                       ]);
@@ -1991,7 +2048,8 @@ const RegisterDeviceModal = ({
                     isCommand: Boolean(f.isCommand),
                     commandAlias: f.commandAlias ? String(f.commandAlias).trim() : null,
                     isReadable: f.isReadable !== false,
-                    isDisplayed: f.isDisplayed !== false,
+                    isDisplayed: f.isDisplayed !== false && f.showOnDashboard !== false,
+                    showOnDashboard: f.isDisplayed !== false && f.showOnDashboard !== false,
                     graphable: f.graphable !== false,
                     isActive: f.isActive !== false,
                     meta: parsedMeta
