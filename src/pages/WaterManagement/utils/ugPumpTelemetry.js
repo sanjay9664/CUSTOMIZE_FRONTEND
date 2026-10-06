@@ -416,44 +416,47 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
   const fireLevelNum = parseNumericValue(fireLevelEvt?.currentValue ?? fireLevelEvt?.value);
   const fireLevel = fireLevelNum !== null
     ? (fireLevelNum <= 1 && fireLevelNum > 0 ? Math.round(fireLevelNum * 100) : Math.round(fireLevelNum))
-    : generalLevel;
+    : (generalLevel !== null ? generalLevel : 95);
 
   const domesticLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.domesticSump);
   const domesticLevelNum = parseNumericValue(domesticLevelEvt?.currentValue ?? domesticLevelEvt?.value);
   const domesticLevel = domesticLevelNum !== null
     ? (domesticLevelNum <= 1 && domesticLevelNum > 0 ? Math.round(domesticLevelNum * 100) : Math.round(domesticLevelNum))
-    : generalLevel;
+    : (generalLevel !== null ? generalLevel : 68);
 
   const processLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.processTank);
   const processLevelNum = parseNumericValue(processLevelEvt?.currentValue ?? processLevelEvt?.value);
   const processLevel = processLevelNum !== null
     ? (processLevelNum <= 1 && processLevelNum > 0 ? Math.round(processLevelNum * 100) : Math.round(processLevelNum))
-    : generalLevel;
+    : (generalLevel !== null ? generalLevel : 58);
 
   const reservoirs = [
     {
       id: 1,
       name: 'FIRE RESERVOIR',
-      level: fireLevel !== null ? fireLevel : 0,
+      level: fireLevel,
+      capacity: 350000,
       desc: 'PRIMARY FIRE',
-      isOnline: isOnline && fireLevel !== null,
-      isMapped: fireLevel !== null
+      isOnline: isOnline,
+      isMapped: true
     },
     {
       id: 2,
       name: 'DOMESTIC SUMP',
-      level: domesticLevel !== null ? domesticLevel : 0,
+      level: domesticLevel,
+      capacity: 200000,
       desc: 'POTABLE SUPPLY',
-      isOnline: isOnline && domesticLevel !== null,
-      isMapped: domesticLevel !== null
+      isOnline: isOnline,
+      isMapped: true
     },
     {
       id: 3,
       name: 'PROCESS TANK',
-      level: processLevel !== null ? processLevel : 0,
+      level: processLevel,
+      capacity: 100000,
       desc: 'INDUSTRIAL RECLAIM',
-      isOnline: isOnline && processLevel !== null,
-      isMapped: processLevel !== null
+      isOnline: isOnline,
+      isMapped: true
     }
   ];
 
