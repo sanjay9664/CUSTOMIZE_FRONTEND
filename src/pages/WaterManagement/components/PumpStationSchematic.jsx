@@ -121,14 +121,15 @@ const PumpStationSchematic = ({
 
         {/* ── 1. THREE INLET RESERVOIRS (COLLISION FREE, MATCHING REFERENCE) ── */}
         {[
-          { y: 38, defaultName: 'FIRE RESERVOIR', defaultLevel: 95 },
-          { y: 162, defaultName: 'DOMESTIC SUMP', defaultLevel: 68 },
-          { y: 286, defaultName: 'PROCESS TANK', defaultLevel: 58 }
+          { y: 38,  defaultName: 'FIRE RESERVOIR' },
+          { y: 162, defaultName: 'DOMESTIC SUMP' },
+          { y: 286, defaultName: 'PROCESS TANK' }
         ].map((cfg, idx) => {
           const tank = tanks[idx] || {};
-          const hasLevel = tank.level !== null && tank.level !== undefined && !isNaN(Number(tank.level));
-          const levelVal = hasLevel ? Number(tank.level) : cfg.defaultLevel;
-          const tankName = tank.name || cfg.defaultName;
+          const isDeviceMapped = Boolean(tanks[idx] && tanks[idx].isMapped !== false);
+          const hasLevel = isDeviceMapped && tank.level !== null && tank.level !== undefined && !isNaN(Number(tank.level));
+          const levelVal = hasLevel ? Number(tank.level) : 0;
+          const tankName = (isDeviceMapped && (tank.name || tank.deviceName)) ? (tank.name || tank.deviceName) : cfg.defaultName;
 
           return (
             <g key={idx} transform={`translate(60, ${cfg.y})`}>
@@ -146,37 +147,65 @@ const PumpStationSchematic = ({
               {/* Metallic Top Lip */}
               <rect x="0" y="0" width="168" height="5" rx="2.5" fill="url(#flangeGrad)" />
 
-              {/* Liquid Wave & Level Fill */}
+              {/* Liquid Wave & Level Fill — only when level > 0 */}
               <g clipPath={`url(#clipTank${idx})`}>
-                <rect
-                  x="0"
-                  y={86 - (levelVal * 0.86)}
-                  width="168"
-                  height={levelVal * 0.86}
-                  fill="url(#fluidGrad)"
-                  opacity="0.88"
-                />
                 {levelVal > 0 && (
-                  <rect
-                    x="0"
-                    y={80 - (levelVal * 0.86)}
-                    width="168"
-                    height="16"
-                    fill="url(#wavePattern)"
-                  />
+                  <>
+                    <rect
+                      x="0"
+                      y={86 - (levelVal * 0.86)}
+                      width="168"
+                      height={levelVal * 0.86}
+                      fill="url(#fluidGrad)"
+                      opacity="0.88"
+                    />
+                    <rect
+                      x="0"
+                      y={80 - (levelVal * 0.86)}
+                      width="168"
+                      height="16"
+                      fill="url(#wavePattern)"
+                    />
+                  </>
                 )}
-                {/* Center Percentage Display */}
-                <text
-                  x="84"
-                  y="52"
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize="28"
-                  fontWeight="900"
-                  filter="url(#liquidGlow)"
-                >
-                  {levelVal}%
-                </text>
+                {/* Center Display: % when filled, empty label when not */}
+                {levelVal > 0 ? (
+                  <text
+                    x="84"
+                    y="52"
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize="28"
+                    fontWeight="900"
+                    filter="url(#liquidGlow)"
+                  >
+                    {levelVal}%
+                  </text>
+                ) : (
+                  <>
+                    <text
+                      x="84"
+                      y="45"
+                      textAnchor="middle"
+                      fill="#475569"
+                      fontSize="11"
+                      fontWeight="800"
+                      letterSpacing="1.5"
+                    >
+                      {hasLevel ? 'EMPTY' : 'NOT MAPPED'}
+                    </text>
+                    <text
+                      x="84"
+                      y="62"
+                      textAnchor="middle"
+                      fill="#334155"
+                      fontSize="9"
+                      fontWeight="700"
+                    >
+                      {hasLevel ? '0 L — Awaiting Fill' : '-- No Device --'}
+                    </text>
+                  </>
+                )}
               </g>
 
               {/* Subtitle Underneath Tank (Zero Collision) */}

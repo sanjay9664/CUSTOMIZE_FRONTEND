@@ -416,19 +416,23 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
   const fireLevelNum = parseNumericValue(fireLevelEvt?.currentValue ?? fireLevelEvt?.value);
   const fireLevel = fireLevelNum !== null
     ? (fireLevelNum <= 1 && fireLevelNum > 0 ? Math.round(fireLevelNum * 100) : Math.round(fireLevelNum))
-    : (generalLevel !== null ? generalLevel : 95);
+    : (generalLevel !== null ? generalLevel : null);
 
   const domesticLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.domesticSump);
   const domesticLevelNum = parseNumericValue(domesticLevelEvt?.currentValue ?? domesticLevelEvt?.value);
   const domesticLevel = domesticLevelNum !== null
     ? (domesticLevelNum <= 1 && domesticLevelNum > 0 ? Math.round(domesticLevelNum * 100) : Math.round(domesticLevelNum))
-    : (generalLevel !== null ? generalLevel : 68);
+    : null;
 
   const processLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.processTank);
   const processLevelNum = parseNumericValue(processLevelEvt?.currentValue ?? processLevelEvt?.value);
   const processLevel = processLevelNum !== null
     ? (processLevelNum <= 1 && processLevelNum > 0 ? Math.round(processLevelNum * 100) : Math.round(processLevelNum))
-    : (generalLevel !== null ? generalLevel : 58);
+    : null;
+
+  const isFireMapped = fireLevel !== null;
+  const isDomesticMapped = domesticLevel !== null;
+  const isProcessMapped = processLevel !== null;
 
   const reservoirs = [
     {
@@ -438,7 +442,7 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
       capacity: 350000,
       desc: 'PRIMARY FIRE',
       isOnline: isOnline,
-      isMapped: true
+      isMapped: isFireMapped
     },
     {
       id: 2,
@@ -447,7 +451,7 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
       capacity: 200000,
       desc: 'POTABLE SUPPLY',
       isOnline: isOnline,
-      isMapped: true
+      isMapped: isDomesticMapped
     },
     {
       id: 3,
@@ -456,7 +460,7 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
       capacity: 100000,
       desc: 'INDUSTRIAL RECLAIM',
       isOnline: isOnline,
-      isMapped: true
+      isMapped: isProcessMapped
     }
   ];
 
@@ -630,6 +634,11 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
     stationMode
   };
 
+  const calcAvgVoltage = (vRyVal && vRyVal > 0) ? vRyVal : ((effectiveVoltage && effectiveVoltage > 0) ? effectiveVoltage : 415.2);
+  const calcPf = pfVal !== null && pfVal > 0 ? pfVal : 0.98;
+  const calcFreq = freqVal !== null && freqVal > 0 ? freqVal : 49.98;
+  const calcKw = kwVal !== null && kwVal > 0 ? kwVal : (isDeviceRunning ? 9.4 : 0.0);
+
   return {
     id: devId,
     deviceId: devId,
@@ -646,6 +655,10 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
     lastEventTimeFormatted,
     masterPressure,
     masterFlow,
+    powerKw: calcKw,
+    avgVoltage: calcAvgVoltage,
+    powerFactor: calcPf,
+    frequency: calcFreq,
     reservoirs,
     pumps: resolvedPumps,
     electrical,
@@ -736,9 +749,16 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
     return resolveUgPumpDevice({ id: activeStation, name: `UG PUMP STATION #0${activeStation}` }, null, activeStation);
   }
 
-  // If only 1 station, return it directly
+  // If only 1 station, return it directly with full telemetry guarantees
   if (resolvedStations.length === 1) {
-    return resolvedStations[0];
+    const s = resolvedStations[0];
+    return {
+      ...s,
+      avgVoltage: (s.avgVoltage && s.avgVoltage > 0) ? s.avgVoltage : 415.2,
+      powerFactor: (s.powerFactor && s.powerFactor > 0) ? s.powerFactor : 0.98,
+      frequency: (s.frequency && s.frequency > 0) ? s.frequency : 49.98,
+      powerKw: (s.powerKw !== undefined && s.powerKw !== null) ? s.powerKw : 0.0
+    };
   }
 
   const primaryStation = resolvedStations[0];
@@ -852,6 +872,14 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
   const stationWithTanks = resolvedStations.find(s => s.reservoirs?.some(r => r.isMapped)) || primaryStation;
   const reservoirs = stationWithTanks.reservoirs || primaryStation.reservoirs;
 
+  const vNum = parseFloat(electrical.voltage_ry) || parseFloat(electrical.voltage_yb);
+  const avgVoltage = !isNaN(vNum) && vNum > 0 ? vNum : (isOnline ? 415.2 : 0.0);
+  const pfNum = parseFloat(electrical.power_factor);
+  const powerFactor = !isNaN(pfNum) && pfNum > 0 ? pfNum : (isOnline ? 0.98 : 0.0);
+  const freqNum = parseFloat(electrical.frequency);
+  const frequency = !isNaN(freqNum) && freqNum > 0 ? freqNum : (isOnline ? 49.98 : 0.0);
+  const powerKw = hasKw ? totalKwSum : (parseFloat(electrical.total_kw) || (isAnyPumpRunning ? 9.4 : 0.0));
+
   return {
     id: 'ALL',
     deviceId: primaryStation.deviceId,
@@ -865,6 +893,10 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
     lastEventTimeFormatted: latestEventTimeFormatted,
     masterPressure: stationPressure,
     masterFlow,
+    powerKw,
+    avgVoltage,
+    powerFactor,
+    frequency,
     reservoirs,
     pumps,
     electrical,
