@@ -259,7 +259,8 @@ const CombinedHydraulicFlow = ({
              ═══════════════════════════════════════════════════════════════════ */}
           {ugTanks.map((tank, idx) => {
             const yPos = 70 + (idx * 175);
-            const levelVal = typeof tank.level === 'number' ? tank.level : parseFloat(tank.level) || 60;
+            const hasLevel = tank.level !== null && tank.level !== undefined && !isNaN(parseFloat(tank.level));
+            const levelVal = hasLevel ? parseFloat(tank.level) : 0;
             const fillHeight = (levelVal / 100) * 120;
             const isFire = tank.name.toUpperCase().includes('FIRE');
             const isProcess = tank.name.toUpperCase().includes('PROCESS') || tank.name.toUpperCase().includes('RAW') || tank.name.toUpperCase().includes('STP');
@@ -320,12 +321,12 @@ const CombinedHydraulicFlow = ({
                     y="72"
                     textAnchor="middle"
                     fill="#ffffff"
-                    fontSize="32"
+                    fontSize={levelVal > 0 ? "32" : "14"}
                     fontWeight="900"
                     filter="url(#waterGlow)"
                     opacity="0.9"
                   >
-                    {levelVal > 0 ? `${Math.round(levelVal)}%` : '--%'}
+                    {levelVal > 0 ? `${Math.round(levelVal)}%` : (hasLevel ? 'EMPTY' : '--')}
                   </text>
                 </g>
 
@@ -614,7 +615,8 @@ const CombinedHydraulicFlow = ({
              ═══════════════════════════════════════════════════════════════════ */}
           {agTanks.map((tank, idx) => {
             const yPos = 70 + (idx * 175);
-            const levelVal = typeof tank.level === 'number' ? tank.level : parseFloat(tank.level) || 55;
+            const hasLevel = tank.level !== null && tank.level !== undefined && !isNaN(parseFloat(tank.level));
+            const levelVal = hasLevel ? parseFloat(tank.level) : 0;
             const fillHeight = (levelVal / 100) * 120;
             const isFlushing = tank.sectorType === 'FLUSHING' || tank.name.toUpperCase().includes('FLUSH');
             const isFire = tank.sectorType === 'UTILITY' || tank.name.toUpperCase().includes('FIRE');
@@ -686,12 +688,12 @@ const CombinedHydraulicFlow = ({
                     y="72"
                     textAnchor="middle"
                     fill="#ffffff"
-                    fontSize="32"
+                    fontSize={levelVal > 0 ? "32" : "14"}
                     fontWeight="900"
                     filter="url(#waterGlow)"
                     opacity="0.95"
                   >
-                    {levelVal > 0 ? `${Math.round(levelVal)}%` : '--%'}
+                    {levelVal > 0 ? `${Math.round(levelVal)}%` : (hasLevel ? 'EMPTY' : '--')}
                   </text>
                 </g>
 
