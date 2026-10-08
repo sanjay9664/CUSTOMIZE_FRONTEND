@@ -83,7 +83,7 @@ const SiemensStyleDG = () => {
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [paramSearch, setParamSearch] = useState('');
-  const [showOnlyMapped, setShowOnlyMapped] = useState(false);
+  const [showOnlyMapped, setShowOnlyMapped] = useState(true);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false); // Closed by default until turned ON
   const [collapsedCategories, setCollapsedCategories] = useState({
@@ -1000,14 +1000,18 @@ const SiemensStyleDG = () => {
     return groups;
   }, [filtered35Parameters]);
 
-  // Category counts from mapped parameters
+  // Category counts from mapped parameters (respects showOnlyMapped toggle)
   const categoryCounts = useMemo(() => {
-    const counts = { ALL: mapped35Parameters.length, CHANGE: 0, PARM: 0, ENGINE: 0, TOTAL: 0, FAULT: 0 };
+    const counts = { ALL: 0, CHANGE: 0, PARM: 0, ENGINE: 0, TOTAL: 0, FAULT: 0 };
     mapped35Parameters.forEach(p => {
-      if (counts[p.category] !== undefined) counts[p.category]++;
+      const isMapped = p.isMapped && p.liveVal !== '--';
+      if (!showOnlyMapped || isMapped) {
+        counts.ALL++;
+        if (counts[p.category] !== undefined) counts[p.category]++;
+      }
     });
     return counts;
-  }, [mapped35Parameters]);
+  }, [mapped35Parameters, showOnlyMapped]);
 
   // Active alarms count (excludes healthy 0.00 / normal / unmapped)
   const activeFaultsCount = useMemo(() => {
@@ -1021,6 +1025,12 @@ const SiemensStyleDG = () => {
       return true;
     }).length;
   }, [mapped35Parameters]);
+
+  // Monitored / mapped safety faults list
+  const mappedFaultsList = useMemo(() => {
+    return mapped35Parameters.filter(p => p.category === 'FAULT' && p.isMapped && p.liveVal !== '--');
+  }, [mapped35Parameters]);
+  const mappedFaultsCount = mappedFaultsList.length;
 
   // Total active mapped telemetry count
   const mappedTotalCount = useMemo(() => {
@@ -1197,21 +1207,21 @@ const SiemensStyleDG = () => {
                         <Activity size={12} className="text-info" />
                         <span className="text-dim fs-11">RPM:</span>
                         <span className="text-white fw-bold font-monospace fs-11">
-                          {data.engine.speed !== null ? data.engine.speed.toFixed(0) : (isEngineRunning ? '1500' : '0')}
+                          {data.engine.speed !== null ? data.engine.speed.toFixed(0) : '--'}
                         </span>
                       </div>
                       <div className="d-flex align-items-center gap-1.5">
                         <Radio size={12} className="text-warning" />
                         <span className="text-dim fs-11">Freq:</span>
                         <span className="text-warning fw-bold font-monospace fs-11">
-                          {data.engine.freq !== null ? data.engine.freq.toFixed(1) : (isEngineRunning ? '50.0' : '0.0')} Hz
+                          {data.engine.freq !== null ? `${data.engine.freq.toFixed(1)} Hz` : '--'}
                         </span>
                       </div>
                       <div className="d-flex align-items-center gap-1.5">
                         <Zap size={12} className="text-success" />
                         <span className="text-dim fs-11">Power:</span>
                         <span className="text-success fw-bold font-monospace fs-11">
-                          {data.power.kw !== null ? data.power.kw.toFixed(1) : (isEngineRunning ? '1.0' : '0.0')} kW
+                          {data.power.kw !== null ? `${data.power.kw.toFixed(1)} kW` : '--'}
                         </span>
                       </div>
                     </div>
@@ -1225,7 +1235,7 @@ const SiemensStyleDG = () => {
                   <div className="dg-subtile p-2 text-center rounded-2">
                     <div className="text-dim fs-10 text-uppercase fw-bold">Run Hours</div>
                     <div className="text-main fw-bold font-monospace fs-12 mt-0.5">
-                      {isDeviceConfigured ? (data.engine.runtime ?? '412.5') : '--'} h
+                      {isDeviceConfigured && data.engine.runtime !== null ? `${data.engine.runtime} h` : '--'}
                     </div>
                   </div>
                 </div>
@@ -1233,7 +1243,7 @@ const SiemensStyleDG = () => {
                   <div className="dg-subtile p-2 text-center rounded-2">
                     <div className="text-dim fs-10 text-uppercase fw-bold">Total Starts</div>
                     <div className="text-main fw-bold font-monospace fs-12 mt-0.5">
-                      {isDeviceConfigured ? (data.engine.starts ?? '14') : '--'}
+                      {isDeviceConfigured && data.engine.starts !== null ? data.engine.starts : '--'}
                     </div>
                   </div>
                 </div>
@@ -1241,7 +1251,7 @@ const SiemensStyleDG = () => {
                   <div className="dg-subtile p-2 text-center rounded-2">
                     <div className="text-dim fs-10 text-uppercase fw-bold">Avg Line V</div>
                     <div className="text-cyan-glow fw-bold font-monospace fs-12 mt-0.5">
-                      {isDeviceConfigured ? (data.voltage.ry ?? '415.0') : '--'} V
+                      {isDeviceConfigured && data.voltage.ry !== null ? `${data.voltage.ry.toFixed(1)} V` : '--'}
                     </div>
                   </div>
                 </div>
@@ -1272,7 +1282,7 @@ const SiemensStyleDG = () => {
                       <span>25%</span>
                     </div>
 
-                    <div className="dg-fluid-fill" style={{ height: `${isDeviceConfigured && data.diesel.level !== null ? Math.min(Math.max(data.diesel.level, 0), 100) : 18}%` }}>
+                    <div className="dg-fluid-fill" style={{ height: `${isDeviceConfigured && data.diesel.level !== null ? Math.min(Math.max(data.diesel.level, 0), 100) : 0}%` }}>
                       <div className="dg-fluid-surface-glow"></div>
                       <div className="dg-bubble b1"></div>
                       <div className="dg-bubble b2"></div>
@@ -1287,7 +1297,7 @@ const SiemensStyleDG = () => {
 
                     <div className="dg-tank-center-badge">
                       <div className="dg-tank-val">
-                        {isDeviceConfigured && data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '18%'}
+                        {isDeviceConfigured && data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '--'}
                       </div>
                       <div className="dg-tank-lbl">Level %</div>
                     </div>
@@ -1302,7 +1312,7 @@ const SiemensStyleDG = () => {
                         <span className="dg-fuel-tile-lbl">Remaining Fuel</span>
                       </div>
                       <span className="dg-fuel-tile-val warning">
-                        {isDeviceConfigured && data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '260 L'}
+                        {isDeviceConfigured && data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '--'}
                       </span>
                     </div>
 
@@ -1312,7 +1322,9 @@ const SiemensStyleDG = () => {
                         <span className="dg-fuel-tile-lbl">Est. Autonomy</span>
                       </div>
                       <span className="dg-fuel-tile-val info">
-                        {isDeviceConfigured ? '~14.5 hrs' : '--'}
+                        {isDeviceConfigured && data.diesel.remaining !== null && data.diesel.burnRate 
+                          ? `~${(data.diesel.remaining / data.diesel.burnRate).toFixed(1)} hrs` 
+                          : '--'}
                       </span>
                     </div>
 
@@ -1322,7 +1334,7 @@ const SiemensStyleDG = () => {
                         <span className="dg-fuel-tile-lbl">Burn Rate</span>
                       </div>
                       <span className="dg-fuel-tile-val danger">
-                        {isDeviceConfigured ? (isEngineRunning ? '18.0 L/h' : '0.0 L/h') : '--'}
+                        {isDeviceConfigured && data.diesel.burnRate ? `${data.diesel.burnRate.toFixed(1)} L/h` : '--'}
                       </span>
                     </div>
 
@@ -1331,8 +1343,10 @@ const SiemensStyleDG = () => {
                         <div className="dg-fuel-tile-icon success"><CheckCircle2 size={13} /></div>
                         <span className="dg-fuel-tile-lbl">Status</span>
                       </div>
-                      <span className="dg-fuel-tile-val success fs-11">
-                        Normal Safe
+                      <span className={`dg-fuel-tile-val ${isDeviceConfigured && data.diesel.level !== null ? 'success' : 'text-muted'} fs-11`}>
+                        {isDeviceConfigured && data.diesel.level !== null 
+                          ? (data.diesel.level < 20 ? 'Low Fuel' : 'Normal Safe') 
+                          : 'NO MAPPED'}
                       </span>
                     </div>
                   </div>
@@ -1355,11 +1369,15 @@ const SiemensStyleDG = () => {
                       <div className="dg-vital-icon cyan"><Zap size={14} /></div>
                       <span className="dg-vital-name">Battery Voltage</span>
                     </div>
-                    <span className="dg-vital-badge cyan">24-28V Normal</span>
+                    {isDeviceConfigured && data.engine.battery !== null ? (
+                      <span className="dg-vital-badge cyan">24-28V Normal</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
                   </div>
                   <div className="d-flex align-items-baseline justify-content-between mt-1">
                     <div className="dg-vital-val font-monospace">
-                      {isDeviceConfigured && data.engine.battery !== null ? data.engine.battery.toFixed(2) : '24.20'}
+                      {isDeviceConfigured && data.engine.battery !== null ? data.engine.battery.toFixed(2) : '--'}
                     </div>
                     <div className="dg-vital-unit cyan">V DC</div>
                   </div>
@@ -1374,11 +1392,15 @@ const SiemensStyleDG = () => {
                       <div className="dg-vital-icon warning"><Thermometer size={14} /></div>
                       <span className="dg-vital-name">Coolant Temp</span>
                     </div>
-                    <span className="dg-vital-badge warning">&lt;95°C Safe</span>
+                    {isDeviceConfigured && data.engine.coolant !== null ? (
+                      <span className="dg-vital-badge warning">&lt;95°C Safe</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
                   </div>
                   <div className="d-flex align-items-baseline justify-content-between mt-1">
                     <div className="dg-vital-val font-monospace">
-                      {isDeviceConfigured && data.engine.coolant !== null ? data.engine.coolant.toFixed(1) : '82.0'}
+                      {isDeviceConfigured && data.engine.coolant !== null ? data.engine.coolant.toFixed(1) : '--'}
                     </div>
                     <div className="dg-vital-unit warning">°C</div>
                   </div>
@@ -1393,11 +1415,15 @@ const SiemensStyleDG = () => {
                       <div className="dg-vital-icon success"><Gauge size={14} /></div>
                       <span className="dg-vital-name">Oil Pressure</span>
                     </div>
-                    <span className="dg-vital-badge success">Optimal</span>
+                    {isDeviceConfigured && data.engine.oilPressure !== null ? (
+                      <span className="dg-vital-badge success">Optimal</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
                   </div>
                   <div className="d-flex align-items-baseline justify-content-between mt-1">
                     <div className="dg-vital-val font-monospace">
-                      {isDeviceConfigured && data.engine.oilPressure !== null ? data.engine.oilPressure.toFixed(1) : '420.0'}
+                      {isDeviceConfigured && data.engine.oilPressure !== null ? data.engine.oilPressure.toFixed(1) : '--'}
                     </div>
                     <div className="dg-vital-unit success">kPA</div>
                   </div>
@@ -1412,13 +1438,15 @@ const SiemensStyleDG = () => {
                       <div className="dg-vital-icon info"><Activity size={14} /></div>
                       <span className="dg-vital-name">Engine Speed</span>
                     </div>
-                    <span className="dg-vital-badge info">
-                      {data.engine.freq !== null ? `${data.engine.freq.toFixed(1)} Hz` : '50.0 Hz'}
-                    </span>
+                    {isDeviceConfigured && data.engine.freq !== null ? (
+                      <span className="dg-vital-badge info">{data.engine.freq.toFixed(1)} Hz</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
                   </div>
                   <div className="d-flex align-items-baseline justify-content-between mt-1">
                     <div className="dg-vital-val font-monospace">
-                      {isDeviceConfigured && data.engine.speed !== null ? data.engine.speed.toFixed(0) : (isEngineRunning ? '1500' : '0')}
+                      {isDeviceConfigured && data.engine.speed !== null ? data.engine.speed.toFixed(0) : '--'}
                     </div>
                     <div className="dg-vital-unit info">RPM</div>
                   </div>
@@ -1427,43 +1455,68 @@ const SiemensStyleDG = () => {
             </div>
 
             {/* SAFETY INTERLOCK & ALARMS DIAGNOSTIC BANNER (CLEAN & INFORMATIVE) */}
-            <div className={`dg-safety-banner rounded-3 p-2.5 ${activeFaultsCount > 0 ? 'alert' : 'healthy'}`}>
+            <div className={`dg-safety-banner rounded-3 p-2.5 ${!isDeviceConfigured ? 'unconfigured' : (activeFaultsCount > 0 ? 'alert' : (mappedFaultsCount > 0 ? 'healthy' : 'unconfigured'))}`}>
               <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div className="d-flex align-items-center gap-2">
-                  <div className={`dg-safety-shield-icon ${activeFaultsCount > 0 ? 'alert' : 'healthy'}`}>
-                    {activeFaultsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
+                  <div className={`dg-safety-shield-icon ${!isDeviceConfigured || mappedFaultsCount === 0 ? 'opacity-40' : (activeFaultsCount > 0 ? 'alert' : 'healthy')}`}>
+                    {!isDeviceConfigured || mappedFaultsCount === 0 ? <ShieldAlert size={16} /> : (activeFaultsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />)}
                   </div>
                   <div>
                     <div className="fw-bold fs-12 d-flex align-items-center gap-2">
-                      <span className={activeFaultsCount > 0 ? 'text-danger' : 'text-success'}>
-                        {activeFaultsCount > 0 ? `${activeFaultsCount} ACTIVE TRIPS DETECTED` : 'ALL 14 SAFETY INTERLOCKS NORMAL'}
-                      </span>
+                      {!isDeviceConfigured ? (
+                        <span className="text-secondary">NO GENERATOR MAPPED</span>
+                      ) : mappedFaultsCount === 0 ? (
+                        <span className="text-secondary">NO INTERLOCKS MAPPED</span>
+                      ) : (
+                        <span className={activeFaultsCount > 0 ? 'text-danger' : 'text-success'}>
+                          {activeFaultsCount > 0 ? `${activeFaultsCount} ACTIVE TRIPS DETECTED` : `ALL ${mappedFaultsCount} SAFETY INTERLOCKS NORMAL`}
+                        </span>
+                      )}
                     </div>
                     <div className="text-dim fs-11">
-                      {activeFaultsCount > 0 ? 'Action required: Inspect active interlock faults below.' : 'Zero active trips. All mechanical, thermal & electrical interlocks healthy.'}
+                      {!isDeviceConfigured 
+                        ? 'No safety interlock parameters or telemetry mapped for this site.'
+                        : mappedFaultsCount === 0 
+                          ? 'No fault or safety interlock parameters mapped for this generator.'
+                          : (activeFaultsCount > 0 ? 'Action required: Inspect active interlock faults below.' : `Zero active trips. All ${mappedFaultsCount} monitored interlocks healthy.`)}
                     </div>
                   </div>
                 </div>
 
                 <button 
                   onClick={() => setShowDiagnostics(!showDiagnostics)} 
+                  disabled={!isDeviceConfigured || mappedFaultsCount === 0}
                   className="btn btn-xs dg-btn-outline-glass d-flex align-items-center gap-1.5 py-1 px-2.5 rounded-2 text-cyan-glow"
-                  title="Inspect all 14 safety sensor states"
+                  title="Inspect safety sensor states"
                 >
                   {showDiagnostics ? <EyeOff size={13} /> : <Eye size={13} />}
-                  <span className="fs-11 fw-semibold">{showDiagnostics ? 'Hide Interlocks' : 'Inspect 14 Sensors'}</span>
+                  <span className="fs-11 fw-semibold">{showDiagnostics ? 'Hide Interlocks' : (mappedFaultsCount > 0 ? `Inspect ${mappedFaultsCount} Sensors` : 'Inspect Interlocks')}</span>
                 </button>
               </div>
 
               {/* QUICK STATUS PILLS */}
               {!showDiagnostics && (
                 <div className="d-flex align-items-center gap-1.5 flex-wrap mt-2 pt-2 border-top dg-border-subtle">
-                  {['Emergency Stop: OK', 'Overspeed: OK', 'High Coolant Temp: OK', 'Low Oil Press: OK', 'Overload: OK'].map((pill, i) => (
-                    <span key={i} className="dg-interlock-chip">
-                      <Check size={10} className="text-success me-1 stroke-2" />
-                      {pill}
+                  {!isDeviceConfigured || mappedFaultsCount === 0 ? (
+                    <span className="dg-interlock-chip text-muted">
+                      No Interlocks Mapped
                     </span>
-                  ))}
+                  ) : (
+                    mappedFaultsList.slice(0, 5).map((f) => {
+                      const isTrip = f.liveVal && f.liveVal !== '--' && 
+                        !String(f.liveVal).toLowerCase().includes('0.00') && 
+                        !String(f.liveVal).toLowerCase().includes('0 status') && 
+                        !String(f.liveVal).toLowerCase().includes('normal') && 
+                        !String(f.liveVal).toLowerCase().includes('ok') && 
+                        parseFloat(f.liveVal) !== 0;
+                      return (
+                        <span key={f.id} className={`dg-interlock-chip ${isTrip ? 'border-danger text-danger' : ''}`}>
+                          {isTrip ? <AlertTriangle size={10} className="text-danger me-1 stroke-2" /> : <Check size={10} className="text-success me-1 stroke-2" />}
+                          {f.name}: {isTrip ? 'TRIP' : 'OK'}
+                        </span>
+                      );
+                    })
+                  )}
                 </div>
               )}
 
@@ -1473,17 +1526,24 @@ const SiemensStyleDG = () => {
                   <Row className="g-1.5">
                     {mapped35Parameters.filter(p => p.category === 'FAULT').map(p => {
                       const IconComp = p.icon || ShieldAlert;
-                      const isAlarmTripped = p.liveVal && p.liveVal !== '--' && !String(p.liveVal).toLowerCase().includes('0.00') && !String(p.liveVal).toLowerCase().includes('0 status') && !String(p.liveVal).toLowerCase().includes('normal') && !String(p.liveVal).toLowerCase().includes('ok') && parseFloat(p.liveVal) !== 0;
+                      const isMapped = p.isMapped && p.liveVal !== '--';
+                      const isAlarmTripped = isMapped && 
+                        !String(p.liveVal).toLowerCase().includes('0.00') && 
+                        !String(p.liveVal).toLowerCase().includes('0 status') && 
+                        !String(p.liveVal).toLowerCase().includes('normal') && 
+                        !String(p.liveVal).toLowerCase().includes('healthy') && 
+                        !String(p.liveVal).toLowerCase().includes('ok') && 
+                        parseFloat(p.liveVal) !== 0;
                       return (
                         <Col key={p.id} md={6}>
-                          <div className={`dg-sensor-item ${isAlarmTripped ? 'tripped' : 'normal'}`}>
+                          <div className={`dg-sensor-item ${!isMapped ? 'unmapped' : (isAlarmTripped ? 'tripped' : 'normal')}`}>
                             <div className="d-flex align-items-center gap-1.5 text-truncate">
                               <span className="dg-param-num">{p.num}</span>
-                              <IconComp size={12} className={isAlarmTripped ? 'text-danger' : 'text-success'} />
+                              <IconComp size={12} className={!isMapped ? 'text-muted opacity-40' : (isAlarmTripped ? 'text-danger' : 'text-success')} />
                               <span className="dg-param-name text-truncate fs-11">{p.name}</span>
                             </div>
-                            <span className={`dg-status-pill ${isAlarmTripped ? 'trip' : 'normal'}`}>
-                              {isAlarmTripped ? 'TRIP' : 'NORMAL'}
+                            <span className={`dg-status-pill ${!isMapped ? 'unmapped' : (isAlarmTripped ? 'trip' : 'normal')}`}>
+                              {!isMapped ? 'NO MAPPED' : (isAlarmTripped ? 'TRIP' : 'NORMAL')}
                             </span>
                           </div>
                         </Col>
@@ -1554,40 +1614,61 @@ const SiemensStyleDG = () => {
 
               {/* PARAMETER TILES GRID */}
               <div className="dg-params-container pe-1">
-                <Row className="g-1.5">
-                  {filtered35Parameters.map(p => {
-                    const IconComp = p.icon || Zap;
-                    const catColor = p.category === 'CHANGE' ? 'success' : p.category === 'PARM' ? 'warning' : p.category === 'ENGINE' ? 'info' : p.category === 'TOTAL' ? 'cyan' : 'danger';
-                    const isAlarmTripped = p.category === 'FAULT' && p.liveVal && p.liveVal !== '--' && 
-                      !String(p.liveVal).toLowerCase().includes('0.00') && 
-                      !String(p.liveVal).toLowerCase().includes('0 status') && 
-                      !String(p.liveVal).toLowerCase().includes('normal') && 
-                      !String(p.liveVal).toLowerCase().includes('healthy') && 
-                      !String(p.liveVal).toLowerCase().includes('ok') && 
-                      parseFloat(p.liveVal) !== 0;
+                {filtered35Parameters.length === 0 ? (
+                  <div className="d-flex flex-column align-items-center justify-content-center py-4 px-3 text-center rounded-2 dg-empty-params-state my-2">
+                    <Database size={24} className="text-muted opacity-40 mb-2" />
+                    <div className="fs-12 fw-bold text-main mb-1">
+                      {!isDeviceConfigured 
+                        ? 'NO GENERATOR MAPPED' 
+                        : (paramSearch ? `No parameters matching "${paramSearch}"` : 'NO MAPPED PARAMETERS AVAILABLE')}
+                    </div>
+                    <div className="text-dim fs-11" style={{ maxWidth: '340px' }}>
+                      {!isDeviceConfigured
+                        ? 'This site has no configured generator devices or telemetry feeds. Select a mapped site to view live data.'
+                        : (showOnlyMapped 
+                            ? 'Currently displaying active mapped telemetry only (0 active). Uncheck "Active Only" to inspect all 35 parameter slots.' 
+                            : 'No telemetry streams found.')}
+                    </div>
+                  </div>
+                ) : (
+                  <Row className="g-1.5">
+                    {filtered35Parameters.map(p => {
+                      const IconComp = p.icon || Zap;
+                      const catColor = p.category === 'CHANGE' ? 'success' : p.category === 'PARM' ? 'warning' : p.category === 'ENGINE' ? 'info' : p.category === 'TOTAL' ? 'cyan' : 'danger';
+                      const isMapped = p.isMapped && p.liveVal !== '--';
+                      const isAlarmTripped = isMapped && p.category === 'FAULT' && 
+                        !String(p.liveVal).toLowerCase().includes('0.00') && 
+                        !String(p.liveVal).toLowerCase().includes('0 status') && 
+                        !String(p.liveVal).toLowerCase().includes('normal') && 
+                        !String(p.liveVal).toLowerCase().includes('healthy') && 
+                        !String(p.liveVal).toLowerCase().includes('ok') && 
+                        parseFloat(p.liveVal) !== 0;
 
-                    const displayVal = p.category === 'FAULT'
-                      ? (p.liveVal === '--' ? '--' : (isAlarmTripped ? 'TRIP' : 'Normal'))
-                      : (typeof p.liveVal === 'string' && p.liveVal.includes(' Status') ? p.liveVal.replace(' Status', '') : p.liveVal);
+                      const displayVal = !isMapped
+                        ? 'NO MAPPED'
+                        : (p.category === 'FAULT'
+                            ? (isAlarmTripped ? 'TRIP' : 'Normal')
+                            : (typeof p.liveVal === 'string' && p.liveVal.includes(' Status') ? p.liveVal.replace(' Status', '') : p.liveVal));
 
-                    return (
-                      <Col key={p.id} md={6}>
-                        <div className={`dg-param-tile-v3 ${p.isMapped ? catColor : 'unmapped'}`}>
-                          <div className="d-flex align-items-center gap-2 text-truncate">
-                            <span className="dg-param-num">{p.num}</span>
-                            <IconComp size={13} className={p.isMapped ? `text-${catColor} flex-shrink-0` : 'text-muted opacity-40 flex-shrink-0'} />
-                            <span className="dg-param-name text-truncate" title={p.name}>{p.name}</span>
+                      return (
+                        <Col key={p.id} md={6}>
+                          <div className={`dg-param-tile-v3 ${isMapped ? catColor : 'unmapped'}`}>
+                            <div className="d-flex align-items-center gap-2 text-truncate">
+                              <span className="dg-param-num">{p.num}</span>
+                              <IconComp size={13} className={isMapped ? `text-${catColor} flex-shrink-0` : 'text-muted opacity-40 flex-shrink-0'} />
+                              <span className="dg-param-name text-truncate" title={p.name}>{p.name}</span>
+                            </div>
+                            <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
+                              <span className={`dg-param-val ${isMapped ? (p.category === 'FAULT' ? (isAlarmTripped ? 'trip' : 'normal') : catColor) : 'unmapped'}`}>
+                                {displayVal}
+                              </span>
+                            </div>
                           </div>
-                          <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
-                            <span className={`dg-param-val ${p.isMapped ? (p.category === 'FAULT' ? (isAlarmTripped ? 'trip' : 'normal') : catColor) : 'unmapped'}`}>
-                              {displayVal}
-                            </span>
-                          </div>
-                        </div>
-                      </Col>
-                    );
-                  })}
-                </Row>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                )}
               </div>
             </div>
           </div>
@@ -1633,7 +1714,7 @@ const SiemensStyleDG = () => {
                       <ChevronDown size={11} className="dg-target-select-chevron pointer-events-none" />
                     </div>
                   ) : (
-                    <span className="text-main fw-bold fs-10 ms-1">--</span>
+                    <span className="text-muted fs-10 ms-1 fw-semibold">No DG Mapped</span>
                   )}
                   {devices && devices.length > 1 && (
                     <span className="dg-target-count-pill" title={`${devices.length} DGs available at this site`}>
@@ -1649,7 +1730,7 @@ const SiemensStyleDG = () => {
                   <div className="dg-power-card-v2 cyan p-2 rounded-2 text-center">
                     <div className="dg-power-sub">ACTIVE</div>
                     <div className="dg-power-val cyan mt-1">
-                      {isDeviceConfigured && data.power.kw !== null ? data.power.kw.toFixed(1) : '1.0'}
+                      {isDeviceConfigured && data.power.kw !== null ? data.power.kw.toFixed(1) : '--'}
                     </div>
                     <div className="dg-power-unit cyan fs-10">kW</div>
                   </div>
@@ -1679,7 +1760,7 @@ const SiemensStyleDG = () => {
                 <div className="d-flex align-items-center justify-content-between mb-1">
                   <span className="text-dim fs-10 text-uppercase fw-bold">Line Voltages (V-L-L)</span>
                   <span className="text-cyan-glow fs-10 font-monospace">
-                    PF: {isDeviceConfigured && data.power.pf !== null ? data.power.pf.toFixed(2) : '0.85'}
+                    PF: {isDeviceConfigured && data.power.pf !== null ? data.power.pf.toFixed(2) : '--'}
                   </span>
                 </div>
                 <div className="row g-1">
@@ -1687,7 +1768,7 @@ const SiemensStyleDG = () => {
                     <div className="dg-phase-volt-tile text-center p-1.5 rounded-2">
                       <span className="dg-phase-tag red">L1-L2</span>
                       <div className="dg-phase-volt-val font-monospace fs-11 mt-1">
-                        {isDeviceConfigured && data.voltage.ry !== null ? `${data.voltage.ry.toFixed(1)}V` : '415V'}
+                        {isDeviceConfigured && data.voltage.ry !== null ? `${data.voltage.ry.toFixed(1)}V` : '--'}
                       </div>
                     </div>
                   </div>
@@ -1695,7 +1776,7 @@ const SiemensStyleDG = () => {
                     <div className="dg-phase-volt-tile text-center p-1.5 rounded-2">
                       <span className="dg-phase-tag amber">L2-L3</span>
                       <div className="dg-phase-volt-val font-monospace fs-11 mt-1">
-                        {isDeviceConfigured && data.voltage.yb !== null ? `${data.voltage.yb.toFixed(1)}V` : '414V'}
+                        {isDeviceConfigured && data.voltage.yb !== null ? `${data.voltage.yb.toFixed(1)}V` : '--'}
                       </div>
                     </div>
                   </div>
@@ -1703,7 +1784,7 @@ const SiemensStyleDG = () => {
                     <div className="dg-phase-volt-tile text-center p-1.5 rounded-2">
                       <span className="dg-phase-tag blue">L3-L1</span>
                       <div className="dg-phase-volt-val font-monospace fs-11 mt-1">
-                        {isDeviceConfigured && data.voltage.br !== null ? `${data.voltage.br.toFixed(1)}V` : '415V'}
+                        {isDeviceConfigured && data.voltage.br !== null ? `${data.voltage.br.toFixed(1)}V` : '--'}
                       </div>
                     </div>
                   </div>
@@ -1714,18 +1795,20 @@ const SiemensStyleDG = () => {
               <div>
                 <div className="d-flex align-items-center justify-content-between mb-1">
                   <span className="text-dim fs-10 text-uppercase fw-bold">Phase Load Currents</span>
-                  <span className="text-success fs-10 font-monospace fw-bold">Balanced</span>
+                  <span className="text-success fs-10 font-monospace fw-bold">
+                    {isDeviceConfigured && data.current.r !== null ? 'Balanced' : '--'}
+                  </span>
                 </div>
                 <div className="d-flex flex-column gap-1.5">
                   <div className="dg-phase-current-row">
                     <div className="d-flex align-items-center justify-content-between fs-11">
                       <span className="text-danger fw-bold">Phase R (L1)</span>
                       <span className="dg-phase-curr-val font-monospace fw-bold">
-                        {isDeviceConfigured && data.current.r !== null ? `${data.current.r.toFixed(1)} A` : '28.0 A'}
+                        {isDeviceConfigured && data.current.r !== null ? `${data.current.r.toFixed(1)} A` : '--'}
                       </span>
                     </div>
                     <div className="progress dg-phase-progress mt-1" style={{ height: '4px' }}>
-                      <div className="progress-bar bg-danger" style={{ width: '42%' }}></div>
+                      <div className="progress-bar bg-danger" style={{ width: isDeviceConfigured && data.current.r !== null ? `${Math.min(data.current.r, 100)}%` : '0%' }}></div>
                     </div>
                   </div>
 
@@ -1733,11 +1816,11 @@ const SiemensStyleDG = () => {
                     <div className="d-flex align-items-center justify-content-between fs-11">
                       <span className="text-warning fw-bold">Phase Y (L2)</span>
                       <span className="dg-phase-curr-val font-monospace fw-bold">
-                        {isDeviceConfigured && data.current.y !== null ? `${data.current.y.toFixed(1)} A` : '30.0 A'}
+                        {isDeviceConfigured && data.current.y !== null ? `${data.current.y.toFixed(1)} A` : '--'}
                       </span>
                     </div>
                     <div className="progress dg-phase-progress mt-1" style={{ height: '4px' }}>
-                      <div className="progress-bar bg-warning" style={{ width: '45%' }}></div>
+                      <div className="progress-bar bg-warning" style={{ width: isDeviceConfigured && data.current.y !== null ? `${Math.min(data.current.y, 100)}%` : '0%' }}></div>
                     </div>
                   </div>
 
@@ -1745,11 +1828,11 @@ const SiemensStyleDG = () => {
                     <div className="d-flex align-items-center justify-content-between fs-11">
                       <span className="text-info fw-bold">Phase B (L3)</span>
                       <span className="dg-phase-curr-val font-monospace fw-bold">
-                        {isDeviceConfigured && data.current.b !== null ? `${data.current.b.toFixed(1)} A` : '29.5 A'}
+                        {isDeviceConfigured && data.current.b !== null ? `${data.current.b.toFixed(1)} A` : '--'}
                       </span>
                     </div>
                     <div className="progress dg-phase-progress mt-1" style={{ height: '4px' }}>
-                      <div className="progress-bar bg-info" style={{ width: '44%' }}></div>
+                      <div className="progress-bar bg-info" style={{ width: isDeviceConfigured && data.current.b !== null ? `${Math.min(data.current.b, 100)}%` : '0%' }}></div>
                     </div>
                   </div>
                 </div>
@@ -1839,7 +1922,7 @@ const SiemensStyleDG = () => {
                     <Database size={13} className="text-info" />
                     <span className="text-dim fs-12 fw-medium">Capacity</span>
                   </div>
-                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.capacity || selectedDevObj?.template?.capacity || '500 kVA') : '--'}</span>
+                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.capacity || selectedDevObj?.template?.capacity || '--') : '--'}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -1847,7 +1930,7 @@ const SiemensStyleDG = () => {
                     <Fuel size={13} className="text-warning" />
                     <span className="text-dim fs-12 fw-medium">Fuel Type</span>
                   </div>
-                  <span className="text-main fs-12 fw-bold">{isDeviceConfigured ? (selectedDevObj?.fuelType || selectedDevObj?.template?.fuelType || 'Diesel') : '--'}</span>
+                  <span className="text-main fs-12 fw-bold">{isDeviceConfigured ? (selectedDevObj?.fuelType || selectedDevObj?.template?.fuelType || '--') : '--'}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -3340,6 +3423,26 @@ const SiemensStyleDG = () => {
           border: 1px solid rgba(239, 68, 68, 0.5);
           animation: dg-pulse 1.5s infinite;
         }
+        .dg-status-pill.unmapped {
+          background: rgba(148, 163, 184, 0.12);
+          color: #94a3b8;
+          border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+        .dg-sensor-item.unmapped {
+          opacity: 0.85;
+          background: rgba(15, 23, 42, 0.3);
+          border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        .dg-vital-badge.unmapped {
+          background: rgba(148, 163, 184, 0.12) !important;
+          color: #94a3b8 !important;
+          border: 1px solid rgba(148, 163, 184, 0.25) !important;
+          letter-spacing: 0.5px;
+        }
+        .dg-empty-params-state {
+          background: rgba(15, 23, 42, 0.35);
+          border: 1px dashed rgba(255, 255, 255, 0.12);
+        }
 
         .dg-pts-counter {
           display: inline-flex;
@@ -3438,6 +3541,29 @@ const SiemensStyleDG = () => {
           background: #fee2e2 !important;
           color: #b91c1c !important;
           border: 1.5px solid #fca5a5 !important;
+        }
+        body.light-mode .dg-status-pill.unmapped,
+        [data-theme="light"] .dg-status-pill.unmapped {
+          background: #f1f5f9 !important;
+          color: #64748b !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-sensor-item.unmapped,
+        [data-theme="light"] .dg-sensor-item.unmapped {
+          background: #f8fafc !important;
+          border: 1px dashed #cbd5e1 !important;
+          opacity: 1 !important;
+        }
+        body.light-mode .dg-vital-badge.unmapped,
+        [data-theme="light"] .dg-vital-badge.unmapped {
+          background: #f1f5f9 !important;
+          color: #64748b !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-empty-params-state,
+        [data-theme="light"] .dg-empty-params-state {
+          background: #f8fafc !important;
+          border: 1px dashed #cbd5e1 !important;
         }
 
         body.light-mode .dg-search-input,
