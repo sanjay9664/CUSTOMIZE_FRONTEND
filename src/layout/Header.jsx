@@ -1,12 +1,33 @@
-import React from 'react';
-import { Menu, Search, User, Bell, Sun, Moon, Building2, ChevronDown, Settings, LogOut, FileText, Check, ShieldCheck, BellRing, Users } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { 
+  Menu, Search, User, Bell, Sun, Moon, Building2, ChevronDown, ChevronRight, 
+  Settings, LogOut, FileText, Check, ShieldCheck, BellRing, Users, Cpu, Zap, Droplets, 
+  Activity, Thermometer, Layers, CheckCircle2 
+} from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { bmsService } from '../services/bmsService';
+import { normalizeList, getAuthHeaders } from '../services/apiClient';
+import { getApiUrl } from '../utils/apiConfig';
 import { getUserInitials } from '../utils/userUtils';
 
 import logo from "../assets/logo.png";
+
+// Custom Generator Engine Icon matching user reference image
+const DgGeneratorIcon = ({ size = 16, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="4" y="6" width="16" height="12" rx="2" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="18" x2="8" y2="22" />
+    <line x1="16" y1="18" x2="16" y2="22" />
+    <circle cx="12" cy="12" r="2.5" />
+    <line x1="19" y1="10" x2="21" y2="10" />
+    <line x1="19" y1="14" x2="21" y2="14" />
+  </svg>
+);
 
 const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonating = false, moduleHeader, moduleIcon: ModuleIcon, activeSites = [], selectedSite, setSelectedSite }) => {
   const navigate = useNavigate();
@@ -14,6 +35,329 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
   const { userRole, logout, user } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const getSiteId = site => site?.id ?? site?.siteId ?? site?._id ?? '';
+
+  // ── CASCADING SITE & ASSET SELECTOR STATES (MATCHING REFERENCE IMAGE 3) ──
+  const [isSiteDropdownOpen, setIsSiteDropdownOpen] = useState(false);
+  const [hoveredSiteId, setHoveredSiteId] = useState(null);
+  const [siteDevicesMap, setSiteDevicesMap] = useState({});
+  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(() => {
+    return localStorage.getItem('selected_dg_device_id') || localStorage.getItem('selected_device_id') || '';
+  });
+  const [siteSearchQuery, setSiteSearchQuery] = useState('');
+  const siteDropdownRef = useRef(null);
+  const dropdownTimerRef = useRef(null);
+
+  // Close cascading dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (siteDropdownRef.current && !siteDropdownRef.current.contains(event.target)) {
+        if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
+        setIsSiteDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
+        setIsSiteDropdownOpen(false);
+      }
+    };
+
+    if (isSiteDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
+    };
+  }, [isSiteDropdownOpen]);
+
+  // Two-way synchronization with other components (e.g. Overview target capsule)
+  useEffect(() => {
+    const handleDeviceEvent = (e) => {
+      if (e.detail?.deviceId) {
+        setSelectedDeviceId(String(e.detail.deviceId));
+      }
+    };
+    window.addEventListener('scada_device_changed', handleDeviceEvent);
+    return () => window.removeEventListener('scada_device_changed', handleDeviceEvent);
+  }, []);
+
+  const currentCategory = useMemo(() => {
+    const title = moduleHeader?.title || '';
+    if (title === 'DG Set') return 'GENERATOR';
+    if (title === 'Energy Metering') return 'ENERGY_METER';
+    if (title === 'Water Management') return 'WATER';
+    if (title === 'Motors') return 'MOTOR';
+    if (title === 'Transformer') return 'TRANSFORMER';
+    if (title === 'LT Panel') return 'LT_PANEL';
+    if (title === 'HVAC') return 'HVAC';
+    if (title === 'Fire') return 'FIRE_PUMP';
+    return null;
+  }, [moduleHeader?.title]);
+
+  const assetLabel = useMemo(() => {
+    const title = moduleHeader?.title || '';
+    if (title === 'DG Set') return 'DGs';
+    if (title === 'Energy Metering') return 'Meters';
+    if (title === 'Water Management') return 'Tanks';
+    if (title === 'Motors') return 'Motors';
+    if (title === 'Transformer') return 'XFMRs';
+    if (title === 'LT Panel') return 'Panels';
+    return 'Assets';
+  }, [moduleHeader?.title]);
+
+  const renderAssetIcon = (size = 15) => {
+    const title = moduleHeader?.title || '';
+    if (title === 'DG Set') return <DgGeneratorIcon size={size} />;
+    if (title === 'Energy Metering') return <Zap size={size} />;
+    if (title === 'Water Management') return <Droplets size={size} />;
+    if (title === 'Motors') return <Activity size={size} />;
+    if (title === 'Transformer') return <Zap size={size} />;
+    if (title === 'LT Panel') return <LayoutDashboard size={size} />;
+    if (title === 'HVAC') return <Thermometer size={size} />;
+    return <Cpu size={size} />;
+  };
+
+  // Pre-fetch and aggregate sub-devices/assets for each site across the active module
+  useEffect(() => {
+    if (!activeSites || activeSites.length === 0) return;
+
+    let isMounted = true;
+    const fetchAllSiteDevices = async () => {
+      setLoadingDevices(true);
+      const newMap = {};
+
+      const localKeys = [
+        'dg_generator_devices',
+        'scada_devices_db',
+        'bms_registered_devices',
+        'scada_device_mappings',
+        'tb_devices'
+      ];
+      const localDevices = [];
+      localKeys.forEach(k => {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const arr = Array.isArray(parsed) ? parsed : [parsed];
+            arr.forEach(d => {
+              if (d && (d.id || d.deviceId || d._id)) localDevices.push(d);
+            });
+          }
+        } catch (e) {}
+      });
+
+      for (const site of activeSites) {
+        const sId = String(getSiteId(site));
+        if (!sId) continue;
+        const siteDeviceList = [];
+        const seenIds = new Set();
+
+        const addDev = (d) => {
+          if (!d) return;
+          const devId = String(d.id || d.deviceId || d._id || '').trim();
+          if (!devId || seenIds.has(devId)) return;
+
+          const devSiteId = d.siteId !== undefined && d.siteId !== null ? String(d.siteId) : null;
+          if (devSiteId && devSiteId !== sId) return;
+
+          if (currentCategory === 'GENERATOR') {
+            const cat = String(d.category || d.type || '').toUpperCase();
+            const name = String(d.name || d.deviceName || d.label || d.title || '').toUpperCase();
+            const mod = String(d.module || '').toUpperCase();
+            const isDG = 
+              cat.includes('GEN') || 
+              cat.includes('DG') || 
+              mod.includes('DG') || 
+              mod.includes('GEN') || 
+              name.includes('DG') || 
+              name.includes('GENERATOR') || 
+              name.includes('GENSET') || 
+              d.module === 'DG Set';
+            if (!isDG) return;
+          } else if (currentCategory) {
+            const cat = String(d.category || d.type || '').toUpperCase();
+            if (!cat.includes(currentCategory)) return;
+          }
+
+          seenIds.add(devId);
+          siteDeviceList.push({
+            ...d,
+            id: devId,
+            name: d.name || d.deviceName || d.label || d.title || `${assetLabel}-${siteDeviceList.length + 1}`
+          });
+        };
+
+        // 1. Fetch from API for this site
+        try {
+          const params = currentCategory ? { category: currentCategory } : {};
+          const res = await bmsService.getSiteDevices(sId, params).catch(() => null);
+          const list = normalizeList(res, 'devices');
+          if (Array.isArray(list)) list.forEach(addDev);
+        } catch (e) {}
+
+        // 2. Fallback /devices?siteId=...
+        try {
+          const queryParams = new URLSearchParams({ siteId: sId });
+          if (currentCategory) queryParams.set('category', currentCategory);
+          const url = getApiUrl(`/devices?${queryParams.toString()}`);
+          const res = await fetch(url, { headers: getAuthHeaders() }).catch(() => null);
+          if (res && res.ok) {
+            const json = await res.json();
+            const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+            list.forEach(addDev);
+          }
+        } catch (e) {}
+
+        // 3. Merge local storage devices
+        localDevices.forEach(addDev);
+
+        newMap[sId] = siteDeviceList;
+      }
+
+      if (isMounted) {
+        setSiteDevicesMap(newMap);
+        setLoadingDevices(false);
+      }
+    };
+
+    fetchAllSiteDevices();
+    return () => { isMounted = false; };
+  }, [activeSites, moduleHeader?.title, currentCategory, assetLabel]);
+
+  const currentSiteId = String(getSiteId(selectedSite) || '');
+  const currentSiteDevices = siteDevicesMap[currentSiteId] || [];
+
+  const currentActiveDeviceObj = useMemo(() => {
+    if (!currentSiteDevices || currentSiteDevices.length === 0) return null;
+    if (selectedDeviceId) {
+      const found = currentSiteDevices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId));
+      if (found) return found;
+    }
+    return currentSiteDevices[0];
+  }, [selectedDeviceId, currentSiteDevices]);
+
+  const handleMouseEnterDropdown = () => {
+    if (dropdownTimerRef.current) {
+      clearTimeout(dropdownTimerRef.current);
+      dropdownTimerRef.current = null;
+    }
+    setHoveredSiteId(String(getSiteId(selectedSite) || getSiteId(activeSites[0]) || ''));
+    setIsSiteDropdownOpen(true);
+  };
+
+  const handleMouseLeaveDropdown = () => {
+    if (dropdownTimerRef.current) {
+      clearTimeout(dropdownTimerRef.current);
+    }
+    dropdownTimerRef.current = setTimeout(() => {
+      setIsSiteDropdownOpen(false);
+    }, 280);
+  };
+
+  const handleToggleSiteDropdown = (e) => {
+    if (e) e.stopPropagation();
+    if (dropdownTimerRef.current) {
+      clearTimeout(dropdownTimerRef.current);
+      dropdownTimerRef.current = null;
+    }
+    setIsSiteDropdownOpen(prev => {
+      const next = !prev;
+      if (next) {
+        setHoveredSiteId(String(getSiteId(selectedSite) || getSiteId(activeSites[0]) || ''));
+        setSiteSearchQuery('');
+      }
+      return next;
+    });
+  };
+
+  const handleSelectDevice = (site, device) => {
+    if (dropdownTimerRef.current) {
+      clearTimeout(dropdownTimerRef.current);
+      dropdownTimerRef.current = null;
+    }
+    if (site && setSelectedSite) {
+      setSelectedSite(site);
+    }
+    const devId = String(device.id || device.deviceId || '');
+    setSelectedDeviceId(devId);
+    
+    if (moduleHeader?.title === 'DG Set') {
+      localStorage.setItem('selected_dg_device_id', devId);
+    }
+    localStorage.setItem('selected_device_id', devId);
+
+    window.dispatchEvent(new CustomEvent('scada_device_changed', {
+      detail: {
+        deviceId: devId,
+        device,
+        siteId: String(getSiteId(site)),
+        module: moduleHeader?.title
+      }
+    }));
+
+    setIsSiteDropdownOpen(false);
+  };
+
+  const handleSelectSiteOnly = (site) => {
+    if (dropdownTimerRef.current) {
+      clearTimeout(dropdownTimerRef.current);
+      dropdownTimerRef.current = null;
+    }
+    if (site && setSelectedSite) {
+      setSelectedSite(site);
+    }
+    const sId = String(getSiteId(site));
+    const devices = siteDevicesMap[sId] || [];
+    if (devices.length > 0) {
+      handleSelectDevice(site, devices[0]);
+    } else {
+      setSelectedDeviceId('');
+      localStorage.removeItem('selected_dg_device_id');
+      localStorage.removeItem('selected_device_id');
+      window.dispatchEvent(new CustomEvent('scada_device_changed', {
+        detail: {
+          deviceId: '',
+          device: null,
+          siteId: sId,
+          module: moduleHeader?.title
+        }
+      }));
+      setIsSiteDropdownOpen(false);
+    }
+  };
+
+  const hoveredSiteObj = useMemo(() => {
+    return activeSites.find(s => String(getSiteId(s)) === String(hoveredSiteId)) || selectedSite || activeSites[0];
+  }, [activeSites, hoveredSiteId, selectedSite]);
+
+  const hoveredDevices = useMemo(() => {
+    if (!hoveredSiteObj) return [];
+    const sId = String(getSiteId(hoveredSiteObj));
+    return siteDevicesMap[sId] || [];
+  }, [hoveredSiteObj, siteDevicesMap]);
+
+  const filteredActiveSites = useMemo(() => {
+    if (!siteSearchQuery.trim()) return activeSites;
+    const q = siteSearchQuery.toLowerCase().trim();
+    return activeSites.filter(site => {
+      const sName = (site.name || site.siteName || '').toLowerCase();
+      if (sName.includes(q)) return true;
+      const sId = String(getSiteId(site));
+      const devs = siteDevicesMap[sId] || [];
+      return devs.some(d => (d.name || d.deviceName || '').toLowerCase().includes(q));
+    });
+  }, [activeSites, siteSearchQuery, siteDevicesMap]);
+
+  const displayedHoveredDevices = useMemo(() => {
+    if (!siteSearchQuery.trim()) return hoveredDevices;
+    const q = siteSearchQuery.toLowerCase().trim();
+    return hoveredDevices.filter(d => (d.name || d.deviceName || '').toLowerCase().includes(q));
+  }, [hoveredDevices, siteSearchQuery]);
 
   return (
     <header 
@@ -52,27 +396,204 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
             <span>{moduleHeader.title}</span>
           </div>
           {activeSites.length > 0 && (
-            <div className="global-site-select-wrap position-relative">
-              <Building2 size={16} className="global-site-icon" />
-              <select
-                className="global-site-select"
-                aria-label="Select site"
-                value={String(getSiteId(selectedSite) || '')}
-                onChange={event => {
-                  const val = event.target.value;
-                  const match = activeSites.find(site => String(getSiteId(site)) === String(val));
-                  if (match && setSelectedSite) {
-                    setSelectedSite(match);
-                  }
-                }}
+            <div 
+              className="global-site-select-wrap position-relative" 
+              ref={siteDropdownRef}
+              onMouseEnter={handleMouseEnterDropdown}
+              onMouseLeave={handleMouseLeaveDropdown}
+            >
+              <button
+                type="button"
+                onClick={handleToggleSiteDropdown}
+                className={`global-site-cascading-toggle d-flex align-items-center justify-content-between ${isSiteDropdownOpen ? 'active' : ''}`}
+                aria-expanded={isSiteDropdownOpen}
+                title="Select Site & Asset"
               >
-                {activeSites.map(site => (
-                  <option key={String(getSiteId(site))} value={String(getSiteId(site))}>
-                    {site.name || site.siteName || `Site ${getSiteId(site)}`}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="global-site-chevron" />
+                <div className="d-flex align-items-center gap-1.5 overflow-hidden me-1">
+                  <Building2 size={15} className="global-site-icon flex-shrink-0" />
+                  <span className="global-site-current-name text-truncate">
+                    {selectedSite?.name || selectedSite?.siteName || `Site ${getSiteId(selectedSite)}` || 'Select Site'}
+                  </span>
+                  {currentActiveDeviceObj ? (
+                    <>
+                      <span className="global-site-divider opacity-50 px-0.5">›</span>
+                      <span className="global-device-current-name d-flex align-items-center gap-1 text-truncate">
+                        {renderAssetIcon(13)}
+                        <span className="text-truncate">{currentActiveDeviceObj.name}</span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="global-device-badge-empty ms-1">
+                      (0 {assetLabel})
+                    </span>
+                  )}
+                </div>
+                <ChevronDown size={14} className={`global-site-chevron flex-shrink-0 ms-1 ${isSiteDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* CASCADING FLYOUT DROPDOWN MENU WITH SMOOTH TRANSITION */}
+              <div 
+                className={`global-cascading-menu-container shadow-2xl ${isSiteDropdownOpen ? 'open' : ''}`}
+                onMouseEnter={handleMouseEnterDropdown}
+                onMouseLeave={handleMouseLeaveDropdown}
+              >
+                  {/* SEARCH FILTER BAR */}
+                  <div className="global-cascading-search-box p-2 border-bottom">
+                    <div className="d-flex align-items-center gap-2 px-2.5 py-1.5 rounded-2 bg-dark bg-opacity-60 border border-secondary border-opacity-30">
+                      <Search size={13} className="text-muted flex-shrink-0" />
+                      <input
+                        type="text"
+                        value={siteSearchQuery}
+                        onChange={(e) => setSiteSearchQuery(e.target.value)}
+                        placeholder={`Search site or ${assetLabel.toLowerCase()}...`}
+                        className="bg-transparent border-0 text-white fs-12 w-100 shadow-none"
+                        style={{ outline: 'none' }}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {siteSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setSiteSearchQuery(''); }}
+                          className="btn btn-link p-0 text-muted fs-11 text-decoration-none"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="d-flex" style={{ minHeight: '260px' }}>
+                    {/* LEFT PANEL: SITES LIST */}
+                    <div className="global-cascading-sites-panel">
+                      <div className="global-cascading-panel-header d-flex align-items-center justify-content-between">
+                        <span>Sites</span>
+                        <span className="text-dim fs-10 fw-normal">({filteredActiveSites.length})</span>
+                      </div>
+                      <div className="global-cascading-list-scroll">
+                        {filteredActiveSites.length === 0 ? (
+                          <div className="text-muted text-center py-3 fs-11">No matching site</div>
+                        ) : (
+                          filteredActiveSites.map(site => {
+                            const sId = String(getSiteId(site));
+                            const isSelectedSite = String(getSiteId(selectedSite)) === sId;
+                            const isHovered = hoveredSiteId === sId;
+                            const siteDevs = siteDevicesMap[sId] || [];
+                            const devCount = siteDevs.length;
+
+                            return (
+                              <div
+                                key={sId}
+                                onMouseEnter={() => setHoveredSiteId(sId)}
+                                onClick={() => setHoveredSiteId(sId)}
+                                className={`global-cascading-site-item d-flex align-items-center justify-content-between ${isHovered ? 'hovered' : ''} ${isSelectedSite ? 'active' : ''}`}
+                                title={`Click to view ${site.name} devices`}
+                              >
+                                <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                  <Building2 size={15} className={`flex-shrink-0 ${isSelectedSite ? 'text-primary' : 'text-dim'}`} />
+                                  <span className="global-cascading-item-name text-truncate">
+                                    {site.name || site.siteName || `Site ${sId}`}
+                                  </span>
+                                </div>
+                                <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
+                                  {devCount > 0 ? (
+                                    <span className="global-cascading-count-pill" title={`${devCount} ${assetLabel} mapped`}>
+                                      {devCount} {assetLabel}
+                                    </span>
+                                  ) : (
+                                    <span className="global-cascading-count-pill zero">0</span>
+                                  )}
+                                  <ChevronRight size={13} className={`global-cascading-chevron-right ${isHovered ? 'active' : 'opacity-60'}`} />
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* RIGHT PANEL: ASSETS FLYOUT FOR HOVERED SITE */}
+                    <div className="global-cascading-assets-panel">
+                      <div className="global-cascading-panel-header d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-1.5 overflow-hidden">
+                          <span className="text-truncate fw-bold">
+                            {hoveredSiteObj?.name || 'Assets'}
+                          </span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="global-cascading-count-pill">
+                            {hoveredDevices.length} {assetLabel}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSiteOnly(hoveredSiteObj)}
+                            className="btn btn-link p-0 text-cyan-glow fs-10 text-decoration-none fw-bold"
+                            title="Select this site"
+                          >
+                            Select Site
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="global-cascading-list-scroll">
+                        {hoveredDevices.length === 0 ? (
+                          <div className="global-cascading-empty text-center py-4 px-3">
+                            <Cpu size={24} className="text-muted opacity-40 mb-2" />
+                            <div className="fs-12 fw-bold text-white mb-1">No {assetLabel} Mapped</div>
+                            <div className="fs-11 text-muted mb-3">No {assetLabel.toLowerCase()} registered under {hoveredSiteObj?.name || 'this site'}</div>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSiteOnly(hoveredSiteObj)}
+                              className="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fs-11 fw-bold"
+                            >
+                              Select {hoveredSiteObj?.name || 'Site'} Anyway
+                            </button>
+                          </div>
+                        ) : displayedHoveredDevices.length === 0 ? (
+                          <div className="text-muted text-center py-4 fs-11">No {assetLabel.toLowerCase()} match "{siteSearchQuery}"</div>
+                        ) : (
+                          displayedHoveredDevices.map((dev, idx) => {
+                            const dId = String(dev.id || dev.deviceId || idx);
+                            const isDevActive = String(selectedDeviceId) === dId && String(getSiteId(selectedSite)) === hoveredSiteId;
+
+                            return (
+                              <button
+                                key={dId}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectDevice(hoveredSiteObj, dev);
+                                }}
+                                className={`global-cascading-asset-item w-100 d-flex align-items-center justify-content-between text-start ${isDevActive ? 'active' : ''}`}
+                              >
+                                <div className="d-flex align-items-center gap-2.5 overflow-hidden me-2">
+                                  <div className={`global-cascading-asset-icon-box ${isDevActive ? 'active' : ''}`}>
+                                    {renderAssetIcon(15)}
+                                  </div>
+                                  <div className="d-flex flex-column overflow-hidden">
+                                    <span className="global-cascading-item-name text-truncate">
+                                      {dev.name || dev.deviceName || `${assetLabel}-${idx + 1}`}
+                                    </span>
+                                    <span className="fs-10 text-muted text-truncate opacity-75">
+                                      {dev.type || dev.category || assetLabel} {isDevActive ? '• Active' : ''}
+                                    </span>
+                                  </div>
+                                </div>
+                                {isDevActive ? (
+                                  <Check size={14} className="text-success stroke-2 flex-shrink-0" />
+                                ) : (
+                                  <span className="global-cascading-select-hint fs-10 text-muted opacity-60">
+                                    Select
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
             </div>
           )}
         </div>
@@ -295,13 +816,281 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
         .fs-7 { font-size: 0.72rem; }
         .custom-toggle::after { display: none; }
         .hover-bg-secondary:hover { background-color: rgba(255, 255, 255, 0.1); }
-        .global-module-context { min-width: 220px; max-width: 520px; flex: 1 1 auto; height: 44px; border: 1px solid rgba(96, 165, 250, 0.25); border-radius: 10px; background: rgba(15, 23, 42, 0.45); }
-        .global-site-select-wrap { min-width: 165px; max-width: 220px; }
-        .global-site-select { appearance: none; width: 100%; height: 38px; padding: 0 30px 0 36px; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: #f8fafc; background: #1e293b; font-size: 13px; font-weight: 700; outline: none; }
-        .global-site-select option { color: #f8fafc; background: #1e293b; }
-        .global-site-icon, .global-site-chevron { position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none; color: #cbd5e1; }
-        .global-site-icon { left: 10px; }
-        .global-site-chevron { right: 9px; color: #38bdf8; }
+        .global-module-context { min-width: 260px; max-width: 620px; flex: 1 1 auto; height: 44px; border: 1px solid rgba(96, 165, 250, 0.25); border-radius: 10px; background: rgba(15, 23, 42, 0.45); }
+        .global-site-select-wrap { min-width: 200px; max-width: 360px; position: relative; }
+        .global-site-cascading-toggle {
+          appearance: none;
+          height: 38px;
+          padding: 0 12px;
+          border: 1px solid rgba(148, 163, 184, 0.25);
+          border-radius: 8px;
+          color: #f8fafc;
+          background: #1e293b;
+          font-size: 13px;
+          font-weight: 700;
+          outline: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .global-site-cascading-toggle:hover,
+        .global-site-cascading-toggle.active {
+          border-color: #38bdf8;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+          background: #0f172a;
+        }
+        .global-site-current-name {
+          color: #f8fafc;
+          font-size: 13px;
+          font-weight: 700;
+        }
+        .global-device-current-name {
+          color: #38bdf8;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .global-site-divider {
+          color: rgba(255, 255, 255, 0.4);
+          font-size: 13px;
+        }
+        .global-device-badge-empty {
+          color: #94a3b8;
+          font-size: 11px;
+          font-weight: 600;
+        }
+        .global-site-icon {
+          color: #38bdf8;
+        }
+        .global-site-chevron {
+          transition: transform 0.2s ease;
+          color: #38bdf8;
+        }
+        .global-site-chevron.rotate-180 {
+          transform: rotate(180deg);
+        }
+
+        .global-cascading-menu-container {
+          position: absolute;
+          top: calc(100% + 6px);
+          right: 0;
+          z-index: 1060;
+          background: rgba(15, 23, 42, 0.98);
+          border: 1px solid rgba(56, 189, 248, 0.25);
+          border-radius: 12px;
+          backdrop-filter: blur(24px);
+          overflow: hidden;
+          min-width: 480px;
+          max-width: 540px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(56, 189, 248, 0.15);
+          opacity: 0;
+          transform: translateY(-8px) scale(0.97);
+          pointer-events: none;
+          visibility: hidden;
+          transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                      visibility 0.24s ease;
+        }
+        .global-cascading-menu-container.open {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          pointer-events: auto;
+          visibility: visible;
+        }
+        /* Invisible bridge to prevent mouse leave gap between trigger and menu */
+        .global-cascading-menu-container::before {
+          content: '';
+          position: absolute;
+          top: -10px;
+          left: 0;
+          right: 0;
+          height: 12px;
+          background: transparent;
+        }
+
+        .global-cascading-search-box {
+          background: rgba(0, 0, 0, 0.2);
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .global-cascading-sites-panel {
+          width: 220px;
+          flex-shrink: 0;
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(15, 23, 42, 0.75);
+        }
+        .global-cascading-assets-panel {
+          width: 260px;
+          flex-grow: 1;
+          background: rgba(15, 23, 42, 0.98);
+        }
+        .global-cascading-panel-header {
+          padding: 8px 12px;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #94a3b8;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(0, 0, 0, 0.25);
+        }
+        .global-cascading-list-scroll {
+          max-height: 290px;
+          overflow-y: auto;
+          padding: 6px;
+        }
+        .global-cascading-site-item {
+          padding: 8px 10px;
+          border-radius: 6px;
+          color: #cbd5e1;
+          font-size: 12.5px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          user-select: none;
+          margin-bottom: 3px;
+        }
+        .global-cascading-site-item:hover,
+        .global-cascading-site-item.hovered {
+          background: #93c5fd !important;
+          color: #0f172a !important;
+          font-weight: 700;
+        }
+        .global-cascading-site-item:hover .text-dim,
+        .global-cascading-site-item.hovered .text-dim,
+        .global-cascading-site-item:hover .global-cascading-item-name,
+        .global-cascading-site-item.hovered .global-cascading-item-name {
+          color: #0f172a !important;
+        }
+        .global-cascading-site-item.active {
+          border-left: 3px solid #38bdf8;
+        }
+
+        .global-cascading-count-pill {
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 9999px;
+          background: rgba(56, 189, 248, 0.15);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+        .global-cascading-count-pill.zero {
+          background: rgba(148, 163, 184, 0.1);
+          color: #94a3b8;
+          border-color: rgba(148, 163, 184, 0.2);
+        }
+        .global-cascading-site-item:hover .global-cascading-count-pill,
+        .global-cascading-site-item.hovered .global-cascading-count-pill {
+          background: #1e3a8a;
+          color: #ffffff;
+          border-color: #1e3a8a;
+        }
+
+        .global-cascading-asset-item {
+          padding: 8px 10px;
+          border-radius: 6px;
+          color: #f1f5f9;
+          font-size: 12.5px;
+          font-weight: 600;
+          background: transparent;
+          border: 1px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          user-select: none;
+          margin-bottom: 3px;
+        }
+        .global-cascading-asset-item:hover {
+          background: rgba(56, 189, 248, 0.12);
+          border-color: rgba(56, 189, 248, 0.25);
+          color: #ffffff;
+        }
+        .global-cascading-asset-item.active {
+          background: #93c5fd !important;
+          color: #0f172a !important;
+          font-weight: 700;
+          border-color: #93c5fd !important;
+        }
+        .global-cascading-asset-item.active .global-cascading-item-name,
+        .global-cascading-asset-item.active .text-muted {
+          color: #0f172a !important;
+          opacity: 0.9 !important;
+        }
+        .global-cascading-asset-item.active .global-cascading-asset-icon-box {
+          color: #0f172a !important;
+          background: rgba(255, 255, 255, 0.5) !important;
+        }
+        .global-cascading-asset-icon-box {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          background: rgba(56, 189, 248, 0.15);
+          color: #38bdf8;
+          flex-shrink: 0;
+        }
+
+        /* LIGHT MODE COMPATIBILITY FOR CASCADING DROPDOWN */
+        body.light-mode .global-site-cascading-toggle,
+        [data-theme="light"] .global-site-cascading-toggle {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .global-site-current-name,
+        [data-theme="light"] .global-site-current-name {
+          color: #0f172a !important;
+        }
+        body.light-mode .global-device-current-name,
+        [data-theme="light"] .global-device-current-name {
+          color: #0284c7 !important;
+        }
+        body.light-mode .global-site-divider,
+        [data-theme="light"] .global-site-divider {
+          color: #64748b !important;
+        }
+        body.light-mode .global-cascading-menu-container,
+        [data-theme="light"] .global-cascading-menu-container {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15) !important;
+        }
+        body.light-mode .global-cascading-search-box,
+        [data-theme="light"] .global-cascading-search-box {
+          background: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .global-cascading-search-box input,
+        [data-theme="light"] .global-cascading-search-box input {
+          color: #0f172a !important;
+        }
+        body.light-mode .global-cascading-search-box input::placeholder,
+        [data-theme="light"] .global-cascading-search-box input::placeholder {
+          color: #64748b !important;
+        }
+        body.light-mode .global-cascading-sites-panel,
+        [data-theme="light"] .global-cascading-sites-panel {
+          background: #f8fafc !important;
+          border-right: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .global-cascading-assets-panel,
+        [data-theme="light"] .global-cascading-assets-panel {
+          background: #ffffff !important;
+        }
+        body.light-mode .global-cascading-panel-header,
+        [data-theme="light"] .global-cascading-panel-header {
+          background: #f1f5f9 !important;
+          color: #475569 !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .global-cascading-site-item,
+        [data-theme="light"] .global-cascading-site-item {
+          color: #334155 !important;
+        }
+        body.light-mode .global-cascading-asset-item,
+        [data-theme="light"] .global-cascading-asset-item {
+          color: #334155 !important;
+        }
 
         /* ── MANAGE HUB DROPDOWN (3 CARDS MATCHING USER DESIGN) ── */
         .manage-hub-dropdown {
