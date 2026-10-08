@@ -395,7 +395,10 @@ const WaterOverview = () => {
   // ── 8. RENDER AG TANK CARD (SCADA GLASS CYLINDER + CENTERED 2x2 TELEMETRY TILES) ──
   const renderAgTankCard = (tank, idx, isMultiColumn = false, totalCount = 1) => {
     const hasLevel = tank.level !== null && tank.level !== undefined && !isNaN(Number(tank.level));
-    const levelVal = hasLevel ? Number(tank.level) : 0;
+    let rawLevelNum = hasLevel ? Number(tank.level) : 0;
+    if (rawLevelNum > 0 && rawLevelNum <= 1) rawLevelNum = rawLevelNum * 100;
+    else if (rawLevelNum > 100 && rawLevelNum <= 10000) rawLevelNum = rawLevelNum / 100;
+    const levelVal = Math.min(100, Math.max(0, Math.round(rawLevelNum)));
     const isValveOpen = tank.valveStatus === 'OPEN' || tank.valveStatus === '1' || tank.valveStatus === true;
     const capacityNum = tank.capacity && !isNaN(Number(tank.capacity)) ? Number(tank.capacity) : (tank.totalCapacity ? Number(tank.totalCapacity) : null);
     const currentVolume = capacityNum ? Math.round((capacityNum * levelVal) / 100) : 0;
@@ -410,9 +413,9 @@ const WaterOverview = () => {
     const isSingleTank = totalCount === 1 && !isMultiColumn;
     const isDualTank = totalCount === 2 && !isMultiColumn;
 
-    // Responsive dimensions: When single tank, expand vessel to be the hero element (~250px tall, ~175px wide)
-    const vesselHeight = isSingleTank ? '255px' : (isDualTank ? '135px' : '96px');
-    const vesselWidth = isSingleTank ? '175px' : (isDualTank ? '118px' : '88px');
+    // Responsive dimensions: Centered SCADA vessel with larger, taller proportions & equal spacing
+    const vesselHeight = isSingleTank ? '255px' : (isDualTank ? '190px' : '110px');
+    const vesselWidth = isSingleTank ? '175px' : (isDualTank ? '128px' : '90px');
 
     return (
       <div
@@ -422,15 +425,15 @@ const WaterOverview = () => {
           background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.95) 0%, rgba(20, 30, 48, 0.85) 100%)',
           boxShadow: isSingleTank ? '0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(56, 189, 248, 0.15)' : '0 4px 16px rgba(0, 0, 0, 0.4)',
           cursor: 'pointer',
-          minHeight: isSingleTank ? '260px' : '155px',
-          padding: isSingleTank ? '14px 16px' : '10px 12px',
+          minHeight: isSingleTank ? '270px' : '220px',
+          padding: isSingleTank ? '16px 18px' : '14px 16px',
           transition: 'all 0.25s ease'
         }}
         onClick={() => handleOpenAssetModal({ ...tank, type: 'AG_TANK' })}
         title="Click to inspect tank diagnostics"
       >
         {/* Tank Header */}
-        <div className="d-flex justify-content-between align-items-center mb-1.5 pb-1 border-bottom border-secondary border-opacity-15" style={{ minWidth: 0 }}>
+        <div className="d-flex justify-content-between align-items-center pb-2 border-bottom border-secondary border-opacity-15" style={{ minWidth: 0 }}>
           <div className="d-flex align-items-center gap-2" style={{ minWidth: 0, flex: '1 1 auto' }}>
             <span
               style={{
@@ -480,6 +483,19 @@ const WaterOverview = () => {
 
           <div className="d-flex align-items-center gap-1.5 flex-shrink-0 ms-1">
             <span
+              className="badge rounded-pill"
+              style={{
+                background: !tank.isOnline ? 'rgba(148, 163, 184, 0.15)' : (hasLevel && levelVal > 15 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
+                color: !tank.isOnline ? '#94a3b8' : (hasLevel && levelVal > 15 ? '#4ade80' : '#f87171'),
+                border: `1px solid ${!tank.isOnline ? 'rgba(148, 163, 184, 0.3)' : (hasLevel && levelVal > 15 ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)')}`,
+                fontSize: isSingleTank ? '9px' : '8px',
+                fontWeight: 700,
+                padding: isSingleTank ? '2.5px 8px' : '2px 6px'
+              }}
+            >
+              {!tank.isOnline ? 'OFFLINE' : (hasLevel && levelVal > 15 ? 'NORMAL STORAGE' : (hasLevel ? 'LOW LEVEL' : 'UNMAPPED'))}
+            </span>
+            <span
               style={{
                 background: 'rgba(2, 132, 199, 0.25)',
                 color: '#38bdf8',
@@ -508,41 +524,49 @@ const WaterOverview = () => {
           </div>
         </div>
 
-        {/* Tank Main Body (Hero Vessel on Left + 4 Balanced Centered SCADA Tiles on Right) */}
-        <div className="d-flex align-items-center gap-3 flex-grow-1 my-1" style={{ minHeight: 0 }}>
-          {/* Left: Cylindrical SCADA Vessel */}
-          <div className="d-flex align-items-center gap-2" style={{ flexShrink: 0 }}>
+        {/* Tank Main Body: Centered Tank with Generous, Symmetrical Top & Bottom Spacing */}
+        <div
+          className="d-flex flex-column align-items-center justify-content-between flex-grow-1 w-100 my-auto"
+          style={{
+            minHeight: 0,
+            paddingTop: isSingleTank ? '16px' : '14px',
+            paddingBottom: isSingleTank ? '14px' : '12px',
+            gap: isSingleTank ? '16px' : '14px'
+          }}
+        >
+          {/* Centered SCADA Vessel with Scale */}
+          <div className="d-flex align-items-center justify-content-center gap-2" style={{ flexShrink: 0 }}>
             {/* Graduation scale */}
-            {isSingleTank ? (
+            {isSingleTank || isDualTank ? (
               <div
                 className="d-flex flex-column justify-content-between text-end pe-1"
-                style={{ height: vesselHeight, fontSize: '8px', color: '#64748b', fontWeight: 800, lineHeight: 1 }}
+                style={{ height: vesselHeight, fontSize: isSingleTank ? '8px' : '7.5px', color: '#64748b', fontWeight: 800, lineHeight: 1 }}
               >
                 <div className="d-flex align-items-center gap-1 justify-content-end">
                   <span style={{ color: levelVal >= 90 ? '#38bdf8' : '#64748b' }}>100%</span>
-                  <span style={{ width: '6px', height: '1.5px', background: levelVal >= 90 ? '#38bdf8' : '#475569' }} />
+                  <span style={{ width: '5px', height: '1px', background: levelVal >= 90 ? '#38bdf8' : '#475569' }} />
                 </div>
                 <div className="d-flex align-items-center gap-1 justify-content-end">
                   <span style={{ color: levelVal >= 75 ? '#38bdf8' : '#475569' }}>75%</span>
-                  <span style={{ width: '4px', height: '1px', background: levelVal >= 75 ? '#38bdf8' : '#334155' }} />
+                  <span style={{ width: '3.5px', height: '1px', background: levelVal >= 75 ? '#38bdf8' : '#334155' }} />
                 </div>
                 <div className="d-flex align-items-center gap-1 justify-content-end">
                   <span style={{ color: levelVal >= 50 ? '#38bdf8' : '#64748b' }}>50%</span>
-                  <span style={{ width: '6px', height: '1.5px', background: levelVal >= 50 ? '#38bdf8' : '#475569' }} />
+                  <span style={{ width: '5px', height: '1px', background: levelVal >= 50 ? '#38bdf8' : '#475569' }} />
                 </div>
                 <div className="d-flex align-items-center gap-1 justify-content-end">
                   <span style={{ color: levelVal >= 25 ? '#38bdf8' : '#475569' }}>25%</span>
-                  <span style={{ width: '4px', height: '1px', background: levelVal >= 25 ? '#38bdf8' : '#334155' }} />
+                  <span style={{ width: '3.5px', height: '1px', background: levelVal >= 25 ? '#38bdf8' : '#334155' }} />
                 </div>
                 <div className="d-flex align-items-center gap-1 justify-content-end">
                   <span style={{ color: '#64748b' }}>0%</span>
-                  <span style={{ width: '6px', height: '1.5px', background: '#475569' }} />
+                  <span style={{ width: '5px', height: '1px', background: '#475569' }} />
                 </div>
               </div>
             ) : (
               <div
                 className="d-flex flex-column justify-content-between text-end pe-0.5"
-                style={{ height: vesselHeight, fontSize: '7.5px', color: '#64748b', fontWeight: 800, lineHeight: 1 }}
+                style={{ height: vesselHeight, fontSize: '7px', color: '#64748b', fontWeight: 800, lineHeight: 1 }}
               >
                 <span>100%</span>
                 <span>50%</span>
@@ -563,48 +587,45 @@ const WaterOverview = () => {
               <div
                 className="position-relative w-100 flex-shrink-0"
                 style={{
-                  height: isSingleTank ? '14px' : '6px',
+                  height: isSingleTank ? '14px' : (isDualTank ? '10px' : '6px'),
                   background: 'linear-gradient(180deg, #64748b 0%, #334155 60%, #1e293b 100%)',
                   borderRadius: '10px 10px 0 0',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.25)',
-                  borderLeft: '2px solid rgba(56, 189, 248, 0.45)',
-                  borderRight: '2px solid rgba(56, 189, 248, 0.45)',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.35)',
+                  borderLeft: '2px solid rgba(56, 189, 248, 0.55)',
+                  borderRight: '2px solid rgba(56, 189, 248, 0.55)',
                   borderBottom: '1px solid rgba(56, 189, 248, 0.3)'
                 }}
               >
-                {isSingleTank && (
-                  <>
-                    {/* Top Sensor Beacon */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '-6px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: '14px',
-                        height: '6px',
-                        borderRadius: '2px',
-                        background: '#0284c7',
-                        border: '1px solid #38bdf8',
-                        boxShadow: '0 0 6px rgba(56, 189, 248, 0.8)'
-                      }}
-                    />
-                    {/* Center Inspection Hatch */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '32px',
-                        height: '4px',
-                        borderRadius: '2px',
-                        background: '#475569',
-                        border: '1px solid rgba(255, 255, 255, 0.2)'
-                      }}
-                    />
-                  </>
-                )}
+                {/* Top Sensor Beacon (Render for both single and dual view) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: isSingleTank ? '-6px' : '-5px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: isSingleTank ? '14px' : '11px',
+                    height: isSingleTank ? '6px' : '5px',
+                    borderRadius: '2px',
+                    background: '#0284c7',
+                    border: '1px solid #38bdf8',
+                    boxShadow: '0 0 8px rgba(56, 189, 248, 0.9)'
+                  }}
+                  title="Ultrasonic Level Transmitter Sensor"
+                />
+                {/* Center Inspection Hatch */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: isSingleTank ? '32px' : '22px',
+                    height: isSingleTank ? '4px' : '3px',
+                    borderRadius: '2px',
+                    background: '#475569',
+                    border: '1px solid rgba(255, 255, 255, 0.25)'
+                  }}
+                />
               </div>
 
               {/* Main Transparent Vessel Chamber */}
@@ -612,44 +633,44 @@ const WaterOverview = () => {
                 className="position-relative flex-grow-1 overflow-hidden"
                 style={{
                   background: 'linear-gradient(180deg, #091325 0%, #040914 100%)',
-                  borderLeft: '2px solid rgba(56, 189, 248, 0.5)',
-                  borderRight: '2px solid rgba(56, 189, 248, 0.5)',
+                  borderLeft: '2px solid rgba(56, 189, 248, 0.55)',
+                  borderRight: '2px solid rgba(56, 189, 248, 0.55)',
                   boxShadow: 'inset 0 0 25px rgba(0, 0, 0, 0.95), inset 0 0 8px rgba(56, 189, 248, 0.25)'
                 }}
               >
                 {/* High Alarm Line (HH 90%) */}
-                {isSingleTank && (
+                {(isSingleTank || isDualTank) && (
                   <div
                     style={{
                       position: 'absolute',
                       top: '10%',
                       left: 0,
                       width: '100%',
-                      borderTop: '1px dashed rgba(239, 68, 68, 0.55)',
+                      borderTop: '1px dashed rgba(239, 68, 68, 0.6)',
                       zIndex: 4,
                       pointerEvents: 'none'
                     }}
                   >
-                    <span style={{ position: 'absolute', right: '4px', top: '-11px', fontSize: '7px', color: '#f87171', fontWeight: 800 }}>
+                    <span style={{ position: 'absolute', right: '4px', top: '-10px', fontSize: '6.5px', color: '#f87171', fontWeight: 800 }}>
                       HH 90%
                     </span>
                   </div>
                 )}
 
                 {/* Low Alarm Line (LL 20%) */}
-                {isSingleTank && (
+                {(isSingleTank || isDualTank) && (
                   <div
                     style={{
                       position: 'absolute',
                       bottom: '20%',
                       left: 0,
                       width: '100%',
-                      borderTop: '1px dashed rgba(245, 158, 11, 0.55)',
+                      borderTop: '1px dashed rgba(245, 158, 11, 0.6)',
                       zIndex: 4,
                       pointerEvents: 'none'
                     }}
                   >
-                    <span style={{ position: 'absolute', right: '4px', top: '-11px', fontSize: '7px', color: '#fbbf24', fontWeight: 800 }}>
+                    <span style={{ position: 'absolute', right: '4px', top: '-10px', fontSize: '6.5px', color: '#fbbf24', fontWeight: 800 }}>
                       LL 20%
                     </span>
                   </div>
@@ -661,11 +682,13 @@ const WaterOverview = () => {
                     className="position-absolute bottom-0 w-100"
                     style={{
                       height: `${levelVal}%`,
-                      background: 'linear-gradient(180deg, #38bdf8 0%, #0284c7 40%, #0369a1 80%, #082f49 100%)',
+                      background: levelVal <= 20 
+                        ? 'linear-gradient(180deg, #f59e0b 0%, #d97706 40%, #b45309 80%, #78350f 100%)'
+                        : 'linear-gradient(180deg, #38bdf8 0%, #0284c7 40%, #0369a1 80%, #082f49 100%)',
                       opacity: 0.92,
                       transition: 'height 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
                       borderTop: '2px solid rgba(186, 230, 253, 0.85)',
-                      boxShadow: '0 0 12px rgba(56, 189, 248, 0.8)'
+                      boxShadow: levelVal <= 20 ? '0 0 12px rgba(245, 158, 11, 0.8)' : '0 0 12px rgba(56, 189, 248, 0.8)'
                     }}
                   >
                     <div className="tank-water-wave" />
@@ -694,7 +717,7 @@ const WaterOverview = () => {
                       <div
                         className="fw-black text-white"
                         style={{
-                          fontSize: isSingleTank ? '38px' : (isDualTank ? '22px' : '17px'),
+                          fontSize: isSingleTank ? '38px' : (isDualTank ? '28px' : '17px'),
                           lineHeight: 1,
                           letterSpacing: '-1px',
                           textShadow: '0 3px 12px rgba(0,0,0,0.95), 0 0 20px rgba(56, 189, 248, 0.75)'
@@ -707,27 +730,27 @@ const WaterOverview = () => {
                           background: 'rgba(5, 12, 24, 0.85)',
                           border: '1px solid rgba(56, 189, 248, 0.4)',
                           borderRadius: '12px',
-                          padding: isSingleTank ? '2.5px 12px' : '1px 6px',
-                          marginTop: isSingleTank ? '6px' : '3px',
+                          padding: isSingleTank ? '2.5px 12px' : (isDualTank ? '2px 9px' : '1px 6px'),
+                          marginTop: isSingleTank ? '6px' : (isDualTank ? '5px' : '3px'),
                           display: 'inline-block',
                           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.7)'
                         }}
                       >
-                        <span style={{ color: '#e0f2fe', fontSize: isSingleTank ? '12px' : (isDualTank ? '9.5px' : '8px'), fontWeight: 900 }}>
+                        <span style={{ color: '#e0f2fe', fontSize: isSingleTank ? '12px' : (isDualTank ? '10px' : '8px'), fontWeight: 900 }}>
                           {currentVolume.toLocaleString()} L
                         </span>
                       </div>
-                      {isSingleTank && (
+                      {(isSingleTank || isDualTank) && (
                         <div className="mt-1">
                           <span
                             style={{
-                              fontSize: '8.5px',
+                              fontSize: isSingleTank ? '8.5px' : '7.5px',
                               fontWeight: 800,
                               color: levelVal >= 85 ? '#f87171' : levelVal <= 20 ? '#fbbf24' : '#38bdf8',
-                              background: 'rgba(0, 0, 0, 0.5)',
-                              padding: '1.5px 8px',
+                              background: 'rgba(0, 0, 0, 0.55)',
+                              padding: '1.5px 7px',
                               borderRadius: '6px',
-                              letterSpacing: '0.4px',
+                              letterSpacing: '0.3px',
                               border: `1px solid ${levelVal >= 85 ? 'rgba(239, 68, 68, 0.4)' : levelVal <= 20 ? 'rgba(245, 158, 11, 0.4)' : 'rgba(56, 189, 248, 0.4)'}`
                             }}
                           >
@@ -751,7 +774,7 @@ const WaterOverview = () => {
                       >
                         {hasLevel ? 'EMPTY' : 'NO DATA'}
                       </div>
-                      {isSingleTank && (
+                      {(isSingleTank || isDualTank) && (
                         <div
                           style={{
                             background: 'rgba(71, 85, 105, 0.15)',
@@ -776,13 +799,13 @@ const WaterOverview = () => {
               <div
                 className="flex-shrink-0"
                 style={{
-                  height: isSingleTank ? '10px' : '5px',
+                  height: isSingleTank ? '10px' : (isDualTank ? '8px' : '5px'),
                   background: 'linear-gradient(180deg, #334155 0%, #0f172a 100%)',
                   borderRadius: '0 0 10px 10px',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderLeft: '2px solid rgba(56, 189, 248, 0.5)',
-                  borderRight: '2px solid rgba(56, 189, 248, 0.5)',
-                  borderBottom: '2px solid rgba(56, 189, 248, 0.5)'
+                  borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderLeft: '2px solid rgba(56, 189, 248, 0.55)',
+                  borderRight: '2px solid rgba(56, 189, 248, 0.55)',
+                  borderBottom: '2px solid rgba(56, 189, 248, 0.55)'
                 }}
               />
             </div>
@@ -799,143 +822,125 @@ const WaterOverview = () => {
             )}
           </div>
 
-          {/* Right: Tank Info Panel (Replacing the 4 tiles as requested) */}
+          {/* Under Tank Info: Brief specs positioned right below the centered tank */}
           <div
-            className="flex-grow-1 rounded-2 d-flex flex-column justify-content-between h-100"
-            style={{
-              background: 'linear-gradient(145deg, rgba(11, 20, 38, 0.95) 0%, rgba(6, 12, 24, 0.98) 100%)',
-              border: '1px solid rgba(56, 189, 248, 0.18)',
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 3px 10px rgba(0, 0, 0, 0.35)',
-              padding: isSingleTank ? '12px 14px' : '8px 10px',
-              minWidth: 0,
-              gap: isSingleTank ? '10px' : '6px'
-            }}
+            className="d-flex align-items-center justify-content-center gap-2 flex-wrap w-100"
+            style={{ maxWidth: isSingleTank ? '560px' : '450px' }}
           >
-            {/* Header: Title & Status */}
-            <div className="d-flex justify-content-between align-items-center pb-1 border-bottom border-secondary border-opacity-15">
-              <div className="d-flex align-items-center gap-1.5">
-                <Database size={isSingleTank ? 13 : 11} style={{ color: '#38bdf8' }} />
-                <span style={{ color: '#e2e8f0', fontSize: isSingleTank ? '11px' : '9px', fontWeight: 800, letterSpacing: '0.4px' }}>
-                  TANK INFORMATION &amp; SPECS
-                </span>
-              </div>
-              <span
-                className="badge rounded-pill"
-                style={{
-                  background: !tank.isOnline ? 'rgba(148, 163, 184, 0.15)' : (hasLevel && levelVal > 15 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
-                  color: !tank.isOnline ? '#94a3b8' : (hasLevel && levelVal > 15 ? '#4ade80' : '#f87171'),
-                  border: `1px solid ${!tank.isOnline ? 'rgba(148, 163, 184, 0.3)' : (hasLevel && levelVal > 15 ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)')}`,
-                  fontSize: isSingleTank ? '8.5px' : '7.5px',
-                  fontWeight: 700,
-                  padding: isSingleTank ? '2px 8px' : '1.5px 6px'
-                }}
-              >
-                {!tank.isOnline ? 'OFFLINE' : (hasLevel && levelVal > 15 ? 'NORMAL STORAGE' : (hasLevel ? 'LOW LEVEL' : 'UNMAPPED'))}
+            {/* Gross Capacity */}
+            <div
+              className="p-1 px-2.5 rounded-2 text-center flex-grow-1"
+              style={{
+                background: 'rgba(11, 20, 38, 0.85)',
+                border: '1px solid rgba(56, 189, 248, 0.18)',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+                minWidth: isMultiColumn ? '70px' : '82px'
+              }}
+            >
+              <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8px' : '7px', fontWeight: 700, display: 'block', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                Gross Capacity
               </span>
+              <strong style={{ color: '#ffffff', fontSize: isSingleTank ? '12px' : '11px', fontWeight: 800, lineHeight: 1.2 }}>
+                {capacityNum ? `${capacityNum.toLocaleString()} L` : (tank.capacity ? `${tank.capacity} L` : '--')}
+              </strong>
             </div>
 
-            {/* Parameter Items: Clean Industrial Grid */}
-            <div className="d-flex flex-column gap-1.5 flex-grow-1 justify-content-center">
-              <Row className="g-1.5">
-                <Col xs={6}>
-                  <div
-                    className="p-1.5 rounded-1 d-flex flex-column justify-content-center h-100"
-                    style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.04)' }}
-                  >
-                    <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8.5px' : '7.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
-                      GROSS CAPACITY
-                    </span>
-                    <strong style={{ color: '#ffffff', fontSize: isSingleTank ? '13px' : '11px', fontWeight: 800, lineHeight: 1.2 }}>
-                      {capacityNum ? `${capacityNum.toLocaleString()} L` : (tank.capacity ? `${tank.capacity} L` : '--')}
-                    </strong>
-                  </div>
-                </Col>
-                <Col xs={6}>
-                  <div
-                    className="p-1.5 rounded-1 d-flex flex-column justify-content-center h-100"
-                    style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.04)' }}
-                  >
-                    <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8.5px' : '7.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
-                      CURRENT RESERVE
-                    </span>
-                    <strong style={{ color: '#38bdf8', fontSize: isSingleTank ? '13px' : '11px', fontWeight: 800, lineHeight: 1.2 }}>
-                      {hasLevel && levelVal > 0 && capacityNum ? `${currentVolume.toLocaleString()} L` : (hasLevel && levelVal > 0 ? `${levelVal}%` : '--')}
-                    </strong>
-                  </div>
-                </Col>
-              </Row>
-
-              <Row className="g-1.5">
-                <Col xs={6}>
-                  <div
-                    className="p-1.5 rounded-1 d-flex flex-column justify-content-center h-100"
-                    style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.04)' }}
-                  >
-                    <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8.5px' : '7.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
-                      SERVICE TYPE
-                    </span>
-                    <strong style={{ color: '#facc15', fontSize: isSingleTank ? '12px' : '10.5px', fontWeight: 700, lineHeight: 1.2 }}>
-                      {sectorTag === 'DOMESTIC' ? 'Domestic Potable' : (sectorTag === 'FLUSHING' ? 'Flushing Recycled' : sectorTag)}
-                    </strong>
-                  </div>
-                </Col>
-                <Col xs={6}>
-                  <div
-                    className="p-1.5 rounded-1 d-flex flex-column justify-content-center h-100"
-                    style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.04)' }}
-                  >
-                    <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8.5px' : '7.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
-                      INLET VALVE ACTUATOR
-                    </span>
-                    <strong style={{ color: isValveOpen ? '#4ade80' : '#cbd5e1', fontSize: isSingleTank ? '12px' : '10.5px', fontWeight: 700, lineHeight: 1.2 }}>
-                      {isValveOpen ? 'OPEN (Inflow)' : 'CLOSED (Idle)'}
-                    </strong>
-                  </div>
-                </Col>
-              </Row>
-
-              {isSingleTank && (
-                <Row className="g-1.5">
-                  <Col xs={6}>
-                    <div
-                      className="p-1.5 rounded-1 d-flex flex-column justify-content-center h-100"
-                      style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.04)' }}
-                    >
-                      <span style={{ color: '#94a3b8', fontSize: '8.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
-                        CONTROL MODE
-                      </span>
-                      <strong style={{ color: '#38bdf8', fontSize: '12px', fontWeight: 700, lineHeight: 1.2 }}>
-                        {tank.valveMode || 'AUTO / PLC'}
-                      </strong>
-                    </div>
-                  </Col>
-                  <Col xs={6}>
-                    <div
-                      className="p-1.5 rounded-1 d-flex flex-column justify-content-center h-100"
-                      style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.04)' }}
-                    >
-                      <span style={{ color: '#94a3b8', fontSize: '8.5px', fontWeight: 700, letterSpacing: '0.3px' }}>
-                        LEVEL TRANSMITTER
-                      </span>
-                      <strong style={{ color: '#4ade80', fontSize: '12px', fontWeight: 700, lineHeight: 1.2 }}>
-                        Hydrostatic 4-20mA
-                      </strong>
-                    </div>
-                  </Col>
-                </Row>
-              )}
+            {/* Current Reserve */}
+            <div
+              className="p-1 px-2.5 rounded-2 text-center flex-grow-1"
+              style={{
+                background: 'rgba(11, 20, 38, 0.85)',
+                border: '1px solid rgba(56, 189, 248, 0.18)',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+                minWidth: isMultiColumn ? '70px' : '82px'
+              }}
+            >
+              <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8px' : '7px', fontWeight: 700, display: 'block', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                Current Reserve
+              </span>
+              <strong style={{ color: '#38bdf8', fontSize: isSingleTank ? '12px' : '11px', fontWeight: 800, lineHeight: 1.2 }}>
+                {hasLevel && levelVal > 0 && capacityNum ? `${currentVolume.toLocaleString()} L` : (hasLevel && levelVal > 0 ? `${levelVal}%` : '--')}
+              </strong>
             </div>
 
-            {/* Footer / Specs row */}
-            <div className="d-flex justify-content-between align-items-center pt-1 border-top border-secondary border-opacity-15" style={{ fontSize: isSingleTank ? '8.5px' : '7.5px', color: '#94a3b8' }}>
-              <span>Zone: <strong style={{ color: '#cbd5e1' }}>{zoneLabel} • Rooftop OHT</strong></span>
-              <span>Signal: <strong style={{ color: tank.isOnline ? '#4ade80' : '#64748b' }}>{tank.isOnline ? 'Online (100%)' : 'No Signal'}</strong></span>
+            {/* Service Type */}
+            <div
+              className="p-1 px-2.5 rounded-2 text-center flex-grow-1"
+              style={{
+                background: 'rgba(11, 20, 38, 0.85)',
+                border: '1px solid rgba(56, 189, 248, 0.18)',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+                minWidth: isMultiColumn ? '70px' : '82px'
+              }}
+            >
+              <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8px' : '7px', fontWeight: 700, display: 'block', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                Service Type
+              </span>
+              <strong style={{ color: '#facc15', fontSize: isSingleTank ? '11px' : '10.5px', fontWeight: 700, lineHeight: 1.2 }}>
+                {sectorTag === 'DOMESTIC' ? 'Domestic Potable' : (sectorTag === 'FLUSHING' ? 'Flushing Recycled' : sectorTag)}
+              </strong>
             </div>
+
+            {/* Inlet Valve Actuator */}
+            <div
+              className="p-1 px-2.5 rounded-2 text-center flex-grow-1"
+              style={{
+                background: 'rgba(11, 20, 38, 0.85)',
+                border: '1px solid rgba(56, 189, 248, 0.18)',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+                minWidth: isMultiColumn ? '70px' : '82px'
+              }}
+            >
+              <span style={{ color: '#94a3b8', fontSize: isSingleTank ? '8px' : '7px', fontWeight: 700, display: 'block', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                Inlet Valve
+              </span>
+              <strong style={{ color: isValveOpen ? '#4ade80' : '#cbd5e1', fontSize: isSingleTank ? '11px' : '10.5px', fontWeight: 700, lineHeight: 1.2 }}>
+                {isValveOpen ? 'OPEN (Inflow)' : 'CLOSED (Idle)'}
+              </strong>
+            </div>
+
+            {/* Single Tank Extras */}
+            {isSingleTank && (
+              <>
+                <div
+                  className="p-1.5 rounded-2 text-center flex-grow-1"
+                  style={{
+                    background: 'rgba(11, 20, 38, 0.85)',
+                    border: '1px solid rgba(56, 189, 248, 0.16)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+                    minWidth: '85px'
+                  }}
+                >
+                  <span style={{ color: '#94a3b8', fontSize: '8px', fontWeight: 700, display: 'block', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                    Control Mode
+                  </span>
+                  <strong style={{ color: '#38bdf8', fontSize: '11.5px', fontWeight: 700, lineHeight: 1.2 }}>
+                    {tank.valveMode || 'AUTO / PLC'}
+                  </strong>
+                </div>
+                <div
+                  className="p-1.5 rounded-2 text-center flex-grow-1"
+                  style={{
+                    background: 'rgba(11, 20, 38, 0.85)',
+                    border: '1px solid rgba(56, 189, 248, 0.16)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+                    minWidth: '85px'
+                  }}
+                >
+                  <span style={{ color: '#94a3b8', fontSize: '8px', fontWeight: 700, display: 'block', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                    Transmitter
+                  </span>
+                  <strong style={{ color: '#4ade80', fontSize: '11.5px', fontWeight: 700, lineHeight: 1.2 }}>
+                    Hydrostatic 4-20mA
+                  </strong>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Tank Footer */}
-        <div className="d-flex justify-content-between align-items-center pt-1.5 mt-1 border-top border-secondary border-opacity-15">
+        <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-15">
           <span style={{ color: '#4ade80', fontSize: isSingleTank ? '9px' : '8px', fontWeight: 800 }} className="d-flex align-items-center gap-1.5">
             <span className="live-radar-dot" style={{ width: '5px', height: '5px' }} />
             TELEMETRY NORMAL • MODBUS RTU #{String(idx + 1).padStart(2, '0')}
@@ -1281,7 +1286,7 @@ const WaterOverview = () => {
                   ) : (
                     /* DYNAMIC SCALABLE AG TANK CARDS (1, 2, OR 4+ TANKS IN HARMONIOUS VIEW) */
                     <div
-                      className="d-flex flex-column gap-2 flex-grow-1 custom-scada-scrollbar h-100"
+                      className="d-flex flex-column gap-3 flex-grow-1 custom-scada-scrollbar h-100"
                       style={{
                         minHeight: 0,
                         overflowY: displayedTanks.length > 4 ? 'auto' : 'hidden',

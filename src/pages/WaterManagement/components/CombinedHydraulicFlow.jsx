@@ -260,7 +260,10 @@ const CombinedHydraulicFlow = ({
           {ugTanks.map((tank, idx) => {
             const yPos = 70 + (idx * 175);
             const hasLevel = tank.level !== null && tank.level !== undefined && !isNaN(parseFloat(tank.level));
-            const levelVal = hasLevel ? parseFloat(tank.level) : 0;
+            let rawNum = hasLevel ? parseFloat(tank.level) : 0;
+            if (rawNum > 0 && rawNum <= 1) rawNum = rawNum * 100;
+            else if (rawNum > 100 && rawNum <= 10000) rawNum = rawNum / 100;
+            const levelVal = Math.min(100, Math.max(0, Math.round(rawNum)));
             const fillHeight = (levelVal / 100) * 120;
             const isFire = tank.name.toUpperCase().includes('FIRE');
             const isProcess = tank.name.toUpperCase().includes('PROCESS') || tank.name.toUpperCase().includes('RAW') || tank.name.toUpperCase().includes('STP');
@@ -616,7 +619,10 @@ const CombinedHydraulicFlow = ({
           {agTanks.map((tank, idx) => {
             const yPos = 70 + (idx * 175);
             const hasLevel = tank.level !== null && tank.level !== undefined && !isNaN(parseFloat(tank.level));
-            const levelVal = hasLevel ? parseFloat(tank.level) : 0;
+            let rawNum = hasLevel ? parseFloat(tank.level) : 0;
+            if (rawNum > 0 && rawNum <= 1) rawNum = rawNum * 100;
+            else if (rawNum > 100 && rawNum <= 10000) rawNum = rawNum / 100;
+            const levelVal = Math.min(100, Math.max(0, Math.round(rawNum)));
             const fillHeight = (levelVal / 100) * 120;
             const isFlushing = tank.sectorType === 'FLUSHING' || tank.name.toUpperCase().includes('FLUSH');
             const isFire = tank.sectorType === 'UTILITY' || tank.name.toUpperCase().includes('FIRE');

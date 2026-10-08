@@ -128,7 +128,10 @@ const PumpStationSchematic = ({
           const tank = tanks[idx] || {};
           const isDeviceMapped = Boolean(tanks[idx] && tanks[idx].isMapped !== false);
           const hasLevel = isDeviceMapped && tank.level !== null && tank.level !== undefined && !isNaN(Number(tank.level));
-          const levelVal = hasLevel ? Number(tank.level) : 0;
+          let rawLevelNum = hasLevel ? Number(tank.level) : 0;
+          if (rawLevelNum > 0 && rawLevelNum <= 1) rawLevelNum = rawLevelNum * 100;
+          else if (rawLevelNum > 100 && rawLevelNum <= 10000) rawLevelNum = rawLevelNum / 100;
+          const levelVal = Math.min(100, Math.max(0, Math.round(rawLevelNum)));
           const tankName = (isDeviceMapped && (tank.name || tank.deviceName)) ? (tank.name || tank.deviceName) : cfg.defaultName;
 
           return (
@@ -215,8 +218,10 @@ const PumpStationSchematic = ({
                 textAnchor="middle"
                 fill="#cbd5e1"
                 fontSize="10"
-                fontWeight="900"
-                letterSpacing="0.8"
+                fontWeight="800"
+                letterSpacing="0.5"
+                textLength={tankName.length > 20 ? 154 : undefined}
+                lengthAdjust={tankName.length > 20 ? "spacingAndGlyphs" : undefined}
               >
                 {tankName}
               </text>

@@ -56,7 +56,7 @@ export const normalizeKey = (str) => {
   return String(str)
     .trim()
     .toLowerCase()
-    .replace(/[\s\-_/()%]+/g, '');
+    .replace(/[\s\-_/()%*#:]+/g, '');
 };
 
 /**
@@ -68,6 +68,24 @@ export const parseNumericValue = (val) => {
   if (typeof val === 'boolean') return val ? 1 : 0;
   const num = Number(val);
   return isNaN(num) ? null : num;
+};
+
+/**
+ * Normalizes, scales, rounds, and clamps any water level input to a valid integer percentage [0, 100].
+ * Prevents long floating point values (e.g. 53.50952148 -> 54), basis points (5350 -> 54), or ratios (0.54 -> 54).
+ */
+export const sanitizeWaterLevelPct = (raw) => {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const num = parseNumericValue(raw);
+  if (num === null) return null;
+  let val = num;
+  if (val > 0 && val <= 1) {
+    val = val * 100;
+  } else if (val > 150 && val <= 10000) {
+    val = val / 100;
+  }
+  const rounded = Math.round(val);
+  return Math.min(100, Math.max(0, rounded));
 };
 
 /**
@@ -407,28 +425,32 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
 
   // 3. Extract Reservoirs (Inlet Reservoirs)
   const generalLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.waterLevelPct);
-  const generalLevelNum = parseNumericValue(generalLevelEvt?.currentValue ?? generalLevelEvt?.value);
-  const generalLevel = generalLevelNum !== null
-    ? (generalLevelNum <= 1 && generalLevelNum > 0 ? Math.round(generalLevelNum * 100) : Math.round(generalLevelNum))
-    : null;
+  const generalLevel = sanitizeWaterLevelPct(generalLevelEvt?.currentValue ?? generalLevelEvt?.value);
 
   const fireLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.fireReservoir);
-  const fireLevelNum = parseNumericValue(fireLevelEvt?.currentValue ?? fireLevelEvt?.value);
-  const fireLevel = fireLevelNum !== null
-    ? (fireLevelNum <= 1 && fireLevelNum > 0 ? Math.round(fireLevelNum * 100) : Math.round(fireLevelNum))
-    : (generalLevel !== null ? generalLevel : null);
+  let fireLevel = sanitizeWaterLevelPct(fireLevelEvt?.currentValue ?? fireLevelEvt?.value);
 
   const domesticLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.domesticSump);
-  const domesticLevelNum = parseNumericValue(domesticLevelEvt?.currentValue ?? domesticLevelEvt?.value);
-  const domesticLevel = domesticLevelNum !== null
-    ? (domesticLevelNum <= 1 && domesticLevelNum > 0 ? Math.round(domesticLevelNum * 100) : Math.round(domesticLevelNum))
-    : null;
+  let domesticLevel = sanitizeWaterLevelPct(domesticLevelEvt?.currentValue ?? domesticLevelEvt?.value);
 
   const processLevelEvt = findEventField(null, eventsList, UG_PUMP_FIELD_SYNONYMS.processTank);
-  const processLevelNum = parseNumericValue(processLevelEvt?.currentValue ?? processLevelEvt?.value);
-  const processLevel = processLevelNum !== null
-    ? (processLevelNum <= 1 && processLevelNum > 0 ? Math.round(processLevelNum * 100) : Math.round(processLevelNum))
-    : null;
+  let processLevel = sanitizeWaterLevelPct(processLevelEvt?.currentValue ?? processLevelEvt?.value);
+
+  // If specific tank synonym wasn't found, but generic 'WATER LEVEL' is present:
+  if (generalLevel !== null && fireLevel === null && domesticLevel === null && processLevel === null) {
+    const combinedName = normalizeKey(`${devName} ${assetName} ${buildingName}`);
+    const devIdx = Array.isArray(allDevices) && allDevices.length > 0
+      ? allDevices.findIndex(d => String(d.id || d.deviceId || d.bmsDeviceId) === String(devId))
+      : 0;
+
+    if (combinedName.includes('domestic') || combinedName.includes('sump') || combinedName.includes('potable') || combinedName.includes('tank2') || combinedName.endsWith('2') || devIdx === 1) {
+      domesticLevel = generalLevel;
+    } else if (combinedName.includes('process') || combinedName.includes('reclaim') || combinedName.includes('tank3') || combinedName.endsWith('3') || devIdx === 2) {
+      processLevel = generalLevel;
+    } else {
+      fireLevel = generalLevel;
+    }
+  }
 
   const isFireMapped = fireLevel !== null;
   const isDomesticMapped = domesticLevel !== null;
@@ -437,7 +459,8 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
   const reservoirs = [
     {
       id: 1,
-      name: 'FIRE RESERVOIR',
+      name: isFireMapped ? (devName || 'FIRE RESERVOIR') : 'FIRE RESERVOIR',
+      deviceName: devName,
       level: fireLevel,
       capacity: 350000,
       desc: 'PRIMARY FIRE',
@@ -446,7 +469,8 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
     },
     {
       id: 2,
-      name: 'DOMESTIC SUMP',
+      name: isDomesticMapped ? (devName || 'DOMESTIC SUMP') : 'DOMESTIC SUMP',
+      deviceName: devName,
       level: domesticLevel,
       capacity: 200000,
       desc: 'POTABLE SUPPLY',
@@ -455,7 +479,8 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
     },
     {
       id: 3,
-      name: 'PROCESS TANK',
+      name: isProcessMapped ? (devName || 'PROCESS TANK') : 'PROCESS TANK',
+      deviceName: devName,
       level: processLevel,
       capacity: 100000,
       desc: 'INDUSTRIAL RECLAIM',
@@ -868,9 +893,79 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
     stationMode
   };
 
-  // Reservoirs: pick from any station that has mapped reservoirs
-  const stationWithTanks = resolvedStations.find(s => s.reservoirs?.some(r => r.isMapped)) || primaryStation;
-  const reservoirs = stationWithTanks.reservoirs || primaryStation.reservoirs;
+  // Reservoirs: Aggregate all 3 inlet reservoir slots across ALL resolved devices
+  const defaultReservoirConfigs = [
+    { id: 1, defaultName: 'FIRE RESERVOIR', desc: 'PRIMARY FIRE', defaultCapacity: 350000 },
+    { id: 2, defaultName: 'DOMESTIC SUMP', desc: 'POTABLE SUPPLY', defaultCapacity: 200000 },
+    { id: 3, defaultName: 'PROCESS TANK', desc: 'INDUSTRIAL RECLAIM', defaultCapacity: 100000 }
+  ];
+
+  // Slot holders: [slot0, slot1, slot2]
+  const assignedSlots = [null, null, null];
+
+  // 1. Pass 1: Collect explicitly slotted mapped reservoirs
+  resolvedStations.forEach(s => {
+    if (Array.isArray(s.reservoirs)) {
+      s.reservoirs.forEach((r, slotIdx) => {
+        if (r && r.isMapped && r.level !== null && !assignedSlots[slotIdx]) {
+          assignedSlots[slotIdx] = {
+            ...r,
+            level: sanitizeWaterLevelPct(r.level),
+            name: r.deviceName || r.name || defaultReservoirConfigs[slotIdx].defaultName,
+            isOnline: s.isOnline,
+            isMapped: true
+          };
+        }
+      });
+    }
+  });
+
+  // 2. Pass 2: If any slot remains empty, check unassigned devices that have level telemetry
+  const alreadyMappedNames = new Set(assignedSlots.filter(Boolean).map(t => t.deviceName || t.name));
+  resolvedStations.forEach(s => {
+    const sName = s.name || s.deviceName || s.assetName;
+    if (alreadyMappedNames.has(sName)) return;
+
+    // Check if station has level from rawFields
+    const rawLvlField = s.rawFields?.find(f => {
+      const k = normalizeKey(f.displayName || f.fieldKey || '');
+      return k.includes('level') || k.includes('tank');
+    });
+    const foundLvl = sanitizeWaterLevelPct(rawLvlField?.value);
+
+    if (foundLvl !== null) {
+      const emptyIdx = assignedSlots.findIndex(slot => !slot);
+      if (emptyIdx !== -1) {
+        assignedSlots[emptyIdx] = {
+          id: defaultReservoirConfigs[emptyIdx].id,
+          name: sName || defaultReservoirConfigs[emptyIdx].defaultName,
+          deviceName: sName,
+          level: foundLvl,
+          capacity: defaultReservoirConfigs[emptyIdx].defaultCapacity,
+          desc: defaultReservoirConfigs[emptyIdx].desc,
+          isOnline: s.isOnline,
+          isMapped: true
+        };
+        alreadyMappedNames.add(sName);
+      }
+    }
+  });
+
+  // 3. Pass 3: Fill any unassigned slot with fallback default (unmapped)
+  const reservoirs = defaultReservoirConfigs.map((cfg, slotIdx) => {
+    if (assignedSlots[slotIdx]) {
+      return assignedSlots[slotIdx];
+    }
+    return {
+      id: cfg.id,
+      name: cfg.defaultName,
+      level: null,
+      capacity: cfg.defaultCapacity,
+      desc: cfg.desc,
+      isOnline,
+      isMapped: false
+    };
+  });
 
   const vNum = parseFloat(electrical.voltage_ry) || parseFloat(electrical.voltage_yb);
   const avgVoltage = !isNaN(vNum) && vNum > 0 ? vNum : (isOnline ? 415.2 : 0.0);
