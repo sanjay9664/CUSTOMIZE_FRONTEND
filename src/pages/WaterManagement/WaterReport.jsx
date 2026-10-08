@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Row, Col, Card, Form, Table, Button, Badge, Spinner } from 'react-bootstrap';
-import { Download, Calendar, ClipboardList, RefreshCw, Zap, FileSpreadsheet, Building2, Clock, AlertCircle } from 'lucide-react';
+import { Download, Calendar, ClipboardList, RefreshCw, Zap, FileSpreadsheet, Building2, Clock, AlertCircle, Database, Waves, Droplets } from 'lucide-react';
 import { generateUserCustomPdfReport } from '../../utils/pdfReportGenerator';
 import { useSiteStore } from '../../context/SiteContext';
 import { apiClient, normalizeList } from '../../services/apiClient';
+import { bmsService } from '../../services/bmsService';
 
-const EnergyPDFReport = () => {
-  const { sites = [], activeSites = [], selectedSite, setSelectedSite } = useSiteStore();
+const WaterReport = () => {
+  const { sites = [], activeSites = [], selectedSite } = useSiteStore();
 
   const allSites = useMemo(() => {
     return activeSites.length > 0 ? activeSites : sites;
   }, [activeSites, sites]);
 
-  // Resolve current active site from SiteContext, localStorage, or fallback
+  // Current active site
   const currentSite = useMemo(() => {
     if (selectedSite) return selectedSite;
     const stored = localStorage.getItem('scada_selected_site');
@@ -35,24 +36,23 @@ const EnergyPDFReport = () => {
     return currentSite?.name || currentSite?.siteName || (allSites[0]?.name ? allSites[0].name : 'STORE-1');
   }, [currentSite, allSites]);
 
-  // Filter state strictly matching user API requirements:
-  // deviceId=3/9, startDate=YYYY-MM-DDT00:00:00Z, endDate=YYYY-MM-DDT23:59:59Z, interval=DAILY|MIN_15|HOURLY
+  // Filter state
   const [filter, setFilter] = useState({
-    deviceId: '3',
+    deviceId: '9',
     interval: 'DAILY',
-    startDate: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    startDate: '2026-09-26',
+    endDate: '2026-10-03'
   });
 
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [siteDevices, setSiteDevices] = useState([]);
   const [reportData, setReportData] = useState([]);
+  const [reportSummary, setReportSummary] = useState(null);
 
-  // Sequence ref to ignore stale out-of-order network responses
   const activeRequestRef = useRef(0);
 
-  // 1. Fetch site devices on site change to resolve available meter IDs (e.g. deviceId: 3, 9)
+  // 1. Fetch site devices and filter for water tanks / water management nodes
   useEffect(() => {
     let isMounted = true;
     const loadSiteDevices = async () => {
@@ -62,16 +62,24 @@ const EnergyPDFReport = () => {
         const list = normalizeList(res, 'devices');
 
         if (isMounted && list && list.length > 0) {
-          // Prioritize ENERGY_METER devices
-          const energyMeters = list.filter(d =>
-            d.category === 'ENERGY_METER' ||
-            d.category === 'MAIN_ENERGY_METER' ||
-            d.category === 'LT_PANEL' ||
-            (d.name && /meter|energy/i.test(d.name))
+          // Prioritize UG_TANK, AG_TANK, or WATER equipment
+          const tankList = list.filter(d =>
+            d.category === 'UG_TANK' ||
+            d.category === 'AG_TANK' ||
+            d.category === 'TANK' ||
+            d.category === 'WATER_TANK' ||
+            d.category === 'WATER' ||
+            (d.name && /tank|water|sump|overhead|underground|domestic/i.test(d.name))
           );
-          const devicesToUse = energyMeters.length > 0
-            ? energyMeters
-            : list.filter(d => d.category !== 'AQI_SENSOR' && d.category !== 'SENSOR');
+          // If no dedicated tank equipment exists in site profile, allow general electrical/utility devices, excluding AQI/ambient temp sensors
+          const devicesToUse = tankList.length > 0
+            ? tankList
+            : list.filter(d =>
+                d.category === 'ENERGY_METER' ||
+                d.category === 'LT_PANEL' ||
+                d.category === 'MAIN_ENERGY_METER' ||
+                (d.category !== 'AQI_SENSOR' && d.category !== 'SENSOR')
+              );
           setSiteDevices(devicesToUse);
 
           setFilter(prev => {
@@ -84,7 +92,7 @@ const EnergyPDFReport = () => {
           });
         }
       } catch (err) {
-        console.warn('Error fetching devices for site:', err);
+        console.warn('[WaterReport] Error fetching devices:', err);
       }
     };
 
@@ -92,18 +100,17 @@ const EnergyPDFReport = () => {
     return () => { isMounted = false; };
   }, [selectedSiteId]);
 
-  // Resolve target meter display name
-  const selectedMeterName = useMemo(() => {
+  // Selected device display name
+  const selectedDeviceName = useMemo(() => {
     const dev = siteDevices.find(d => String(d.id || d.deviceId) === String(filter.deviceId));
     if (dev) {
-      return dev.name || dev.deviceName || `Meter (ID: ${dev.id || dev.deviceId})`;
+      return dev.name || dev.deviceName || `Water Unit #${dev.id || dev.deviceId}`;
     }
-    return filter.deviceId ? `Normal Meter (ID: ${filter.deviceId})` : selectedSiteName;
-  }, [siteDevices, filter.deviceId, selectedSiteName]);
+    return filter.deviceId ? `Water Unit (ID: ${filter.deviceId})` : 'Water Unit';
+  }, [siteDevices, filter.deviceId]);
 
-  // 2. Fetch energy report cleanly without request spam or 401s
-  // Calls GET /api/v1/reports/energy with Bearer token authentication
-  const fetchEnergyReport = useCallback(async (currentFilter) => {
+  // 2. Fetch Water report strictly without dummy data
+  const fetchWaterReport = useCallback(async (currentFilter) => {
     if (!currentFilter?.deviceId) return;
 
     const requestId = ++activeRequestRef.current;
@@ -122,19 +129,14 @@ const EnergyPDFReport = () => {
         interval: intervalVal
       };
 
-      // Call internal authenticated API route (/api/v1/reports/energy)
-      // Never call external URL directly in browser to avoid 401s
-      const reportRes = await apiClient.get('/reports/energy', queryParams).catch((err) => {
-        console.warn('Failed to load energy report:', err);
+      const reportRes = await bmsService.getWaterReports(queryParams).catch((err) => {
+        console.warn('[WaterReport] Failed to load water report:', err);
         return null;
       });
 
-      // Discard stale response if another request was triggered
-      if (requestId !== activeRequestRef.current) {
-        return;
-      }
+      if (requestId !== activeRequestRef.current) return;
 
-      // Extract records: backend returns { success: true, data: { deviceId, data: [...] } }
+      // Extract raw records from response
       let rawRecords = [];
       if (Array.isArray(reportRes?.data?.data)) {
         rawRecords = reportRes.data.data;
@@ -144,15 +146,17 @@ const EnergyPDFReport = () => {
         rawRecords = reportRes.data.records;
       } else if (Array.isArray(reportRes?.records)) {
         rawRecords = reportRes.records;
-      } else if (Array.isArray(reportRes?.items)) {
-        rawRecords = reportRes.items;
       } else if (Array.isArray(reportRes)) {
         rawRecords = reportRes;
       }
 
-      const currentDeviceObj = siteDevices.find(d => String(d.id || d.deviceId) === String(devId));
-      const meterDisplayName = currentDeviceObj?.name || `Meter #${devId}`;
+      const summaryObj = reportRes?.data?.summary || null;
+      setReportSummary(summaryObj);
 
+      const currentDevObj = siteDevices.find(d => String(d.id || d.deviceId) === String(devId));
+      const waterDisplayName = currentDevObj?.name || `Water Unit #${devId}`;
+
+      // Strictly parse real records — NO dummy data, NO synthetic fallback rows
       if (rawRecords && rawRecords.length > 0) {
         const pad = (n) => String(n).padStart(2, '0');
 
@@ -191,60 +195,62 @@ const EnergyPDFReport = () => {
             windowEndCol = `${endDD}-${endMMMonth}-${endYYYY} ${endHH}:${endMM}:${endSS}`;
           }
 
-          // Active Energy (kWh) — strictly from API
-          let kwhStr = '-';
-          let rawKwh = 0;
-          if (item.energyDelta != null) {
-            rawKwh = Number(item.energyDelta) || 0;
-            kwhStr = `${rawKwh.toFixed(2)} kWh`;
-          } else if (item.closingEnergy != null && item.openingEnergy != null) {
-            rawKwh = Math.max(0, Number(item.closingEnergy) - Number(item.openingEnergy));
-            kwhStr = `${rawKwh.toFixed(2)} kWh`;
-          } else if (item.consumption != null || item.energy != null) {
-            rawKwh = Number(item.consumption ?? item.energy) || 0;
-            kwhStr = `${rawKwh.toFixed(2)} kWh`;
+          // Water Level Avg (%) — strictly from API
+          let levelAvgStr = '-';
+          let rawLevelAvg = 0;
+          if (item.levelAvg != null || item.level != null || item.waterLevel != null) {
+            rawLevelAvg = Number(item.levelAvg ?? item.level ?? item.waterLevel) || 0;
+            levelAvgStr = `${rawLevelAvg.toFixed(1)} %`;
           }
 
-          // Active Power (kW) — strictly from API
-          let kwStr = '-';
-          let rawKw = 0;
-          if (item.demandMax != null || item.peakDemand != null || item.demand != null) {
-            rawKw = Number(item.demandMax ?? item.peakDemand ?? item.demand) || 0;
-            kwStr = `${rawKw.toFixed(2)} kW`;
+          // Water Level Min (%) — strictly from API
+          let levelMinStr = '-';
+          let rawLevelMin = 0;
+          if (item.levelMin != null) {
+            rawLevelMin = Number(item.levelMin) || 0;
+            levelMinStr = `${rawLevelMin.toFixed(1)} %`;
           }
 
-          // Apparent Energy (kVAh) — strictly from API
-          let kvahStr = '-';
-          let rawKvah = 0;
-          if (item.kvahDelta != null) {
-            rawKvah = Number(item.kvahDelta) || 0;
-            kvahStr = `${rawKvah.toFixed(2)} kVAh`;
-          } else if (item.closingKvah != null && item.openingKvah != null) {
-            rawKvah = Math.max(0, Number(item.closingKvah) - Number(item.openingKvah));
-            kvahStr = `${rawKvah.toFixed(2)} kVAh`;
-          } else if (item.apparentEnergy != null || item.kvah != null) {
-            rawKvah = Number(item.apparentEnergy ?? item.kvah) || 0;
-            kvahStr = `${rawKvah.toFixed(2)} kVAh`;
+          // Water Level Max (%) — strictly from API
+          let levelMaxStr = '-';
+          let rawLevelMax = 0;
+          if (item.levelMax != null) {
+            rawLevelMax = Number(item.levelMax) || 0;
+            levelMaxStr = `${rawLevelMax.toFixed(1)} %`;
           }
 
-          // Power Factor (PF) — only from API, NO default 0.99
-          const pfStr = item.pfAvg != null || item.powerFactor != null || item.pf != null
-            ? Number(item.pfAvg ?? item.powerFactor ?? item.pf).toFixed(2)
-            : '-';
+          // Water Temperature (°C) — strictly from API
+          let tempStr = '-';
+          let rawTemp = 0;
+          if (item.temperatureAvg != null || item.temp != null || item.temperature != null) {
+            rawTemp = Number(item.temperatureAvg ?? item.temp ?? item.temperature) || 0;
+            tempStr = `${rawTemp.toFixed(1)} °C`;
+          }
+
+          // Volume / Consumption (L or kL) — if reported
+          let volumeStr = '-';
+          let rawVolume = 0;
+          if (item.volumeDelta != null || item.consumption != null || item.volume != null) {
+            rawVolume = Number(item.volumeDelta ?? item.consumption ?? item.volume) || 0;
+            volumeStr = `${rawVolume.toFixed(0)} L`;
+          }
 
           return {
             srNo: idx + 1,
             date: dateCol,
             timeRange: timeRangeCol,
             windowEnd: windowEndCol,
-            meter: meterDisplayName,
-            kwh: kwhStr,
-            kw: kwStr,
-            kvah: kvahStr,
-            pf: pfStr,
-            rawKwh,
-            rawKw,
-            rawKvah
+            equipment: waterDisplayName,
+            levelAvg: levelAvgStr,
+            levelMin: levelMinStr,
+            levelMax: levelMaxStr,
+            temp: tempStr,
+            volume: volumeStr,
+            rawLevelAvg,
+            rawLevelMin,
+            rawLevelMax,
+            rawTemp,
+            rawVolume
           };
         });
 
@@ -252,10 +258,10 @@ const EnergyPDFReport = () => {
         return;
       }
 
-      // Zero dummy data when no records returned
+      // No records: zero dummy data
       setReportData([]);
     } catch (err) {
-      console.warn('Error fetching energy report:', err);
+      console.warn('[WaterReport] Error fetching water report:', err);
       setReportData([]);
     } finally {
       if (requestId === activeRequestRef.current) {
@@ -264,46 +270,43 @@ const EnergyPDFReport = () => {
     }
   }, [siteDevices]);
 
-  // Single trigger: fetch report strictly when filter parameters change (single request flow)
+  // Single trigger on filter parameters change
   useEffect(() => {
     if (filter.deviceId) {
-      fetchEnergyReport(filter);
+      fetchWaterReport(filter);
     }
-  }, [filter.deviceId, filter.interval, filter.startDate, filter.endDate, fetchEnergyReport]);
+  }, [filter.deviceId, filter.interval, filter.startDate, filter.endDate, fetchWaterReport]);
 
-  // Target Meter selection
   const handleDeviceSelectionChange = (e) => {
     const val = e.target.value;
     setFilter(prev => ({ ...prev, deviceId: val }));
   };
 
-  // Interval selection: MIN_15 | HOURLY | DAILY
   const handleIntervalChange = (val) => {
     setFilter(prev => ({ ...prev, interval: val }));
   };
 
-  // Manual Generate Report re-trigger
   const handleGenerate = async () => {
     setGenerating(true);
-    await fetchEnergyReport(filter);
+    await fetchWaterReport(filter);
     setGenerating(false);
   };
 
-  // Export to Excel / CSV with UTF-8 Byte Order Mark
+  // Export to Excel / CSV with UTF-8 BOM
   const handleDownloadExcel = () => {
     if (reportData.length === 0) return;
     const headers = [
-      '#,Date,Time Window,Target Feed Node,Active Energy (kWh),Active Power (kW),Apparent Energy (kVAh),Power Factor (PF),Recorded Time'
+      'Sr. No.,Date,Time Window,Tank / Source,Avg Water Level (%),Min Level (%),Max Level (%),Water Temp (°C),Volume (L),Last Updated'
     ];
     const csvRows = reportData.map(r =>
-      `"${r.srNo}","${r.date}","${r.timeRange}","${r.meter}","${r.kwh}","${r.kw}","${r.kvah}","${r.pf}","${r.windowEnd}"`
+      `"${r.srNo}","${r.date}","${r.timeRange}","${r.equipment}","${r.levelAvg}","${r.levelMin}","${r.levelMax}","${r.temp}","${r.volume}","${r.windowEnd}"`
     );
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + [headers.join(','), ...csvRows].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Energy_Report_${selectedMeterName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.interval}_${filter.startDate}_to_${filter.endDate}.csv`);
+    link.setAttribute('download', `Water_Report_${selectedDeviceName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.interval}_${filter.startDate}_to_${filter.endDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -313,90 +316,90 @@ const EnergyPDFReport = () => {
   const handleDownloadPdf = () => {
     if (reportData.length === 0) return;
 
-    const totalKwh = reportData.reduce((acc, r) => acc + (r.rawKwh || 0), 0);
-    const maxKw = Math.max(...reportData.map(r => r.rawKw || 0));
-    const totalKvah = reportData.reduce((acc, r) => acc + (r.rawKvah || 0), 0);
-    const validPfs = reportData.filter(r => r.pf !== '-').map(r => parseFloat(r.pf));
-    const avgPfVal = validPfs.length > 0 ? (validPfs.reduce((a, b) => a + b, 0) / validPfs.length).toFixed(2) : '-';
+    const validLevels = reportData.filter(r => r.levelAvg !== '-').map(r => r.rawLevelAvg);
+    const avgLevelVal = validLevels.length > 0 ? (validLevels.reduce((a, b) => a + b, 0) / validLevels.length).toFixed(1) : '-';
+
+    const validTemps = reportData.filter(r => r.temp !== '-').map(r => r.rawTemp);
+    const avgTempVal = validTemps.length > 0 ? (validTemps.reduce((a, b) => a + b, 0) / validTemps.length).toFixed(1) : '-';
+
     const latestTime = reportData[reportData.length - 1]?.windowEnd || new Date().toLocaleString('en-IN');
 
     generateUserCustomPdfReport({
-      title: 'Energy Telemetry & Metering Report',
-      subtitle: `Target: ${selectedMeterName} • Interval: ${filter.interval}`,
+      title: 'Water Management & Tanks Report',
+      subtitle: `Target: ${selectedDeviceName} • Interval: ${filter.interval}`,
       siteName: selectedSiteName,
-      targetMeter: selectedMeterName,
+      targetMeter: selectedDeviceName,
       dateRange: `${filter.startDate} to ${filter.endDate} (${filter.interval})`,
       kpis: [
-        { label: 'Active Energy', value: `${totalKwh.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`, unit: 'kWh' },
-        { label: 'Peak Active Power', value: `${maxKw.toFixed(1)}`, unit: 'kW' },
-        { label: 'Apparent Energy', value: `${totalKvah.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`, unit: 'kVAh' },
-        { label: 'Power Factor', value: avgPfVal, unit: 'PF' },
-        { label: 'Recorded Time', value: latestTime }
+        { label: 'Avg Water Level', value: avgLevelVal, unit: '%' },
+        { label: 'Avg Water Temp', value: avgTempVal, unit: '°C' },
+        { label: 'Latest Recorded Time', value: latestTime }
       ],
       headers: [
         '#',
         'Date',
         'Time Window',
-        'Target Feed Node',
-        'Active Energy (kWh)',
-        'Active Power (kW)',
-        'Apparent Energy (kVAh)',
-        'Power Factor (PF)',
+        'Tank / Node',
+        'Avg Level (%)',
+        'Min Level (%)',
+        'Max Level (%)',
+        'Temp (°C)',
+        'Volume',
         'Recorded Time'
       ],
-      data: reportData.map(r => [
+      rows: reportData.map(r => [
         r.srNo,
         r.date,
         r.timeRange,
-        r.meter,
-        r.kwh,
-        r.kw,
-        r.kvah,
-        r.pf,
+        r.equipment,
+        r.levelAvg,
+        r.levelMin,
+        r.levelMax,
+        r.temp,
+        r.volume,
         r.windowEnd
       ]),
-      fileName: `Energy_Report_${selectedMeterName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.interval}_${filter.startDate}_to_${filter.endDate}.pdf`
+      fileName: `Water_Report_${selectedDeviceName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${filter.interval}_${filter.startDate}_to_${filter.endDate}.pdf`
     });
   };
 
   return (
-    <div className="energy-reports-page fade-in p-3 p-md-4">
-
+    <div className="water-reports-page fade-in p-3 p-md-4">
       {/* FILTER CONTROL CARD */}
       <Card className="scada-card border-0 mb-4 shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))', borderRadius: '16px' }}>
         <Card.Body className="p-3 p-md-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h6 className="mb-0 fw-bold text-white d-flex align-items-center gap-2 fs-13 text-uppercase text-secondary">
-              <Calendar className="text-info" size={16} /> Report Parameters & Filters
+              <Calendar className="text-info" size={16} /> Water Management Parameters
             </h6>
             <div className="d-flex align-items-center gap-2">
               {loading && (
                 <span className="text-info fs-12 d-flex align-items-center gap-2 me-2">
-                  <Spinner animation="border" size="sm" /> Querying Energy Report...
+                  <Spinner animation="border" size="sm" /> Querying Water Telemetry...
                 </span>
               )}
               <Badge bg="info" className="bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1 rounded-pill d-flex align-items-center gap-2 fs-11 fw-semibold">
-                <Building2 size={13} />
-                Selected: {selectedMeterName}
+                <Database size={13} className="text-info" />
+                Selected: {selectedDeviceName}
               </Badge>
             </div>
           </div>
 
           <Row className="g-3 align-items-end">
-            {/* TARGET METER */}
+            {/* TARGET TANK / WATER UNIT */}
             <Col md={3}>
               <Form.Group>
-                <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Target Meter</Form.Label>
+                <Form.Label className="text-secondary fw-semibold fs-12 mb-1">Target Tank / Water Unit</Form.Label>
                 <Form.Select
                   className="bg-dark text-white border-secondary border-opacity-50 rounded-3 py-2 fw-semibold"
                   value={String(filter.deviceId || '')}
                   onChange={handleDeviceSelectionChange}
-                  aria-label="Target Meter"
+                  aria-label="Target Water Equipment"
                 >
                   {siteDevices.length > 0 ? (
                     siteDevices.map(d => {
                       const dId = String(d.id || d.deviceId || '');
-                      const dName = d.name || d.deviceName || `Meter #${dId}`;
+                      const dName = d.name || d.deviceName || `Water Unit #${dId}`;
                       return (
                         <option key={dId} value={dId}>
                           {dName} (ID: {dId})
@@ -404,13 +407,13 @@ const EnergyPDFReport = () => {
                       );
                     })
                   ) : (
-                    <option value="">No meters available</option>
+                    <option value="">No equipment available</option>
                   )}
                 </Form.Select>
               </Form.Group>
             </Col>
 
-            {/* SELECT INTERVAL (15 Minutes, Hourly, Daily) */}
+            {/* SELECT INTERVAL */}
             <Col md={3}>
               <Form.Group>
                 <Form.Label className="text-warning fw-bold fs-12 mb-1 d-flex align-items-center gap-2 text-uppercase" style={{ letterSpacing: '0.5px' }}>
@@ -468,6 +471,41 @@ const EnergyPDFReport = () => {
               </Button>
             </Col>
           </Row>
+
+          {/* Quick Metrics KPI Bar strictly if real data exists */}
+          {reportData.length > 0 && (
+            <div className="mt-3 pt-3 border-top border-secondary border-opacity-25 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+              <div className="d-flex flex-wrap gap-4 align-items-center">
+                {reportSummary?.avgLevel != null && (
+                  <div>
+                    <small className="text-secondary d-block fs-11 text-uppercase">Avg Level</small>
+                    <span className="fs-14 fw-bold text-info font-monospace">{Number(reportSummary.avgLevel).toFixed(1)} %</span>
+                  </div>
+                )}
+                {reportSummary?.maxLevel != null && (
+                  <div className="border-start border-secondary border-opacity-25 ps-3">
+                    <small className="text-secondary d-block fs-11 text-uppercase">Max Level</small>
+                    <span className="fs-14 fw-bold text-success font-monospace">{Number(reportSummary.maxLevel).toFixed(1)} %</span>
+                  </div>
+                )}
+                {reportSummary?.minLevel != null && (
+                  <div className="border-start border-secondary border-opacity-25 ps-3">
+                    <small className="text-secondary d-block fs-11 text-uppercase">Min Level</small>
+                    <span className="fs-14 fw-bold text-warning font-monospace">{Number(reportSummary.minLevel).toFixed(1)} %</span>
+                  </div>
+                )}
+                {reportSummary?.avgTemperature != null && (
+                  <div className="border-start border-secondary border-opacity-25 ps-3">
+                    <small className="text-secondary d-block fs-11 text-uppercase">Avg Temp</small>
+                    <span className="fs-14 fw-bold text-light font-monospace">{Number(reportSummary.avgTemperature).toFixed(1)} °C</span>
+                  </div>
+                )}
+              </div>
+              <Badge bg="secondary" className="bg-opacity-25 text-light px-2.5 py-1.5 rounded-pill fs-11">
+                Interval: {filter.interval} • Range: {filter.startDate} to {filter.endDate}
+              </Badge>
+            </div>
+          )}
         </Card.Body>
       </Card>
 
@@ -477,13 +515,13 @@ const EnergyPDFReport = () => {
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
               <h6 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
-                <ClipboardList className="text-info" size={18} /> Generated Report Ledger
+                <ClipboardList className="text-info" size={18} /> Water Telemetry Ledger
               </h6>
               <small className="text-secondary">
                 {reportData.length > 0 ? (
-                  <>Showing {reportData.length} recorded interval{reportData.length > 1 ? 's' : ''} for <strong className="text-info">{selectedMeterName}</strong> (Interval: {filter.interval}).</>
+                  <>Showing {reportData.length} recorded interval{reportData.length > 1 ? 's' : ''} for <strong className="text-info">{selectedDeviceName}</strong> (Interval: {filter.interval}).</>
                 ) : (
-                  <>Showing 0 recorded intervals for <strong className="text-secondary">{selectedMeterName}</strong> (No report data).</>
+                  <>Showing 0 recorded intervals for <strong className="text-secondary">{selectedDeviceName}</strong> (No report data in this range).</>
                 )}
               </small>
             </div>
@@ -515,9 +553,9 @@ const EnergyPDFReport = () => {
             <div className="text-center py-5">
               <div className="p-4 rounded-3 d-inline-block text-secondary" style={{ background: 'rgba(15, 23, 42, 0.5)', border: '1px dashed rgba(255, 255, 255, 0.1)', maxWidth: '480px' }}>
                 <AlertCircle className="mx-auto mb-2 text-warning opacity-75 d-block" size={32} />
-                <h6 className="text-white fw-bold mb-1">No Telemetry Report Recorded</h6>
+                <h6 className="text-white fw-bold mb-1">No Water Telemetry Recorded</h6>
                 <p className="fs-12 mb-0 text-secondary">
-                  Target <strong className="text-info">{selectedMeterName}</strong> does not have recorded telemetry data for interval <span className="text-warning fw-semibold">{filter.interval}</span> ({filter.startDate} to {filter.endDate}). Dummy data generation is disabled.
+                  Target <strong className="text-info">{selectedDeviceName}</strong> does not have recorded telemetry data in the system for interval <span className="text-warning fw-semibold">{filter.interval}</span> ({filter.startDate} to {filter.endDate}). Dummy data is disabled.
                 </p>
               </div>
             </div>
@@ -529,15 +567,16 @@ const EnergyPDFReport = () => {
                     <th className="py-3 px-3">#</th>
                     <th className="py-3">Date</th>
                     <th className="py-3">Time Window</th>
-                    <th className="py-3">Target Feed Node</th>
-                    <th className="py-3 text-end">Active Energy (kWh)</th>
-                    <th className="py-3 text-end">Active Power (kW)</th>
-                    <th className="py-3 text-end">Apparent Energy (kVAh)</th>
-                    <th className="py-3 text-center">Power Factor (PF)</th>
+                    <th className="py-3">Tank / Source</th>
+                    <th className="py-3 text-end">Avg Level (%)</th>
+                    <th className="py-3 text-end">Min Level (%)</th>
+                    <th className="py-3 text-end">Max Level (%)</th>
+                    <th className="py-3 text-end">Water Temp (°C)</th>
+                    <th className="py-3 text-end">Volume</th>
                     <th className="py-3 text-end px-3">
-                      <span className="d-inline-flex align-items-center justify-content-end gap-2">
+                      <span className="d-inline-flex align-items-center justify-content-end gap-2 text-nowrap">
                         <Clock size={12} className="text-secondary opacity-75" />
-                        <span>Recorded Time</span>
+                        <span>Last Updated</span>
                       </span>
                     </th>
                   </tr>
@@ -548,22 +587,25 @@ const EnergyPDFReport = () => {
                       <td className="py-3 px-3 font-monospace text-secondary fs-12">{row.srNo}</td>
                       <td className="py-3 text-white fw-semibold">{row.date}</td>
                       <td className="py-3 text-secondary font-monospace fs-12">{row.timeRange}</td>
-                      <td className="py-3 text-light">{row.meter}</td>
-                      <td className="py-3 text-end text-white fw-bold font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {row.kwh}
+                      <td className="py-3 text-light">{row.equipment}</td>
+                      <td className="py-3 text-end text-info fw-bold font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {row.levelAvg}
                       </td>
-                      <td className="py-3 text-end text-secondary font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {row.kw}
+                      <td className="py-3 text-end text-warning font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {row.levelMin}
+                      </td>
+                      <td className="py-3 text-end text-success font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {row.levelMax}
                       </td>
                       <td className="py-3 text-end text-light font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {row.kvah}
+                        {row.temp}
                       </td>
-                      <td className="py-3 text-center text-secondary font-monospace">
-                        {row.pf}
+                      <td className="py-3 text-end text-secondary font-monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {row.volume}
                       </td>
-                      <td className="py-3 text-end px-3 font-monospace fs-12" style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                        <span className="d-inline-flex align-items-center justify-content-end gap-2 text-info fw-semibold">
-                          <Clock size={13} className="text-secondary opacity-75 flex-shrink-0" />
+                      <td className="py-3 text-end text-secondary font-monospace px-3" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        <span className="d-inline-flex align-items-center justify-content-end gap-2 text-nowrap">
+                          <Clock size={11} className="text-info opacity-75 flex-shrink-0" />
                           <span>{row.windowEnd}</span>
                         </span>
                       </td>
@@ -579,4 +621,4 @@ const EnergyPDFReport = () => {
   );
 };
 
-export default EnergyPDFReport;
+export default WaterReport;

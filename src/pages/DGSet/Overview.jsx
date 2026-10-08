@@ -6,7 +6,8 @@ import {
   Building2, Layers, Cpu, Search, Play, Square, RotateCcw, 
   AlertOctagon, Info, LayoutGrid, ListFilter, Sliders, CheckCircle2,
   AlertCircle, ChevronRight, RefreshCw, RefreshCcw, Radio, Maximize2, Sun, Moon,
-  Tag, MapPin, Clock, ChevronDown, ChevronUp, Thermometer, Droplets, Calendar, Upload, Image as ImageIcon
+  Tag, MapPin, Clock, ChevronDown, ChevronUp, Thermometer, Droplets, Calendar, Upload, Image as ImageIcon,
+  ShieldCheck, Check, Power, AlertTriangle, Eye, EyeOff, Sparkles, Filter
 } from 'lucide-react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
@@ -66,6 +67,15 @@ const SYSTEM_35_PARAMS = [
   { id: 35, num: '35', name: 'Fail to come to rest', category: 'FAULT', catCode: '05', unit: 'Status', defaultVal: '--', isAlarm: true, icon: Square }
 ];
 
+const DEFAULT_CLEAN_STATE = {
+  voltage: { ry: null, yb: null, br: null, rn: null, yn: null, bn: null },
+  current: { r: null, y: null, b: null, avg: null },
+  power: { kw: null, kvar: null, kva: null, pf: null },
+  engine: { coolant: null, oilPressure: null, oilTemp: null, speed: null, runtime: null, freq: null, battery: null, starts: null, status: null },
+  diesel: { level: null, remaining: null, capacity: 2000, spentToday: null, efficiency: null, lastFill: '--' },
+  generation: { today: null, kvaHours: null, kvarHours: null, month: null }
+};
+
 const SiemensStyleDG = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -73,6 +83,8 @@ const SiemensStyleDG = () => {
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [paramSearch, setParamSearch] = useState('');
+  const [showOnlyMapped, setShowOnlyMapped] = useState(true);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false); // Closed by default until turned ON
   const [collapsedCategories, setCollapsedCategories] = useState({
     CHANGE: false,
@@ -283,7 +295,7 @@ const SiemensStyleDG = () => {
     }
   }, [selectedSite?.id, selectedSite?.siteId, selectedSite?._id, sites, selectedSiteId]);
 
-  // 2. Load Generator Devices for selectedSiteId (Category: GENERATOR)
+  // 2. Load Generator Devices for selectedSiteId (Aggregate API & LocalStorage for multi-DG support)
   useEffect(() => {
     if (!selectedSiteId) {
       setDevices([]);
@@ -295,27 +307,74 @@ const SiemensStyleDG = () => {
     const fetchGeneratorDevices = async () => {
       setDevicesLoading(true);
       try {
-        const queryParams = new URLSearchParams({
-          siteId: String(selectedSiteId),
-          category: 'GENERATOR',
-          include: 'settings,rules,profile'
-        });
-        const url = getApiUrl(`/devices?${queryParams.toString()}`);
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: getAuthHeaders()
-        });
+        const discovered = [];
+        const seenIds = new Set();
 
-        let items = [];
-        if (res && res.ok) {
-          const json = await res.json();
-          if (Array.isArray(json?.data)) {
-            items = json.data;
-          } else if (Array.isArray(json)) {
-            items = json;
+        const addDevice = (d) => {
+          if (!d) return;
+          const id = String(d.id || d.deviceId || d._id || '').trim();
+          if (!id || seenIds.has(id)) return;
+
+          // Check if device belongs to this site
+          const devSiteId = d.siteId !== undefined && d.siteId !== null ? String(d.siteId) : null;
+          if (devSiteId && devSiteId !== String(selectedSiteId)) {
+            return;
           }
-        } else {
-          // Fallback via apiClient
+
+          // Check if it's a generator / DG device
+          const cat = String(d.category || d.type || '').toUpperCase();
+          const name = String(d.name || d.deviceName || d.label || d.title || '').toUpperCase();
+          const mod = String(d.module || '').toUpperCase();
+          const isDG = 
+            cat.includes('GEN') || 
+            cat.includes('DG') || 
+            mod.includes('DG') || 
+            mod.includes('GEN') || 
+            name.includes('DG') || 
+            name.includes('GENERATOR') || 
+            name.includes('GENSET') || 
+            d.module === 'DG Set';
+
+          if (isDG) {
+            seenIds.add(id);
+            discovered.push({
+              ...d,
+              id,
+              name: d.name || d.deviceName || d.label || d.title || `DG-SET-${discovered.length + 1}`
+            });
+          }
+        };
+
+        // 1. Fetch from /devices?siteId=...&category=GENERATOR
+        try {
+          const queryParams = new URLSearchParams({
+            siteId: String(selectedSiteId),
+            category: 'GENERATOR',
+            include: 'settings,rules,profile'
+          });
+          const url = getApiUrl(`/devices?${queryParams.toString()}`);
+          const res = await fetch(url, {
+            method: 'GET',
+            headers: getAuthHeaders()
+          });
+          if (res && res.ok) {
+            const json = await res.json();
+            const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+            list.forEach(addDevice);
+          }
+        } catch (e) {}
+
+        // 2. Fetch via bmsService.getSiteDevices
+        try {
+          const siteDevRes = await bmsService.getSiteDevices(selectedSiteId, { category: 'GENERATOR' }).catch(() => null);
+          const siteDevList = normalizeList(siteDevRes, 'devices');
+          if (Array.isArray(siteDevList)) {
+            siteDevList.forEach(addDevice);
+          }
+        } catch (e) {}
+
+        // 3. Fallback via apiClient
+        try {
           const fallbackRes = await apiClient.get('/devices', { 
             siteId: String(selectedSiteId), 
             category: 'GENERATOR', 
@@ -323,30 +382,49 @@ const SiemensStyleDG = () => {
           }).catch(() => null);
           const list = normalizeList(fallbackRes, 'devices');
           if (Array.isArray(list) && list.length > 0) {
-            items = list;
+            list.forEach(addDevice);
           }
-        }
+        } catch (e) {}
+
+        // 4. Merge cached & registered devices from localStorage
+        const localKeys = [
+          'dg_generator_devices',
+          'scada_devices_db',
+          'bms_registered_devices',
+          'scada_device_mappings',
+          'tb_devices'
+        ];
+        localKeys.forEach(k => {
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const arr = Array.isArray(parsed) ? parsed : [parsed];
+              arr.forEach(addDevice);
+            }
+          } catch (e) {}
+        });
 
         if (isMounted) {
-          setDevices(items);
-          if (items.length > 0) {
-            const currentInList = items.some(d => String(d.id || d.deviceId) === String(selectedDeviceId));
+          setDevices(discovered);
+          if (discovered.length > 0) {
+            const currentInList = discovered.some(d => String(d.id || d.deviceId) === String(selectedDeviceId));
             const storedId = localStorage.getItem('selected_dg_device_id');
-            const storedInList = items.find(d => String(d.id || d.deviceId) === String(storedId));
+            const storedInList = discovered.find(d => String(d.id || d.deviceId) === String(storedId));
 
             if (currentInList) {
               // keep current
             } else if (storedInList) {
               setSelectedDeviceId(String(storedInList.id || storedInList.deviceId));
             } else {
-              const firstId = String(items[0].id || items[0].deviceId);
+              const firstId = String(discovered[0].id || discovered[0].deviceId);
               setSelectedDeviceId(firstId);
               localStorage.setItem('selected_dg_device_id', firstId);
             }
           } else {
             setSelectedDeviceId('');
             localStorage.removeItem('selected_dg_device_id');
-            setData(defaultCleanState);
+            setData(DEFAULT_CLEAN_STATE);
             setBackendEvents({});
           }
         }
@@ -355,7 +433,7 @@ const SiemensStyleDG = () => {
         if (isMounted) {
           setDevices([]);
           setSelectedDeviceId('');
-          setData(defaultCleanState);
+          setData(DEFAULT_CLEAN_STATE);
           setBackendEvents({});
         }
       } finally {
@@ -403,16 +481,8 @@ const SiemensStyleDG = () => {
   const userRole = (localStorage.getItem('userRole') || 'user').toUpperCase();
   const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
 
-  const defaultCleanState = {
-    voltage: { ry: null, yb: null, br: null, rn: null, yn: null, bn: null },
-    current: { r: null, y: null, b: null, avg: null },
-    power: { kw: null, kvar: null, kva: null, pf: null },
-    engine: { coolant: null, oilPressure: null, oilTemp: null, speed: null, runtime: null, freq: null, battery: null, starts: null, status: null },
-    diesel: { level: null, remaining: null, capacity: 2000, spentToday: null, efficiency: null, lastFill: '--' },
-    generation: { today: null, kvaHours: null, kvarHours: null, month: null }
-  };
-
-  const [data, setData] = useState(defaultCleanState);
+  const defaultCleanState = DEFAULT_CLEAN_STATE;
+  const [data, setData] = useState(DEFAULT_CLEAN_STATE);
   const [backendEvents, setBackendEvents] = useState({});
 
   const isEngineRunning = useMemo(() => {
@@ -554,6 +624,26 @@ const SiemensStyleDG = () => {
     };
   }, [sites, selectedSiteId, setSelectedSite]);
 
+  // ── HANDLE SWITCHING ACTIVE TARGET GENERATOR (Seamless Multi-DG switching) ──
+  const handleDeviceChange = useCallback((newId) => {
+    if (!newId || String(newId) === String(selectedDeviceId)) return;
+    const targetId = String(newId);
+    setSelectedDeviceId(targetId);
+    localStorage.setItem('selected_dg_device_id', targetId);
+
+    // Clear previous live data immediately to avoid stale data flashing
+    setData(DEFAULT_CLEAN_STATE);
+    setBackendEvents({});
+
+    // Toast feedback with selected DG name
+    const targetDev = devices.find(d => String(d.id || d.deviceId) === targetId);
+    const devName = targetDev?.name || targetDev?.deviceName || `Generator #${targetId}`;
+    triggerToast(`🎯 Active Target: ${devName}`);
+
+    // Fetch telemetry for newly selected DG
+    fetchDeviceTelemetry(targetId);
+  }, [devices, selectedDeviceId, fetchDeviceTelemetry]);
+
   // Device selector configuration for PageContextBanner
   const deviceSelector = useMemo(() => {
     if (devicesLoading) {
@@ -597,14 +687,12 @@ const SiemensStyleDG = () => {
       value: currentVal,
       options: deviceOptions,
       onChange: (newId) => {
-        if (!newId) return;
-        setSelectedDeviceId(newId);
-        localStorage.setItem('selected_dg_device_id', String(newId));
+        handleDeviceChange(newId);
       },
       ariaLabel: 'Select Generator Device',
       disabled: false
     };
-  }, [devices, devicesLoading, selectedDeviceId]);
+  }, [devices, devicesLoading, selectedDeviceId, handleDeviceChange]);
 
   // Compute live value mapping & mapped status for each of the 35 Parameters
   const mapped35Parameters = useMemo(() => {
@@ -637,18 +725,25 @@ const SiemensStyleDG = () => {
 
         list.forEach(t => {
           if (!t) return;
-          const isDG =
-            !selectedDeviceId ||
-            String(t.id) === String(selectedDeviceId) ||
-            String(t.deviceId) === String(selectedDeviceId) ||
-            String(t.name || '').toLowerCase().includes(String(activeDeviceDisplayName || '').toLowerCase()) ||
-            (t.category && String(t.category).toUpperCase().includes('GEN')) ||
-            (t.module && String(t.module).toUpperCase().includes('DG')) ||
-            (t.module && String(t.module).toUpperCase().includes('GEN')) ||
-            t.module === 'DG Set' ||
-            t.type === 'GENERATOR';
+          let isMatchingDevice = false;
+          if (selectedDeviceId) {
+            const matchesId = String(t.id || t.deviceId || '') === String(selectedDeviceId);
+            const matchesName = Boolean(
+              activeDeviceDisplayName &&
+              t.name &&
+              String(t.name).trim().toLowerCase() === String(activeDeviceDisplayName).trim().toLowerCase()
+            );
+            isMatchingDevice = matchesId || matchesName;
+          } else {
+            isMatchingDevice =
+              (t.category && String(t.category).toUpperCase().includes('GEN')) ||
+              (t.module && String(t.module).toUpperCase().includes('DG')) ||
+              (t.module && String(t.module).toUpperCase().includes('GEN')) ||
+              t.module === 'DG Set' ||
+              t.type === 'GENERATOR';
+          }
 
-          if (isDG) {
+          if (isMatchingDevice) {
             if (t.mapping && typeof t.mapping === 'object') {
               savedMappings = { ...savedMappings, ...t.mapping };
             }
@@ -657,7 +752,10 @@ const SiemensStyleDG = () => {
             }
             if (t.settings) {
               const s = Array.isArray(t.settings) ? t.settings[0]?.meta : t.settings;
-              if (s && typeof s === 'object') savedMappings = { ...savedMappings, ...s };
+              if (s && typeof s === 'object') {
+                if (s.mapping && typeof s.mapping === 'object') savedMappings = { ...savedMappings, ...s.mapping };
+                else savedMappings = { ...savedMappings, ...s };
+              }
             }
             if (t.parameters) {
               if (Array.isArray(t.parameters)) {
@@ -683,6 +781,12 @@ const SiemensStyleDG = () => {
       if (selectedDevObj.settings?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.settings.mapping };
       if (selectedDevObj.profile?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.profile.mapping };
       if (selectedDevObj.raw?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.raw.mapping };
+      if (selectedDevObj.mapping && typeof selectedDevObj.mapping === 'object') savedMappings = { ...savedMappings, ...selectedDevObj.mapping };
+      if (selectedDevObj.parameters && Array.isArray(selectedDevObj.parameters)) {
+        selectedDevObj.parameters.forEach(p => {
+          if (p && p.name) savedMappings[p.name] = p.register || p.field || p.value || 'Mapped';
+        });
+      }
     }
 
     return SYSTEM_35_PARAMS.map(param => {
@@ -870,7 +974,7 @@ const SiemensStyleDG = () => {
     });
   }, [data, backendEvents, selectedDeviceId, selectedDevObj, activeDeviceDisplayName, isDeviceConfigured]);
 
-  // Filtered parameters by search & category
+  // Filtered parameters by search, category & active status
   const filtered35Parameters = useMemo(() => {
     let list = mapped35Parameters;
     if (selectedCategoryFilter !== 'ALL') {
@@ -880,8 +984,11 @@ const SiemensStyleDG = () => {
       const term = paramSearch.toLowerCase();
       list = list.filter(p => p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term));
     }
+    if (showOnlyMapped) {
+      list = list.filter(p => p.isMapped && p.liveVal !== '--');
+    }
     return list;
-  }, [mapped35Parameters, selectedCategoryFilter, paramSearch]);
+  }, [mapped35Parameters, selectedCategoryFilter, paramSearch, showOnlyMapped]);
 
   // Categorized groups
   const categorizedGroups = useMemo(() => {
@@ -893,13 +1000,41 @@ const SiemensStyleDG = () => {
     return groups;
   }, [filtered35Parameters]);
 
-  // Category counts from mapped parameters
+  // Category counts from mapped parameters (respects showOnlyMapped toggle)
   const categoryCounts = useMemo(() => {
-    const counts = { ALL: mapped35Parameters.length, CHANGE: 0, PARM: 0, ENGINE: 0, TOTAL: 0, FAULT: 0 };
+    const counts = { ALL: 0, CHANGE: 0, PARM: 0, ENGINE: 0, TOTAL: 0, FAULT: 0 };
     mapped35Parameters.forEach(p => {
-      if (counts[p.category] !== undefined) counts[p.category]++;
+      const isMapped = p.isMapped && p.liveVal !== '--';
+      if (!showOnlyMapped || isMapped) {
+        counts.ALL++;
+        if (counts[p.category] !== undefined) counts[p.category]++;
+      }
     });
     return counts;
+  }, [mapped35Parameters, showOnlyMapped]);
+
+  // Active alarms count (excludes healthy 0.00 / normal / unmapped)
+  const activeFaultsCount = useMemo(() => {
+    return mapped35Parameters.filter(p => {
+      if (p.category !== 'FAULT') return false;
+      if (!p.liveVal || p.liveVal === '--') return false;
+      const lower = String(p.liveVal).toLowerCase();
+      if (lower.includes('0.00') || lower.includes('0 status') || lower.includes('normal') || lower.includes('ok')) return false;
+      const num = parseFloat(p.liveVal);
+      if (!isNaN(num) && num === 0) return false;
+      return true;
+    }).length;
+  }, [mapped35Parameters]);
+
+  // Monitored / mapped safety faults list
+  const mappedFaultsList = useMemo(() => {
+    return mapped35Parameters.filter(p => p.category === 'FAULT' && p.isMapped && p.liveVal !== '--');
+  }, [mapped35Parameters]);
+  const mappedFaultsCount = mappedFaultsList.length;
+
+  // Total active mapped telemetry count
+  const mappedTotalCount = useMemo(() => {
+    return mapped35Parameters.filter(p => p.isMapped && p.liveVal !== '--').length;
   }, [mapped35Parameters]);
 
   const handlePdfDownload = () => {
@@ -980,104 +1115,166 @@ const SiemensStyleDG = () => {
         className="main-meter-context-banner"
       />
 
-      {/* ═══ UNIFIED SINGLE PAGE DASHBOARD GRID (SKELETON ALWAYS DISPLAYED) ═══ */}
+      {/* ═══ UNIFIED SINGLE PAGE INDUSTRIAL SCADA DASHBOARD ═══ */}
       <Row className="g-3 mt-1">
-        {/* LEFT COLUMN: HERO GENERATOR VISUAL UNIT (BIGGER IMAGE) & OPERATING STATUS */}
+        {/* ── LEFT COLUMN (4 Cols): DIGITAL TWIN UNIT & SMART FUEL MANAGEMENT ── */}
         <Col xl={4} lg={5}>
-          <div className="d-flex flex-column gap-2.5">
-            {/* HERO GENERATOR UNIT CARD (CLEAN VIEW WITH CUSTOM UPLOAD & RESET OPTIONS) */}
+          <div className="d-flex flex-column gap-3">
+            {/* HERO DIGITAL TWIN UNIT CARD */}
             <div className="dg-glass-card p-3 position-relative overflow-hidden dg-hero-card">
-              <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div className="d-flex justify-content-between align-items-center mb-2.5 flex-wrap gap-2">
                 <div className="fw-bold fs-12 text-cyan-glow uppercase tracking-wider d-flex align-items-center gap-2">
-                  <Cpu size={14} className="text-info" /> DG Digital Twin Showcase
+                  <Cpu size={15} className="text-info" />
+                  <span>DG DIGITAL TWIN SCADA</span>
                 </div>
                 <div className="d-flex align-items-center gap-2 flex-wrap ms-auto">
-                  {/* UPLOAD & RESET BUTTONS ONLY WHEN DEVICE IS CONFIGURED */}
                   {isDeviceConfigured && (
                     <>
-                      <label className="btn btn-xs dg-btn-outline-glass d-flex align-items-center gap-1.5 cursor-pointer mb-0 text-cyan-glow py-1 px-2.5 rounded-2" title="Upload your custom DG Set photo">
-                        <Upload size={13} />
-                        <span className="fs-12 fw-medium">Upload DG</span>
+                      <label className="btn btn-xs dg-btn-outline-glass d-flex align-items-center gap-1.5 cursor-pointer mb-0 text-cyan-glow py-1 px-2.5 rounded-2" title="Upload custom DG Set photo">
+                        <Upload size={12} />
+                        <span className="fs-11 fw-semibold">Photo</span>
                         <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                       </label>
-
                       {customDgImage !== DEFAULT_DG_IMAGE && (
                         <button 
                           onClick={handleResetImage} 
-                          className="btn btn-xs btn-outline-warning d-flex align-items-center gap-1.5 py-1 px-2.5 fs-12 rounded-2"
-                          title="Restore original default DG image"
+                          className="btn btn-xs btn-outline-warning d-flex align-items-center gap-1 py-1 px-2 fs-11 rounded-2"
+                          title="Restore default image"
                         >
-                          <RotateCcw size={13} />
-                          <span className="fw-medium">Reset Image</span>
+                          <RotateCcw size={11} />
                         </button>
                       )}
                     </>
                   )}
-
-                  <Badge bg={isDeviceConfigured ? (isDeviceOnline ? "success" : "secondary") : "secondary"} className="px-2.5 py-1 fs-12 uppercase rounded-pill border border-opacity-30 fw-semibold ms-1">
-                    <Activity size={10} className="me-1 pulse-icon" /> {isDeviceConfigured ? (isDeviceOnline ? "ONLINE" : "OFFLINE") : "UNCONFIGURED"}
-                  </Badge>
+                  <span className={`dg-online-pill ${isDeviceConfigured ? (isDeviceOnline ? "online" : "offline") : "offline"}`}>
+                    <Activity size={10} className="me-1 pulse-icon" /> 
+                    {isDeviceConfigured ? (isDeviceOnline ? "ONLINE" : "OFFLINE") : "UNCONFIGURED"}
+                  </span>
                 </div>
               </div>
 
-              {/* 100% CLEAN STILL HIGH-DEF GENERATOR IMAGE FRAME (OR UNCONFIGURED SKELETON STATE) */}
-              <div className="position-relative rounded-4 overflow-hidden border border-white border-opacity-15 shadow-2xl dg-generator-hero-frame bg-dark">
+              {/* INDUSTRIAL SCADA GENERATOR HOUSING FRAME */}
+              <div className={`position-relative rounded-3 overflow-hidden border shadow-lg dg-generator-hero-frame bg-dark ${isEngineRunning ? 'engine-active' : 'engine-idle'}`} style={{ height: '240px' }}>
                 {!isDeviceConfigured ? (
-                  <div className="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3 py-5 select-none" style={{ minHeight: '360px' }}>
-                    {/* Dashed circular boundary */}
+                  <div className="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3 py-4 select-none">
                     <div 
-                      className="d-flex align-items-center justify-content-center mb-3"
+                      className="d-flex align-items-center justify-content-center mb-2"
                       style={{
-                        width: '84px',
-                        height: '84px',
+                        width: '64px',
+                        height: '64px',
                         borderRadius: '50%',
                         border: '1.5px dashed rgba(56, 189, 248, 0.45)',
-                        background: 'rgba(56, 189, 248, 0.03)'
+                        background: 'rgba(56, 189, 248, 0.05)'
                       }}
                     >
-                      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="7" width="18" height="13" rx="2" />
-                        <line x1="3" y1="11" x2="21" y2="11" />
-                        <line x1="7" y1="15" x2="10" y2="15" />
-                        <path d="M15 4a3 3 0 0 1 3 3" />
-                        <path d="M13 2a6 6 0 0 1 6 6" />
-                        <line x1="1" y1="1" x2="23" y2="23" stroke="#38bdf8" strokeWidth="1.8" />
-                      </svg>
+                      <Cpu size={28} className="text-info opacity-75" />
                     </div>
-
-                    <h5 className="fw-bold text-white mb-2" style={{ fontSize: '1.05rem', letterSpacing: '0.2px' }}>
-                      No device configured for this site
-                    </h5>
-
-                    <p className="text-secondary mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.45', maxWidth: '240px' }}>
-                      Configure a device to view live telemetry, generator readings and SCADA data.
+                    <h6 className="fw-bold text-white mb-1">No Generator Configured</h6>
+                    <p className="text-muted small mb-0" style={{ maxWidth: '220px', fontSize: '0.75rem' }}>
+                      Select or configure a generator to stream live telemetry.
                     </p>
                   </div>
                 ) : (
-                  <img 
-                    src={customDgImage || DEFAULT_DG_IMAGE} 
-                    alt="DG Generator Unit" 
-                    className="img-fluid dg-hero-img" 
-                    style={{ width: '100%', height: '360px', objectFit: 'cover', display: 'block' }} 
-                    onError={(e) => { e.target.src = DEFAULT_DG_IMAGE; }}
-                  />
+                  <>
+                    <img 
+                      src={customDgImage || DEFAULT_DG_IMAGE} 
+                      alt="DG Unit" 
+                      className={`w-100 h-100 dg-hero-img ${isEngineRunning ? 'dg-mechanical-vibe' : ''}`} 
+                      style={{ objectFit: 'cover', display: 'block' }} 
+                      onError={(e) => { e.target.src = DEFAULT_DG_IMAGE; }}
+                    />
+                    <div className="position-absolute top-0 start-0 w-100 h-100 dg-scada-grid-overlay pointer-events-none" />
+
+                    {/* RUNNING STATUS HUD BADGE (TOP LEFT) */}
+                    <div className="position-absolute top-2 start-2 z-2">
+                      <div className={`dg-engine-hud-pill ${isEngineRunning ? 'running' : 'idle'}`}>
+                        <span className={`dg-live-dot ${isEngineRunning ? 'green-pulse' : 'gray'}`} />
+                        <span>{isEngineRunning ? 'RUNNING ON LOAD' : 'AUTO-STANDBY (READY)'}</span>
+                        {isEngineRunning && (
+                          <div className="dg-soundwave-bars ms-1">
+                            <span className="bar b1" />
+                            <span className="bar b2" />
+                            <span className="bar b3" />
+                            <span className="bar b4" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* HUD TELEMETRY CHIPS (FLOATING CORNER READOUTS) */}
+                    <div className="position-absolute bottom-2 start-2 end-2 z-2 d-flex align-items-center justify-content-between px-2.5 py-1.5 dg-hud-bottom-bar rounded-2">
+                      <div className="d-flex align-items-center gap-1.5">
+                        <Activity size={12} className="text-info" />
+                        <span className="text-dim fs-11">RPM:</span>
+                        <span className="text-white fw-bold font-monospace fs-11">
+                          {data.engine.speed !== null ? data.engine.speed.toFixed(0) : '--'}
+                        </span>
+                      </div>
+                      <div className="d-flex align-items-center gap-1.5">
+                        <Radio size={12} className="text-warning" />
+                        <span className="text-dim fs-11">Freq:</span>
+                        <span className="text-warning fw-bold font-monospace fs-11">
+                          {data.engine.freq !== null ? `${data.engine.freq.toFixed(1)} Hz` : '--'}
+                        </span>
+                      </div>
+                      <div className="d-flex align-items-center gap-1.5">
+                        <Zap size={12} className="text-success" />
+                        <span className="text-dim fs-11">Power:</span>
+                        <span className="text-success fw-bold font-monospace fs-11">
+                          {data.power.kw !== null ? `${data.power.kw.toFixed(1)} kW` : '--'}
+                        </span>
+                      </div>
+                    </div>
+                  </>
                 )}
+              </div>
+
+              {/* QUICK TELEMETRY STRIP UNDER GENERATOR */}
+              <div className="row g-2 mt-2">
+                <div className="col-4">
+                  <div className="dg-subtile p-2 text-center rounded-2">
+                    <div className="text-dim fs-10 text-uppercase fw-bold">Run Hours</div>
+                    <div className="text-main fw-bold font-monospace fs-12 mt-0.5">
+                      {isDeviceConfigured && data.engine.runtime !== null ? `${data.engine.runtime} h` : '--'}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="dg-subtile p-2 text-center rounded-2">
+                    <div className="text-dim fs-10 text-uppercase fw-bold">Total Starts</div>
+                    <div className="text-main fw-bold font-monospace fs-12 mt-0.5">
+                      {isDeviceConfigured && data.engine.starts !== null ? data.engine.starts : '--'}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div className="dg-subtile p-2 text-center rounded-2">
+                    <div className="text-dim fs-10 text-uppercase fw-bold">Avg Line V</div>
+                    <div className="text-cyan-glow fw-bold font-monospace fs-12 mt-0.5">
+                      {isDeviceConfigured && data.voltage.ry !== null ? `${data.voltage.ry.toFixed(1)} V` : '--'}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* DEDICATED REALISTIC FUEL TANK MANAGEMENT CARD (CONSOLIDATED IN ONE PLACE) */}
+            {/* DEDICATED REALISTIC FUEL TANK MANAGEMENT */}
             <div className="dg-glass-card p-3">
-              <div className="fw-bold fs-12 text-warning mb-3 uppercase tracking-wider d-flex align-items-center gap-2">
-                <Fuel size={16} /> DEDICATED FUEL MANAGEMENT
+              <div className="d-flex align-items-center justify-content-between mb-2.5">
+                <div className="fw-bold fs-12 text-warning uppercase tracking-wider d-flex align-items-center gap-2">
+                  <Fuel size={15} /> 
+                  <span>DEDICATED FUEL MANAGEMENT</span>
+                </div>
+                <span className="dg-fuel-badge">
+                  <Fuel size={11} className="me-1" />
+                  DIESEL HSD
+                </span>
               </div>
 
               <Row className="g-3 align-items-center">
                 <Col xs={5} className="d-flex justify-content-center">
-                  {/* REALISTIC DIESEL FUEL TANK WITH FLUID SVG WAVES & RISING BUBBLES */}
                   <div className="dg-realistic-fuel-tank">
                     <div className="dg-tank-sheen"></div>
-                    
-                    {/* ACCURATE TICK MARKS */}
                     <div className="dg-tank-ticks">
                       <span>100%</span>
                       <span>75%</span>
@@ -1085,17 +1282,11 @@ const SiemensStyleDG = () => {
                       <span>25%</span>
                     </div>
 
-                    {/* LIQUID FILL WITH BUBBLES & WAVE SURFACE */}
                     <div className="dg-fluid-fill" style={{ height: `${isDeviceConfigured && data.diesel.level !== null ? Math.min(Math.max(data.diesel.level, 0), 100) : 0}%` }}>
-                      {/* DYNAMIC SURFACE GLOW LINE */}
                       <div className="dg-fluid-surface-glow"></div>
-                      
-                      {/* BUBBLE ANIMATIONS */}
                       <div className="dg-bubble b1"></div>
                       <div className="dg-bubble b2"></div>
                       <div className="dg-bubble b3"></div>
-
-                      {/* DUAL LAYER FLUID WAVE ANIMATION */}
                       <svg className="dg-fluid-wave wave-back" viewBox="0 0 1200 120" preserveAspectRatio="none">
                         <path d="M0,0 C150,90 350,-40 500,60 C650,160 900,10 1200,40 L1200,120 L0,120 Z"></path>
                       </svg>
@@ -1104,38 +1295,59 @@ const SiemensStyleDG = () => {
                       </svg>
                     </div>
 
-                    {/* CENTER GLASS BADGE WITH READABLE NUMBER & LABEL */}
                     <div className="dg-tank-center-badge">
-                      <div className="dg-tank-val">{isDeviceConfigured && data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '-- %'}</div>
+                      <div className="dg-tank-val">
+                        {isDeviceConfigured && data.diesel.level !== null ? `${data.diesel.level.toFixed(0)}%` : '--'}
+                      </div>
                       <div className="dg-tank-lbl">Level %</div>
                     </div>
                   </div>
                 </Col>
 
                 <Col xs={7}>
-                  <div className="d-flex flex-column gap-2.5">
+                  <div className="d-flex flex-column gap-2">
                     <div className="dg-fuel-tile warning">
                       <div className="d-flex align-items-center gap-2">
-                        <div className="dg-fuel-tile-icon warning"><Droplets size={14} /></div>
-                        <span className="dg-fuel-tile-lbl">Remaining Ltrs</span>
+                        <div className="dg-fuel-tile-icon warning"><Droplets size={13} /></div>
+                        <span className="dg-fuel-tile-lbl">Remaining Fuel</span>
                       </div>
-                      <span className="dg-fuel-tile-val warning">{isDeviceConfigured && data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '--'}</span>
-                    </div>
-
-                    <div className="dg-fuel-tile danger">
-                      <div className="d-flex align-items-center gap-2">
-                        <div className="dg-fuel-tile-icon danger"><TrendingDown size={14} /></div>
-                        <span className="dg-fuel-tile-lbl">Today Used</span>
-                      </div>
-                      <span className="dg-fuel-tile-val danger">{isDeviceConfigured && data.diesel.spentToday !== null ? `${data.diesel.spentToday.toFixed(1)} L` : '--'}</span>
+                      <span className="dg-fuel-tile-val warning">
+                        {isDeviceConfigured && data.diesel.remaining !== null ? `${data.diesel.remaining.toFixed(0)} L` : '--'}
+                      </span>
                     </div>
 
                     <div className="dg-fuel-tile info">
                       <div className="d-flex align-items-center gap-2">
-                        <div className="dg-fuel-tile-icon info"><Calendar size={14} /></div>
-                        <span className="dg-fuel-tile-lbl">Refill Date</span>
+                        <div className="dg-fuel-tile-icon info"><Clock size={13} /></div>
+                        <span className="dg-fuel-tile-lbl">Est. Autonomy</span>
                       </div>
-                      <span className="dg-fuel-tile-val info">{isDeviceConfigured ? data.diesel.lastFill : '--'}</span>
+                      <span className="dg-fuel-tile-val info">
+                        {isDeviceConfigured && data.diesel.remaining !== null && data.diesel.burnRate 
+                          ? `~${(data.diesel.remaining / data.diesel.burnRate).toFixed(1)} hrs` 
+                          : '--'}
+                      </span>
+                    </div>
+
+                    <div className="dg-fuel-tile danger">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="dg-fuel-tile-icon danger"><TrendingDown size={13} /></div>
+                        <span className="dg-fuel-tile-lbl">Burn Rate</span>
+                      </div>
+                      <span className="dg-fuel-tile-val danger">
+                        {isDeviceConfigured && data.diesel.burnRate ? `${data.diesel.burnRate.toFixed(1)} L/h` : '--'}
+                      </span>
+                    </div>
+
+                    <div className="dg-fuel-tile success">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="dg-fuel-tile-icon success"><CheckCircle2 size={13} /></div>
+                        <span className="dg-fuel-tile-lbl">Status</span>
+                      </div>
+                      <span className={`dg-fuel-tile-val ${isDeviceConfigured && data.diesel.level !== null ? 'success' : 'text-muted'} fs-11`}>
+                        {isDeviceConfigured && data.diesel.level !== null 
+                          ? (data.diesel.level < 20 ? 'Low Fuel' : 'Normal Safe') 
+                          : 'NO MAPPED'}
+                      </span>
                     </div>
                   </div>
                 </Col>
@@ -1144,378 +1356,501 @@ const SiemensStyleDG = () => {
           </div>
         </Col>
 
-        {/* CENTER COLUMN: UNIFIED 35 PARAMETERS MATRIX SHOWCASE (COMPACT TILES) */}
+        {/* ── CENTER COLUMN (5 Cols): CORE VITALS, SAFETY INTERLOCKS & SCADA MATRIX ── */}
         <Col xl={5} lg={7}>
-          <div className="dg-glass-card p-3 h-100">
-            {/* ULTRA-SLEEK INDUSTRIAL CATEGORY SELECTOR BAR */}
-            <div className="dg-category-nav-bar mb-3">
-              {[
-                { key: 'ALL', code: null, name: 'ALL', color: 'cyan' },
-                { key: 'CHANGE', code: '01', name: 'CHANGE', color: 'success' },
-                { key: 'PARM', code: '02', name: 'PARM', color: 'warning' },
-                { key: 'ENGINE', code: '03', name: 'ENGINE', color: 'info' },
-                { key: 'TOTAL', code: '04', name: 'TOTAL', color: 'cyan' },
-                { key: 'FAULT', code: '05', name: 'FAULT', color: 'danger' }
-              ].map(cat => {
-                const isSelected = selectedCategoryFilter === cat.key;
-                const count = categoryCounts[cat.key] ?? 0;
-                return (
-                  <button
-                    key={cat.key}
-                    type="button"
-                    onClick={() => setSelectedCategoryFilter(prev => prev === cat.key && cat.key !== 'ALL' ? 'ALL' : cat.key)}
-                    className={`dg-cat-nav-btn ${isSelected ? `active ${cat.color}` : ''}`}
-                    title={`Filter by ${cat.name} (${count})`}
-                  >
-                    <span className="dg-cat-main">
-                      {cat.code ? (
-                        <span className={`dg-cat-code ${cat.color}`}>{cat.code}</span>
-                      ) : (
-                        <span className="dg-cat-dot cyan" />
-                      )}
-                      <span className="dg-cat-name">{cat.name}</span>
-                    </span>
-                    <span className={`dg-cat-badge ${isSelected ? `active ${cat.color}` : ''}`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 5 CATEGORIES COLLAPSIBLE ACCORDION SHOWCASE MATRIX (MATCHING IMAGE 2) */}
-            <div className="dg-params-container pe-1">
-              {/* 01. CHANGE (1) */}
-              {categorizedGroups['CHANGE'].length > 0 && (
-                <div className="dg-category-block success mb-2.5">
-                  <div 
-                    onClick={() => toggleCategoryCollapse('CHANGE')}
-                    className="dg-category-header success cursor-pointer d-flex align-items-center justify-content-between p-2.5"
-                  >
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="dg-code-pill success">01</span>
-                      <Zap size={14} className="text-success" />
-                      <span className="fs-12 fw-extrabold text-success uppercase tracking-wider">CHANGE</span>
+          <div className="d-flex flex-column gap-3">
+            {/* 4 PRIMARY OPERATIONAL VITALS GAUGES */}
+            <div className="row g-2">
+              {/* Battery Voltage */}
+              <div className="col-sm-6 col-12">
+                <div className="dg-vital-card cyan p-2.5 rounded-3 h-100">
+                  <div className="d-flex align-items-center justify-content-between mb-1.5">
+                    <div className="d-flex align-items-center gap-1.5">
+                      <div className="dg-vital-icon cyan"><Zap size={14} /></div>
+                      <span className="dg-vital-name">Battery Voltage</span>
                     </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="badge dg-cat-badge success rounded-pill px-2.5 py-1">
-                        {categorizedGroups['CHANGE'].length} Parameter
-                      </span>
-                      {collapsedCategories['CHANGE'] ? <ChevronDown size={14} className="text-success" /> : <ChevronUp size={14} className="text-success" />}
-                    </div>
+                    {isDeviceConfigured && data.engine.battery !== null ? (
+                      <span className="dg-vital-badge cyan">24-28V Normal</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
                   </div>
-
-                  {!collapsedCategories['CHANGE'] && (
-                    <div className="p-2 pt-1">
-                      <Row className="g-1.5">
-                        {categorizedGroups['CHANGE'].map(p => {
-                          const IconComp = p.icon || Zap;
-                          return (
-                            <Col key={p.id} md={12}>
-                              <div className={`dg-param-tile-v2 ${p.isMapped ? 'success' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
-                                  <IconComp size={13} className={p.isMapped ? "text-success flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <span className={`dg-param-val ${p.isMapped ? 'green' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
-                                </div>
-                              </div>
-                            </Col>
-                          );
-                        })}
-                      </Row>
+                  <div className="d-flex align-items-baseline justify-content-between mt-1">
+                    <div className="dg-vital-val font-monospace">
+                      {isDeviceConfigured && data.engine.battery !== null ? data.engine.battery.toFixed(2) : '--'}
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* 02. PARM (9) */}
-              {categorizedGroups['PARM'].length > 0 && (
-                <div className="dg-category-block warning mb-2.5">
-                  <div 
-                    onClick={() => toggleCategoryCollapse('PARM')}
-                    className="dg-category-header warning cursor-pointer d-flex align-items-center justify-content-between p-2.5"
-                  >
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="dg-code-pill warning">02</span>
-                      <Settings size={14} className="text-warning" />
-                      <span className="fs-12 fw-extrabold text-warning uppercase tracking-wider">PARM</span>
-                    </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="badge dg-cat-badge warning rounded-pill px-2.5 py-1">
-                        {categorizedGroups['PARM'].length} Parameters
-                      </span>
-                      {collapsedCategories['PARM'] ? <ChevronDown size={14} className="text-warning" /> : <ChevronUp size={14} className="text-warning" />}
-                    </div>
+                    <div className="dg-vital-unit cyan">V DC</div>
                   </div>
-
-                  {!collapsedCategories['PARM'] && (
-                    <div className="p-2 pt-1">
-                      <Row className="g-1.5">
-                        {categorizedGroups['PARM'].map(p => {
-                          const IconComp = p.icon || Settings;
-                          return (
-                            <Col key={p.id} md={6}>
-                              <div className={`dg-param-tile-v2 ${p.isMapped ? 'warning' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
-                                  <IconComp size={13} className={p.isMapped ? "text-warning flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <span className={`dg-param-val ${p.isMapped ? 'warning' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
-                                </div>
-                              </div>
-                            </Col>
-                          );
-                        })}
-                      </Row>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 03. ENGINE (6) */}
-              {categorizedGroups['ENGINE'].length > 0 && (
-                <div className="dg-category-block info mb-2.5">
-                  <div 
-                    onClick={() => toggleCategoryCollapse('ENGINE')}
-                    className="dg-category-header info cursor-pointer d-flex align-items-center justify-content-between p-2.5"
-                  >
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="dg-code-pill info">03</span>
-                      <Cpu size={14} className="text-info" />
-                      <span className="fs-12 fw-extrabold text-info uppercase tracking-wider">ENGINE</span>
-                    </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="badge dg-cat-badge info rounded-pill px-2.5 py-1">
-                        {categorizedGroups['ENGINE'].length} Parameters
-                      </span>
-                      {collapsedCategories['ENGINE'] ? <ChevronDown size={14} className="text-info" /> : <ChevronUp size={14} className="text-info" />}
-                    </div>
-                  </div>
-
-                  {!collapsedCategories['ENGINE'] && (
-                    <div className="p-2 pt-1">
-                      <Row className="g-1.5">
-                        {categorizedGroups['ENGINE'].map(p => {
-                          const IconComp = p.icon || Cpu;
-                          return (
-                            <Col key={p.id} md={6}>
-                              <div className={`dg-param-tile-v2 ${p.isMapped ? 'info' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
-                                  <IconComp size={13} className={p.isMapped ? "text-info flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <span className={`dg-param-val ${p.isMapped ? 'info' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
-                                </div>
-                              </div>
-                            </Col>
-                          );
-                        })}
-                      </Row>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 04. TOTAL (5) */}
-              {categorizedGroups['TOTAL'].length > 0 && (
-                <div className="dg-category-block purple mb-2.5">
-                  <div 
-                    onClick={() => toggleCategoryCollapse('TOTAL')}
-                    className="dg-category-header purple cursor-pointer d-flex align-items-center justify-content-between p-2.5"
-                  >
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="dg-code-pill purple">04</span>
-                      <TrendingDown size={14} className="text-purple-glow" />
-                      <span className="fs-12 fw-extrabold text-purple-glow uppercase tracking-wider">TOTAL</span>
-                    </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="badge dg-cat-badge purple rounded-pill px-2.5 py-1">
-                        {categorizedGroups['TOTAL'].length} Parameters
-                      </span>
-                      {collapsedCategories['TOTAL'] ? <ChevronDown size={14} style={{ color: '#a855f7' }} /> : <ChevronUp size={14} style={{ color: '#a855f7' }} />}
-                    </div>
-                  </div>
-
-                  {!collapsedCategories['TOTAL'] && (
-                    <div className="p-2 pt-1">
-                      <Row className="g-1.5">
-                        {categorizedGroups['TOTAL'].map(p => {
-                          const IconComp = p.icon || TrendingDown;
-                          return (
-                            <Col key={p.id} md={6}>
-                              <div className={`dg-param-tile-v2 ${p.isMapped ? 'cyan' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
-                                  <IconComp size={13} className={p.isMapped ? "text-cyan-glow flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <span className={`dg-param-val ${p.isMapped ? 'green' : 'text-muted'}`}>{p.liveVal}</span>
-                                  <ChevronRight size={13} className="opacity-40" />
-                                </div>
-                              </div>
-                            </Col>
-                          );
-                        })}
-                      </Row>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 05. FAULT (14) */}
-              {categorizedGroups['FAULT'].length > 0 && (
-                <div className="dg-category-block danger mb-2">
-                  <div 
-                    onClick={() => toggleCategoryCollapse('FAULT')}
-                    className="dg-category-header danger cursor-pointer d-flex align-items-center justify-content-between p-2.5"
-                  >
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="dg-code-pill danger">05</span>
-                      <ShieldAlert size={14} className="text-danger" />
-                      <span className="fs-12 fw-extrabold text-danger uppercase tracking-wider">FAULT</span>
-                    </div>
-                    <div className="d-flex align-items-center gap-2">
-                      <span className="badge dg-cat-badge danger rounded-pill px-2.5 py-1">
-                        {categorizedGroups['FAULT'].length} Parameters
-                      </span>
-                      {collapsedCategories['FAULT'] ? <ChevronDown size={14} className="text-danger" /> : <ChevronUp size={14} className="text-danger" />}
-                    </div>
-                  </div>
-
-                  {!collapsedCategories['FAULT'] && (
-                    <div className="p-2 pt-1">
-                      <Row className="g-1.5">
-                        {categorizedGroups['FAULT'].map(p => {
-                          const IconComp = p.icon || ShieldAlert;
-                          return (
-                            <Col key={p.id} md={6}>
-                              <div className={`dg-param-tile-v2 ${p.isMapped ? 'danger' : 'unmapped'}`}>
-                                <div className="d-flex align-items-center gap-2 text-truncate">
-                                  <span className="dg-param-num">{p.num}</span>
-                                  <IconComp size={13} className={p.isMapped ? "text-danger flex-shrink-0" : "text-muted opacity-50 flex-shrink-0"} />
-                                  <span className="dg-param-name text-truncate">{p.name}</span>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <span className={`dg-param-val ${p.isMapped ? (p.liveVal === '--' ? 'cyan' : 'red') : 'text-muted'}`}>
-                                    {p.liveVal}
-                                  </span>
-                                  <ChevronRight size={13} className="opacity-40" />
-                                </div>
-                              </div>
-                            </Col>
-                          );
-                        })}
-                      </Row>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </Col>
-
-        {/* RIGHT COLUMN: LIVE ELECTRICAL OVERVIEW, QUICK ACTIONS & SYSTEM INFO */}
-        <Col xl={3} lg={12}>
-          <div className="d-flex flex-column gap-2.5">
-            {/* LIVE ELECTRICAL OVERVIEW - MATCHING SCREENSHOT DESIGN */}
-            <div className="dg-glass-card p-3">
-              <div className="d-flex align-items-center justify-content-between mb-2.5">
-                <div className="fw-bold fs-12 text-cyan-glow uppercase tracking-wider d-flex align-items-center gap-2">
-                  <Zap size={15} /> LIVE ELECTRICAL OVERVIEW
-                </div>
-                <div className="dg-target-badge">
-                  <Activity size={11} className={`text-success ${isDeviceConfigured ? 'pulse-icon' : 'opacity-50'} me-1`} />
-                  <span className="text-dim">Target:</span>
-                  <span className="text-main fw-bold ms-1">{isDeviceConfigured ? activeDeviceDisplayName : '--'}</span>
                 </div>
               </div>
 
-              <Row className="g-2">
-                {/* kW Active Power */}
-                <Col xs={4}>
-                  <div className="dg-power-card-v2 cyan">
-                    <div className="d-flex align-items-center gap-1.5 mb-2">
-                      <div className="dg-power-icon-box cyan">
-                        <Zap size={13} />
-                      </div>
-                      <div className="text-truncate">
-                        <div className="dg-power-title">kW</div>
-                        <div className="dg-power-sub">ACTIVE POWER</div>
-                      </div>
+              {/* Coolant Temperature */}
+              <div className="col-sm-6 col-12">
+                <div className="dg-vital-card warning p-2.5 rounded-3 h-100">
+                  <div className="d-flex align-items-center justify-content-between mb-1.5">
+                    <div className="d-flex align-items-center gap-1.5">
+                      <div className="dg-vital-icon warning"><Thermometer size={14} /></div>
+                      <span className="dg-vital-name">Coolant Temp</span>
                     </div>
+                    {isDeviceConfigured && data.engine.coolant !== null ? (
+                      <span className="dg-vital-badge warning">&lt;95°C Safe</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
+                  </div>
+                  <div className="d-flex align-items-baseline justify-content-between mt-1">
+                    <div className="dg-vital-val font-monospace">
+                      {isDeviceConfigured && data.engine.coolant !== null ? data.engine.coolant.toFixed(1) : '--'}
+                    </div>
+                    <div className="dg-vital-unit warning">°C</div>
+                  </div>
+                </div>
+              </div>
 
-                    <div className="d-flex align-items-end justify-content-between mt-2">
-                      <div className="dg-power-val cyan">{isDeviceConfigured && data.power.kw !== null ? data.power.kw.toFixed(1) : '--'}</div>
-                      <div className="dg-power-unit cyan">kW</div>
+              {/* Oil Pressure */}
+              <div className="col-sm-6 col-12">
+                <div className="dg-vital-card success p-2.5 rounded-3 h-100">
+                  <div className="d-flex align-items-center justify-content-between mb-1.5">
+                    <div className="d-flex align-items-center gap-1.5">
+                      <div className="dg-vital-icon success"><Gauge size={14} /></div>
+                      <span className="dg-vital-name">Oil Pressure</span>
+                    </div>
+                    {isDeviceConfigured && data.engine.oilPressure !== null ? (
+                      <span className="dg-vital-badge success">Optimal</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
+                  </div>
+                  <div className="d-flex align-items-baseline justify-content-between mt-1">
+                    <div className="dg-vital-val font-monospace">
+                      {isDeviceConfigured && data.engine.oilPressure !== null ? data.engine.oilPressure.toFixed(1) : '--'}
+                    </div>
+                    <div className="dg-vital-unit success">kPA</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Engine Speed & Freq */}
+              <div className="col-sm-6 col-12">
+                <div className="dg-vital-card info p-2.5 rounded-3 h-100">
+                  <div className="d-flex align-items-center justify-content-between mb-1.5">
+                    <div className="d-flex align-items-center gap-1.5">
+                      <div className="dg-vital-icon info"><Activity size={14} /></div>
+                      <span className="dg-vital-name">Engine Speed</span>
+                    </div>
+                    {isDeviceConfigured && data.engine.freq !== null ? (
+                      <span className="dg-vital-badge info">{data.engine.freq.toFixed(1)} Hz</span>
+                    ) : (
+                      <span className="dg-vital-badge unmapped">NO MAPPED</span>
+                    )}
+                  </div>
+                  <div className="d-flex align-items-baseline justify-content-between mt-1">
+                    <div className="dg-vital-val font-monospace">
+                      {isDeviceConfigured && data.engine.speed !== null ? data.engine.speed.toFixed(0) : '--'}
+                    </div>
+                    <div className="dg-vital-unit info">RPM</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SAFETY INTERLOCK & ALARMS DIAGNOSTIC BANNER (CLEAN & INFORMATIVE) */}
+            <div className={`dg-safety-banner rounded-3 p-2.5 ${!isDeviceConfigured ? 'unconfigured' : (activeFaultsCount > 0 ? 'alert' : (mappedFaultsCount > 0 ? 'healthy' : 'unconfigured'))}`}>
+              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div className={`dg-safety-shield-icon ${!isDeviceConfigured || mappedFaultsCount === 0 ? 'opacity-40' : (activeFaultsCount > 0 ? 'alert' : 'healthy')}`}>
+                    {!isDeviceConfigured || mappedFaultsCount === 0 ? <ShieldAlert size={16} /> : (activeFaultsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />)}
+                  </div>
+                  <div>
+                    <div className="fw-bold fs-12 d-flex align-items-center gap-2">
+                      {!isDeviceConfigured ? (
+                        <span className="text-secondary">NO GENERATOR MAPPED</span>
+                      ) : mappedFaultsCount === 0 ? (
+                        <span className="text-secondary">NO INTERLOCKS MAPPED</span>
+                      ) : (
+                        <span className={activeFaultsCount > 0 ? 'text-danger' : 'text-success'}>
+                          {activeFaultsCount > 0 ? `${activeFaultsCount} ACTIVE TRIPS DETECTED` : `ALL ${mappedFaultsCount} SAFETY INTERLOCKS NORMAL`}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-dim fs-11">
+                      {!isDeviceConfigured 
+                        ? 'No safety interlock parameters or telemetry mapped for this site.'
+                        : mappedFaultsCount === 0 
+                          ? 'No fault or safety interlock parameters mapped for this generator.'
+                          : (activeFaultsCount > 0 ? 'Action required: Inspect active interlock faults below.' : `Zero active trips. All ${mappedFaultsCount} monitored interlocks healthy.`)}
                     </div>
                   </div>
-                </Col>
+                </div>
 
-                {/* kVA Apparent Power */}
-                <Col xs={4}>
-                  <div className="dg-power-card-v2 warning">
-                    <div className="d-flex align-items-center gap-1.5 mb-2">
-                      <div className="dg-power-icon-box warning">
-                        <Activity size={13} />
-                      </div>
-                      <div className="text-truncate">
-                        <div className="dg-power-title warning">kVA</div>
-                        <div className="dg-power-sub">APPARENT POWER</div>
-                      </div>
+                <button 
+                  onClick={() => setShowDiagnostics(!showDiagnostics)} 
+                  disabled={!isDeviceConfigured || mappedFaultsCount === 0}
+                  className="btn btn-xs dg-btn-outline-glass d-flex align-items-center gap-1.5 py-1 px-2.5 rounded-2 text-cyan-glow"
+                  title="Inspect safety sensor states"
+                >
+                  {showDiagnostics ? <EyeOff size={13} /> : <Eye size={13} />}
+                  <span className="fs-11 fw-semibold">{showDiagnostics ? 'Hide Interlocks' : (mappedFaultsCount > 0 ? `Inspect ${mappedFaultsCount} Sensors` : 'Inspect Interlocks')}</span>
+                </button>
+              </div>
+
+              {/* QUICK STATUS PILLS */}
+              {!showDiagnostics && (
+                <div className="d-flex align-items-center gap-1.5 flex-wrap mt-2 pt-2 border-top dg-border-subtle">
+                  {!isDeviceConfigured || mappedFaultsCount === 0 ? (
+                    <span className="dg-interlock-chip text-muted">
+                      No Interlocks Mapped
+                    </span>
+                  ) : (
+                    mappedFaultsList.slice(0, 5).map((f) => {
+                      const isTrip = f.liveVal && f.liveVal !== '--' && 
+                        !String(f.liveVal).toLowerCase().includes('0.00') && 
+                        !String(f.liveVal).toLowerCase().includes('0 status') && 
+                        !String(f.liveVal).toLowerCase().includes('normal') && 
+                        !String(f.liveVal).toLowerCase().includes('ok') && 
+                        parseFloat(f.liveVal) !== 0;
+                      return (
+                        <span key={f.id} className={`dg-interlock-chip ${isTrip ? 'border-danger text-danger' : ''}`}>
+                          {isTrip ? <AlertTriangle size={10} className="text-danger me-1 stroke-2" /> : <Check size={10} className="text-success me-1 stroke-2" />}
+                          {f.name}: {isTrip ? 'TRIP' : 'OK'}
+                        </span>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* EXPANDABLE DIAGNOSTIC SENSOR MATRIX */}
+              {showDiagnostics && (
+                <div className="mt-2.5 pt-2.5 border-top dg-border-subtle transition-all">
+                  <Row className="g-1.5">
+                    {mapped35Parameters.filter(p => p.category === 'FAULT').map(p => {
+                      const IconComp = p.icon || ShieldAlert;
+                      const isMapped = p.isMapped && p.liveVal !== '--';
+                      const isAlarmTripped = isMapped && 
+                        !String(p.liveVal).toLowerCase().includes('0.00') && 
+                        !String(p.liveVal).toLowerCase().includes('0 status') && 
+                        !String(p.liveVal).toLowerCase().includes('normal') && 
+                        !String(p.liveVal).toLowerCase().includes('healthy') && 
+                        !String(p.liveVal).toLowerCase().includes('ok') && 
+                        parseFloat(p.liveVal) !== 0;
+                      return (
+                        <Col key={p.id} md={6}>
+                          <div className={`dg-sensor-item ${!isMapped ? 'unmapped' : (isAlarmTripped ? 'tripped' : 'normal')}`}>
+                            <div className="d-flex align-items-center gap-1.5 text-truncate">
+                              <span className="dg-param-num">{p.num}</span>
+                              <IconComp size={12} className={!isMapped ? 'text-muted opacity-40' : (isAlarmTripped ? 'text-danger' : 'text-success')} />
+                              <span className="dg-param-name text-truncate fs-11">{p.name}</span>
+                            </div>
+                            <span className={`dg-status-pill ${!isMapped ? 'unmapped' : (isAlarmTripped ? 'trip' : 'normal')}`}>
+                              {!isMapped ? 'NO MAPPED' : (isAlarmTripped ? 'TRIP' : 'NORMAL')}
+                            </span>
+                          </div>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                </div>
+              )}
+            </div>
+
+            {/* UNIFIED SCADA PARAMETERS MATRIX */}
+            <div className="dg-glass-card p-3">
+              {/* TOP SEGMENTED CATEGORY NAV BAR */}
+              <div className="dg-category-nav-bar mb-2.5">
+                {[
+                  { key: 'ALL', name: 'ALL', count: mapped35Parameters.length, color: 'cyan' },
+                  { key: 'PARM', name: '02 VITALS', count: categoryCounts['PARM'], color: 'warning' },
+                  { key: 'ENGINE', name: '03 ENGINE', count: categoryCounts['ENGINE'], color: 'info' },
+                  { key: 'TOTAL', name: '04 POWER', count: categoryCounts['TOTAL'], color: 'cyan' },
+                  { key: 'CHANGE', name: '01 DC/BAT', count: categoryCounts['CHANGE'], color: 'success' },
+                  { key: 'FAULT', name: '05 FAULTS', count: categoryCounts['FAULT'], color: 'danger' }
+                ].map(cat => {
+                  const isSelected = selectedCategoryFilter === cat.key;
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setSelectedCategoryFilter(cat.key)}
+                      className={`dg-cat-nav-btn ${isSelected ? `active ${cat.color}` : ''}`}
+                    >
+                      <span className="dg-cat-name">{cat.name}</span>
+                      <span className={`dg-cat-badge ${isSelected ? `active ${cat.color}` : ''}`}>
+                        {cat.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* SEARCH & ACTIVE ONLY CONTROLS */}
+              <div className="d-flex align-items-center justify-content-between gap-2 mb-2.5 flex-wrap">
+                <div className="position-relative flex-grow-1" style={{ maxWidth: '280px' }}>
+                  <Search size={13} className="position-absolute top-50 start-2 translate-middle-y text-dim" />
+                  <input 
+                    type="text" 
+                    value={paramSearch} 
+                    onChange={(e) => setParamSearch(e.target.value)} 
+                    placeholder="Search parameter..." 
+                    className="form-control form-control-sm ps-4 dg-search-input rounded-2 fs-11"
+                  />
+                </div>
+
+                <div className="d-flex align-items-center gap-2 ms-auto">
+                  <label className="d-flex align-items-center gap-1.5 cursor-pointer select-none mb-0 fs-11 text-dim">
+                    <input 
+                      type="checkbox" 
+                      checked={showOnlyMapped} 
+                      onChange={(e) => setShowOnlyMapped(e.target.checked)} 
+                      className="form-check-input mt-0 cursor-pointer dg-checkbox"
+                    />
+                    <span>Active Only ({mappedTotalCount})</span>
+                  </label>
+                  <span className="dg-pts-counter">
+                    Showing {filtered35Parameters.length} pts
+                  </span>
+                </div>
+              </div>
+
+              {/* PARAMETER TILES GRID */}
+              <div className="dg-params-container pe-1">
+                {filtered35Parameters.length === 0 ? (
+                  <div className="d-flex flex-column align-items-center justify-content-center py-4 px-3 text-center rounded-2 dg-empty-params-state my-2">
+                    <Database size={24} className="text-muted opacity-40 mb-2" />
+                    <div className="fs-12 fw-bold text-main mb-1">
+                      {!isDeviceConfigured 
+                        ? 'NO GENERATOR MAPPED' 
+                        : (paramSearch ? `No parameters matching "${paramSearch}"` : 'NO MAPPED PARAMETERS AVAILABLE')}
                     </div>
-
-                    <div className="d-flex align-items-end justify-content-between mt-2">
-                      <div className="dg-power-val warning">{isDeviceConfigured && data.power.kva !== null ? data.power.kva.toFixed(1) : '--'}</div>
-                      <div className="dg-power-unit warning">kVA</div>
+                    <div className="text-dim fs-11" style={{ maxWidth: '340px' }}>
+                      {!isDeviceConfigured
+                        ? 'This site has no configured generator devices or telemetry feeds. Select a mapped site to view live data.'
+                        : (showOnlyMapped 
+                            ? 'Currently displaying active mapped telemetry only (0 active). Uncheck "Active Only" to inspect all 35 parameter slots.' 
+                            : 'No telemetry streams found.')}
                     </div>
                   </div>
-                </Col>
+                ) : (
+                  <Row className="g-1.5">
+                    {filtered35Parameters.map(p => {
+                      const IconComp = p.icon || Zap;
+                      const catColor = p.category === 'CHANGE' ? 'success' : p.category === 'PARM' ? 'warning' : p.category === 'ENGINE' ? 'info' : p.category === 'TOTAL' ? 'cyan' : 'danger';
+                      const isMapped = p.isMapped && p.liveVal !== '--';
+                      const isAlarmTripped = isMapped && p.category === 'FAULT' && 
+                        !String(p.liveVal).toLowerCase().includes('0.00') && 
+                        !String(p.liveVal).toLowerCase().includes('0 status') && 
+                        !String(p.liveVal).toLowerCase().includes('normal') && 
+                        !String(p.liveVal).toLowerCase().includes('healthy') && 
+                        !String(p.liveVal).toLowerCase().includes('ok') && 
+                        parseFloat(p.liveVal) !== 0;
 
-                {/* kVAr Reactive Power */}
+                      const displayVal = !isMapped
+                        ? 'NO MAPPED'
+                        : (p.category === 'FAULT'
+                            ? (isAlarmTripped ? 'TRIP' : 'Normal')
+                            : (typeof p.liveVal === 'string' && p.liveVal.includes(' Status') ? p.liveVal.replace(' Status', '') : p.liveVal));
+
+                      return (
+                        <Col key={p.id} md={6}>
+                          <div className={`dg-param-tile-v3 ${isMapped ? catColor : 'unmapped'}`}>
+                            <div className="d-flex align-items-center gap-2 text-truncate">
+                              <span className="dg-param-num">{p.num}</span>
+                              <IconComp size={13} className={isMapped ? `text-${catColor} flex-shrink-0` : 'text-muted opacity-40 flex-shrink-0'} />
+                              <span className="dg-param-name text-truncate" title={p.name}>{p.name}</span>
+                            </div>
+                            <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
+                              <span className={`dg-param-val ${isMapped ? (p.category === 'FAULT' ? (isAlarmTripped ? 'trip' : 'normal') : catColor) : 'unmapped'}`}>
+                                {displayVal}
+                              </span>
+                            </div>
+                          </div>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                )}
+              </div>
+            </div>
+          </div>
+        </Col>
+
+        {/* ── RIGHT COLUMN (3 Cols): 3-PHASE ELECTRICAL COCKPIT, ACTIONS & INFO ── */}
+        <Col xl={3} lg={12}>
+          <div className="d-flex flex-column gap-3">
+            {/* 3-PHASE LIVE ELECTRICAL COCKPIT */}
+            <div className="dg-glass-card p-3">
+              <div className="d-flex align-items-center justify-content-between mb-2.5 flex-wrap gap-2">
+                <div className="fw-bold fs-12 text-cyan-glow uppercase tracking-wider d-flex align-items-center gap-2">
+                  <Zap size={15} /> 
+                  <span>ELECTRICAL COCKPIT</span>
+                </div>
+                
+                {/* INTERACTIVE TARGET DG SELECTOR CAPSULE */}
+                <div className="dg-target-selector-capsule" title="Select active DG Set for Electrical Cockpit & Telemetry">
+                  <Activity 
+                    size={11} 
+                    className={`text-success ${isDeviceConfigured ? 'pulse-icon' : 'opacity-40'} flex-shrink-0`} 
+                  />
+                  <span className="dg-target-label">Target:</span>
+                  {devices && devices.length > 0 ? (
+                    <div className="position-relative d-inline-flex align-items-center">
+                      <select
+                        id="dg-target-device-select"
+                        value={String(selectedDeviceId || (devices[0]?.id || devices[0]?.deviceId || ''))}
+                        onChange={(e) => handleDeviceChange(e.target.value)}
+                        className="dg-target-select-input"
+                        aria-label="Select Target Generator"
+                      >
+                        {devices.map((dev, idx) => {
+                          const dId = String(dev.id || dev.deviceId || idx);
+                          const dName = dev.name || dev.deviceName || `DG-SET-${idx + 1}`;
+                          return (
+                            <option key={dId} value={dId} className="dg-target-select-option">
+                              {dName}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <ChevronDown size={11} className="dg-target-select-chevron pointer-events-none" />
+                    </div>
+                  ) : (
+                    <span className="text-muted fs-10 ms-1 fw-semibold">No DG Mapped</span>
+                  )}
+                  {devices && devices.length > 1 && (
+                    <span className="dg-target-count-pill" title={`${devices.length} DGs available at this site`}>
+                      {devices.length} DGs
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 3 PRIMARY POWER TILES */}
+              <Row className="g-2 mb-2.5">
                 <Col xs={4}>
-                  <div className="dg-power-card-v2 success">
-                    <div className="d-flex align-items-center gap-1.5 mb-2">
-                      <div className="dg-power-icon-box success">
-                        <TrendingDown size={13} />
-                      </div>
-                      <div className="text-truncate">
-                        <div className="dg-power-title success">kVAr</div>
-                        <div className="dg-power-sub">REACTIVE POWER</div>
-                      </div>
+                  <div className="dg-power-card-v2 cyan p-2 rounded-2 text-center">
+                    <div className="dg-power-sub">ACTIVE</div>
+                    <div className="dg-power-val cyan mt-1">
+                      {isDeviceConfigured && data.power.kw !== null ? data.power.kw.toFixed(1) : '--'}
                     </div>
-
-                    <div className="d-flex align-items-end justify-content-between mt-2">
-                      <div className="dg-power-val success">{isDeviceConfigured && data.power.kvar !== null ? data.power.kvar.toFixed(1) : '--'}</div>
-                      <div className="dg-power-unit success">kVAr</div>
+                    <div className="dg-power-unit cyan fs-10">kW</div>
+                  </div>
+                </Col>
+                <Col xs={4}>
+                  <div className="dg-power-card-v2 warning p-2 rounded-2 text-center">
+                    <div className="dg-power-sub">APPARENT</div>
+                    <div className="dg-power-val warning mt-1">
+                      {isDeviceConfigured && data.power.kva !== null ? data.power.kva.toFixed(1) : '--'}
                     </div>
+                    <div className="dg-power-unit warning fs-10">kVA</div>
+                  </div>
+                </Col>
+                <Col xs={4}>
+                  <div className="dg-power-card-v2 success p-2 rounded-2 text-center">
+                    <div className="dg-power-sub">REACTIVE</div>
+                    <div className="dg-power-val success mt-1">
+                      {isDeviceConfigured && data.power.kvar !== null ? data.power.kvar.toFixed(1) : '--'}
+                    </div>
+                    <div className="dg-power-unit success fs-10">kVAr</div>
                   </div>
                 </Col>
               </Row>
+
+              {/* 3-PHASE VOLTAGE DISTRIBUTION */}
+              <div className="mb-2.5">
+                <div className="d-flex align-items-center justify-content-between mb-1">
+                  <span className="text-dim fs-10 text-uppercase fw-bold">Line Voltages (V-L-L)</span>
+                  <span className="text-cyan-glow fs-10 font-monospace">
+                    PF: {isDeviceConfigured && data.power.pf !== null ? data.power.pf.toFixed(2) : '--'}
+                  </span>
+                </div>
+                <div className="row g-1">
+                  <div className="col-4">
+                    <div className="dg-phase-volt-tile text-center p-1.5 rounded-2">
+                      <span className="dg-phase-tag red">L1-L2</span>
+                      <div className="dg-phase-volt-val font-monospace fs-11 mt-1">
+                        {isDeviceConfigured && data.voltage.ry !== null ? `${data.voltage.ry.toFixed(1)}V` : '--'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-4">
+                    <div className="dg-phase-volt-tile text-center p-1.5 rounded-2">
+                      <span className="dg-phase-tag amber">L2-L3</span>
+                      <div className="dg-phase-volt-val font-monospace fs-11 mt-1">
+                        {isDeviceConfigured && data.voltage.yb !== null ? `${data.voltage.yb.toFixed(1)}V` : '--'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-4">
+                    <div className="dg-phase-volt-tile text-center p-1.5 rounded-2">
+                      <span className="dg-phase-tag blue">L3-L1</span>
+                      <div className="dg-phase-volt-val font-monospace fs-11 mt-1">
+                        {isDeviceConfigured && data.voltage.br !== null ? `${data.voltage.br.toFixed(1)}V` : '--'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3-PHASE LOAD CURRENTS & BALANCE */}
+              <div>
+                <div className="d-flex align-items-center justify-content-between mb-1">
+                  <span className="text-dim fs-10 text-uppercase fw-bold">Phase Load Currents</span>
+                  <span className="text-success fs-10 font-monospace fw-bold">
+                    {isDeviceConfigured && data.current.r !== null ? 'Balanced' : '--'}
+                  </span>
+                </div>
+                <div className="d-flex flex-column gap-1.5">
+                  <div className="dg-phase-current-row">
+                    <div className="d-flex align-items-center justify-content-between fs-11">
+                      <span className="text-danger fw-bold">Phase R (L1)</span>
+                      <span className="dg-phase-curr-val font-monospace fw-bold">
+                        {isDeviceConfigured && data.current.r !== null ? `${data.current.r.toFixed(1)} A` : '--'}
+                      </span>
+                    </div>
+                    <div className="progress dg-phase-progress mt-1" style={{ height: '4px' }}>
+                      <div className="progress-bar bg-danger" style={{ width: isDeviceConfigured && data.current.r !== null ? `${Math.min(data.current.r, 100)}%` : '0%' }}></div>
+                    </div>
+                  </div>
+
+                  <div className="dg-phase-current-row">
+                    <div className="d-flex align-items-center justify-content-between fs-11">
+                      <span className="text-warning fw-bold">Phase Y (L2)</span>
+                      <span className="dg-phase-curr-val font-monospace fw-bold">
+                        {isDeviceConfigured && data.current.y !== null ? `${data.current.y.toFixed(1)} A` : '--'}
+                      </span>
+                    </div>
+                    <div className="progress dg-phase-progress mt-1" style={{ height: '4px' }}>
+                      <div className="progress-bar bg-warning" style={{ width: isDeviceConfigured && data.current.y !== null ? `${Math.min(data.current.y, 100)}%` : '0%' }}></div>
+                    </div>
+                  </div>
+
+                  <div className="dg-phase-current-row">
+                    <div className="d-flex align-items-center justify-content-between fs-11">
+                      <span className="text-info fw-bold">Phase B (L3)</span>
+                      <span className="dg-phase-curr-val font-monospace fw-bold">
+                        {isDeviceConfigured && data.current.b !== null ? `${data.current.b.toFixed(1)} A` : '--'}
+                      </span>
+                    </div>
+                    <div className="progress dg-phase-progress mt-1" style={{ height: '4px' }}>
+                      <div className="progress-bar bg-info" style={{ width: isDeviceConfigured && data.current.b !== null ? `${Math.min(data.current.b, 100)}%` : '0%' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* QUICK ACTIONS SECTION WITH REAL PILL TOGGLE SWITCH (MATCHING IMAGE 1) */}
+            {/* QUICK ACTIONS SECTION WITH REAL PILL TOGGLE SWITCH */}
             <div className="dg-glass-card p-3">
               <div className="d-flex align-items-center justify-content-between">
                 <div className="fw-bold fs-12 text-cyan-glow uppercase tracking-wider d-flex align-items-center gap-2">
-                  <Settings size={15} /> QUICK ACTIONS
+                  <Settings size={15} /> 
+                  <span>QUICK ACTIONS</span>
                 </div>
 
-                {/* REAL SLIDING PILL TOGGLE SWITCH (OFF/ON) */}
                 <div 
                   onClick={() => setShowQuickActions(!showQuickActions)} 
                   className={`dg-pill-toggle-switch ${showQuickActions ? 'on' : 'off'}`}
-                  title={showQuickActions ? "Click to Turn OFF Controls" : "Click to Turn ON Controls"}
+                  title={showQuickActions ? "Click to Turn OFF Remote Controls" : "Click to Turn ON Remote Controls"}
                 >
                   <span className="dg-toggle-label">{showQuickActions ? 'ON' : 'OFF'}</span>
                   <div className="dg-toggle-knob"></div>
@@ -1528,37 +1863,37 @@ const SiemensStyleDG = () => {
                     <Col xs={6}>
                       <button onClick={handleStartEngine} disabled={!isDeviceConfigured} className="dg-action-btn-v2 start w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
-                          <div className="dg-action-icon-circle start"><Play size={12} fill="currentColor" /></div>
+                          <div className="dg-action-icon-circle start"><Play size={11} fill="currentColor" /></div>
                           <span>START</span>
                         </div>
-                        <ChevronRight size={14} className="opacity-70" />
+                        <ChevronRight size={13} className="opacity-70" />
                       </button>
                     </Col>
                     <Col xs={6}>
                       <button onClick={handleStopEngine} disabled={!isDeviceConfigured} className="dg-action-btn-v2 stop w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
-                          <div className="dg-action-icon-circle stop"><Square size={12} fill="currentColor" /></div>
+                          <div className="dg-action-icon-circle stop"><Square size={11} fill="currentColor" /></div>
                           <span>STOP</span>
                         </div>
-                        <ChevronRight size={14} className="opacity-70" />
+                        <ChevronRight size={13} className="opacity-70" />
                       </button>
                     </Col>
                     <Col xs={6}>
                       <button onClick={handleResetEngine} disabled={!isDeviceConfigured} className="dg-action-btn-v2 reset w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
-                          <div className="dg-action-icon-circle reset"><RotateCcw size={12} /></div>
+                          <div className="dg-action-icon-circle reset"><RotateCcw size={11} /></div>
                           <span>RESET</span>
                         </div>
-                        <ChevronRight size={14} className="opacity-70" />
+                        <ChevronRight size={13} className="opacity-70" />
                       </button>
                     </Col>
                     <Col xs={6}>
                       <button onClick={handleEmergencyStop} disabled={!isDeviceConfigured} className="dg-action-btn-v2 emergency w-100 d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
-                          <div className="dg-action-icon-circle emergency"><AlertOctagon size={12} /></div>
+                          <div className="dg-action-icon-circle emergency"><AlertOctagon size={11} /></div>
                           <span>EMERGENCY</span>
                         </div>
-                        <ChevronRight size={14} className="opacity-70" />
+                        <ChevronRight size={13} className="opacity-70" />
                       </button>
                     </Col>
                   </Row>
@@ -1569,7 +1904,8 @@ const SiemensStyleDG = () => {
             {/* SYSTEM INFO WITH SLEEK ICON PILL ROWS */}
             <div className="dg-glass-card p-3">
               <div className="fw-bold fs-12 text-cyan-glow mb-2.5 uppercase tracking-wider d-flex align-items-center gap-2">
-                <Info size={15} /> SYSTEM INFO
+                <Info size={15} /> 
+                <span>SYSTEM INFO</span>
               </div>
 
               <div className="d-flex flex-column gap-1.5">
@@ -1586,7 +1922,7 @@ const SiemensStyleDG = () => {
                     <Database size={13} className="text-info" />
                     <span className="text-dim fs-12 fw-medium">Capacity</span>
                   </div>
-                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.capacity || selectedDevObj?.template?.capacity || '500 kVA') : '--'}</span>
+                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.capacity || selectedDevObj?.template?.capacity || '--') : '--'}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -1594,7 +1930,7 @@ const SiemensStyleDG = () => {
                     <Fuel size={13} className="text-warning" />
                     <span className="text-dim fs-12 fw-medium">Fuel Type</span>
                   </div>
-                  <span className="text-main fs-12 fw-bold">{isDeviceConfigured ? (selectedDevObj?.fuelType || selectedDevObj?.template?.fuelType || 'Diesel') : '--'}</span>
+                  <span className="text-main fs-12 fw-bold">{isDeviceConfigured ? (selectedDevObj?.fuelType || selectedDevObj?.template?.fuelType || '--') : '--'}</span>
                 </div>
 
                 <div className="dg-sysinfo-row">
@@ -1669,35 +2005,38 @@ const SiemensStyleDG = () => {
         .bg-pill-status { background: rgba(3, 7, 18, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); }
         .dg-opt { background: #0f172a; color: #f8fafc; }
 
-        /* LIGHT MODE HIGH-CONTRAST PREMIUM SYSTEM */
+        /* LIGHT MODE EYE-COMFORT & HIGH-CONTRAST SYSTEM */
         body.light-mode .dg-premium-page,
         [data-theme="light"] .dg-premium-page {
-          background: #f1f5f9 !important;
-          background-image: 
-            radial-gradient(ellipse at 50% 0%, rgba(2, 132, 199, 0.08) 0%, transparent 60%),
-            linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px) !important;
-          background-size: 100% 100%, 30px 30px, 30px 30px !important;
+          background: #f0f3f8 !important;
+          background-image: none !important;
           color: #0f172a !important;
         }
 
         body.light-mode .dg-glass-card,
         [data-theme="light"] .dg-glass-card {
-          background: rgba(255, 255, 255, 0.85) !important;
-          border: 1px solid rgba(203, 213, 225, 0.8) !important;
-          box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08) !important;
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05) !important;
+        }
+        body.light-mode .dg-glass-card:hover,
+        [data-theme="light"] .dg-glass-card:hover {
+          border-color: #94a3b8 !important;
         }
 
         body.light-mode .text-main,
         [data-theme="light"] .text-main { color: #0f172a !important; }
 
         body.light-mode .text-dim,
-        [data-theme="light"] .text-dim { color: #64748b !important; }
+        [data-theme="light"] .text-dim { color: #475569 !important; font-weight: 600; }
+
+        body.light-mode .text-cyan-glow,
+        [data-theme="light"] .text-cyan-glow { color: #0284c7 !important; }
 
         body.light-mode .bg-pill-status,
         [data-theme="light"] .bg-pill-status {
-          background: #f8fafc !important;
-          border: 1px solid #cbd5e1 !important;
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
         }
 
         body.light-mode .dg-opt,
@@ -2143,6 +2482,18 @@ const SiemensStyleDG = () => {
           padding: 6px 14px;
           transition: 0.25s;
         }
+        body.light-mode .dg-btn-outline-glass,
+        [data-theme="light"] .dg-btn-outline-glass {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          color: #0284c7 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .dg-btn-outline-glass:hover,
+        [data-theme="light"] .dg-btn-outline-glass:hover {
+          background: #f1f5f9 !important;
+          border-color: #0284c7 !important;
+        }
 
         .dg-btn-cyan {
           background: linear-gradient(135deg, #0ea5e9, #0284c7);
@@ -2480,17 +2831,117 @@ const SiemensStyleDG = () => {
         body.light-mode .dg-power-unit.warning, [data-theme="light"] .dg-power-unit.warning { color: #d97706 !important; }
         body.light-mode .dg-power-unit.success, [data-theme="light"] .dg-power-unit.success { color: #059669 !important; }
 
-        /* TARGET BADGE */
-        .dg-target-badge {
-          background: rgba(3, 7, 18, 0.7);
-          border: 1px solid rgba(14, 165, 233, 0.25);
+        /* TARGET BADGE & INTERACTIVE TARGET SELECTOR */
+        .dg-target-badge,
+        .dg-target-selector-capsule {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          background: rgba(3, 7, 18, 0.75);
+          border: 1px solid rgba(14, 165, 233, 0.35);
           border-radius: 20px;
-          padding: 3px 10px;
-          font-size: 0.72rem;
+          padding: 2px 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+          transition: all 0.2s ease;
+          max-width: 100%;
         }
-        body.light-mode .dg-target-badge, [data-theme="light"] .dg-target-badge {
-          background: #f8fafc !important;
-          border-color: #cbd5e1 !important;
+        .dg-target-selector-capsule:hover {
+          border-color: rgba(14, 165, 233, 0.6);
+          box-shadow: 0 0 10px rgba(14, 165, 233, 0.25);
+        }
+        .dg-target-label {
+          font-size: 0.65rem;
+          color: #94a3b8;
+          font-weight: 700;
+          letter-spacing: 0.3px;
+          flex-shrink: 0;
+        }
+        .dg-target-select-input {
+          background: transparent;
+          color: #ffffff;
+          font-size: 0.68rem;
+          font-weight: 800;
+          border: none;
+          outline: none;
+          cursor: pointer;
+          padding-right: 14px;
+          padding-left: 2px;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          letter-spacing: 0.3px;
+          max-width: 130px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+        .dg-target-select-input:focus {
+          outline: none;
+        }
+        .dg-target-select-option {
+          background: #0f172a;
+          color: #f8fafc;
+          font-weight: 700;
+          padding: 6px 10px;
+        }
+        .dg-target-select-chevron {
+          position: absolute;
+          right: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #38bdf8;
+          pointer-events: none;
+        }
+        .dg-target-count-pill {
+          font-size: 0.58rem;
+          font-weight: 800;
+          color: #38bdf8;
+          background: rgba(14, 165, 233, 0.18);
+          border: 1px solid rgba(14, 165, 233, 0.4);
+          border-radius: 10px;
+          padding: 1px 5px;
+          letter-spacing: 0.2px;
+          line-height: 1.2;
+          flex-shrink: 0;
+        }
+
+        body.light-mode .dg-target-badge,
+        [data-theme="light"] .dg-target-badge,
+        body.light-mode .dg-target-selector-capsule,
+        [data-theme="light"] .dg-target-selector-capsule {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+        }
+        body.light-mode .dg-target-selector-capsule:hover,
+        [data-theme="light"] .dg-target-selector-capsule:hover {
+          border-color: #0284c7 !important;
+          box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15) !important;
+        }
+        body.light-mode .dg-target-label,
+        [data-theme="light"] .dg-target-label {
+          color: #475569 !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .dg-target-select-input,
+        [data-theme="light"] .dg-target-select-input {
+          color: #0f172a !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-target-select-option,
+        [data-theme="light"] .dg-target-select-option {
+          background: #ffffff !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .dg-target-select-chevron,
+        [data-theme="light"] .dg-target-select-chevron {
+          color: #0284c7 !important;
+        }
+        body.light-mode .dg-target-count-pill,
+        [data-theme="light"] .dg-target-count-pill {
+          background: #e0f2fe !important;
+          color: #0369a1 !important;
+          border: 1px solid #bae6fd !important;
         }
 
         /* ACTION BUTTONS V2 */
@@ -2661,6 +3112,808 @@ const SiemensStyleDG = () => {
         }
 
         .dg-code-pill.purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+        /* ── NEW MODERN SCADA VITALS & TELEMETRY STYLING ── */
+        .dg-vital-card {
+          background: rgba(15, 23, 42, 0.75);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          transition: all 0.25s ease;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        }
+        .dg-vital-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        }
+        .dg-vital-card.cyan { border-left: 3px solid #0ea5e9; }
+        .dg-vital-card.warning { border-left: 3px solid #f59e0b; }
+        .dg-vital-card.success { border-left: 3px solid #10b981; }
+        .dg-vital-card.info { border-left: 3px solid #3b82f6; }
+
+        .dg-vital-icon {
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .dg-vital-icon.cyan { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
+        .dg-vital-icon.warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .dg-vital-icon.success { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .dg-vital-icon.info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+
+        .dg-vital-name {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+        .dg-vital-badge {
+          font-size: 0.62rem;
+          font-weight: 700;
+          font-family: monospace;
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+        .dg-vital-badge.cyan { background: rgba(14, 165, 233, 0.12); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+        .dg-vital-badge.warning { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .dg-vital-badge.success { background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .dg-vital-badge.info { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+
+        .dg-vital-val {
+          font-size: 1.35rem;
+          font-weight: 900;
+          color: #ffffff;
+          line-height: 1;
+        }
+        .dg-vital-unit {
+          font-size: 0.75rem;
+          font-weight: 800;
+          font-family: monospace;
+        }
+        .dg-vital-unit.cyan { color: #38bdf8; }
+        .dg-vital-unit.warning { color: #fbbf24; }
+        .dg-vital-unit.success { color: #34d399; }
+        .dg-vital-unit.info { color: #60a5fa; }
+
+        /* SAFETY INTERLOCKS BANNER */
+        .dg-safety-banner {
+          background: rgba(15, 23, 42, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          transition: all 0.3s ease;
+        }
+        .dg-safety-banner.healthy {
+          border-color: rgba(16, 185, 129, 0.35);
+          background: linear-gradient(135deg, rgba(6, 78, 59, 0.25) 0%, rgba(15, 23, 42, 0.7) 100%);
+        }
+        .dg-safety-banner.alert {
+          border-color: rgba(239, 68, 68, 0.5);
+          background: linear-gradient(135deg, rgba(127, 29, 29, 0.3) 0%, rgba(15, 23, 42, 0.7) 100%);
+          box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+        }
+
+        .dg-safety-shield-icon {
+          width: 30px;
+          height: 30px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .dg-safety-shield-icon.healthy {
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        .dg-safety-shield-icon.alert {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+          border: 1px solid rgba(239, 68, 68, 0.4);
+          animation: dg-pulse 1.2s infinite;
+        }
+
+        .dg-interlock-chip {
+          display: inline-flex;
+          align-items: center;
+          font-size: 0.67rem;
+          font-weight: 600;
+          color: #cbd5e1;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 6px;
+          padding: 2px 7px;
+        }
+
+        .dg-sensor-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 5px 8px;
+          border-radius: 6px;
+          background: rgba(3, 7, 18, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          transition: all 0.2s ease;
+        }
+        .dg-sensor-item.tripped {
+          border-color: rgba(239, 68, 68, 0.4);
+          background: rgba(239, 68, 68, 0.12);
+        }
+        .dg-sensor-item.normal {
+          border-left: 2px solid #10b981;
+        }
+
+        /* PARAMETER TILES V3 */
+        .dg-param-tile-v3 {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 6px 9px;
+          border-radius: 8px;
+          background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          transition: all 0.2s ease;
+        }
+        .dg-param-tile-v3:hover {
+          background: rgba(255, 255, 255, 0.06);
+          transform: translateY(-1px);
+          border-color: rgba(255, 255, 255, 0.12);
+        }
+        .dg-param-tile-v3.success { border-left: 3px solid #10b981; }
+        .dg-param-tile-v3.warning { border-left: 3px solid #f59e0b; }
+        .dg-param-tile-v3.info { border-left: 3px solid #3b82f6; }
+        .dg-param-tile-v3.cyan { border-left: 3px solid #06b6d4; }
+        .dg-param-tile-v3.danger { border-left: 3px solid #ef4444; }
+
+        .dg-param-tile-v3.unmapped {
+          opacity: 0.42;
+          background: rgba(15, 23, 42, 0.25);
+          border-left: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        /* DIGITAL TWIN SUBTILE & HUD */
+        .dg-subtile {
+          background: rgba(3, 7, 18, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .dg-engine-hud-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 0.65rem;
+          font-weight: 800;
+          font-family: monospace;
+          letter-spacing: 0.4px;
+          backdrop-filter: blur(8px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        .dg-engine-hud-pill.running {
+          background: rgba(6, 78, 59, 0.85);
+          border: 1px solid rgba(52, 211, 153, 0.6);
+          color: #34d399;
+        }
+        .dg-engine-hud-pill.idle {
+          background: rgba(15, 23, 42, 0.85);
+          border: 1px solid rgba(56, 189, 248, 0.4);
+          color: #38bdf8;
+        }
+
+        .dg-hud-bottom-bar {
+          background: rgba(3, 7, 18, 0.85);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+        }
+
+        .dg-scada-grid-overlay {
+          background-image: linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
+          background-size: 20px 20px;
+        }
+
+        /* 3-PHASE ELECTRICAL COCKPIT */
+        .dg-phase-volt-tile {
+          background: rgba(3, 7, 18, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          transition: all 0.2s ease;
+        }
+        .dg-phase-volt-val {
+          color: #ffffff;
+          font-weight: 800;
+        }
+        .dg-phase-curr-val {
+          color: #ffffff;
+        }
+        .dg-phase-current-row {
+          background: rgba(3, 7, 18, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          padding: 6px 10px;
+          border-radius: 8px;
+        }
+        .dg-phase-progress {
+          background: rgba(255, 255, 255, 0.08);
+          border-radius: 2px;
+        }
+
+        /* HIGH-CONTRAST PHASE TAGS (L1-L2, L2-L3, L3-L1) */
+        .dg-phase-tag {
+          display: inline-block;
+          padding: 2px 7px;
+          border-radius: 5px;
+          font-size: 0.65rem;
+          font-weight: 800;
+          font-family: monospace;
+          letter-spacing: 0.5px;
+        }
+        .dg-phase-tag.red {
+          background: rgba(239, 68, 68, 0.22);
+          color: #f87171;
+          border: 1px solid rgba(239, 68, 68, 0.45);
+        }
+        .dg-phase-tag.amber {
+          background: rgba(245, 158, 11, 0.22);
+          color: #fbbf24;
+          border: 1px solid rgba(245, 158, 11, 0.45);
+        }
+        .dg-phase-tag.blue {
+          background: rgba(14, 165, 233, 0.22);
+          color: #38bdf8;
+          border: 1px solid rgba(14, 165, 233, 0.45);
+        }
+
+        /* BADGES & STATUS PILLS */
+        .dg-fuel-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 3px 10px;
+          border-radius: 9999px;
+          font-size: 0.68rem;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          background: rgba(245, 158, 11, 0.18);
+          color: #fbbf24;
+          border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .dg-online-pill {
+          display: inline-flex;
+          align-items: center;
+          padding: 3px 10px;
+          border-radius: 9999px;
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+        }
+        .dg-online-pill.online {
+          background: rgba(16, 185, 129, 0.18);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        .dg-online-pill.offline {
+          background: rgba(148, 163, 184, 0.18);
+          color: #94a3b8;
+          border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .dg-status-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 3px 10px;
+          border-radius: 9999px;
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+        }
+        .dg-status-pill.normal {
+          background: rgba(16, 185, 129, 0.18);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .dg-status-pill.trip {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+          border: 1px solid rgba(239, 68, 68, 0.5);
+          animation: dg-pulse 1.5s infinite;
+        }
+        .dg-status-pill.unmapped {
+          background: rgba(148, 163, 184, 0.12);
+          color: #94a3b8;
+          border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+        .dg-sensor-item.unmapped {
+          opacity: 0.85;
+          background: rgba(15, 23, 42, 0.3);
+          border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        .dg-vital-badge.unmapped {
+          background: rgba(148, 163, 184, 0.12) !important;
+          color: #94a3b8 !important;
+          border: 1px solid rgba(148, 163, 184, 0.25) !important;
+          letter-spacing: 0.5px;
+        }
+        .dg-empty-params-state {
+          background: rgba(15, 23, 42, 0.35);
+          border: 1px dashed rgba(255, 255, 255, 0.12);
+        }
+
+        .dg-pts-counter {
+          display: inline-flex;
+          align-items: center;
+          padding: 3px 8px;
+          border-radius: 9999px;
+          font-size: 0.65rem;
+          font-weight: 700;
+          font-family: monospace;
+          background: rgba(255, 255, 255, 0.08);
+          color: #94a3b8;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dg-search-input {
+          background: rgba(15, 23, 42, 0.8) !important;
+          color: #f8fafc !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        .dg-search-input::placeholder {
+          color: #64748b !important;
+        }
+        .dg-search-input:focus {
+          border-color: #0ea5e9 !important;
+          box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.25) !important;
+        }
+
+        .dg-border-subtle {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .fs-9 { font-size: 0.56rem !important; }
+        .fs-10 { font-size: 0.65rem !important; }
+        .fs-11 { font-size: 0.72rem !important; }
+
+        /* ── COMPLETE EYE-COMFORT & HIGH-CONTRAST LIGHT MODE OVERRIDES ── */
+        body.light-mode .dg-fuel-badge,
+        [data-theme="light"] .dg-fuel-badge {
+          background: #fef3c7 !important;
+          color: #92400e !important;
+          border: 1.5px solid #fcd34d !important;
+          box-shadow: 0 1px 3px rgba(180, 83, 9, 0.08) !important;
+        }
+
+        body.light-mode .dg-online-pill.online,
+        [data-theme="light"] .dg-online-pill.online {
+          background: #dcfce7 !important;
+          color: #15803d !important;
+          border: 1.5px solid #86efac !important;
+        }
+        body.light-mode .dg-online-pill.offline,
+        [data-theme="light"] .dg-online-pill.offline {
+          background: #f1f5f9 !important;
+          color: #475569 !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+
+        body.light-mode .dg-phase-tag.red,
+        [data-theme="light"] .dg-phase-tag.red {
+          background: #fee2e2 !important;
+          color: #991b1b !important;
+          border: 1.5px solid #fca5a5 !important;
+        }
+        body.light-mode .dg-phase-tag.amber,
+        [data-theme="light"] .dg-phase-tag.amber {
+          background: #fef3c7 !important;
+          color: #92400e !important;
+          border: 1.5px solid #fde68a !important;
+        }
+        body.light-mode .dg-phase-tag.blue,
+        [data-theme="light"] .dg-phase-tag.blue {
+          background: #e0f2fe !important;
+          color: #0369a1 !important;
+          border: 1.5px solid #bae6fd !important;
+        }
+
+        body.light-mode .dg-phase-volt-val,
+        [data-theme="light"] .dg-phase-volt-val {
+          color: #0f172a !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-phase-curr-val,
+        [data-theme="light"] .dg-phase-curr-val {
+          color: #0f172a !important;
+          font-weight: 800 !important;
+        }
+
+        body.light-mode .dg-status-pill.normal,
+        [data-theme="light"] .dg-status-pill.normal {
+          background: #dcfce7 !important;
+          color: #15803d !important;
+          border: 1.5px solid #86efac !important;
+        }
+        body.light-mode .dg-status-pill.trip,
+        [data-theme="light"] .dg-status-pill.trip {
+          background: #fee2e2 !important;
+          color: #b91c1c !important;
+          border: 1.5px solid #fca5a5 !important;
+        }
+        body.light-mode .dg-status-pill.unmapped,
+        [data-theme="light"] .dg-status-pill.unmapped {
+          background: #f1f5f9 !important;
+          color: #64748b !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-sensor-item.unmapped,
+        [data-theme="light"] .dg-sensor-item.unmapped {
+          background: #f8fafc !important;
+          border: 1px dashed #cbd5e1 !important;
+          opacity: 1 !important;
+        }
+        body.light-mode .dg-vital-badge.unmapped,
+        [data-theme="light"] .dg-vital-badge.unmapped {
+          background: #f1f5f9 !important;
+          color: #64748b !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-empty-params-state,
+        [data-theme="light"] .dg-empty-params-state {
+          background: #f8fafc !important;
+          border: 1px dashed #cbd5e1 !important;
+        }
+
+        body.light-mode .dg-search-input,
+        [data-theme="light"] .dg-search-input {
+          background: #ffffff !important;
+          color: #0f172a !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-search-input::placeholder,
+        [data-theme="light"] .dg-search-input::placeholder {
+          color: #94a3b8 !important;
+        }
+
+        body.light-mode .dg-pts-counter,
+        [data-theme="light"] .dg-pts-counter {
+          background: #e2e8f0 !important;
+          color: #334155 !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+
+        body.light-mode .dg-border-subtle,
+        [data-theme="light"] .dg-border-subtle {
+          border-color: #cbd5e1 !important;
+        }
+
+        /* PRIMARY VITALS */
+        body.light-mode .dg-vital-card,
+        [data-theme="light"] .dg-vital-card {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+        }
+        body.light-mode .dg-vital-card.cyan { border-left: 4px solid #0284c7 !important; }
+        body.light-mode .dg-vital-card.warning { border-left: 4px solid #d97706 !important; }
+        body.light-mode .dg-vital-card.success { border-left: 4px solid #16a34a !important; }
+        body.light-mode .dg-vital-card.info { border-left: 4px solid #2563eb !important; }
+
+        body.light-mode .dg-vital-name,
+        [data-theme="light"] .dg-vital-name {
+          color: #334155 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-vital-val,
+        [data-theme="light"] .dg-vital-val {
+          color: #0f172a !important;
+          font-weight: 900 !important;
+        }
+        body.light-mode .dg-vital-badge.cyan,
+        [data-theme="light"] .dg-vital-badge.cyan {
+          background: #e0f2fe !important;
+          color: #0369a1 !important;
+          border: 1.5px solid #bae6fd !important;
+        }
+        body.light-mode .dg-vital-badge.warning,
+        [data-theme="light"] .dg-vital-badge.warning {
+          background: #fef3c7 !important;
+          color: #92400e !important;
+          border: 1.5px solid #fde68a !important;
+        }
+        body.light-mode .dg-vital-badge.success,
+        [data-theme="light"] .dg-vital-badge.success {
+          background: #dcfce7 !important;
+          color: #15803d !important;
+          border: 1.5px solid #86efac !important;
+        }
+        body.light-mode .dg-vital-badge.info,
+        [data-theme="light"] .dg-vital-badge.info {
+          background: #dbeafe !important;
+          color: #1d4ed8 !important;
+          border: 1.5px solid #bfdbfe !important;
+        }
+
+        body.light-mode .dg-vital-unit.cyan, [data-theme="light"] .dg-vital-unit.cyan { color: #0284c7 !important; font-weight: 800; }
+        body.light-mode .dg-vital-unit.warning, [data-theme="light"] .dg-vital-unit.warning { color: #b45309 !important; font-weight: 800; }
+        body.light-mode .dg-vital-unit.success, [data-theme="light"] .dg-vital-unit.success { color: #15803d !important; font-weight: 800; }
+        body.light-mode .dg-vital-unit.info, [data-theme="light"] .dg-vital-unit.info { color: #1d4ed8 !important; font-weight: 800; }
+
+        /* SAFETY BANNER & SENSORS */
+        body.light-mode .dg-safety-banner.healthy,
+        [data-theme="light"] .dg-safety-banner.healthy {
+          background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%) !important;
+          border: 1.5px solid #86efac !important;
+          box-shadow: 0 4px 15px rgba(22, 101, 52, 0.06) !important;
+        }
+        body.light-mode .dg-safety-shield-icon.healthy,
+        [data-theme="light"] .dg-safety-shield-icon.healthy {
+          background: #dcfce7 !important;
+          color: #15803d !important;
+          border: 1.5px solid #86efac !important;
+        }
+        body.light-mode .dg-interlock-chip,
+        [data-theme="light"] .dg-interlock-chip {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #1f2937 !important;
+          font-weight: 700 !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .dg-sensor-item,
+        [data-theme="light"] .dg-sensor-item {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-sensor-item.normal,
+        [data-theme="light"] .dg-sensor-item.normal {
+          border-left: 3px solid #16a34a !important;
+        }
+
+        /* PARAMETER TILES V3 & CLEAR VISIBILITY FOR UNMAPPED */
+        body.light-mode .dg-param-tile-v3,
+        [data-theme="light"] .dg-param-tile-v3 {
+          background: #ffffff !important;
+          border: 1.5px solid #e2e8f0 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        }
+        body.light-mode .dg-param-tile-v3:hover,
+        [data-theme="light"] .dg-param-tile-v3:hover {
+          background: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .dg-param-tile-v3.success { border-left: 3px solid #16a34a !important; }
+        body.light-mode .dg-param-tile-v3.warning { border-left: 3px solid #d97706 !important; }
+        body.light-mode .dg-param-tile-v3.info { border-left: 3px solid #2563eb !important; }
+        body.light-mode .dg-param-tile-v3.cyan { border-left: 3px solid #0284c7 !important; }
+        body.light-mode .dg-param-tile-v3.danger { border-left: 3px solid #dc2626 !important; }
+
+        /* ALL UNMAPPED PARAMETERS NOW CRISP & FULLY VISIBLE */
+        .dg-param-tile-v3.unmapped {
+          opacity: 0.95;
+          background: rgba(15, 23, 42, 0.35);
+          border: 1px dashed rgba(255, 255, 255, 0.12);
+        }
+        .dg-param-tile-v3.unmapped .dg-param-name {
+          color: #94a3b8 !important;
+        }
+        .dg-param-tile-v3.unmapped .dg-param-val {
+          color: #64748b !important;
+        }
+
+        body.light-mode .dg-param-tile-v3.unmapped,
+        [data-theme="light"] .dg-param-tile-v3.unmapped {
+          background: #f8fafc !important;
+          border: 1px dashed #cbd5e1 !important;
+          opacity: 1 !important;
+        }
+        body.light-mode .dg-param-tile-v3.unmapped .dg-param-name,
+        [data-theme="light"] .dg-param-tile-v3.unmapped .dg-param-name {
+          color: #334155 !important;
+          font-weight: 600 !important;
+        }
+        body.light-mode .dg-param-tile-v3.unmapped .dg-param-val,
+        [data-theme="light"] .dg-param-tile-v3.unmapped .dg-param-val {
+          color: #64748b !important;
+          font-weight: 700 !important;
+        }
+
+        body.light-mode .dg-param-name,
+        [data-theme="light"] .dg-param-name {
+          color: #0f172a !important;
+          font-weight: 600 !important;
+        }
+        body.light-mode .dg-param-num,
+        [data-theme="light"] .dg-param-num {
+          background: #e2e8f0 !important;
+          color: #475569 !important;
+          font-weight: 700 !important;
+        }
+
+        body.light-mode .dg-param-val.normal,
+        [data-theme="light"] .dg-param-val.normal {
+          color: #15803d !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-param-val.trip,
+        [data-theme="light"] .dg-param-val.trip {
+          color: #b91c1c !important;
+          background: #fee2e2 !important;
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-param-val.cyan,
+        [data-theme="light"] .dg-param-val.cyan {
+          color: #0284c7 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-param-val.warning,
+        [data-theme="light"] .dg-param-val.warning {
+          color: #b45309 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-param-val.info,
+        [data-theme="light"] .dg-param-val.info {
+          color: #1d4ed8 !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-param-val.success,
+        [data-theme="light"] .dg-param-val.success {
+          color: #15803d !important;
+          font-weight: 800 !important;
+        }
+
+        /* SUBTILES, PHASE TILES & SYSINFO */
+        body.light-mode .dg-subtile,
+        [data-theme="light"] .dg-subtile {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .dg-phase-volt-tile,
+        [data-theme="light"] .dg-phase-volt-tile {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .dg-phase-current-row,
+        [data-theme="light"] .dg-phase-current-row {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-phase-progress,
+        [data-theme="light"] .dg-phase-progress {
+          background: #e2e8f0 !important;
+        }
+
+        body.light-mode .dg-sysinfo-row,
+        [data-theme="light"] .dg-sysinfo-row {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-sysinfo-row .text-main,
+        [data-theme="light"] .dg-sysinfo-row .text-main {
+          color: #0f172a !important;
+        }
+        body.light-mode .dg-sysinfo-row .text-dim,
+        [data-theme="light"] .dg-sysinfo-row .text-dim {
+          color: #475569 !important;
+        }
+
+        /* FUEL TILES IN LIGHT MODE */
+        body.light-mode .dg-fuel-tile-val.warning, [data-theme="light"] .dg-fuel-tile-val.warning { color: #b45309 !important; font-weight: 800; }
+        body.light-mode .dg-fuel-tile-val.info, [data-theme="light"] .dg-fuel-tile-val.info { color: #0284c7 !important; font-weight: 800; }
+        body.light-mode .dg-fuel-tile-val.danger, [data-theme="light"] .dg-fuel-tile-val.danger { color: #dc2626 !important; font-weight: 800; }
+        body.light-mode .dg-fuel-tile-val.success, [data-theme="light"] .dg-fuel-tile-val.success { color: #15803d !important; font-weight: 800; }
+        body.light-mode .dg-fuel-tile-lbl, [data-theme="light"] .dg-fuel-tile-lbl { color: #334155 !important; font-weight: 700 !important; }
+
+        /* TANK LEVEL BADGE */
+        body.light-mode .dg-tank-center-badge,
+        [data-theme="light"] .dg-tank-center-badge {
+          background: rgba(255, 255, 255, 0.94) !important;
+          border: 1.5px solid #f59e0b !important;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12) !important;
+          padding: 3px 8px !important;
+          border-radius: 8px !important;
+        }
+        body.light-mode .dg-tank-val,
+        [data-theme="light"] .dg-tank-val {
+          color: #0f172a !important;
+          text-shadow: none !important;
+        }
+        body.light-mode .dg-tank-lbl,
+        [data-theme="light"] .dg-tank-lbl {
+          color: #b45309 !important;
+          text-shadow: none !important;
+        }
+
+        /* CATEGORY NAV BUTTONS IN LIGHT MODE */
+        body.light-mode .dg-category-nav-bar,
+        [data-theme="light"] .dg-category-nav-bar {
+          background: #f8fafc !important;
+          border: 1.5px solid #cbd5e1 !important;
+        }
+        body.light-mode .dg-cat-nav-btn,
+        [data-theme="light"] .dg-cat-nav-btn {
+          background: #ffffff !important;
+          color: #334155 !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .dg-cat-nav-btn:hover,
+        [data-theme="light"] .dg-cat-nav-btn:hover {
+          background: #f1f5f9 !important;
+          color: #0f172a !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .dg-cat-badge,
+        [data-theme="light"] .dg-cat-badge {
+          background: #e2e8f0 !important;
+          color: #334155 !important;
+        }
+        body.light-mode .dg-cat-nav-btn.active.cyan,
+        [data-theme="light"] .dg-cat-nav-btn.active.cyan {
+          background: #e0f2fe !important;
+          border-color: #0284c7 !important;
+          color: #0369a1 !important;
+          box-shadow: 0 2px 6px rgba(2, 132, 199, 0.18) !important;
+        }
+        body.light-mode .dg-cat-badge.active.cyan,
+        [data-theme="light"] .dg-cat-badge.active.cyan {
+          background: #0284c7 !important;
+          color: #ffffff !important;
+        }
+        body.light-mode .dg-cat-nav-btn.active.warning,
+        [data-theme="light"] .dg-cat-nav-btn.active.warning {
+          background: #fef3c7 !important;
+          border-color: #d97706 !important;
+          color: #92400e !important;
+          box-shadow: 0 2px 6px rgba(217, 119, 6, 0.18) !important;
+        }
+        body.light-mode .dg-cat-badge.active.warning,
+        [data-theme="light"] .dg-cat-badge.active.warning {
+          background: #d97706 !important;
+          color: #ffffff !important;
+        }
+        body.light-mode .dg-cat-nav-btn.active.info,
+        [data-theme="light"] .dg-cat-nav-btn.active.info {
+          background: #dbeafe !important;
+          border-color: #2563eb !important;
+          color: #1d4ed8 !important;
+          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.18) !important;
+        }
+        body.light-mode .dg-cat-badge.active.info,
+        [data-theme="light"] .dg-cat-badge.active.info {
+          background: #2563eb !important;
+          color: #ffffff !important;
+        }
+        body.light-mode .dg-cat-nav-btn.active.success,
+        [data-theme="light"] .dg-cat-nav-btn.active.success {
+          background: #dcfce7 !important;
+          border-color: #16a34a !important;
+          color: #15803d !important;
+          box-shadow: 0 2px 6px rgba(22, 163, 74, 0.18) !important;
+        }
+        body.light-mode .dg-cat-badge.active.success,
+        [data-theme="light"] .dg-cat-badge.active.success {
+          background: #16a34a !important;
+          color: #ffffff !important;
+        }
+        body.light-mode .dg-cat-nav-btn.active.danger,
+        [data-theme="light"] .dg-cat-nav-btn.active.danger {
+          background: #fee2e2 !important;
+          border-color: #dc2626 !important;
+          color: #991b1b !important;
+          box-shadow: 0 2px 6px rgba(220, 38, 38, 0.18) !important;
+        }
+        body.light-mode .dg-cat-badge.active.danger,
+        [data-theme="light"] .dg-cat-badge.active.danger {
+          background: #dc2626 !important;
+          color: #ffffff !important;
+        }
 
         .dg-params-container {
           max-height: calc(100vh - 270px);

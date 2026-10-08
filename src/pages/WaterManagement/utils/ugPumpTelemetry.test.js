@@ -2,6 +2,7 @@ import assert from 'assert';
 import {
   getCanonicalUgPumpTemplate,
   formatWaterTelemetryValue,
+  sanitizeWaterLevelPct,
   findEventField,
   resolveUgPumpDevice,
   mapBatchEventsToUgPumps,
@@ -40,6 +41,19 @@ assert.strictEqual(formatWaterTelemetryValue(''), '--', 'empty string formatting
 assert.strictEqual(formatWaterTelemetryValue(0.9, 1, 'BAR'), '0.9 BAR', 'number with unit formatting');
 assert.strictEqual(formatWaterTelemetryValue(2450, 0, 'LPM'), '2,450 LPM', 'thousands formatting');
 console.log('✓ Test 3: Value formatting passed');
+
+// 3b. Water Level Percent Sanitization
+assert.strictEqual(sanitizeWaterLevelPct(null), null, 'null level');
+assert.strictEqual(sanitizeWaterLevelPct(undefined), null, 'undefined level');
+assert.strictEqual(sanitizeWaterLevelPct(''), null, 'empty string level');
+assert.strictEqual(sanitizeWaterLevelPct(53.50952148), 54, 'multi-decimal float rounding');
+assert.strictEqual(sanitizeWaterLevelPct('53.50952148'), 54, 'string multi-decimal float rounding');
+assert.strictEqual(sanitizeWaterLevelPct(7.0), 7, 'integer float level');
+assert.strictEqual(sanitizeWaterLevelPct(0.72), 72, 'ratio level 0-1');
+assert.strictEqual(sanitizeWaterLevelPct(5350), 54, 'basis points level');
+assert.strictEqual(sanitizeWaterLevelPct(120), 100, 'upper clamping');
+assert.strictEqual(sanitizeWaterLevelPct(-5), 0, 'lower clamping');
+console.log('✓ Test 3b: Water level sanitization & float rounding passed');
 
 // 4. Synonym Matching
 const mockEvents = [

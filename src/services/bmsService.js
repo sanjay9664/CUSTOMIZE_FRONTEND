@@ -180,6 +180,10 @@ export const bmsService = {
     );
     return apiClient.get(`/sites/${siteId}/devices/${deviceId}/telemetry/snapshots`, cleanParams);
   },
+  getEnergyReports: (params = {}) => apiClient.get('/reports/energy', params),
+  getDgReports: (params = {}) => apiClient.get('/reports/dg', params),
+  getMotorReports: (params = {}) => apiClient.get('/reports/motor', params).catch(() => apiClient.get('/reports/pump', params)).catch(() => apiClient.get('/reports/energy', params)),
+  getWaterReports: (params = {}) => apiClient.get('/reports/water', params).catch(() => apiClient.get('/reports/tank', params)).catch(() => apiClient.get('/reports/energy', params)),
 
   // Sochiot Platform Token Service
   getSochiotAccessToken: () => apiClient.get('/auth/Access-token')

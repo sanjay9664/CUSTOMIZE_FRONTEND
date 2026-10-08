@@ -40,7 +40,7 @@ export const normalizeKey = (str) => {
   return String(str)
     .trim()
     .toLowerCase()
-    .replace(/[\s\-_/()]+/g, '');
+    .replace(/[\s\-_/()%*#:]+/g, '');
 };
 
 /**
@@ -52,6 +52,23 @@ export const parseNumericValue = (val) => {
   if (typeof val === 'boolean') return val ? 1 : 0;
   const num = Number(val);
   return isNaN(num) ? null : num;
+};
+
+/**
+ * Normalizes, scales, rounds, and clamps any water level input to a valid integer percentage [0, 100].
+ */
+export const sanitizeWaterLevelPct = (raw) => {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const num = parseNumericValue(raw);
+  if (num === null) return null;
+  let val = num;
+  if (val > 0 && val <= 1) {
+    val = val * 100;
+  } else if (val > 150 && val <= 10000) {
+    val = val / 100;
+  }
+  const rounded = Math.round(val);
+  return Math.min(100, Math.max(0, rounded));
 };
 
 /**
@@ -329,15 +346,7 @@ export const resolveAgTankDevice = (device, eventResult = null) => {
   // 2. Extract Primary SCADA Metrics using synonym matching
   // Water Level %
   const levelPctEvt = findEventField(null, eventsList, AG_TANK_FIELD_SYNONYMS.waterLevelPct);
-  let level = null;
-  if (levelPctEvt) {
-    const raw = levelPctEvt.currentValue ?? levelPctEvt.value;
-    const num = parseNumericValue(raw);
-    if (num !== null) {
-      // If reading is between 0-1 (e.g. 0.75), convert to percentage
-      level = num <= 1 && num > 0 ? Math.round(num * 100) : Math.round(num);
-    }
-  }
+  const level = levelPctEvt ? sanitizeWaterLevelPct(levelPctEvt.currentValue ?? levelPctEvt.value) : null;
 
   // Water Level (absolute / depth)
   const levelEvt = findEventField(null, eventsList, AG_TANK_FIELD_SYNONYMS.waterLevel);

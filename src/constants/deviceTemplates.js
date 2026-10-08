@@ -799,36 +799,84 @@ MAIN_ENERGY_METER: {
     ]
   },
 
-  AC: {
-    id: 'AC',
-    label: 'Air Conditioner',
-    parameters: [
-      { name: 'AC Status', required: true },
-      { name: 'ON/OFF', required: false },
-      { name: 'Set Temperature', required: false },
-      { name: 'Room Temperature', required: false },
-      { name: 'Humidity', required: false },
-      { name: 'Mode', required: false },
-      { name: 'Cooling', required: false },
-      { name: 'Heating', required: false },
-      { name: 'Fan Speed', required: false },
-      { name: 'Compressor Status', required: false },
-      { name: 'Current', required: false },
-      { name: 'Power', required: false },
-      { name: 'Supply Air Temperature', required: false },
-      { name: 'Return Air Temperature', required: false },
-      { name: 'Energy Consumption', required: false },
-      { name: 'Runtime', required: false },
-      { name: 'Schedule', required: false },
-      { name: 'Auto/Manual', required: false },
-      { name: 'Swing Status', required: false },
-      { name: 'Filter Status', required: false },
-      { name: 'Fault Status', required: false },
-      { name: 'Communication Status', required: false },
-      { name: 'Temperature Alarm', required: false },
-      { name: 'Power Consumption', required: false }
-    ]
-  },
+ AC: {
+  id: 'AC',
+  label: 'Air Conditioner',
+
+  parameters: [
+    // =========================
+    // AC CORE PARAMETERS
+    // =========================
+    { name: 'AC Status', required: true },
+    { name: 'ON/OFF', required: false },
+    { name: 'Set Temperature', required: false },
+    { name: 'Room Temperature', required: false },
+    { name: 'Humidity', required: false },
+    { name: 'Mode', required: false },
+    { name: 'Cooling', required: false },
+    { name: 'Heating', required: false },
+    { name: 'Fan Speed', required: false },
+    { name: 'Compressor Status', required: false },
+    { name: 'Current', required: false },
+    { name: 'Power', required: false },
+    { name: 'Supply Air Temperature', required: false },
+    { name: 'Return Air Temperature', required: false },
+    { name: 'Energy Consumption', required: false },
+    { name: 'Runtime', required: false },
+    { name: 'Schedule', required: false },
+    { name: 'Auto/Manual', required: false },
+    { name: 'Swing Status', required: false },
+    { name: 'Filter Status', required: false },
+    { name: 'Fault Status', required: false },
+    { name: 'Communication Status', required: false },
+    { name: 'Temperature Alarm', required: false },
+    { name: 'Power Consumption', required: false },
+
+    // =========================
+    // ELECTRICAL / POWER METER
+    // =========================
+    { name: 'kWh-R', required: false },
+    { name: 'kWh-Y', required: false },
+    { name: 'kWh-B', required: false },
+
+    { name: 'PF-R', required: false },
+    { name: 'PF-Y', required: false },
+    { name: 'PF-B', required: false },
+
+    { name: 'Avg. Voltage L-L', required: false },
+    { name: 'Average Current', required: false },
+    { name: 'Power kVA (Avg.)', required: false },
+
+    // =========================
+    // PHASE VOLTAGE
+    // =========================
+    { name: 'Voltage R-N', required: false },
+    { name: 'Voltage Y-N', required: false },
+    { name: 'Voltage B-R', required: false },
+
+    // =========================
+    // PHASE CURRENT
+    // =========================
+    { name: 'Current L1', required: false },
+    { name: 'Current L2', required: false },
+    { name: 'Current L3', required: false },
+
+    // =========================
+    // PHASE POWER
+    // =========================
+    { name: 'kW-R', required: false },
+    { name: 'kW-Y', required: false },
+    { name: 'kW-B', required: false },
+
+    // =========================
+    // SENSOR / EVENT PARAMETERS
+    // =========================
+    { name: 'Temp', required: false },
+    { name: 'state', required: false },
+    { name: 'Value', required: false },
+    { name: 'Voltage', required: false }
+  ]
+},
   
 SOLAR_SYSTEM: {
   id: 'SOLAR_SYSTEM',

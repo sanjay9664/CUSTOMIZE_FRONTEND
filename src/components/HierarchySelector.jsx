@@ -141,7 +141,7 @@ const HierarchySelector = ({
   }, [accentColor]);
   const rgba = (a) => `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, ${a})`;
 
-  const selectedSite = allSites.find(s => String(s.id) === String(selectedSiteId));
+  const currentSite = allSites.find(s => String(s.id) === String(selectedSiteId));
   const activeDevice = filteredDevices.find(d => d.id === activeDeviceId) || filteredDevices[0];
 
   return (

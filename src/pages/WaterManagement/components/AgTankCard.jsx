@@ -114,7 +114,7 @@ const AgTankCard = ({ tank, onClick, isSelected = false, isFullscreen = false })
             <div
               className="tank-fill"
               style={{
-                height: `${levelValue !== null ? Math.min(100, Math.max(0, levelValue)) : 0}%`,
+                height: `${levelValue !== null && levelValue > 0 ? Math.min(100, Math.max(0, levelValue)) : 0}%`,
                 background: isOnline
                   ? (isAlarm
                     ? 'linear-gradient(180deg, #f87171 0%, #ef4444 60%, #b91c1c 100%)'
@@ -189,7 +189,7 @@ const AgTankCard = ({ tank, onClick, isSelected = false, isFullscreen = false })
             >
               {levelValue !== null ? levelValue : '--'}
             </span>
-            <span className="fs-6 fw-bold text-info ms-1">%</span>
+            {levelValue !== null && <span className="fs-6 fw-bold text-info ms-1">%</span>}
           </div>
 
           {/* Level Health Tag */}
