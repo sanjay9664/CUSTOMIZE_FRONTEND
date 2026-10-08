@@ -67,6 +67,15 @@ const SYSTEM_35_PARAMS = [
   { id: 35, num: '35', name: 'Fail to come to rest', category: 'FAULT', catCode: '05', unit: 'Status', defaultVal: '--', isAlarm: true, icon: Square }
 ];
 
+const DEFAULT_CLEAN_STATE = {
+  voltage: { ry: null, yb: null, br: null, rn: null, yn: null, bn: null },
+  current: { r: null, y: null, b: null, avg: null },
+  power: { kw: null, kvar: null, kva: null, pf: null },
+  engine: { coolant: null, oilPressure: null, oilTemp: null, speed: null, runtime: null, freq: null, battery: null, starts: null, status: null },
+  diesel: { level: null, remaining: null, capacity: 2000, spentToday: null, efficiency: null, lastFill: '--' },
+  generation: { today: null, kvaHours: null, kvarHours: null, month: null }
+};
+
 const SiemensStyleDG = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -286,7 +295,7 @@ const SiemensStyleDG = () => {
     }
   }, [selectedSite?.id, selectedSite?.siteId, selectedSite?._id, sites, selectedSiteId]);
 
-  // 2. Load Generator Devices for selectedSiteId (Category: GENERATOR)
+  // 2. Load Generator Devices for selectedSiteId (Aggregate API & LocalStorage for multi-DG support)
   useEffect(() => {
     if (!selectedSiteId) {
       setDevices([]);
@@ -298,27 +307,74 @@ const SiemensStyleDG = () => {
     const fetchGeneratorDevices = async () => {
       setDevicesLoading(true);
       try {
-        const queryParams = new URLSearchParams({
-          siteId: String(selectedSiteId),
-          category: 'GENERATOR',
-          include: 'settings,rules,profile'
-        });
-        const url = getApiUrl(`/devices?${queryParams.toString()}`);
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: getAuthHeaders()
-        });
+        const discovered = [];
+        const seenIds = new Set();
 
-        let items = [];
-        if (res && res.ok) {
-          const json = await res.json();
-          if (Array.isArray(json?.data)) {
-            items = json.data;
-          } else if (Array.isArray(json)) {
-            items = json;
+        const addDevice = (d) => {
+          if (!d) return;
+          const id = String(d.id || d.deviceId || d._id || '').trim();
+          if (!id || seenIds.has(id)) return;
+
+          // Check if device belongs to this site
+          const devSiteId = d.siteId !== undefined && d.siteId !== null ? String(d.siteId) : null;
+          if (devSiteId && devSiteId !== String(selectedSiteId)) {
+            return;
           }
-        } else {
-          // Fallback via apiClient
+
+          // Check if it's a generator / DG device
+          const cat = String(d.category || d.type || '').toUpperCase();
+          const name = String(d.name || d.deviceName || d.label || d.title || '').toUpperCase();
+          const mod = String(d.module || '').toUpperCase();
+          const isDG = 
+            cat.includes('GEN') || 
+            cat.includes('DG') || 
+            mod.includes('DG') || 
+            mod.includes('GEN') || 
+            name.includes('DG') || 
+            name.includes('GENERATOR') || 
+            name.includes('GENSET') || 
+            d.module === 'DG Set';
+
+          if (isDG) {
+            seenIds.add(id);
+            discovered.push({
+              ...d,
+              id,
+              name: d.name || d.deviceName || d.label || d.title || `DG-SET-${discovered.length + 1}`
+            });
+          }
+        };
+
+        // 1. Fetch from /devices?siteId=...&category=GENERATOR
+        try {
+          const queryParams = new URLSearchParams({
+            siteId: String(selectedSiteId),
+            category: 'GENERATOR',
+            include: 'settings,rules,profile'
+          });
+          const url = getApiUrl(`/devices?${queryParams.toString()}`);
+          const res = await fetch(url, {
+            method: 'GET',
+            headers: getAuthHeaders()
+          });
+          if (res && res.ok) {
+            const json = await res.json();
+            const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+            list.forEach(addDevice);
+          }
+        } catch (e) {}
+
+        // 2. Fetch via bmsService.getSiteDevices
+        try {
+          const siteDevRes = await bmsService.getSiteDevices(selectedSiteId, { category: 'GENERATOR' }).catch(() => null);
+          const siteDevList = normalizeList(siteDevRes, 'devices');
+          if (Array.isArray(siteDevList)) {
+            siteDevList.forEach(addDevice);
+          }
+        } catch (e) {}
+
+        // 3. Fallback via apiClient
+        try {
           const fallbackRes = await apiClient.get('/devices', { 
             siteId: String(selectedSiteId), 
             category: 'GENERATOR', 
@@ -326,30 +382,49 @@ const SiemensStyleDG = () => {
           }).catch(() => null);
           const list = normalizeList(fallbackRes, 'devices');
           if (Array.isArray(list) && list.length > 0) {
-            items = list;
+            list.forEach(addDevice);
           }
-        }
+        } catch (e) {}
+
+        // 4. Merge cached & registered devices from localStorage
+        const localKeys = [
+          'dg_generator_devices',
+          'scada_devices_db',
+          'bms_registered_devices',
+          'scada_device_mappings',
+          'tb_devices'
+        ];
+        localKeys.forEach(k => {
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const arr = Array.isArray(parsed) ? parsed : [parsed];
+              arr.forEach(addDevice);
+            }
+          } catch (e) {}
+        });
 
         if (isMounted) {
-          setDevices(items);
-          if (items.length > 0) {
-            const currentInList = items.some(d => String(d.id || d.deviceId) === String(selectedDeviceId));
+          setDevices(discovered);
+          if (discovered.length > 0) {
+            const currentInList = discovered.some(d => String(d.id || d.deviceId) === String(selectedDeviceId));
             const storedId = localStorage.getItem('selected_dg_device_id');
-            const storedInList = items.find(d => String(d.id || d.deviceId) === String(storedId));
+            const storedInList = discovered.find(d => String(d.id || d.deviceId) === String(storedId));
 
             if (currentInList) {
               // keep current
             } else if (storedInList) {
               setSelectedDeviceId(String(storedInList.id || storedInList.deviceId));
             } else {
-              const firstId = String(items[0].id || items[0].deviceId);
+              const firstId = String(discovered[0].id || discovered[0].deviceId);
               setSelectedDeviceId(firstId);
               localStorage.setItem('selected_dg_device_id', firstId);
             }
           } else {
             setSelectedDeviceId('');
             localStorage.removeItem('selected_dg_device_id');
-            setData(defaultCleanState);
+            setData(DEFAULT_CLEAN_STATE);
             setBackendEvents({});
           }
         }
@@ -358,7 +433,7 @@ const SiemensStyleDG = () => {
         if (isMounted) {
           setDevices([]);
           setSelectedDeviceId('');
-          setData(defaultCleanState);
+          setData(DEFAULT_CLEAN_STATE);
           setBackendEvents({});
         }
       } finally {
@@ -406,16 +481,8 @@ const SiemensStyleDG = () => {
   const userRole = (localStorage.getItem('userRole') || 'user').toUpperCase();
   const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
 
-  const defaultCleanState = {
-    voltage: { ry: null, yb: null, br: null, rn: null, yn: null, bn: null },
-    current: { r: null, y: null, b: null, avg: null },
-    power: { kw: null, kvar: null, kva: null, pf: null },
-    engine: { coolant: null, oilPressure: null, oilTemp: null, speed: null, runtime: null, freq: null, battery: null, starts: null, status: null },
-    diesel: { level: null, remaining: null, capacity: 2000, spentToday: null, efficiency: null, lastFill: '--' },
-    generation: { today: null, kvaHours: null, kvarHours: null, month: null }
-  };
-
-  const [data, setData] = useState(defaultCleanState);
+  const defaultCleanState = DEFAULT_CLEAN_STATE;
+  const [data, setData] = useState(DEFAULT_CLEAN_STATE);
   const [backendEvents, setBackendEvents] = useState({});
 
   const isEngineRunning = useMemo(() => {
@@ -557,6 +624,26 @@ const SiemensStyleDG = () => {
     };
   }, [sites, selectedSiteId, setSelectedSite]);
 
+  // ── HANDLE SWITCHING ACTIVE TARGET GENERATOR (Seamless Multi-DG switching) ──
+  const handleDeviceChange = useCallback((newId) => {
+    if (!newId || String(newId) === String(selectedDeviceId)) return;
+    const targetId = String(newId);
+    setSelectedDeviceId(targetId);
+    localStorage.setItem('selected_dg_device_id', targetId);
+
+    // Clear previous live data immediately to avoid stale data flashing
+    setData(DEFAULT_CLEAN_STATE);
+    setBackendEvents({});
+
+    // Toast feedback with selected DG name
+    const targetDev = devices.find(d => String(d.id || d.deviceId) === targetId);
+    const devName = targetDev?.name || targetDev?.deviceName || `Generator #${targetId}`;
+    triggerToast(`🎯 Active Target: ${devName}`);
+
+    // Fetch telemetry for newly selected DG
+    fetchDeviceTelemetry(targetId);
+  }, [devices, selectedDeviceId, fetchDeviceTelemetry]);
+
   // Device selector configuration for PageContextBanner
   const deviceSelector = useMemo(() => {
     if (devicesLoading) {
@@ -600,14 +687,12 @@ const SiemensStyleDG = () => {
       value: currentVal,
       options: deviceOptions,
       onChange: (newId) => {
-        if (!newId) return;
-        setSelectedDeviceId(newId);
-        localStorage.setItem('selected_dg_device_id', String(newId));
+        handleDeviceChange(newId);
       },
       ariaLabel: 'Select Generator Device',
       disabled: false
     };
-  }, [devices, devicesLoading, selectedDeviceId]);
+  }, [devices, devicesLoading, selectedDeviceId, handleDeviceChange]);
 
   // Compute live value mapping & mapped status for each of the 35 Parameters
   const mapped35Parameters = useMemo(() => {
@@ -640,18 +725,25 @@ const SiemensStyleDG = () => {
 
         list.forEach(t => {
           if (!t) return;
-          const isDG =
-            !selectedDeviceId ||
-            String(t.id) === String(selectedDeviceId) ||
-            String(t.deviceId) === String(selectedDeviceId) ||
-            String(t.name || '').toLowerCase().includes(String(activeDeviceDisplayName || '').toLowerCase()) ||
-            (t.category && String(t.category).toUpperCase().includes('GEN')) ||
-            (t.module && String(t.module).toUpperCase().includes('DG')) ||
-            (t.module && String(t.module).toUpperCase().includes('GEN')) ||
-            t.module === 'DG Set' ||
-            t.type === 'GENERATOR';
+          let isMatchingDevice = false;
+          if (selectedDeviceId) {
+            const matchesId = String(t.id || t.deviceId || '') === String(selectedDeviceId);
+            const matchesName = Boolean(
+              activeDeviceDisplayName &&
+              t.name &&
+              String(t.name).trim().toLowerCase() === String(activeDeviceDisplayName).trim().toLowerCase()
+            );
+            isMatchingDevice = matchesId || matchesName;
+          } else {
+            isMatchingDevice =
+              (t.category && String(t.category).toUpperCase().includes('GEN')) ||
+              (t.module && String(t.module).toUpperCase().includes('DG')) ||
+              (t.module && String(t.module).toUpperCase().includes('GEN')) ||
+              t.module === 'DG Set' ||
+              t.type === 'GENERATOR';
+          }
 
-          if (isDG) {
+          if (isMatchingDevice) {
             if (t.mapping && typeof t.mapping === 'object') {
               savedMappings = { ...savedMappings, ...t.mapping };
             }
@@ -660,7 +752,10 @@ const SiemensStyleDG = () => {
             }
             if (t.settings) {
               const s = Array.isArray(t.settings) ? t.settings[0]?.meta : t.settings;
-              if (s && typeof s === 'object') savedMappings = { ...savedMappings, ...s };
+              if (s && typeof s === 'object') {
+                if (s.mapping && typeof s.mapping === 'object') savedMappings = { ...savedMappings, ...s.mapping };
+                else savedMappings = { ...savedMappings, ...s };
+              }
             }
             if (t.parameters) {
               if (Array.isArray(t.parameters)) {
@@ -686,6 +781,12 @@ const SiemensStyleDG = () => {
       if (selectedDevObj.settings?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.settings.mapping };
       if (selectedDevObj.profile?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.profile.mapping };
       if (selectedDevObj.raw?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.raw.mapping };
+      if (selectedDevObj.mapping && typeof selectedDevObj.mapping === 'object') savedMappings = { ...savedMappings, ...selectedDevObj.mapping };
+      if (selectedDevObj.parameters && Array.isArray(selectedDevObj.parameters)) {
+        selectedDevObj.parameters.forEach(p => {
+          if (p && p.name) savedMappings[p.name] = p.register || p.field || p.value || 'Mapped';
+        });
+      }
     }
 
     return SYSTEM_35_PARAMS.map(param => {
@@ -1497,15 +1598,48 @@ const SiemensStyleDG = () => {
           <div className="d-flex flex-column gap-3">
             {/* 3-PHASE LIVE ELECTRICAL COCKPIT */}
             <div className="dg-glass-card p-3">
-              <div className="d-flex align-items-center justify-content-between mb-2.5">
+              <div className="d-flex align-items-center justify-content-between mb-2.5 flex-wrap gap-2">
                 <div className="fw-bold fs-12 text-cyan-glow uppercase tracking-wider d-flex align-items-center gap-2">
                   <Zap size={15} /> 
                   <span>ELECTRICAL COCKPIT</span>
                 </div>
-                <div className="dg-target-badge">
-                  <Activity size={10} className={`text-success ${isDeviceConfigured ? 'pulse-icon' : 'opacity-40'} me-1`} />
-                  <span className="text-dim fs-10">Target:</span>
-                  <span className="text-main fw-bold fs-10 ms-1">{isDeviceConfigured ? activeDeviceDisplayName : '--'}</span>
+                
+                {/* INTERACTIVE TARGET DG SELECTOR CAPSULE */}
+                <div className="dg-target-selector-capsule" title="Select active DG Set for Electrical Cockpit & Telemetry">
+                  <Activity 
+                    size={11} 
+                    className={`text-success ${isDeviceConfigured ? 'pulse-icon' : 'opacity-40'} flex-shrink-0`} 
+                  />
+                  <span className="dg-target-label">Target:</span>
+                  {devices && devices.length > 0 ? (
+                    <div className="position-relative d-inline-flex align-items-center">
+                      <select
+                        id="dg-target-device-select"
+                        value={String(selectedDeviceId || (devices[0]?.id || devices[0]?.deviceId || ''))}
+                        onChange={(e) => handleDeviceChange(e.target.value)}
+                        className="dg-target-select-input"
+                        aria-label="Select Target Generator"
+                      >
+                        {devices.map((dev, idx) => {
+                          const dId = String(dev.id || dev.deviceId || idx);
+                          const dName = dev.name || dev.deviceName || `DG-SET-${idx + 1}`;
+                          return (
+                            <option key={dId} value={dId} className="dg-target-select-option">
+                              {dName}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <ChevronDown size={11} className="dg-target-select-chevron pointer-events-none" />
+                    </div>
+                  ) : (
+                    <span className="text-main fw-bold fs-10 ms-1">--</span>
+                  )}
+                  {devices && devices.length > 1 && (
+                    <span className="dg-target-count-pill" title={`${devices.length} DGs available at this site`}>
+                      {devices.length} DGs
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -2614,17 +2748,117 @@ const SiemensStyleDG = () => {
         body.light-mode .dg-power-unit.warning, [data-theme="light"] .dg-power-unit.warning { color: #d97706 !important; }
         body.light-mode .dg-power-unit.success, [data-theme="light"] .dg-power-unit.success { color: #059669 !important; }
 
-        /* TARGET BADGE */
-        .dg-target-badge {
-          background: rgba(3, 7, 18, 0.7);
-          border: 1px solid rgba(14, 165, 233, 0.25);
+        /* TARGET BADGE & INTERACTIVE TARGET SELECTOR */
+        .dg-target-badge,
+        .dg-target-selector-capsule {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          background: rgba(3, 7, 18, 0.75);
+          border: 1px solid rgba(14, 165, 233, 0.35);
           border-radius: 20px;
-          padding: 3px 10px;
-          font-size: 0.72rem;
+          padding: 2px 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+          transition: all 0.2s ease;
+          max-width: 100%;
         }
-        body.light-mode .dg-target-badge, [data-theme="light"] .dg-target-badge {
-          background: #f8fafc !important;
-          border-color: #cbd5e1 !important;
+        .dg-target-selector-capsule:hover {
+          border-color: rgba(14, 165, 233, 0.6);
+          box-shadow: 0 0 10px rgba(14, 165, 233, 0.25);
+        }
+        .dg-target-label {
+          font-size: 0.65rem;
+          color: #94a3b8;
+          font-weight: 700;
+          letter-spacing: 0.3px;
+          flex-shrink: 0;
+        }
+        .dg-target-select-input {
+          background: transparent;
+          color: #ffffff;
+          font-size: 0.68rem;
+          font-weight: 800;
+          border: none;
+          outline: none;
+          cursor: pointer;
+          padding-right: 14px;
+          padding-left: 2px;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          letter-spacing: 0.3px;
+          max-width: 130px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+        .dg-target-select-input:focus {
+          outline: none;
+        }
+        .dg-target-select-option {
+          background: #0f172a;
+          color: #f8fafc;
+          font-weight: 700;
+          padding: 6px 10px;
+        }
+        .dg-target-select-chevron {
+          position: absolute;
+          right: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #38bdf8;
+          pointer-events: none;
+        }
+        .dg-target-count-pill {
+          font-size: 0.58rem;
+          font-weight: 800;
+          color: #38bdf8;
+          background: rgba(14, 165, 233, 0.18);
+          border: 1px solid rgba(14, 165, 233, 0.4);
+          border-radius: 10px;
+          padding: 1px 5px;
+          letter-spacing: 0.2px;
+          line-height: 1.2;
+          flex-shrink: 0;
+        }
+
+        body.light-mode .dg-target-badge,
+        [data-theme="light"] .dg-target-badge,
+        body.light-mode .dg-target-selector-capsule,
+        [data-theme="light"] .dg-target-selector-capsule {
+          background: #ffffff !important;
+          border: 1.5px solid #cbd5e1 !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+        }
+        body.light-mode .dg-target-selector-capsule:hover,
+        [data-theme="light"] .dg-target-selector-capsule:hover {
+          border-color: #0284c7 !important;
+          box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15) !important;
+        }
+        body.light-mode .dg-target-label,
+        [data-theme="light"] .dg-target-label {
+          color: #475569 !important;
+          font-weight: 700 !important;
+        }
+        body.light-mode .dg-target-select-input,
+        [data-theme="light"] .dg-target-select-input {
+          color: #0f172a !important;
+          font-weight: 800 !important;
+        }
+        body.light-mode .dg-target-select-option,
+        [data-theme="light"] .dg-target-select-option {
+          background: #ffffff !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .dg-target-select-chevron,
+        [data-theme="light"] .dg-target-select-chevron {
+          color: #0284c7 !important;
+        }
+        body.light-mode .dg-target-count-pill,
+        [data-theme="light"] .dg-target-count-pill {
+          background: #e0f2fe !important;
+          color: #0369a1 !important;
+          border: 1px solid #bae6fd !important;
         }
 
         /* ACTION BUTTONS V2 */
