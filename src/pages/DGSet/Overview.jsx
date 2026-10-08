@@ -642,7 +642,21 @@ const SiemensStyleDG = () => {
 
     // Fetch telemetry for newly selected DG
     fetchDeviceTelemetry(targetId);
-  }, [devices, selectedDeviceId, fetchDeviceTelemetry]);
+    window.dispatchEvent(new CustomEvent('scada_device_changed', {
+      detail: { deviceId: targetId, siteId: selectedSiteId, module: 'DG Set' }
+    }));
+  }, [devices, selectedDeviceId, selectedSiteId, fetchDeviceTelemetry]);
+
+  // Synchronize when active device is selected from the top Header cascading dropdown
+  useEffect(() => {
+    const handleGlobalDeviceChange = (e) => {
+      if (e.detail?.deviceId && String(e.detail.deviceId) !== String(selectedDeviceId)) {
+        handleDeviceChange(String(e.detail.deviceId));
+      }
+    };
+    window.addEventListener('scada_device_changed', handleGlobalDeviceChange);
+    return () => window.removeEventListener('scada_device_changed', handleGlobalDeviceChange);
+  }, [selectedDeviceId, handleDeviceChange]);
 
   // Device selector configuration for PageContextBanner
   const deviceSelector = useMemo(() => {
@@ -1684,44 +1698,6 @@ const SiemensStyleDG = () => {
                   <Zap size={15} /> 
                   <span>ELECTRICAL COCKPIT</span>
                 </div>
-                
-                {/* INTERACTIVE TARGET DG SELECTOR CAPSULE */}
-                <div className="dg-target-selector-capsule" title="Select active DG Set for Electrical Cockpit & Telemetry">
-                  <Activity 
-                    size={11} 
-                    className={`text-success ${isDeviceConfigured ? 'pulse-icon' : 'opacity-40'} flex-shrink-0`} 
-                  />
-                  <span className="dg-target-label">Target:</span>
-                  {devices && devices.length > 0 ? (
-                    <div className="position-relative d-inline-flex align-items-center">
-                      <select
-                        id="dg-target-device-select"
-                        value={String(selectedDeviceId || (devices[0]?.id || devices[0]?.deviceId || ''))}
-                        onChange={(e) => handleDeviceChange(e.target.value)}
-                        className="dg-target-select-input"
-                        aria-label="Select Target Generator"
-                      >
-                        {devices.map((dev, idx) => {
-                          const dId = String(dev.id || dev.deviceId || idx);
-                          const dName = dev.name || dev.deviceName || `DG-SET-${idx + 1}`;
-                          return (
-                            <option key={dId} value={dId} className="dg-target-select-option">
-                              {dName}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <ChevronDown size={11} className="dg-target-select-chevron pointer-events-none" />
-                    </div>
-                  ) : (
-                    <span className="text-muted fs-10 ms-1 fw-semibold">No DG Mapped</span>
-                  )}
-                  {devices && devices.length > 1 && (
-                    <span className="dg-target-count-pill" title={`${devices.length} DGs available at this site`}>
-                      {devices.length} DGs
-                    </span>
-                  )}
-                </div>
               </div>
 
               {/* 3 PRIMARY POWER TILES */}
@@ -1917,21 +1893,6 @@ const SiemensStyleDG = () => {
                   <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.name || selectedDevObj?.deviceName || `DEV-${selectedDeviceId}`) : '--'}</span>
                 </div>
 
-                <div className="dg-sysinfo-row">
-                  <div className="d-flex align-items-center gap-2">
-                    <Database size={13} className="text-info" />
-                    <span className="text-dim fs-12 fw-medium">Capacity</span>
-                  </div>
-                  <span className="text-main fs-12 font-monospace fw-bold">{isDeviceConfigured ? (selectedDevObj?.capacity || selectedDevObj?.template?.capacity || '--') : '--'}</span>
-                </div>
-
-                <div className="dg-sysinfo-row">
-                  <div className="d-flex align-items-center gap-2">
-                    <Fuel size={13} className="text-warning" />
-                    <span className="text-dim fs-12 fw-medium">Fuel Type</span>
-                  </div>
-                  <span className="text-main fs-12 fw-bold">{isDeviceConfigured ? (selectedDevObj?.fuelType || selectedDevObj?.template?.fuelType || '--') : '--'}</span>
-                </div>
 
                 <div className="dg-sysinfo-row">
                   <div className="d-flex align-items-center gap-2">
