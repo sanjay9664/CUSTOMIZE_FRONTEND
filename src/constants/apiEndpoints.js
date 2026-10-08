@@ -5,7 +5,7 @@ export const AUTH_ENDPOINTS = {
   USER_ME: '/auth-engine/user/me',
   LOGIN: '/auth/login',
   LOGOUT: '/auth/logout',
-  REFRESH_TOKEN: '/auth/refresh-token',
+  REFRESH_TOKEN: '/auth/refresh',
   SUPER_ADMIN_LOGIN: '/super-admin/auth/login',
   CHANGE_PASSWORD: '/auth-engine/user/changePassword',
   RESET_PASSWORD: '/auth-engine/user/resetPassword'

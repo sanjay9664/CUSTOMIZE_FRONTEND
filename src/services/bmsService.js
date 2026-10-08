@@ -1,4 +1,4 @@
-import apiClient, { normalizeList } from './apiClient';
+import apiClient, { normalizeList } from './apiClient.js';
 
 /**
  * Standardized BMS API Service Layer
@@ -31,6 +31,9 @@ export const bmsService = {
 
   // RBAC Permissions Catalog
   getPermissions: (params = {}) => apiClient.get('/permissions', params),
+
+  // Unified Location Hierarchy
+  getLocationTree: (params = {}) => apiClient.get('/locations/tree', params),
 
   // Companies Service
   getCompanies: (params = {}) => apiClient.get('/companies', params),

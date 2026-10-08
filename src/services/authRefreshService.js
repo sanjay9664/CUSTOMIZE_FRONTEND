@@ -10,16 +10,19 @@ import {
   clearAuthSession,
   getUserRole,
   getUserData,
-  isTokenExpiringSoon
+  isTokenExpiringSoon,
+  sanitizeClientCookies
 } from '../utils/cookieUtils.js';
 import { AUTH_ENDPOINTS } from '../utils/apiConfig.js';
 
 // Access tokens expire in 15 minutes (900s). Refresh every 10 minutes proactively.
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const REFRESH_COOLDOWN_MS = 30 * 1000; // 30s cooldown to prevent flood
+const MIN_DEBOUNCE_MS = 5 * 1000; // 5s absolute debounce to prevent rapid rotation collisions
 
 let refreshTimer = null;
 let activeRefreshPromise = null;
+let activeRefreshAbortController = null;
 let lastRefreshTime = 0;
 let isListenersAttached = false;
 
@@ -31,13 +34,20 @@ export const performTokenRefresh = async (force = false) => {
   const now = Date.now();
   const currentAccessToken = getAuthToken();
 
+  // Strict debounce to avoid rapid back-to-back rotations triggering TOKEN_REUSE_DETECTED
+  if (currentAccessToken && (now - lastRefreshTime < MIN_DEBOUNCE_MS)) {
+    return currentAccessToken;
+  }
+
   // If not forced and token is not expiring within 3 minutes and cooldown applies, return existing token
   if (!force && !isTokenExpiringSoon(currentAccessToken, 180) && (now - lastRefreshTime < REFRESH_COOLDOWN_MS)) {
     return currentAccessToken;
   }
-  lastRefreshTime = now;
 
   activeRefreshPromise = (async () => {
+    // 1. Sanitize any legacy or rogue client cookies that might shadow the server's HttpOnly cookie
+    sanitizeClientCookies();
+
     const currentRefreshToken = getRefreshToken();
 
     if (!currentRefreshToken && !currentAccessToken) {
@@ -51,23 +61,34 @@ export const performTokenRefresh = async (force = false) => {
     );
 
     try {
-      const response = await fetch(AUTH_ENDPOINTS.refresh, {
+      activeRefreshAbortController = new AbortController();
+
+      // Send refreshToken in body as fallback if available in client storage (supports both login JWT & rotated tokens)
+      const refreshBody = currentRefreshToken && typeof currentRefreshToken === 'string' && currentRefreshToken.trim()
+        ? { refreshToken: currentRefreshToken.trim() }
+        : {};
+
+      const fetchFn = (typeof window !== 'undefined' && window._nativeFetch) ? window._nativeFetch : fetch;
+      const response = await fetchFn(AUTH_ENDPOINTS.refresh, {
         method: 'POST',
         credentials: 'include',
+        signal: activeRefreshAbortController.signal,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(currentRefreshToken ? { refreshToken: currentRefreshToken } : {})
+        body: JSON.stringify(refreshBody)
       });
 
       console.info(`[AuthRefresh] Refresh endpoint responded: HTTP ${response.status}`);
 
       if (response.ok) {
+        lastRefreshTime = Date.now();
         const resData = await response.json();
         const payload = resData?.data || resData;
         const newAccessToken = payload?.accessToken || payload?.token;
-        const newRefreshToken = payload?.refreshToken || currentRefreshToken;
+        // Backend rotates the refresh token and returns the new raw token in payload & Set-Cookie
+        const newRefreshToken = payload?.refreshToken || null;
 
         if (newAccessToken) {
           const userRole = getUserRole() || 'USER';
@@ -84,17 +105,33 @@ export const performTokenRefresh = async (force = false) => {
           return newAccessToken;
         }
       } else if (response.status === 401 || response.status === 403) {
-        // Refresh token is expired or revoked
+        // Refresh token is expired or revoked (e.g. TOKEN_REVOKED, TOKEN_NOT_FOUND, or TOKEN_REUSE_DETECTED)
+        console.warn(`[AuthRefresh] Refresh failed with HTTP ${response.status}. Purging session.`);
         clearAuthSession();
+
+        try {
+          const { store } = await import('../store/store.js');
+          const { logout } = await import('../store/authSlice.js');
+          if (store?.dispatch && logout) {
+            store.dispatch(logout());
+          }
+        } catch (e) {}
+
         if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
-          window.location.href = '/login';
+          window.location.replace('/login');
         }
         return null;
       } else {
         console.warn(`[AuthRefresh] Unexpected HTTP ${response.status} from refresh endpoint. Session NOT cleared.`);
       }
     } catch (err) {
-      console.warn('[AuthRefresh] Network error during token refresh:', err);
+      if (err.name === 'AbortError') {
+        console.info('[AuthRefresh] Token refresh aborted due to session termination/logout.');
+      } else {
+        console.warn('[AuthRefresh] Network error during token refresh:', err);
+      }
+    } finally {
+      activeRefreshAbortController = null;
     }
 
     return null;
@@ -105,12 +142,11 @@ export const performTokenRefresh = async (force = false) => {
   return activeRefreshPromise;
 };
 
-
 const handleVisibilityOrFocus = () => {
   if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
   const currentToken = getAuthToken();
   if (currentToken && isTokenExpiringSoon(currentToken, 180)) {
-    performTokenRefresh(true);
+    performTokenRefresh(false);
   }
 };
 
@@ -148,4 +184,11 @@ export const stopAutoTokenRefresh = () => {
     document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     isListenersAttached = false;
   }
+  if (activeRefreshAbortController) {
+    try {
+      activeRefreshAbortController.abort();
+    } catch (e) {}
+    activeRefreshAbortController = null;
+  }
+  activeRefreshPromise = null;
 };

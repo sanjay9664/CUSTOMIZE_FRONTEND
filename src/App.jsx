@@ -12,6 +12,16 @@ const AppRoutes = lazy(() => import('./routes/AppRoutes'));
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  React.useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted && !isAuthenticated) {
+        window.location.replace('/login');
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [isAuthenticated]);
+
   if (isLoading) {
     return (
       <div className="d-flex align-items-center justify-content-center min-vh-100 bg-dark text-white">

@@ -7,7 +7,7 @@ import {
   Globe, Layers, BarChart3, BellRing, Radio, RefreshCw
 } from 'lucide-react';
 import GlobalSettings from './GlobalSettings';
-import UserAdministration from './UserAdministration';
+import UserManagement from '../Admin/UserManagement';
 import SiteManagement from './SiteManagement';
 import AssetManagement from './AssetManagement';
 import DeviceManagement from './DeviceManagement';
@@ -779,7 +779,7 @@ const SettingsIndex = () => {
       ) : activeTab === 'devices' ? (
         <DeviceManagement />
       ) : activeTab === 'users' ? (
-        <UserAdministration />
+        <UserManagement />
       ) : null}
     </div>
   );

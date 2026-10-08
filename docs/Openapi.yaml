@@ -441,6 +441,80 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /users/bulk-import:
+    post:
+      tags: [Users]
+      summary: Bulk Import Users
+      description: Batch import users from a JSON array or CSV payload. Creates pending users and sends activation email invitations. Requires user:write permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkImportRequest'
+          text/csv:
+            schema:
+              type: string
+              example: "email,name,role,phone\njane@example.com,Jane Doe,OPERATOR,+1234567890"
+      responses:
+        '200':
+          description: Users imported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/export:
+    get:
+      tags: [Users]
+      summary: Export Users
+      description: Export all accessible users in CSV or JSON format. Requires user:read permission.
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+          description: Desired export format
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+          description: Filter export by tenant ID (SuperAdmin only)
+      responses:
+        '200':
+          description: Exported users payload
+          content:
+            text/csv:
+              schema:
+                type: string
+                example: "ID,Name,Email,Role,Role ID,Status,Tenant ID,Created At\n\"cm123\",\"Jane Doe\",\"jane@example.com\",\"OPERATOR\",,\"ACTIVE\",\"tenant_1\",\"2026-10-01T12:00:00.000Z\""
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 25
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /users/{id}:
     get:
       tags: [Users]
@@ -1605,8 +1679,50 @@ paths:
                 type: object
 
   # ============================================================
-  # J. SITES SERVICE
+  # J. SITES & LOCATIONS SERVICE
   # ============================================================
+  /locations/tree:
+    get:
+      tags: [Sites]
+      summary: Get Unified Location Hierarchy Tree
+      description: "Returns the complete recursive multi-level spatial hierarchy tree ([Company] -> Tenant -> Zone -> TenantArea -> Site -> Asset: Building -> Floor -> Room -> Equipment...). NOTE: Legacy Building model is deprecated; physical hierarchy below Site is derived exclusively from the Asset model."
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+          description: Filter hierarchy by tenant ID (SuperAdmin only)
+        - name: companyId
+          in: query
+          schema:
+            type: string
+          description: Filter hierarchy by company ID (SuperAdmin only)
+        - name: includeCompany
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: When true, returns the tree rooted at Company level (Company -> Tenant -> ...). When false/omitted, preserves backward-compatible Tenant-rooted structure.
+      responses:
+        '200':
+          description: Location hierarchy tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationTreeNode'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /sites:
     get:
       tags: [Sites]
@@ -4981,6 +5097,15 @@ components:
           type: string
           nullable: true
           example: "cm01ab23cd45ef67gh89"
+        roleType:
+          type: string
+          nullable: true
+          example: "CUSTOM"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["device:read", "site:read"]
         tenantId:
           type: string
           nullable: true
@@ -5021,6 +5146,15 @@ components:
             - type: integer
           nullable: true
           example: "cm01ab23cd45ef67gh89"
+        roleType:
+          type: string
+          nullable: true
+          example: "CUSTOM"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["device:read", "site:read"]
         status:
           $ref: '#/components/schemas/UserStatus'
         features:
@@ -5034,6 +5168,141 @@ components:
                 type: string
               zoneNodeId:
                 type: string
+
+    BulkImportUserItem:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user1@example.com"
+        name:
+          type: string
+          example: "Alex Johnson"
+        role:
+          $ref: '#/components/schemas/UserRole'
+        roleId:
+          oneOf:
+            - type: string
+            - type: integer
+          nullable: true
+        roleType:
+          type: string
+          nullable: true
+        tenantId:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        employeeId:
+          type: string
+          nullable: true
+        zoneLocations:
+          type: array
+          items:
+            type: object
+            properties:
+              zoneNodeType:
+                type: string
+              zoneNodeId:
+                type: string
+
+    BulkImportRequest:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkImportUserItem'
+
+    BulkImportResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 5
+            created:
+              type: integer
+              example: 4
+            failed:
+              type: integer
+              example: 1
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  row:
+                    type: integer
+                    example: 3
+                  email:
+                    type: string
+                    example: "duplicate@example.com"
+                  reason:
+                    type: string
+                    example: "User with this email already exists"
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    LocationTreeNode:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cm01ab23cd45ef67gh89"
+        name:
+          type: string
+          example: "North Wing Floor 2"
+        type:
+          type: string
+          enum: [COMPANY, TENANT, ZONE, AREA, SITE, BUILDING, FLOOR, ROOM, CUBICLE, EQUIPMENT, MACHINE, LINE, PANEL, DG, LT_ROOM, PUMP_ROOM, OTHER, ASSET]
+          example: "FLOOR"
+        parentId:
+          type: string
+          nullable: true
+          example: "cm01ab23cd45ef67gh00"
+        siteId:
+          type: integer
+          nullable: true
+          example: 7
+        sochiotLocationId:
+          type: integer
+          nullable: true
+          example: 7
+        address:
+          type: string
+          nullable: true
+          example: "Sector 63, Noida"
+        city:
+          type: string
+          nullable: true
+          example: "Noida"
+        assetType:
+          type: string
+          nullable: true
+          example: "FLOOR"
+        depth:
+          type: integer
+          nullable: true
+          example: 1
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationTreeNode'
 
     # ============================================================
     # 3. RBAC ROLES & PERMISSIONS SCHEMAS

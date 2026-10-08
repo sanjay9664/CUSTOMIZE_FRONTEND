@@ -2,8 +2,8 @@
  * Unified API Client for BMS Platform
  * Manages HTTP requests, authentication, token refresh, and standardized ApiError handling.
  */
-import { getAuthToken } from '../utils/cookieUtils';
-import { getApiUrl } from '../utils/apiConfig';
+import { getAuthToken } from '../utils/cookieUtils.js';
+import { getApiUrl } from '../utils/apiConfig.js';
 
 export class ApiError extends Error {
   constructor(message, status = 500, code = 'INTERNAL_ERROR', data = null) {

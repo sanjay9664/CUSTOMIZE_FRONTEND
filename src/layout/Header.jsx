@@ -1,14 +1,17 @@
 import React from 'react';
-import { Menu, Search, User, Bell, Sun, Moon, Building2, ChevronDown, Settings, LogOut, FileText, Check, ShieldCheck, BellRing } from 'lucide-react';
+import { Menu, Search, User, Bell, Sun, Moon, Building2, ChevronDown, Settings, LogOut, FileText, Check, ShieldCheck, BellRing, Users } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { getUserInitials } from '../utils/userUtils';
 
 import logo from "../assets/logo.png";
 
 const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonating = false, moduleHeader, moduleIcon: ModuleIcon, activeSites = [], selectedSite, setSelectedSite }) => {
+  const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
-  const { userRole, logout } = useAuth();
+  const { userRole, logout, user } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const getSiteId = site => site?.id ?? site?.siteId ?? site?._id ?? '';
 
@@ -75,23 +78,36 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
         </div>
       )}
 
-      <div className="header-right d-flex align-items-center">
-        {/* Settings Dropdown with Embedded Notifications & Theme Switch */}
-        <Dropdown align="end" className="settings-dropdown-wrapper">
+      {/* Right Controls: User Profile & Settings Areas */}
+      <div className="header-right d-flex align-items-center gap-2">
+        {/* 1. USER PROFILE AREA: [ SA ⌵ ] Dropdown */}
+        <Dropdown align="end" className="user-dropdown-wrapper">
           <Dropdown.Toggle 
             variant="custom" 
-            className="settings-toggle-btn d-flex align-items-center gap-2 text-decoration-none border-0"
-            id="header-settings-toggle"
+            className="header-user-avatar-pill border-0 text-decoration-none shadow-none"
+            id="header-user-toggle"
+            aria-label="User profile menu"
           >
-            <div className="settings-icon-circle d-flex align-items-center justify-content-center">
-              <Settings size={16} className="settings-gear-icon" />
+            <div
+              className="d-flex align-items-center justify-content-center rounded-circle fw-bold header-user-avatar-circle"
+              style={{
+                width: '26px',
+                height: '26px',
+                backgroundColor: '#14532d',
+                color: '#4ade80',
+                border: '1px solid rgba(74, 222, 128, 0.5)',
+                fontSize: '11px',
+                letterSpacing: '0.02em',
+                userSelect: 'none'
+              }}
+            >
+              {user?.name ? getUserInitials(user.name) : (userRole?.slice(0, 2).toUpperCase() || 'SA')}
             </div>
-            <span className="settings-toggle-text fw-bold">Settings</span>
-            <ChevronDown size={14} className="settings-chevron-icon opacity-75" />
+            <ChevronDown size={13} className="header-user-chevron" />
           </Dropdown.Toggle>
 
-          <Dropdown.Menu className="settings-dropdown-menu mt-2 p-0 shadow-lg border">
-            {/* Header User Profile Card */}
+          <Dropdown.Menu className="user-dropdown-menu mt-2 p-0 shadow-lg border">
+            {/* User Profile Card */}
             <div className="settings-user-header p-3 border-bottom d-flex align-items-center gap-3">
               <div className="settings-avatar-box rounded-circle d-flex align-items-center justify-content-center">
                 <User size={18} />
@@ -99,23 +115,71 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
               <div className="flex-grow-1 overflow-hidden">
                 <div className="d-flex align-items-center gap-2">
                   <span className="settings-user-name fw-bold text-truncate">
-                    {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : 
-                     userRole?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User'}
+                    {user?.name || (userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : userRole?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User')}
                   </span>
-                  <span className="settings-online-badge">Online</span>
+                  <span className="settings-online-badge">ONLINE</span>
                 </div>
                 <div className="settings-user-role text-muted small text-truncate">
-                  {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' :
-                   userRole?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator'}
+                  {user?.role || (userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' : userRole?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator')}
                 </div>
               </div>
             </div>
 
+            {/* User Account Navigation Items */}
+            <div className="p-2 d-flex flex-column gap-1">
+              <button 
+                type="button" 
+                onClick={() => navigate('/admin/manage-users')}
+                className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+              >
+                <User size={15} className="text-info" />
+                <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Profile</span>
+                <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
+              </button>
+              <button 
+                type="button" 
+                onClick={() => navigate('/audit-logs')}
+                className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+              >
+                <FileText size={15} className="text-primary" />
+                <span className="flex-grow-1" style={{ fontSize: '13px' }}>Activity & Audit Logs</span>
+                <span className="text-muted" style={{ fontSize: '11px' }}>View</span>
+              </button>
+            </div>
+
+            {/* Dropdown Footer: Sign Out */}
+            <div className="p-2 border-top">
+              <button 
+                type="button"
+                className="settings-signout-btn d-flex align-items-center justify-content-center gap-2 w-100 py-2 rounded-2 border-0 fw-bold"
+                onClick={logout}
+              >
+                <LogOut size={15} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </Dropdown.Menu>
+        </Dropdown>
+
+        {/* 2. SETTINGS AREA: [ ⚙ Settings ⌵ ] Dropdown */}
+        <Dropdown align="end" className="settings-dropdown-wrapper">
+          <Dropdown.Toggle 
+            variant="custom" 
+            className="settings-toggle-btn border-0 text-decoration-none shadow-none"
+            id="header-settings-toggle"
+            aria-label="Settings and preferences menu"
+          >
+            <Settings size={15} className="settings-gear-icon" />
+            <span className="settings-toggle-text">Settings</span>
+            <ChevronDown size={13} className="settings-chevron-icon" />
+          </Dropdown.Toggle>
+
+          <Dropdown.Menu className="settings-dropdown-menu mt-2 p-0 shadow-lg border">
             <div className="p-3 d-flex flex-column gap-3">
               {/* Theme Mode Switcher */}
               <div className="settings-section">
                 <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="settings-section-title">Theme Mode</span>
+                  <span className="settings-section-title">THEME MODE</span>
                   <span className="settings-active-pill">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
                 </div>
                 <div className="theme-toggle-segmented d-flex p-1 rounded-3">
@@ -141,7 +205,7 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
               {/* Notifications Setting */}
               <div className="settings-section">
                 <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="settings-section-title">Notifications</span>
+                  <span className="settings-section-title">NOTIFICATIONS</span>
                   <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-0.5 rounded-pill" style={{ fontSize: '10px' }}>
                     3 Alerts
                   </span>
@@ -168,31 +232,36 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
                 </div>
               </div>
 
-              {/* Navigation Items */}
-              <div className="settings-nav-links d-flex flex-column gap-1">
-                <button type="button" className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100">
-                  <User size={15} className="text-info" />
-                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Profile</span>
+              {/* System Navigation Links */}
+              <div className="settings-nav-links d-flex flex-column gap-1 pt-1 border-top" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/settings?tab=global')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <Settings size={15} className="text-warning" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Global Settings</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>Configure</span>
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/manage-organisation')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <Building2 size={15} className="text-primary" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Manage Organisation</span>
                   <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
                 </button>
-                <button type="button" className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100">
-                  <FileText size={15} className="text-primary" />
-                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Activity & Audit Logs</span>
-                  <span className="text-muted" style={{ fontSize: '11px' }}>View</span>
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/admin/manage-users')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <Users size={15} className="text-info" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Management</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
                 </button>
               </div>
-            </div>
-
-            {/* Dropdown Footer / Sign Out */}
-            <div className="p-2 border-top">
-              <button 
-                type="button"
-                className="settings-signout-btn d-flex align-items-center justify-content-center gap-2 w-100 py-2 rounded-2 border-0 fw-bold"
-                onClick={logout}
-              >
-                <LogOut size={15} />
-                <span>Sign Out</span>
-              </button>
             </div>
           </Dropdown.Menu>
         </Dropdown>
@@ -342,19 +411,115 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           color: #94a3b8;
         }
 
-        /* ── SETTINGS DROPDOWN & TOGGLE ── */
+        /* ── SETTINGS & USER DROPDOWN TOGGLES ── */
+        .user-dropdown-wrapper .custom-toggle::after,
+        .user-dropdown-wrapper .dropdown-toggle::after,
         .settings-dropdown-wrapper .custom-toggle::after,
         .settings-dropdown-wrapper .dropdown-toggle::after {
           display: none !important;
         }
 
+        /* User Avatar Pill */
+        .header-user-avatar-pill {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          padding: 4px 10px 4px 5px !important;
+          border-radius: 9999px !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          cursor: pointer !important;
+          transition: all 0.18s ease !important;
+          text-decoration: none !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+        }
+
+        .header-user-avatar-pill:hover,
+        .header-user-avatar-pill:focus,
+        .user-dropdown-wrapper.show .header-user-avatar-pill {
+          background: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(255, 255, 255, 0.38) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+        }
+
+        .header-user-chevron {
+          color: #cbd5e1 !important;
+          opacity: 0.85 !important;
+          transition: transform 0.18s ease;
+        }
+
+        .user-dropdown-wrapper.show .header-user-chevron {
+          transform: rotate(180deg);
+        }
+
+        /* Settings Toggle Button Pill */
         .settings-toggle-btn {
-          padding: 6px 14px !important;
-          border-radius: 20px !important;
-          background: rgba(255, 255, 255, 0.07) !important;
-          border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          color: #f8fafc !important;
-          transition: all 0.22s ease !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 7px !important;
+          padding: 5px 14px !important;
+          border-radius: 9999px !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          color: #ffffff !important;
+          font-size: 13.5px !important;
+          font-weight: 600 !important;
+          line-height: 1.2 !important;
+          cursor: pointer !important;
+          transition: all 0.18s ease !important;
+          text-decoration: none !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+        }
+
+        .settings-toggle-btn:hover,
+        .settings-toggle-btn:focus,
+        .settings-dropdown-wrapper.show .settings-toggle-btn {
+          background: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(255, 255, 255, 0.38) !important;
+          color: #ffffff !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+        }
+
+        .settings-toggle-btn .settings-gear-icon {
+          color: #ffffff !important;
+          opacity: 0.95 !important;
+          flex-shrink: 0;
+        }
+
+        .settings-toggle-btn .settings-toggle-text {
+          color: #ffffff !important;
+          font-weight: 600 !important;
+          font-size: 13.5px !important;
+          letter-spacing: -0.01em;
+        }
+
+        .settings-toggle-btn .settings-chevron-icon {
+          color: #cbd5e1 !important;
+          opacity: 0.85 !important;
+          margin-left: 1px !important;
+          transition: transform 0.18s ease;
+        }
+
+        .settings-dropdown-wrapper.show .settings-chevron-icon {
+          transform: rotate(180deg);
+        }
+
+        /* Light Mode Pill Overrides */
+        body.light-mode .header-user-avatar-pill {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+        }
+
+        body.light-mode .header-user-avatar-pill:hover,
+        body.light-mode .header-user-avatar-pill:focus,
+        body.light-mode .user-dropdown-wrapper.show .header-user-avatar-pill {
+          background: #f1f5f9 !important;
+          border-color: #0284c7 !important;
+        }
+
+        body.light-mode .header-user-chevron {
+          color: #64748b !important;
         }
 
         body.light-mode .settings-toggle-btn {
@@ -364,24 +529,34 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
         }
 
-        .settings-toggle-btn:hover {
-          background: rgba(56, 189, 248, 0.15) !important;
-          border-color: #38bdf8 !important;
-          color: #38bdf8 !important;
-        }
-
-        body.light-mode .settings-toggle-btn:hover {
+        body.light-mode .settings-toggle-btn:hover,
+        body.light-mode .settings-toggle-btn:focus,
+        body.light-mode .settings-dropdown-wrapper.show .settings-toggle-btn {
           background: #f1f5f9 !important;
           border-color: #0284c7 !important;
           color: #0284c7 !important;
         }
 
-        .settings-gear-icon {
-          transition: transform 0.35s ease;
+        body.light-mode .settings-toggle-btn .settings-gear-icon {
+          color: #0f172a !important;
         }
 
-        .settings-toggle-btn:hover .settings-gear-icon {
-          transform: rotate(45deg);
+        body.light-mode .settings-toggle-btn .settings-toggle-text {
+          color: #0f172a !important;
+        }
+
+        body.light-mode .settings-toggle-btn .settings-chevron-icon {
+          color: #64748b !important;
+        }
+
+        .user-dropdown-menu,
+        .settings-dropdown-menu {
+          min-width: 320px !important;
+          border-radius: 14px !important;
+          overflow: hidden !important;
+          background: #0f172a !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65) !important;
         }
 
         .settings-dropdown-menu {

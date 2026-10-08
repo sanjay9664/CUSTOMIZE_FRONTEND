@@ -55,7 +55,9 @@ export const useAuth = () => {
     login: (credentials) => dispatch(loginAction(credentials)).unwrap().then((result) => ({ success: true, data: result.data })),
     logout: () => {
       dispatch(logoutAction());
-      if (location.pathname !== '/login') location.href = '/login';
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.replace('/login');
+      }
     },
     syncAuthState: () => dispatch(syncAuth()),
     hasRole: (roles) => !roles?.length || roles.some((role) => role.toUpperCase() === auth.userRole?.toUpperCase()),
