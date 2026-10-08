@@ -130,29 +130,12 @@ export const UserManagement = () => {
         When in USERS view (LIST mode), SystemUsersView renders the full reference header.
       */}
       {activeSection === 'ROLES' && viewMode === 'LIST' && (
-        <div className="d-flex flex-wrap align-items-start justify-content-between mb-3 gap-3">
+        <div className="d-flex flex-wrap align-items-center justify-content-between mb-2.5 gap-2">
           <div>
-            <nav aria-label="breadcrumb" className="mb-1">
-              <ol className="breadcrumb mb-0 fs-13" style={{ background: 'transparent', padding: 0 }}>
-                <li className="breadcrumb-item">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectSection('USERS')}
-                    className="btn btn-link p-0 text-decoration-none fs-13"
-                    style={{ color: '#60a5fa', fontWeight: 500 }}
-                  >
-                    Administration
-                  </button>
-                </li>
-                <li className="breadcrumb-item active" aria-current="page" style={{ color: '#94a3b8' }}>
-                  User Roles
-                </li>
-              </ol>
-            </nav>
-            <h2 className="page-main-title fw-bold text-white mb-1" style={{ fontSize: '1.65rem', letterSpacing: '-0.02em' }}>
+            <h2 className="page-main-title fw-bold text-white mb-0" style={{ fontSize: '1.45rem', letterSpacing: '-0.02em' }}>
               User Roles
             </h2>
-            <p className="page-sub-description mb-0 fs-13" style={{ color: '#94a3b8' }}>
+            <p className="page-sub-description mb-0 fs-12" style={{ color: '#94a3b8' }}>
               Manage access permission levels, custom roles, and authorization policies.
             </p>
           </div>
@@ -160,10 +143,10 @@ export const UserManagement = () => {
           <div className="d-flex align-items-center gap-2">
             <button
               type="button"
-              className="btn d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-2 fs-13 fw-semibold actions-panel-toggle-btn"
+              className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 rounded-pill fs-13 fw-semibold user-toolbar-pill-btn"
               onClick={() => handleSelectSection('USERS')}
             >
-              <Users size={15} />
+              <Users size={15} className="text-info" />
               <span>Back to System Users</span>
             </button>
           </div>
@@ -227,6 +210,8 @@ export const UserManagement = () => {
               onRefresh={fetchRoles}
               onAddRole={handleAddRole}
               onEditRole={handleEditRole}
+              onBackToUsers={() => handleSelectSection('USERS')}
+              onManageOrg={() => navigate('/manage-organisation')}
               activeTab={roleTab}
               setActiveTab={setRoleTab}
             />
@@ -298,6 +283,43 @@ export const UserManagement = () => {
           background-color: #090e1f !important;
           border-color: rgba(255, 255, 255, 0.1) !important;
           color: #94a3b8 !important;
+        }
+
+        /* Pill Buttons & Toolbar Styles */
+        .user-management-page .user-toolbar-pill-btn {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          border-radius: 9999px !important;
+          color: #ffffff !important;
+          height: 35px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-decoration: none !important;
+          display: inline-flex !important;
+          align-items: center !important;
+        }
+        .user-management-page .user-toolbar-pill-btn:hover,
+        .user-management-page .user-toolbar-pill-btn:focus {
+          background-color: rgba(255, 255, 255, 0.12) !important;
+          border-color: rgba(255, 255, 255, 0.35) !important;
+          color: #ffffff !important;
+        }
+        .user-management-page .user-toolbar-primary-btn {
+          background-color: #0284c7 !important;
+          border: 1px solid #38bdf8 !important;
+          border-radius: 9999px !important;
+          color: #ffffff !important;
+          height: 35px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+          display: inline-flex !important;
+          align-items: center !important;
+        }
+        .user-management-page .user-toolbar-primary-btn:hover {
+          background-color: #0369a1 !important;
+          border-color: #7dd3fc !important;
+          color: #ffffff !important;
         }
 
         /* Top Nav Tabs */

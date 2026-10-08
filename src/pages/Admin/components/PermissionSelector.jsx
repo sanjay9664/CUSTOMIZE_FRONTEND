@@ -90,73 +90,113 @@ export const PermissionSelector = ({
     }
   };
 
+  // Helper for category badge styling
+  const renderCategoryBadge = (category) => {
+    if (!category) return null;
+    const cat = String(category).toLowerCase();
+    let bg = 'rgba(255, 255, 255, 0.08)';
+    let color = '#cbd5e1';
+    let border = 'rgba(255, 255, 255, 0.16)';
+
+    if (cat.includes('user')) {
+      bg = 'rgba(56, 189, 248, 0.14)';
+      color = '#38bdf8';
+      border = 'rgba(56, 189, 248, 0.3)';
+    } else if (cat.includes('device')) {
+      bg = 'rgba(168, 85, 247, 0.14)';
+      color = '#c084fc';
+      border = 'rgba(168, 85, 247, 0.3)';
+    } else if (cat.includes('role')) {
+      bg = 'rgba(34, 197, 94, 0.14)';
+      color = '#4ade80';
+      border = 'rgba(34, 197, 94, 0.3)';
+    } else if (cat.includes('energy') || cat.includes('meter')) {
+      bg = 'rgba(234, 179, 8, 0.14)';
+      color = '#facc15';
+      border = 'rgba(234, 179, 8, 0.3)';
+    }
+
+    return (
+      <span
+        className="flex-shrink-0 px-2 py-0.5 rounded-pill fs-10 fw-semibold text-capitalize ms-1 user-select-none"
+        style={{ backgroundColor: bg, color, border: `1px solid ${border}` }}
+      >
+        {category}
+      </span>
+    );
+  };
+
   return (
     <div className="permission-selector-wrapper">
       {/* Header with Title and Controls */}
-      <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+      <div className="d-flex flex-wrap align-items-center justify-content-between mb-2.5 gap-2">
         <div className="d-flex align-items-center gap-2">
-          <span className="fw-semibold text-dark fs-14">Permissions</span>
-          <Badge bg="primary" pill className="fs-11">
+          <span className="fw-semibold text-white fs-14">Permissions</span>
+          <span
+            className="px-2.5 py-0.5 rounded-pill fs-11 fw-semibold"
+            style={{
+              backgroundColor: selectedSet.size > 0 ? 'rgba(56, 189, 248, 0.18)' : 'rgba(255, 255, 255, 0.08)',
+              color: selectedSet.size > 0 ? '#38bdf8' : '#94a3b8',
+              border: selectedSet.size > 0 ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255, 255, 255, 0.15)',
+            }}
+          >
             {selectedSet.size} selected
-          </Badge>
+          </span>
         </div>
 
-        <div className="d-flex align-items-center gap-2">
-          <Button 
-            variant="link" 
-            size="sm" 
-            className="p-0 text-decoration-none fs-12 text-primary"
+        <div className="d-flex align-items-center gap-1.5">
+          <button 
+            type="button" 
+            className="btn btn-link p-0 text-decoration-none fs-12 fw-medium"
+            style={{ color: '#38bdf8' }}
             onClick={handleSelectAll}
             disabled={disabled || loading || filteredPermissions.length === 0}
           >
             Select All
-          </Button>
-          <span className="text-muted fs-12">|</span>
-          <Button 
-            variant="link" 
-            size="sm" 
-            className="p-0 text-decoration-none fs-12 text-secondary"
+          </button>
+          <span className="text-secondary opacity-40 mx-1 fs-12">|</span>
+          <button 
+            type="button" 
+            className="btn btn-link p-0 text-decoration-none fs-12 fw-medium text-secondary"
             onClick={handleClearAll}
             disabled={disabled || loading || selectedSet.size === 0}
           >
             Clear All
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Search & Category Filter Controls */}
-      <Row className="g-2 mb-3">
-        <Col xs={12} sm={7}>
-          <InputGroup size="sm">
-            <InputGroup.Text className="bg-light border-end-0">
-              <Search size={14} className="text-muted" />
-            </InputGroup.Text>
-            <Form.Control
-              placeholder="Search permissions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-start-0"
-              disabled={disabled || loading}
-            />
-            {searchTerm && (
-              <Button 
-                variant="outline-secondary" 
-                size="sm"
-                onClick={() => setSearchTerm('')}
-              >
-                ×
-              </Button>
-            )}
-          </InputGroup>
-        </Col>
+      <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+        {/* Search Input with Icon */}
+        <div className="position-relative flex-grow-1" style={{ minWidth: '180px' }}>
+          <div
+            className="position-absolute top-50 translate-middle-y ps-3 text-secondary d-flex align-items-center pointer-events-none"
+            style={{ zIndex: 2 }}
+          >
+            <Search size={14} style={{ color: '#94a3b8' }} />
+          </div>
+          <input
+            type="text"
+            placeholder="Search permissions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="form-control ps-5 py-1.5 fs-13 text-white perm-filter-input"
+            disabled={disabled || loading}
+            aria-label="Search permissions"
+          />
+        </div>
 
+        {/* Category Select Dropdown */}
         {categories.length > 2 && (
-          <Col xs={12} sm={5}>
+          <div style={{ width: '150px' }}>
             <Form.Select 
               size="sm"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               disabled={disabled || loading}
+              className="perm-filter-select text-white fs-13 py-1.5 px-3"
+              aria-label="Filter permissions by category"
             >
               {categories.map(c => (
                 <option key={c} value={c}>
@@ -164,37 +204,37 @@ export const PermissionSelector = ({
                 </option>
               ))}
             </Form.Select>
-          </Col>
+          </div>
         )}
-      </Row>
+      </div>
 
       {/* Permissions 2-Column Grid */}
       <div 
-        className="permission-grid-scroll overflow-auto p-3 border rounded bg-white" 
-        style={{ maxHeight: '420px', minHeight: '220px' }}
+        className="permission-grid-scroll overflow-auto p-2.5 rounded-3 border" 
+        style={{ maxHeight: '420px', minHeight: '240px', backgroundColor: '#081024', borderColor: 'rgba(255, 255, 255, 0.08)' }}
       >
         {loading ? (
-          <div className="text-center py-5 text-muted">
-            <Spinner animation="border" size="sm" className="me-2" />
+          <div className="text-center py-5 text-secondary">
+            <Spinner animation="border" size="sm" variant="primary" className="me-2" />
             <span className="fs-13">Loading permissions catalog...</span>
           </div>
         ) : error ? (
-          <div className="alert alert-warning py-2 px-3 fs-13 mb-0">
+          <div className="alert alert-warning py-2 px-3 fs-13 mb-0 bg-warning bg-opacity-10 border-warning border-opacity-25 text-warning">
             {error}
           </div>
         ) : filteredPermissions.length === 0 ? (
-          <div className="text-center py-4 text-muted fs-13">
-            No permissions matching filter.
+          <div className="text-center py-5 text-secondary fs-13">
+            {searchTerm ? `No permissions matching "${searchTerm}".` : 'No permissions found.'}
           </div>
         ) : (
-          <Row className="g-3">
+          <Row className="g-2.5">
             {filteredPermissions.map((perm) => {
               const isChecked = selectedSet.has(perm.code);
               return (
                 <Col xs={12} md={6} key={perm.code}>
                   <div 
-                    className={`permission-item p-2 rounded border d-flex align-items-start gap-2 ${
-                      isChecked ? 'border-primary bg-primary-subtle' : 'border-light-subtle bg-light'
+                    className={`permission-item p-2.5 rounded-3 border d-flex align-items-start gap-2.5 ${
+                      isChecked ? 'permission-item-checked' : 'permission-item-default'
                     }`}
                     style={{ 
                       cursor: disabled ? 'not-allowed' : 'pointer',
@@ -202,31 +242,28 @@ export const PermissionSelector = ({
                     }}
                     onClick={() => !disabled && handleToggle(perm.code)}
                   >
-                    <Form.Check 
-                      type="checkbox"
+                    <input 
+                      type="checkbox" 
                       id={`perm-check-${perm.code}`}
                       checked={isChecked}
                       onChange={() => {}} // Handled by parent div
                       disabled={disabled}
-                      className="mt-1"
+                      className="form-check-input role-perm-checkbox mt-0.5 flex-shrink-0"
+                      aria-label={`Select ${perm.name || perm.code}`}
                     />
                     <div className="flex-grow-1 overflow-hidden">
-                      <div className="d-flex align-items-center justify-content-between">
-                        <span className="fw-semibold fs-13 text-dark text-truncate">
+                      <div className="d-flex align-items-center justify-content-between gap-1">
+                        <span className="fw-semibold fs-13 text-white text-truncate">
                           {perm.name || perm.code}
                         </span>
-                        {perm.category && (
-                          <Badge bg="secondary" className="fs-10 text-capitalize ms-1 opacity-75">
-                            {perm.category}
-                          </Badge>
-                        )}
+                        {renderCategoryBadge(perm.category)}
                       </div>
                       {perm.description && (
-                        <div className="fs-11 text-muted text-truncate mt-1" title={perm.description}>
+                        <div className="fs-11 text-truncate mt-1" style={{ color: '#94a3b8' }} title={perm.description}>
                           {perm.description}
                         </div>
                       )}
-                      <div className="fs-10 font-monospace text-secondary opacity-75 mt-0">
+                      <div className="fs-10 font-monospace mt-1" style={{ color: '#64748b' }}>
                         {perm.code}
                       </div>
                     </div>
@@ -237,6 +274,97 @@ export const PermissionSelector = ({
           </Row>
         )}
       </div>
+
+      {/* Scoped Permission Selector CSS */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .perm-filter-input,
+        .perm-filter-select {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.18) !important;
+          border-radius: 8px !important;
+          height: 35px;
+          color: #ffffff !important;
+          box-shadow: none !important;
+          transition: all 0.15s ease;
+        }
+        .perm-filter-input:focus,
+        .perm-filter-select:focus {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+          border-color: #38bdf8 !important;
+          color: #ffffff !important;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15) !important;
+        }
+        .perm-filter-input::placeholder {
+          color: #64748b !important;
+        }
+        .perm-filter-select option {
+          background-color: #0f172a;
+          color: #ffffff;
+        }
+
+        .permission-grid-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+        .permission-grid-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        .permission-grid-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+        }
+
+        .permission-item-default {
+          background-color: rgba(255, 255, 255, 0.03) !important;
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .permission-item-default:hover {
+          background-color: rgba(255, 255, 255, 0.06) !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        .permission-item-checked {
+          background-color: rgba(14, 165, 233, 0.12) !important;
+          border-color: rgba(56, 189, 248, 0.45) !important;
+          box-shadow: 0 0 12px rgba(56, 189, 248, 0.08);
+        }
+
+        .role-perm-checkbox {
+          cursor: pointer;
+          background-color: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.3);
+        }
+        .role-perm-checkbox:checked {
+          background-color: #0284c7;
+          border-color: #0284c7;
+        }
+
+        /* Light mode overrides */
+        body.light-mode .perm-filter-input,
+        body.light-mode .perm-filter-select {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .permission-grid-scroll {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .permission-item-default {
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .permission-item-default:hover {
+          background-color: #f1f5f9 !important;
+        }
+        body.light-mode .permission-item-checked {
+          background-color: #e0f2fe !important;
+          border-color: #38bdf8 !important;
+        }
+        body.light-mode .role-perm-checkbox {
+          background-color: #ffffff;
+          border-color: #cbd5e1;
+        }
+      `}} />
     </div>
   );
 };

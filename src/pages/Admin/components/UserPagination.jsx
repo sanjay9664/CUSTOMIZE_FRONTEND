@@ -20,11 +20,13 @@ export const UserPagination = ({
   currentPage = 1,
   totalPages = 1,
   totalUsers = 0,
+  totalItems,
   pageSize = 10,
   onPageChange,
   onPageSizeChange
 }) => {
-  if (totalUsers === 0) return null;
+  const count = typeof totalItems === 'number' ? totalItems : totalUsers;
+  if (count === 0) return null;
 
   // Generate page numbers with ellipses
   const getPageNumbers = () => {
@@ -83,7 +85,7 @@ export const UserPagination = ({
             ))}
           </Dropdown.Menu>
         </Dropdown>
-        <span>of {totalUsers} rows</span>
+        <span>of {count} rows</span>
       </div>
 
       {/* ── Right: « ‹ 1 2 3 ... N › » Navigation Controls ── */}

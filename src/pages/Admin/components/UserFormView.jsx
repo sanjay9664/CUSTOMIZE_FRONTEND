@@ -141,39 +141,49 @@ export const UserFormView = ({
   };
 
   return (
-    <div className="user-form-view">
+    <div className="user-form-view w-100">
       {/* Subheader with Back Arrow */}
-      <div className="d-flex align-items-center mb-4">
+      <div className="d-flex align-items-center mb-3.5">
         <button
           type="button"
-          className="btn btn-link text-decoration-none text-dark p-0 me-3 d-flex align-items-center back-nav-btn"
+          className="btn btn-sm d-inline-flex align-items-center justify-content-center me-2.5 p-1.5 rounded-circle text-white role-back-btn"
           onClick={onBack}
           title="Back to Users"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            transition: 'all 0.15s ease'
+          }}
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={17} />
         </button>
-        <h5 className="mb-0 fw-semibold text-dark fs-16">
-          {isEdit ? `Edit User: ${user.name}` : `Add ${userType}`}
-        </h5>
+        <div>
+          <h4 className="mb-0 fw-bold text-white fs-18">
+            {isEdit ? `Edit User: ${user.name}` : `Add ${userType}`}
+          </h4>
+        </div>
       </div>
 
       {error && (
-        <Alert variant="danger" className="fs-13 py-2 px-3 mb-4" dismissible onClose={() => setError(null)}>
+        <Alert variant="danger" className="fs-13 py-2 px-3 mb-3 bg-danger bg-opacity-10 border-danger border-opacity-25 text-danger" dismissible onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       {/* Main 2-Column Card */}
-      <Card className="border-0 shadow-sm rounded-3 bg-white">
-        <Card.Body className="p-4">
+      <Card 
+        className="border-0 shadow-lg rounded-3 role-form-card"
+        style={{ backgroundColor: '#0c1429', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+      >
+        <Card.Body className="p-4 p-md-4.5">
           <Form onSubmit={handleSubmit}>
             <Row className="g-4">
               {/* Left Column: User Details Form */}
               <Col xs={12} lg={6}>
                 {/* Name */}
                 <Form.Group className="mb-3">
-                  <Form.Label className="fs-13 fw-semibold text-dark">
-                    Name<span className="text-danger ms-1">*</span>
+                  <Form.Label className="fs-13 fw-semibold text-white mb-1.5">
+                    Name <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Control
                     type="text"
@@ -182,14 +192,14 @@ export const UserFormView = ({
                     onChange={(e) => setName(e.target.value)}
                     required
                     disabled={saving}
-                    className="ref-form-input"
+                    className="role-form-input"
                   />
                 </Form.Group>
 
                 {/* Email */}
                 <Form.Group className="mb-3">
-                  <Form.Label className="fs-13 fw-semibold text-dark">
-                    Email<span className="text-danger ms-1">*</span>
+                  <Form.Label className="fs-13 fw-semibold text-white mb-1.5">
+                    Email <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Control
                     type="email"
@@ -198,13 +208,13 @@ export const UserFormView = ({
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={saving}
-                    className="ref-form-input"
+                    className="role-form-input"
                   />
                 </Form.Group>
 
                 {/* Password (Required on create, optional on edit) */}
                 <Form.Group className="mb-3">
-                  <Form.Label className="fs-13 fw-semibold text-dark">
+                  <Form.Label className="fs-13 fw-semibold text-white mb-1.5">
                     {isEdit ? 'Password (Leave blank to keep unchanged)' : 'Password'}
                     {!isEdit && <span className="text-danger ms-1">*</span>}
                   </Form.Label>
@@ -220,14 +230,14 @@ export const UserFormView = ({
 
                 {/* Organization */}
                 <Form.Group className="mb-3">
-                  <Form.Label className="fs-13 fw-semibold text-dark">
-                    Organization<span className="text-danger ms-1">*</span>
+                  <Form.Label className="fs-13 fw-semibold text-white mb-1.5">
+                    Organization <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Select
                     value={organization}
                     onChange={(e) => setOrganization(e.target.value)}
                     disabled={saving || loadingMeta}
-                    className="ref-form-input"
+                    className="role-form-input"
                     required
                   >
                     <option value="">Select Organization</option>
@@ -241,14 +251,14 @@ export const UserFormView = ({
 
                 {/* User Type */}
                 <Form.Group className="mb-3">
-                  <Form.Label className="fs-13 fw-semibold text-dark">
-                    User Type<span className="text-danger ms-1">*</span>
+                  <Form.Label className="fs-13 fw-semibold text-white mb-1.5">
+                    User Type <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Select
                     value={userType}
                     onChange={(e) => setUserType(e.target.value)}
                     disabled={saving}
-                    className="ref-form-input"
+                    className="role-form-input"
                   >
                     <option value="Administrator User">Administrator User</option>
                     <option value="Installation User">Installation User</option>
@@ -258,14 +268,14 @@ export const UserFormView = ({
 
                 {/* Role */}
                 <Form.Group className="mb-3">
-                  <Form.Label className="fs-13 fw-semibold text-dark">
-                    Role<span className="text-danger ms-1">*</span>
+                  <Form.Label className="fs-13 fw-semibold text-white mb-1.5">
+                    Role <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Select
                     value={role}
                     onChange={(e) => handleRoleChange(e.target.value)}
                     disabled={saving || loadingMeta}
-                    className="ref-form-input"
+                    className="role-form-input"
                     required
                   >
                     {roles.length === 0 ? (
@@ -286,7 +296,7 @@ export const UserFormView = ({
                     type="switch"
                     id="user-enabled-switch"
                     label={
-                      <span className="fs-13 fw-semibold text-dark">
+                      <span className="fs-13 fw-semibold text-white">
                         Account Enabled ({status})
                       </span>
                     }
@@ -308,13 +318,11 @@ export const UserFormView = ({
             </Row>
 
             {/* Bottom Action Buttons */}
-            <div className="d-flex align-items-center gap-2 mt-4 pt-3 border-top">
-              <Button
+            <div className="d-flex align-items-center gap-2.5 mt-4 pt-3 border-top border-secondary border-opacity-25">
+              <button
                 type="submit"
-                variant="primary"
-                className="px-4 py-2 fs-14 fw-500 rounded-1 ref-primary-btn"
+                className="btn d-inline-flex align-items-center justify-content-center px-4 py-2 fs-13 fw-semibold rounded-pill role-submit-btn"
                 disabled={saving || !name.trim() || !email.trim()}
-                style={{ minWidth: '100px', backgroundColor: '#1d4ed8', borderColor: '#1d4ed8' }}
               >
                 {saving ? (
                   <>
@@ -324,22 +332,104 @@ export const UserFormView = ({
                 ) : (
                   isEdit ? 'Save Changes' : 'Add'
                 )}
-              </Button>
+              </button>
 
-              <Button
+              <button
                 type="button"
-                variant="outline-secondary"
-                className="px-4 py-2 fs-14 fw-500 rounded-1 bg-white border"
+                className="btn d-inline-flex align-items-center justify-content-center px-4 py-2 fs-13 fw-medium rounded-pill role-cancel-btn"
                 onClick={onBack}
                 disabled={saving}
-                style={{ color: '#475569', borderColor: '#cbd5e1' }}
               >
                 Cancel
-              </Button>
+              </button>
             </div>
           </Form>
         </Card.Body>
       </Card>
+
+      {/* Scoped Styles for UserFormView */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .role-form-input {
+          background-color: rgba(255, 255, 255, 0.04) !important;
+          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+          border-radius: 8px !important;
+          color: #ffffff !important;
+          padding: 8px 13px !important;
+          font-size: 13.5px !important;
+          transition: all 0.15s ease;
+        }
+        .role-form-input:focus {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+          border-color: #38bdf8 !important;
+          color: #ffffff !important;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
+        }
+        .role-form-input::placeholder {
+          color: #64748b !important;
+        }
+        .role-form-input option {
+          background-color: #0f172a;
+          color: #ffffff;
+        }
+
+        .role-submit-btn {
+          background-color: #0284c7 !important;
+          border: 1px solid #38bdf8 !important;
+          color: #ffffff !important;
+          min-width: 105px;
+          height: 36px;
+          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+          transition: all 0.15s ease;
+        }
+        .role-submit-btn:hover:not(:disabled) {
+          background-color: #0369a1 !important;
+          border-color: #7dd3fc !important;
+          color: #ffffff !important;
+        }
+        .role-submit-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .role-cancel-btn {
+          background-color: rgba(255, 255, 255, 0.06) !important;
+          border: 1px solid rgba(255, 255, 255, 0.22) !important;
+          color: #ffffff !important;
+          min-width: 95px;
+          height: 36px;
+          transition: all 0.15s ease;
+        }
+        .role-cancel-btn:hover:not(:disabled) {
+          background-color: rgba(255, 255, 255, 0.12) !important;
+          border-color: rgba(255, 255, 255, 0.35) !important;
+          color: #ffffff !important;
+        }
+
+        .role-back-btn:hover {
+          background-color: rgba(255, 255, 255, 0.15) !important;
+          border-color: rgba(255, 255, 255, 0.35) !important;
+        }
+
+        /* Light mode overrides */
+        body.light-mode .role-form-card {
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .role-form-input {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .role-form-input option {
+          background-color: #ffffff;
+          color: #0f172a;
+        }
+        body.light-mode .role-cancel-btn {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+      `}} />
     </div>
   );
 };
