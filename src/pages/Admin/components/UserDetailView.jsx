@@ -103,11 +103,18 @@ export const UserDetailView = ({
 
   // Derive Accessible Locations
   const getAccessibleLocations = () => {
-    // 1. Explicit zoneLocations array
-    if (Array.isArray(currentUser?.zoneLocations) && currentUser.zoneLocations.length > 0) {
-      return currentUser.zoneLocations.map((loc) => {
+    // 1. Explicit locationMappings or zoneLocations array
+    const mappings = currentUser?.locationMappings || currentUser?.zoneLocations;
+    if (Array.isArray(mappings) && mappings.length > 0) {
+      return mappings.map((loc) => {
         if (typeof loc === 'string') return loc.toUpperCase();
         if (loc?.name) return String(loc.name).toUpperCase();
+        if (loc?.siteId && sitesMap[loc.siteId]) {
+          return String(sitesMap[loc.siteId]).toUpperCase();
+        }
+        if (loc?.siteId) return `SITE #${loc.siteId}`.toUpperCase();
+        if (loc?.assetId) return `ASSET #${loc.assetId}`.toUpperCase();
+        if (loc?.zoneId) return `ZONE #${loc.zoneId}`.toUpperCase();
         if (loc?.zoneNodeType === 'SITE' && loc?.zoneNodeId && sitesMap[loc.zoneNodeId]) {
           return String(sitesMap[loc.zoneNodeId]).toUpperCase();
         }

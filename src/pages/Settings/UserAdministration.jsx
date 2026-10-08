@@ -607,6 +607,17 @@ const UserAdministration = () => {
     const selectedTenant = formData.tenantId || (tenants[0]?.id || '');
     const selectedScopeId = formData.scopeId || (formData.scopeType === 'ZONE' ? (zones[0]?.id || 'zone-north-01') : formData.scopeType === 'SITE' ? (sites[0]?.id || 'site-bms-01') : selectedTenant);
 
+    const locationMapping = {
+      companyId: null,
+      tenantId: selectedTenant ? String(selectedTenant) : null,
+      zoneId: formData.scopeType === 'ZONE' ? String(selectedScopeId) : null,
+      tenantAreaId: null,
+      siteId: formData.scopeType === 'SITE' ? (Number(selectedScopeId) || null) : null,
+      areaId: null,
+      assetId: null,
+      deviceId: null
+    };
+
     const payload = {
       name: formData.name,
       email: formData.email,
@@ -615,10 +626,7 @@ const UserAdministration = () => {
       tenantId: selectedTenant,
       status: formData.status || 'ACTIVE',
       ...(formData.password ? { password: formData.password } : {}),
-      zoneLocations: [{
-        zoneNodeType: formData.scopeType || 'ZONE',
-        zoneNodeId: String(selectedScopeId)
-      }]
+      locationMappings: [locationMapping]
     };
 
     let createdUser = null;
@@ -680,6 +688,17 @@ const UserAdministration = () => {
     const selectedTenant = formData.tenantId || selectedUser.tenantId || (tenants[0]?.id || '');
     const selectedScopeId = formData.scopeId || (formData.scopeType === 'ZONE' ? (zones[0]?.id || 'zone-north-01') : formData.scopeType === 'SITE' ? (sites[0]?.id || 'site-bms-01') : selectedTenant);
 
+    const locationMapping = {
+      companyId: null,
+      tenantId: selectedTenant ? String(selectedTenant) : null,
+      zoneId: formData.scopeType === 'ZONE' ? String(selectedScopeId) : null,
+      tenantAreaId: null,
+      siteId: formData.scopeType === 'SITE' ? (Number(selectedScopeId) || null) : null,
+      areaId: null,
+      assetId: null,
+      deviceId: null
+    };
+
     const payload = {
       name: formData.name,
       email: formData.email,
@@ -687,10 +706,7 @@ const UserAdministration = () => {
       roleId: resolvedRoleId,
       status: formData.status,
       tenantId: selectedTenant,
-      zoneLocations: [{
-        zoneNodeType: formData.scopeType || 'ZONE',
-        zoneNodeId: String(selectedScopeId)
-      }]
+      locationMappings: [locationMapping]
     };
 
     let updatedResult = null;
@@ -2069,8 +2085,9 @@ const UserAdministration = () => {
                           <button 
                             onClick={() => {
                               setSelectedUser(u);
-                              const parsedScopeType = u.zoneLocations?.[0]?.zoneNodeType || u.scopeType || 'ZONE';
-                              const parsedScopeId = u.zoneLocations?.[0]?.zoneNodeId || u.scopeId || (parsedScopeType === 'ZONE' ? zones[0]?.id : (parsedScopeType === 'SITE' ? sites[0]?.id : u.tenantId)) || '';
+                              const mapping = u.locationMappings?.[0] || u.zoneLocations?.[0];
+                              const parsedScopeType = mapping?.siteId ? 'SITE' : (mapping?.zoneId ? 'ZONE' : (mapping?.zoneNodeType || u.scopeType || 'ZONE'));
+                              const parsedScopeId = mapping?.siteId || mapping?.zoneId || mapping?.zoneNodeId || u.scopeId || (parsedScopeType === 'ZONE' ? zones[0]?.id : (parsedScopeType === 'SITE' ? sites[0]?.id : u.tenantId)) || '';
                               setFormData({
                                 name: u.name || '',
                                 email: u.email || '',
@@ -2623,7 +2640,7 @@ const UserAdministration = () => {
                     <span className="badge bg-primary fs-11 text-uppercase">{formData.scopeType}</span>
                   </div>
                   <div className="font-monospace fs-11 p-2 rounded-2" style={{ backgroundColor: '#131924', color: '#38bdf8' }}>
-                    {`zoneLocations: [{ zoneNodeType: "${formData.scopeType}", zoneNodeId: "${formData.scopeId || formData.tenantId}" }]`}
+                    {`locationMappings: [{ ${formData.scopeType === 'SITE' ? `siteId: ${formData.scopeId || 'null'}` : `zoneId: "${formData.scopeId || formData.tenantId}"`} }]`}
                   </div>
                   <div className="fs-11 text-slate-400 mt-2 d-flex align-items-center gap-1.5">
                     <ShieldCheck size={14} className="text-emerald-400" />
@@ -2868,7 +2885,7 @@ const UserAdministration = () => {
                     <span className="badge bg-warning text-dark fs-11 text-uppercase">{formData.scopeType}</span>
                   </div>
                   <div className="font-monospace fs-11 p-2 rounded-2" style={{ backgroundColor: '#151c28', color: '#fbbf24' }}>
-                    {`zoneLocations: [{ zoneNodeType: "${formData.scopeType}", zoneNodeId: "${formData.scopeId || formData.tenantId}" }]`}
+                    {`locationMappings: [{ ${formData.scopeType === 'SITE' ? `siteId: ${formData.scopeId || 'null'}` : `zoneId: "${formData.scopeId || formData.tenantId}"`} }]`}
                   </div>
                 </div>
 

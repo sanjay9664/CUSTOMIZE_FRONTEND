@@ -1,67 +1,69 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap';
-import { ArrowLeft, Save, Plus, Eye, EyeOff, ShieldCheck, User } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import LocationTreeSelector from './LocationTreeSelector';
 import PasswordInput from '../../../components/PasswordInput';
 import { bmsService } from '../../../services/bmsService';
 
 export const UserFormView = ({
   user = null, // if present, edit mode; if null, add mode
-  defaultUserType = 'Administrator User',
+  defaultUserType = '',
   onBack,
   onSaved
 }) => {
   const isEdit = Boolean(user && user.id);
 
-  // Form State
+  // Form State (No hardcoded or pre-filled defaults on creation)
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
-  const [organization, setOrganization] = useState(user?.tenantId || '');
-  const [userType, setUserType] = useState(defaultUserType || 'Administrator User');
-  const [role, setRole] = useState(user?.role || 'ADMIN');
+  const [organization, setOrganization] = useState(user?.tenantId || user?.companyId || '');
+  const [userType, setUserType] = useState(user ? (user.userType || defaultUserType) : (defaultUserType || ''));
+  const [role, setRole] = useState(user?.role || '');
   const [roleId, setRoleId] = useState(user?.roleId || '');
   const [status, setStatus] = useState(user?.status || 'ACTIVE');
-  const [zoneLocations, setZoneLocations] = useState(user?.zoneLocations || []);
+  const [locationMappings, setLocationMappings] = useState(user?.locationMappings || user?.zoneLocations || []);
 
   // Auxiliary data
   const [roles, setRoles] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
+  const [loadingRoles, setLoadingRoles] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load roles & organizations
+  // Load organizations on mount
   useEffect(() => {
     let isMounted = true;
-    const fetchMetadata = async () => {
+    const fetchOrganizations = async () => {
       try {
         setLoadingMeta(true);
-        const [rolesRes, tenantsRes, companiesRes] = await Promise.allSettled([
-          bmsService.getRoles(),
+        const [tenantsRes, companiesRes] = await Promise.allSettled([
           bmsService.getTenants(),
           bmsService.getCompanies()
         ]);
 
         if (isMounted) {
-          if (rolesRes.status === 'fulfilled') {
-            const roleList = rolesRes.value?.data || (Array.isArray(rolesRes.value) ? rolesRes.value : []);
-            setRoles(roleList);
-          }
-
           const orgList = [];
           if (tenantsRes.status === 'fulfilled') {
             const tenants = tenantsRes.value?.data || (Array.isArray(tenantsRes.value) ? tenantsRes.value : []);
-            tenants.forEach(t => orgList.push({ id: t.id, name: `${t.name || t.tenantName} (Tenant)` }));
+            tenants.forEach(t => orgList.push({ 
+              id: t.id, 
+              name: `${t.name || t.tenantName} (Tenant)`, 
+              type: 'TENANT',
+              raw: t
+            }));
           }
           if (companiesRes.status === 'fulfilled') {
             const companies = companiesRes.value?.data || (Array.isArray(companiesRes.value) ? companiesRes.value : []);
-            companies.forEach(c => orgList.push({ id: c.id, name: `${c.name} (Company)` }));
+            companies.forEach(c => orgList.push({ 
+              id: c.id, 
+              name: `${c.name} (Company)`, 
+              type: 'COMPANY',
+              raw: c
+            }));
           }
           setOrganizations(orgList);
-          if (!organization && orgList.length > 0) {
-            setOrganization(orgList[0].id);
-          }
         }
       } catch (e) {
         // Fallback gracefully
@@ -69,9 +71,94 @@ export const UserFormView = ({
         if (isMounted) setLoadingMeta(false);
       }
     };
-    fetchMetadata();
+    fetchOrganizations();
     return () => { isMounted = false; };
   }, []);
+
+  // Fetch and filter roles strictly for the selected organization
+  useEffect(() => {
+    let isMounted = true;
+    if (!organization) {
+      setRoles([]);
+      setLoadingRoles(false);
+      return;
+    }
+
+    const fetchRolesForOrg = async () => {
+      try {
+        setLoadingRoles(true);
+        const targetOrg = organizations.find(o => String(o.id) === String(organization));
+        const params = {};
+        if (targetOrg?.type === 'TENANT') {
+          params.tenantId = organization;
+        } else if (targetOrg?.type === 'COMPANY') {
+          params.companyId = organization;
+        } else {
+          params.tenantId = organization;
+        }
+
+        const rolesRes = await bmsService.getRoles(params);
+        const rawRoles = rolesRes?.data || (Array.isArray(rolesRes) ? rolesRes : []);
+
+        // Filter strictly for the selected organization:
+        // Omit custom roles and restricted roles that belong to other organizations
+        const targetId = String(organization).trim();
+        const filteredRoles = rawRoles.filter((r) => {
+          // If role belongs explicitly to another tenant
+          if (r.tenantId && String(r.tenantId) !== targetId) return false;
+          // If role belongs explicitly to another company
+          if (r.companyId && String(r.companyId) !== targetId) return false;
+          // If role belongs explicitly to another organization
+          if (r.organizationId && String(r.organizationId) !== targetId) return false;
+
+          // If role has an array of allowed tenants
+          if (Array.isArray(r.tenants) && r.tenants.length > 0) {
+            const hasT = r.tenants.some(t => String(t?.id || t) === targetId);
+            if (!hasT) return false;
+          }
+          // If role has an array of allowed companies
+          if (Array.isArray(r.companies) && r.companies.length > 0) {
+            const hasC = r.companies.some(c => String(c?.id || c) === targetId);
+            if (!hasC) return false;
+          }
+
+          // If the organization definition itself defines an allowed/assigned roles list
+          const orgRaw = targetOrg?.raw;
+          if (Array.isArray(orgRaw?.roles) && orgRaw.roles.length > 0) {
+            const matches = orgRaw.roles.some(oRole => {
+              const oId = typeof oRole === 'string' ? oRole : (oRole?.id || oRole?.name);
+              return String(oId) === String(r.id) || String(oId).toUpperCase() === String(r.name).toUpperCase();
+            });
+            if (!matches) return false;
+          }
+          if (Array.isArray(orgRaw?.roleIds) && orgRaw.roleIds.length > 0) {
+            if (!orgRaw.roleIds.includes(r.id)) return false;
+          }
+
+          return true;
+        });
+
+        if (isMounted) {
+          setRoles(filteredRoles);
+          // If role was already selected, update roleId
+          if (role) {
+            const found = filteredRoles.find(r => r.name === role);
+            if (found) {
+              setRoleId(found.id);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch roles for organization:', err);
+        if (isMounted) setRoles([]);
+      } finally {
+        if (isMounted) setLoadingRoles(false);
+      }
+    };
+
+    fetchRolesForOrg();
+    return () => { isMounted = false; };
+  }, [organization, organizations]);
 
   // Sync roleId when role selection changes
   const handleRoleChange = (selectedRoleName) => {
@@ -79,8 +166,23 @@ export const UserFormView = ({
     const found = roles.find(r => r.name === selectedRoleName);
     if (found) {
       setRoleId(found.id);
+    } else {
+      setRoleId('');
     }
   };
+
+  // When organization changes, reset location mappings and role selection
+  const handleOrganizationChange = (e) => {
+    const selectedOrgId = e.target.value;
+    setOrganization(selectedOrgId);
+    setLocationMappings([]); // reset location selection on organization change
+    setRole('');             // reset role so stale role from previous org is discarded
+    setRoleId('');
+  };
+
+  const selectedOrgObj = useMemo(() => {
+    return organizations.find(o => String(o.id) === String(organization));
+  }, [organizations, organization]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -92,16 +194,57 @@ export const UserFormView = ({
       setError('Password is required (min 6 characters).');
       return;
     }
+    if (!organization) {
+      setError('Please select an Organization.');
+      return;
+    }
+    if (!role) {
+      setError('Please select a Role.');
+      return;
+    }
 
     try {
       setSaving(true);
       setError(null);
 
-      // Clean zoneLocations payload
-      const cleanedLocations = (zoneLocations || []).map(loc => ({
-        zoneNodeType: String(loc.zoneNodeType || 'SITE').toUpperCase(),
-        zoneNodeId: String(loc.zoneNodeId || loc.id)
-      }));
+      // Convert selected location nodes to LocationMapping schema
+      const cleanedMappings = (locationMappings || []).map(loc => {
+        // If already formatted with LocationMapping fields
+        if (loc.siteId !== undefined || loc.assetId !== undefined || loc.zoneId !== undefined || loc.tenantId !== undefined) {
+          return {
+            companyId: loc.companyId ? String(loc.companyId) : null,
+            tenantId: loc.tenantId ? String(loc.tenantId) : null,
+            zoneId: loc.zoneId ? String(loc.zoneId) : null,
+            tenantAreaId: loc.tenantAreaId ? String(loc.tenantAreaId) : null,
+            siteId: loc.siteId ? (Number(loc.siteId) || null) : null,
+            areaId: loc.areaId ? (Number(loc.areaId) || null) : null,
+            assetId: loc.assetId ? String(loc.assetId) : null,
+            deviceId: loc.deviceId ? (Number(loc.deviceId) || null) : null
+          };
+        }
+        // If raw tree node or legacy item
+        const type = String(loc.type || loc.zoneNodeType || '').toUpperCase();
+        const id = loc.id || loc.zoneNodeId;
+        const mapping = {
+          companyId: loc.companyId ? String(loc.companyId) : null,
+          tenantId: loc.tenantId ? String(loc.tenantId) : null,
+          zoneId: loc.zoneId ? String(loc.zoneId) : null,
+          tenantAreaId: loc.tenantAreaId ? String(loc.tenantAreaId) : null,
+          siteId: loc.siteId ? (Number(loc.siteId) || null) : null,
+          areaId: loc.areaId ? (Number(loc.areaId) || null) : null,
+          assetId: loc.assetId ? String(loc.assetId) : null,
+          deviceId: loc.deviceId ? (Number(loc.deviceId) || null) : null
+        };
+        if (type === 'COMPANY') mapping.companyId = mapping.companyId || String(id);
+        else if (type === 'TENANT') mapping.tenantId = mapping.tenantId || String(id);
+        else if (type === 'ZONE') mapping.zoneId = mapping.zoneId || String(id);
+        else if (type === 'TENANT_AREA' || type === 'TENANTAREA') mapping.tenantAreaId = mapping.tenantAreaId || String(id);
+        else if (type === 'SITE') mapping.siteId = Number(id) || null;
+        else if (type === 'AREA') mapping.areaId = Number(id) || null;
+        else if (type === 'ASSET' || type === 'BUILDING' || type === 'PANEL' || type === 'DG' || type === 'EQUIPMENT') mapping.assetId = mapping.assetId || String(id);
+        else if (type === 'DEVICE') mapping.deviceId = Number(id) || null;
+        return mapping;
+      });
 
       if (isEdit) {
         const updatePayload = {
@@ -111,12 +254,13 @@ export const UserFormView = ({
           roleId: roleId || undefined,
           status,
           tenantId: organization || undefined,
-          zoneLocations: cleanedLocations
+          locationMappings: cleanedMappings
         };
         if (password && password.length >= 6) {
           updatePayload.password = password;
         }
 
+        // Completely removed zoneLocations per migration guide
         await bmsService.updateUser(user.id, updatePayload);
       } else {
         const createPayload = {
@@ -126,9 +270,10 @@ export const UserFormView = ({
           role,
           roleId: roleId || undefined,
           tenantId: organization || undefined,
-          zoneLocations: cleanedLocations
+          locationMappings: cleanedMappings
         };
 
+        // Completely removed zoneLocations per migration guide
         await bmsService.createUser(createPayload);
       }
 
@@ -139,6 +284,10 @@ export const UserFormView = ({
       setSaving(false);
     }
   };
+
+  const titleText = isEdit 
+    ? `Edit User: ${user.name}` 
+    : (userType ? `Add ${userType}` : 'Add User');
 
   return (
     <div className="user-form-view w-100">
@@ -159,7 +308,7 @@ export const UserFormView = ({
         </button>
         <div>
           <h4 className="mb-0 fw-bold text-white fs-18">
-            {isEdit ? `Edit User: ${user.name}` : `Add ${userType}`}
+            {titleText}
           </h4>
         </div>
       </div>
@@ -176,7 +325,7 @@ export const UserFormView = ({
         style={{ backgroundColor: '#0c1429', border: '1px solid rgba(255, 255, 255, 0.08)' }}
       >
         <Card.Body className="p-4 p-md-4.5">
-          <Form onSubmit={handleSubmit}>
+          <Form onSubmit={handleSubmit} autoComplete="off">
             <Row className="g-4">
               {/* Left Column: User Details Form */}
               <Col xs={12} lg={6}>
@@ -193,6 +342,7 @@ export const UserFormView = ({
                     required
                     disabled={saving}
                     className="role-form-input"
+                    autoComplete="off"
                   />
                 </Form.Group>
 
@@ -203,12 +353,14 @@ export const UserFormView = ({
                   </Form.Label>
                   <Form.Control
                     type="email"
-                    placeholder="user@example.com"
+                    placeholder="Enter email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={saving}
                     className="role-form-input"
+                    autoComplete="off"
+                    name="new_user_email"
                   />
                 </Form.Group>
 
@@ -225,6 +377,9 @@ export const UserFormView = ({
                     required={!isEdit}
                     minLength={6}
                     disabled={saving}
+                    autoComplete="new-password"
+                    name="new_user_password"
+                    className="role-form-input"
                   />
                 </Form.Group>
 
@@ -235,7 +390,7 @@ export const UserFormView = ({
                   </Form.Label>
                   <Form.Select
                     value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
+                    onChange={handleOrganizationChange}
                     disabled={saving || loadingMeta}
                     className="role-form-input"
                     required
@@ -259,14 +414,16 @@ export const UserFormView = ({
                     onChange={(e) => setUserType(e.target.value)}
                     disabled={saving}
                     className="role-form-input"
+                    required
                   >
+                    <option value="">Select User Type</option>
+                    <option value="Organisation User">Organisation User</option>
                     <option value="Administrator User">Administrator User</option>
                     <option value="Installation User">Installation User</option>
-                    <option value="Organisation User">Organisation User</option>
                   </Form.Select>
                 </Form.Group>
 
-                {/* Role */}
+                {/* Role (shown and enabled only after organization is selected) */}
                 <Form.Group className="mb-3">
                   <Form.Label className="fs-13 fw-semibold text-white mb-1.5">
                     Role <span className="text-danger">*</span>
@@ -274,20 +431,32 @@ export const UserFormView = ({
                   <Form.Select
                     value={role}
                     onChange={(e) => handleRoleChange(e.target.value)}
-                    disabled={saving || loadingMeta}
+                    disabled={saving || !organization || loadingRoles}
                     className="role-form-input"
                     required
                   >
-                    {roles.length === 0 ? (
-                      <option value="ADMIN">ADMIN</option>
+                    {!organization ? (
+                      <option value="">Select Organization first</option>
+                    ) : loadingRoles ? (
+                      <option value="">Loading roles for organization...</option>
+                    ) : roles.length === 0 ? (
+                      <option value="">No roles available for this organization</option>
                     ) : (
-                      roles.map((r) => (
-                        <option key={r.id} value={r.name}>
-                          {r.name} {r.isPredefined ? '(System)' : '(Custom)'}
-                        </option>
-                      ))
+                      <>
+                        <option value="">Select Role</option>
+                        {roles.map((r) => (
+                          <option key={r.id || r.name} value={r.name}>
+                            {r.name} {r.isPredefined ? '(System)' : '(Custom)'}
+                          </option>
+                        ))}
+                      </>
                     )}
                   </Form.Select>
+                  {!organization && (
+                    <Form.Text className="text-secondary fs-12 mt-1 d-block">
+                      Select an organization above to view its available roles.
+                    </Form.Text>
+                  )}
                 </Form.Group>
 
                 {/* Enabled Status */}
@@ -307,12 +476,15 @@ export const UserFormView = ({
                 </Form.Group>
               </Col>
 
-              {/* Right Column: Location Tree Assignment */}
+              {/* Right Column: Location Tree Assignment (Scoped to Selected Organization) */}
               <Col xs={12} lg={6}>
                 <LocationTreeSelector
-                  value={zoneLocations}
-                  onChange={setZoneLocations}
-                  disabled={saving}
+                  value={locationMappings}
+                  onChange={setLocationMappings}
+                  disabled={saving || !organization}
+                  organizationId={organization}
+                  organizationType={selectedOrgObj?.type}
+                  organizationName={selectedOrgObj?.name}
                 />
               </Col>
             </Row>
@@ -322,7 +494,7 @@ export const UserFormView = ({
               <button
                 type="submit"
                 className="btn d-inline-flex align-items-center justify-content-center px-4 py-2 fs-13 fw-semibold rounded-pill role-submit-btn"
-                disabled={saving || !name.trim() || !email.trim()}
+                disabled={saving || !name.trim() || !email.trim() || !organization || !role}
               >
                 {saving ? (
                   <>

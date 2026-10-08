@@ -13,11 +13,11 @@ export const RoleFormView = ({
   const isEdit = Boolean(role && role.id);
   const isPredefined = Boolean(role?.isPredefined);
 
-  // Form State
+  // Form State (no pre-filled or hardcoded defaults on creation)
   const [name, setName] = useState(role?.name || '');
   const [description, setDescription] = useState(role?.description || '');
   const [organization, setOrganization] = useState(role?.tenantId || '');
-  const [roleType, setRoleType] = useState(defaultRoleType || 'Organization');
+  const [roleType, setRoleType] = useState(role ? (role.roleType || role.category || defaultRoleType) : (defaultRoleType || ''));
   const [selectedPermissions, setSelectedPermissions] = useState(role?.permissions || []);
 
   // Organizations / Tenants list
@@ -49,9 +49,6 @@ export const RoleFormView = ({
 
         if (isMounted) {
           setOrganizations(list);
-          if (!organization && list.length > 0) {
-            setOrganization(list[0].id);
-          }
         }
       } catch (e) {
         // Fallback gracefully
@@ -67,6 +64,14 @@ export const RoleFormView = ({
     e.preventDefault();
     if (!name.trim()) {
       setError('Role name is required.');
+      return;
+    }
+    if (!organization) {
+      setError('Please select an Organization.');
+      return;
+    }
+    if (!roleType) {
+      setError('Please select a Role Type.');
       return;
     }
     if (selectedPermissions.length === 0) {
@@ -133,7 +138,7 @@ export const RoleFormView = ({
         </button>
         <div>
           <h4 className="mb-0 fw-bold text-white fs-18">
-            {titlePrefix} {roleType} Role
+            {titlePrefix} {roleType ? `${roleType} ` : ''}Role
           </h4>
         </div>
       </div>
@@ -227,7 +232,9 @@ export const RoleFormView = ({
                     onChange={(e) => setRoleType(e.target.value)}
                     disabled={isPredefined || saving}
                     className="role-form-input"
+                    required
                   >
+                    <option value="">Select Role Type</option>
                     <option value="Organization">Organization</option>
                     <option value="Administrator">Administrator</option>
                     <option value="Installation">Installation</option>
@@ -251,7 +258,7 @@ export const RoleFormView = ({
                 <button
                   type="submit"
                   className="btn d-inline-flex align-items-center justify-content-center px-4 py-2 fs-13 fw-semibold rounded-pill role-submit-btn"
-                  disabled={saving || !name.trim() || selectedPermissions.length === 0}
+                  disabled={saving || !name.trim() || !organization || !roleType || selectedPermissions.length === 0}
                 >
                   {saving ? (
                     <>

@@ -71,21 +71,63 @@ const orgUsers = sampleUsers.filter(u => u.role === 'VIEWER');
 assert.strictEqual(orgUsers.length, 1, 'Should classify 1 organisation user');
 console.log('✓ User tab classification rules verified');
 
-// 4. Location node conversion test
+// 4. LocationMapping conversion test (per OpenAPI LocationMapping schema)
 const rawNodes = [
-  { id: 'site_1', name: 'Testing Site', type: 'SITE' },
-  { id: 'zone_2', name: 'Zone North', type: 'ZONE' }
+  { id: '7', name: 'Testing Site', type: 'SITE' },
+  { id: 'zone-12', name: 'Zone North', type: 'ZONE' },
+  { id: 'asset-101', name: 'Chiller 1', type: 'ASSET', siteId: 7 }
 ];
-const zoneLocations = rawNodes.map(node => ({
-  zoneNodeType: node.type,
-  zoneNodeId: String(node.id)
-}));
 
-assert.deepStrictEqual(zoneLocations, [
-  { zoneNodeType: 'SITE', zoneNodeId: 'site_1' },
-  { zoneNodeType: 'ZONE', zoneNodeId: 'zone_2' }
-], 'Location tree node conversion must match OpenAPI zoneLocations schema');
-console.log('✓ Location tree zoneLocations conversion verified');
+const convertNodeToMapping = (node) => {
+  const type = String(node.type || '').toUpperCase();
+  const id = node.id;
+  return {
+    companyId: node.companyId ? String(node.companyId) : null,
+    tenantId: node.tenantId ? String(node.tenantId) : null,
+    zoneId: type === 'ZONE' ? String(id) : (node.zoneId ? String(node.zoneId) : null),
+    tenantAreaId: type === 'TENANT_AREA' ? String(id) : null,
+    siteId: type === 'SITE' ? (Number(id) || null) : (node.siteId ? (Number(node.siteId) || null) : null),
+    areaId: type === 'AREA' ? (Number(id) || null) : null,
+    assetId: (type === 'ASSET' || type === 'BUILDING') ? String(id) : null,
+    deviceId: type === 'DEVICE' ? (Number(id) || null) : null
+  };
+};
+
+const locationMappings = rawNodes.map(convertNodeToMapping);
+
+assert.deepStrictEqual(locationMappings, [
+  {
+    companyId: null,
+    tenantId: null,
+    zoneId: null,
+    tenantAreaId: null,
+    siteId: 7,
+    areaId: null,
+    assetId: null,
+    deviceId: null
+  },
+  {
+    companyId: null,
+    tenantId: null,
+    zoneId: 'zone-12',
+    tenantAreaId: null,
+    siteId: null,
+    areaId: null,
+    assetId: null,
+    deviceId: null
+  },
+  {
+    companyId: null,
+    tenantId: null,
+    zoneId: null,
+    tenantAreaId: null,
+    siteId: 7,
+    areaId: null,
+    assetId: 'asset-101',
+    deviceId: null
+  }
+], 'Location tree node conversion must match OpenAPI LocationMapping schema');
+console.log('✓ Location tree locationMappings conversion verified');
 
 // 5. Predefined role deletion prevention check
 const deleteAllowed = (role) => !role.isPredefined;
@@ -115,7 +157,7 @@ const sampleApiUser = {
   scopeType: 'SITE',
   scopeId: '3',
   status: 'ACTIVE',
-  zoneLocations: [{ zoneNodeType: 'SITE', zoneNodeId: '3' }]
+  locationMappings: [{ siteId: 3 }]
 };
 
 const extractedName = sampleApiUser.user_name || sampleApiUser.name || sampleApiUser.username;
@@ -194,6 +236,33 @@ assert.ok(typeof formatJoinedDate('2023-03-12T00:00:00Z') === 'string', 'formatJ
 assert.ok(typeof formatLastActive(new Date().toISOString()) === 'string', 'formatLastActive returns string');
 console.log('✓ Figma format helpers verified');
 
+// 11. Organization-scoped role filtering verification
+const mixedRoles = [
+  { id: 'r1', name: 'ADMIN', isPredefined: true },
+  { id: 'r2', name: 'Custom Org1 Role', isPredefined: false, tenantId: 'tenant_1' },
+  { id: 'r3', name: 'Custom Org2 Role', isPredefined: false, tenantId: 'tenant_2' },
+  { id: 'r4', name: 'Company Specific Role', isPredefined: false, companyId: 'comp_1' }
+];
+
+const filterRolesForOrg = (rolesList, targetOrgId) => {
+  const targetId = String(targetOrgId).trim();
+  return rolesList.filter(r => {
+    if (r.tenantId && String(r.tenantId) !== targetId) return false;
+    if (r.companyId && String(r.companyId) !== targetId) return false;
+    if (r.organizationId && String(r.organizationId) !== targetId) return false;
+    return true;
+  });
+};
+
+const tenant1Roles = filterRolesForOrg(mixedRoles, 'tenant_1');
+assert.strictEqual(tenant1Roles.length, 2, 'tenant_1 must only receive global/system roles and its own custom role');
+assert.ok(tenant1Roles.some(r => r.name === 'ADMIN'), 'Must include ADMIN');
+assert.ok(tenant1Roles.some(r => r.name === 'Custom Org1 Role'), 'Must include Custom Org1 Role');
+assert.ok(!tenant1Roles.some(r => r.name === 'Custom Org2 Role'), 'Must NOT include Custom Org2 Role');
+assert.ok(!tenant1Roles.some(r => r.name === 'Company Specific Role'), 'Must NOT include Company Specific Role');
+console.log('✓ Organization-scoped role filtering verified');
+
 console.log('--- ALL USER & ROLE MANAGEMENT CHECKS PASSED ---');
+
 
 

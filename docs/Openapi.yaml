@@ -361,7 +361,7 @@ paths:
     post:
       tags: [Users]
       summary: Create User
-      description: Admin endpoint to create a user with multi-node zoneLocations and trigger an email invitation.
+      description: Admin endpoint to create a user with granular locationMappings.
       requestBody:
         required: true
         content:
@@ -372,15 +372,11 @@ paths:
               name: "Rajesh Padhi"
               email: "rajesh@sochiot.com"
               role: "ADMIN"
-              roleId: 2
+              roleId: "cm01ab23cd45ef67gh89"
               tenantId: "c2a8b410-449e-11ee-be56-0242ac120002"
-              zoneLocations:
-                - zoneNodeType: "ZONE"
-                  zoneNodeId: "18"
-                - zoneNodeType: "SITE"
-                  zoneNodeId: "7"
-                - zoneNodeType: "ASSET"
-                  zoneNodeId: "room_101"
+              locationMappings:
+                - siteId: 7
+                  deviceId: 45
       responses:
         '201':
           description: User created successfully
@@ -4973,10 +4969,10 @@ components:
           type: object
           additionalProperties:
             type: boolean
-        zoneLocations:
+        locationMappings:
           type: array
           items:
-            type: object
+            $ref: '#/components/schemas/LocationMapping'
         scopeType:
           type: string
           example: "TENANT"
@@ -5063,20 +5059,50 @@ components:
           type: array
           items:
             type: string
-        zoneLocations:
+        locationMappings:
           type: array
           items:
-            type: object
-            properties:
-              zoneNodeType:
-                type: string
-                example: "ZONE"
-              zoneNodeId:
-                type: string
-                example: "18"
+            $ref: '#/components/schemas/LocationMapping'
         createdAt:
           type: string
           format: date-time
+
+    LocationMapping:
+      type: object
+      description: Granular location mapping associating a user to a specific node in the hierarchy
+      properties:
+        companyId:
+          type: string
+          nullable: true
+          example: "comp-1"
+        tenantId:
+          type: string
+          nullable: true
+          example: "c2a8b410-449e-11ee-be56-0242ac120002"
+        zoneId:
+          type: string
+          nullable: true
+          example: "zone-12"
+        tenantAreaId:
+          type: string
+          nullable: true
+          example: "area-3"
+        siteId:
+          type: integer
+          nullable: true
+          example: 7
+        areaId:
+          type: integer
+          nullable: true
+          example: 4
+        assetId:
+          type: string
+          nullable: true
+          example: "asset-101"
+        deviceId:
+          type: integer
+          nullable: true
+          example: 45
 
     CreateUserRequest:
       type: object
@@ -5110,17 +5136,10 @@ components:
           type: string
           nullable: true
           example: "c2a8b410-449e-11ee-be56-0242ac120002"
-        zoneLocations:
+        locationMappings:
           type: array
           items:
-            type: object
-            properties:
-              zoneNodeType:
-                type: string
-                example: "ZONE"
-              zoneNodeId:
-                type: string
-                example: "18"
+            $ref: '#/components/schemas/LocationMapping'
 
     UpdateUserRequest:
       type: object
@@ -5159,15 +5178,10 @@ components:
           $ref: '#/components/schemas/UserStatus'
         features:
           type: object
-        zoneLocations:
+        locationMappings:
           type: array
           items:
-            type: object
-            properties:
-              zoneNodeType:
-                type: string
-              zoneNodeId:
-                type: string
+            $ref: '#/components/schemas/LocationMapping'
 
     BulkImportUserItem:
       type: object
@@ -5201,15 +5215,10 @@ components:
         employeeId:
           type: string
           nullable: true
-        zoneLocations:
+        locationMappings:
           type: array
           items:
-            type: object
-            properties:
-              zoneNodeType:
-                type: string
-              zoneNodeId:
-                type: string
+            $ref: '#/components/schemas/LocationMapping'
 
     BulkImportRequest:
       type: object
