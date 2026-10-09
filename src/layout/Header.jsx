@@ -55,7 +55,7 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
 
       {moduleHeader && (
         <div className="global-module-context d-flex align-items-center justify-content-between gap-3 ms-3 me-auto px-3">
-          <div className="d-flex align-items-center gap-2 text-white fw-bold text-nowrap">
+          <div className="global-module-title d-flex align-items-center gap-2 fw-bold text-nowrap">
             {ModuleIcon && <ModuleIcon size={19} />}
             <span>{moduleHeader.title}</span>
           </div>
@@ -283,6 +283,16 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           background-color: #ffffff !important;
           border-color: #cbd5e1 !important;
           color: #0f172a !important;
+        }
+        body.light-mode .global-module-context {
+          background: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .global-module-title {
+          color: #0f172a !important;
+        }
+        .global-module-title {
+          color: #f8fafc;
         }
         .leading-tight { line-height: 1.1; }
         .fs-8 { font-size: 0.62rem; }

@@ -649,14 +649,14 @@ export const GlobalSiteAssetDropdown = ({
                       >
                         <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
                           <Building2 size={15} className={`flex-shrink-0 ${isGloballySelected ? 'text-cyan' : 'text-muted'}`} />
-                          <span className="global-cascading-item-name text-truncate fs-12 fw-medium text-white">
+                          <span className="global-cascading-item-name text-truncate fs-12 fw-medium">
                             {site.name || site.siteName || `Site ${sId}`}
                           </span>
                         </div>
                         {isGloballySelected ? (
-                          <div className="d-flex align-items-center gap-1 bg-success bg-opacity-20 px-2 py-0.5 rounded-pill border border-success border-opacity-30">
-                            <Check size={12} className="text-success stroke-2" />
-                            <span className="fs-10 text-success fw-bold">Active</span>
+                          <div className="global-cascading-active-pill d-flex align-items-center gap-1 px-2 py-0.5 rounded-pill flex-shrink-0">
+                            <Check size={12} className="stroke-2 flex-shrink-0" />
+                            <span className="fs-10 fw-bold">Active</span>
                           </div>
                         ) : (
                           <span className="global-cascading-select-hint fs-10 text-muted opacity-50 pe-1">
@@ -676,7 +676,7 @@ export const GlobalSiteAssetDropdown = ({
               <div className="global-cascading-sites-panel">
                 <div className="global-cascading-panel-header d-flex align-items-center justify-content-between px-3 py-2 border-bottom border-secondary border-opacity-20">
                   <span className="text-uppercase tracking-wider fs-11 fw-bold text-muted">Sites</span>
-                  <span className="badge bg-secondary bg-opacity-30 text-white fs-10 px-1.5 py-0.5 rounded-pill">
+                  <span className="badge bg-secondary bg-opacity-30 fs-10 px-1.5 py-0.5 rounded-pill">
                     {filteredSites.length}
                   </span>
                 </div>
@@ -740,7 +740,7 @@ export const GlobalSiteAssetDropdown = ({
                 <div className="global-cascading-panel-header d-flex align-items-center justify-content-between px-3 py-2 border-bottom border-secondary border-opacity-20">
                   <div className="d-flex align-items-center gap-1.5 overflow-hidden me-2">
                     <Building2 size={13} className="text-cyan flex-shrink-0" />
-                    <span className="text-truncate fs-12 fw-bold text-white" title={activePanelSiteObj?.name}>
+                    <span className="global-cascading-panel-title text-truncate fs-12 fw-bold" title={activePanelSiteObj?.name}>
                       {activePanelSiteObj?.name || 'Selected Site'}
                     </span>
                     <span className="badge bg-secondary bg-opacity-25 text-info fs-10 px-2 py-0.5 rounded-pill ms-1 flex-shrink-0">
@@ -772,7 +772,7 @@ export const GlobalSiteAssetDropdown = ({
                       <div className="p-3 d-inline-flex rounded-circle bg-dark bg-opacity-50 border border-secondary border-opacity-25 mb-2">
                         <Cpu size={26} className="text-muted opacity-60" />
                       </div>
-                      <div className="fs-13 fw-semibold text-white mb-1">No {assetLabel} Mapped</div>
+                      <div className="global-cascading-panel-title fs-13 fw-semibold mb-1">No {assetLabel} Mapped</div>
                       <div className="fs-11 text-muted mb-3">
                         No {assetLabel.toLowerCase()} registered under {activePanelSiteObj?.name || 'this site'}.
                       </div>
@@ -812,7 +812,7 @@ export const GlobalSiteAssetDropdown = ({
                                 {renderAssetIcon(14)}
                               </div>
                               <div className="d-flex flex-column overflow-hidden">
-                                <span className="global-cascading-item-name text-truncate fs-12 fw-medium text-white">
+                                <span className="global-cascading-item-name text-truncate fs-12 fw-medium">
                                   {dev.name || dev.deviceName || `${assetLabel.slice(0, -1)} ${idx + 1}`}
                                 </span>
                                 <span className="fs-10 text-muted text-truncate opacity-75">
@@ -821,9 +821,9 @@ export const GlobalSiteAssetDropdown = ({
                               </div>
                             </div>
                             {isDevActive ? (
-                              <div className="d-flex align-items-center gap-1 bg-success bg-opacity-20 px-2 py-0.5 rounded-pill border border-success border-opacity-30">
-                                <Check size={12} className="text-success stroke-2" />
-                                <span className="fs-10 text-success fw-bold">Active</span>
+                              <div className="global-cascading-active-pill d-flex align-items-center gap-1 px-2 py-0.5 rounded-pill flex-shrink-0">
+                                <Check size={12} className="stroke-2 flex-shrink-0" />
+                                <span className="fs-10 fw-bold">Active</span>
                               </div>
                             ) : (
                               <span className="global-cascading-select-hint fs-10 text-muted opacity-50 pe-1">
@@ -978,29 +978,168 @@ export const GlobalSiteAssetDropdown = ({
           align-items: center;
         }
 
+        /* Active Status Pill */
+        .global-cascading-active-pill {
+          background-color: rgba(34, 197, 94, 0.2) !important;
+          color: #4ade80 !important;
+          border: 1px solid rgba(34, 197, 94, 0.5) !important;
+        }
+        .global-cascading-item-name {
+          color: #f8fafc;
+        }
+        .global-cascading-panel-title {
+          color: #f8fafc;
+        }
+
         /* Light mode support */
-        body.light-mode .global-cascading-menu-container {
+        body.light-mode .global-site-cascading-toggle,
+        [data-theme="light"] .global-site-cascading-toggle {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        body.light-mode .global-site-cascading-toggle:hover,
+        body.light-mode .global-site-cascading-toggle.active,
+        [data-theme="light"] .global-site-cascading-toggle:hover,
+        [data-theme="light"] .global-site-cascading-toggle.active {
+          background-color: #f8fafc !important;
+          border-color: #0284c7 !important;
+          box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+        }
+        body.light-mode .global-site-current-name,
+        [data-theme="light"] .global-site-current-name {
+          color: #0f172a !important;
+        }
+        body.light-mode .global-device-current-name,
+        [data-theme="light"] .global-device-current-name {
+          color: #0284c7 !important;
+        }
+        body.light-mode .global-site-divider,
+        [data-theme="light"] .global-site-divider {
+          color: #94a3b8 !important;
+        }
+        body.light-mode .global-site-chevron,
+        [data-theme="light"] .global-site-chevron {
+          color: #64748b !important;
+        }
+        body.light-mode .global-device-badge-empty,
+        [data-theme="light"] .global-device-badge-empty {
+          color: #64748b !important;
+        }
+        body.light-mode .text-cyan,
+        [data-theme="light"] .text-cyan {
+          color: #0284c7 !important;
+        }
+        body.light-mode .border-cyan-glow,
+        [data-theme="light"] .border-cyan-glow {
+          border-color: rgba(2, 132, 199, 0.3) !important;
+        }
+        body.light-mode .bg-cyan-subtle,
+        [data-theme="light"] .bg-cyan-subtle {
+          background-color: rgba(2, 132, 199, 0.1) !important;
+        }
+
+        /* Popover in Light Mode */
+        body.light-mode .global-cascading-menu-container,
+        [data-theme="light"] .global-cascading-menu-container {
           background: #ffffff !important;
           border-color: #cbd5e1 !important;
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.05);
         }
-        body.light-mode .global-cascading-sites-panel {
-          background-color: #f8fafc;
+        body.light-mode .global-cascading-search-box,
+        [data-theme="light"] .global-cascading-search-box {
+          border-bottom-color: #e2e8f0 !important;
+        }
+        body.light-mode .global-cascading-search-box > div,
+        [data-theme="light"] .global-cascading-search-box > div {
+          background-color: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .global-cascading-search-box input,
+        [data-theme="light"] .global-cascading-search-box input {
+          color: #0f172a !important;
+        }
+        body.light-mode .global-cascading-search-box input::placeholder,
+        [data-theme="light"] .global-cascading-search-box input::placeholder {
+          color: #94a3b8 !important;
+        }
+        body.light-mode .global-cascading-sites-panel,
+        [data-theme="light"] .global-cascading-sites-panel {
+          background-color: #f8fafc !important;
+          border-right-color: #e2e8f0 !important;
+        }
+        body.light-mode .global-cascading-panel-header,
+        [data-theme="light"] .global-cascading-panel-header {
+          border-bottom-color: #e2e8f0 !important;
+        }
+        body.light-mode .global-cascading-panel-header span,
+        [data-theme="light"] .global-cascading-panel-header span {
+          color: #475569 !important;
+        }
+        body.light-mode .global-cascading-panel-title,
+        [data-theme="light"] .global-cascading-panel-title {
+          color: #0f172a !important;
+        }
+        body.light-mode .global-cascading-site-item,
+        [data-theme="light"] .global-cascading-site-item {
+          color: #334155;
+        }
+        body.light-mode .global-cascading-site-item:hover,
+        [data-theme="light"] .global-cascading-site-item:hover {
+          background-color: #f1f5f9 !important;
+        }
+        body.light-mode .global-cascading-site-item.active,
+        [data-theme="light"] .global-cascading-site-item.active {
+          background-color: #e0f2fe !important;
+          border-left-color: #0284c7 !important;
+        }
+        body.light-mode .global-cascading-site-item.active .global-cascading-item-name,
+        [data-theme="light"] .global-cascading-site-item.active .global-cascading-item-name {
+          color: #0284c7 !important;
         }
         body.light-mode .global-cascading-site-item .global-cascading-item-name,
-        body.light-mode .global-cascading-panel-header span {
+        [data-theme="light"] .global-cascading-site-item .global-cascading-item-name {
           color: #0f172a !important;
         }
-        body.light-mode .global-cascading-asset-item {
-          background: #f8fafc;
-          border-color: #e2e8f0;
+        body.light-mode .global-cascading-assets-panel,
+        [data-theme="light"] .global-cascading-assets-panel {
+          border-left-color: #e2e8f0 !important;
         }
-        body.light-mode .global-cascading-asset-item:hover {
+        body.light-mode .global-cascading-asset-item,
+        [data-theme="light"] .global-cascading-asset-item {
+          background: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        body.light-mode .global-cascading-asset-item:hover,
+        [data-theme="light"] .global-cascading-asset-item:hover {
           background: #f0f9ff !important;
-          border-color: #38bdf8 !important;
+          border-color: #0284c7 !important;
         }
-        body.light-mode .global-cascading-asset-item .global-cascading-item-name {
+        body.light-mode .global-cascading-asset-item.active,
+        [data-theme="light"] .global-cascading-asset-item.active {
+          background: #e0f2fe !important;
+          border-color: #0284c7 !important;
+        }
+        body.light-mode .global-cascading-asset-item .global-cascading-item-name,
+        [data-theme="light"] .global-cascading-asset-item .global-cascading-item-name {
           color: #0f172a !important;
+        }
+        body.light-mode .global-cascading-asset-icon-box,
+        [data-theme="light"] .global-cascading-asset-icon-box {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+        body.light-mode .global-cascading-asset-icon-box.active,
+        [data-theme="light"] .global-cascading-asset-icon-box.active {
+          background: #bae6fd;
+          border-color: #0284c7;
+        }
+        body.light-mode .global-cascading-active-pill,
+        [data-theme="light"] .global-cascading-active-pill {
+          background-color: #dcfce7 !important;
+          color: #15803d !important;
+          border-color: #86efac !important;
         }
       `}} />
     </div>
