@@ -137,15 +137,8 @@ export const useDeviceStatus = () => {
 };
 
 export const DeviceStatusProvider = ({ children }) => {
-  const { refreshStatuses } = useDeviceStatus();
-  const isAuthenticated = useSelector((state) => state.auth?.isAuthenticated);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    refreshStatuses();
-    const interval = setInterval(refreshStatuses, 20000);
-    return () => clearInterval(interval);
-  }, [refreshStatuses, isAuthenticated]);
-
+  // Ponytail: background polling of localStorage('scada_templates') causes unwanted network requests
+  // on login for stale/mock device UUIDs (e.g. f40a4dc8-0be6-44f2-8eb2-fbc459a872f3, 1280, 1281).
+  // Device statuses should be checked on-demand by the specific pages that need them.
   return children;
 };

@@ -570,6 +570,33 @@ const MainMeter = () => {
     }
   }, [selectedSite, allSites, setSelectedSite]);
 
+  // Listen for global device selection events from the Header dropdown
+  useEffect(() => {
+    const handleGlobalDeviceChange = (e) => {
+      const detail = e.detail;
+      if (!detail) return;
+
+      const category = detail.category || detail.device?.category;
+      if (category && category !== 'MAIN_ENERGY_METER') {
+        return;
+      }
+
+      if (detail.siteId && String(detail.siteId) !== String(selectedSiteId)) {
+        setSelectedSiteId(String(detail.siteId));
+        localStorage.setItem('selected_main_meter_site_id', String(detail.siteId));
+      }
+
+      if (detail.deviceId && String(detail.deviceId) !== String(selectedMeterId)) {
+        const dId = String(detail.deviceId);
+        setSelectedMeterId(dId);
+        localStorage.setItem('selected_main_meter_id', dId);
+      }
+    };
+
+    window.addEventListener('scada_device_changed', handleGlobalDeviceChange);
+    return () => window.removeEventListener('scada_device_changed', handleGlobalDeviceChange);
+  }, [selectedSiteId, selectedMeterId]);
+
   // Single OpenAPI route for main energy meters of the selected site:
   // GET /api/v1/devices?siteId={siteId}&category=MAIN_ENERGY_METER&include=settings,rules,profile
   useEffect(() => {
@@ -608,8 +635,17 @@ const MainMeter = () => {
         if (isMounted) {
           setSiteDevices(items);
           if (items.length > 0) {
-            const currentInList = items.some(d => String(d.id || d.deviceId) === String(selectedMeterId));
-            if (!currentInList) {
+            const savedMeterId = localStorage.getItem('selected_main_meter_id');
+            const matchSaved = items.find(d => String(d.id || d.deviceId) === String(savedMeterId));
+            const currentInList = items.find(d => String(d.id || d.deviceId) === String(selectedMeterId));
+            
+            if (currentInList) {
+              // Current selected device is valid in this site
+            } else if (matchSaved) {
+              const targetId = String(matchSaved.id || matchSaved.deviceId);
+              setSelectedMeterId(targetId);
+              localStorage.setItem('selected_main_meter_id', targetId);
+            } else {
               const firstId = String(items[0].id || items[0].deviceId);
               setSelectedMeterId(firstId);
               localStorage.setItem('selected_main_meter_id', firstId);
@@ -951,7 +987,7 @@ const MainMeter = () => {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [selectedMeterId, selectedSiteId]);
+  }, [selectedMeterId, selectedSiteId, siteDevices]);
 
 
   // Cal LED Blinking frequency based on active power load

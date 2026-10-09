@@ -1,360 +1,27 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Menu, Search, User, Bell, Sun, Moon, Building2, ChevronDown, ChevronRight, 
-  Settings, LogOut, FileText, Check, ShieldCheck, BellRing, Cpu, Zap, Droplets, 
+  Settings, LogOut, FileText, Check, ShieldCheck, BellRing, Users, Cpu, Zap, Droplets, 
   Activity, Thermometer, Layers, CheckCircle2 
 } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { bmsService } from '../services/bmsService';
 import { normalizeList, getAuthHeaders } from '../services/apiClient';
 import { getApiUrl } from '../utils/apiConfig';
+import { getUserInitials } from '../utils/userUtils';
 
 import logo from "../assets/logo.png";
 
-// Custom Generator Engine Icon matching user reference image
-const DgGeneratorIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect x="4" y="6" width="16" height="12" rx="2" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="18" x2="8" y2="22" />
-    <line x1="16" y1="18" x2="16" y2="22" />
-    <circle cx="12" cy="12" r="2.5" />
-    <line x1="19" y1="10" x2="21" y2="10" />
-    <line x1="19" y1="14" x2="21" y2="14" />
-  </svg>
-);
+import GlobalSiteAssetDropdown from '../components/GlobalSiteAssetDropdown';
 
 const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonating = false, moduleHeader, moduleIcon: ModuleIcon, activeSites = [], selectedSite, setSelectedSite }) => {
+  const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
-  const { userRole, logout } = useAuth();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const getSiteId = site => site?.id ?? site?.siteId ?? site?._id ?? '';
-
-  // ── CASCADING SITE & ASSET SELECTOR STATES (MATCHING REFERENCE IMAGE 3) ──
-  const [isSiteDropdownOpen, setIsSiteDropdownOpen] = useState(false);
-  const [hoveredSiteId, setHoveredSiteId] = useState(null);
-  const [siteDevicesMap, setSiteDevicesMap] = useState({});
-  const [loadingDevices, setLoadingDevices] = useState(false);
-  const [selectedDeviceId, setSelectedDeviceId] = useState(() => {
-    return localStorage.getItem('selected_dg_device_id') || localStorage.getItem('selected_device_id') || '';
-  });
-  const [siteSearchQuery, setSiteSearchQuery] = useState('');
-  const siteDropdownRef = useRef(null);
-  const dropdownTimerRef = useRef(null);
-
-  // Close cascading dropdown when clicking outside or pressing Escape
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (siteDropdownRef.current && !siteDropdownRef.current.contains(event.target)) {
-        if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
-        setIsSiteDropdownOpen(false);
-      }
-    };
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
-        setIsSiteDropdownOpen(false);
-      }
-    };
-
-    if (isSiteDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-      if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current);
-    };
-  }, [isSiteDropdownOpen]);
-
-  // Two-way synchronization with other components (e.g. Overview target capsule)
-  useEffect(() => {
-    const handleDeviceEvent = (e) => {
-      if (e.detail?.deviceId) {
-        setSelectedDeviceId(String(e.detail.deviceId));
-      }
-    };
-    window.addEventListener('scada_device_changed', handleDeviceEvent);
-    return () => window.removeEventListener('scada_device_changed', handleDeviceEvent);
-  }, []);
-
-  const currentCategory = useMemo(() => {
-    const title = moduleHeader?.title || '';
-    if (title === 'DG Set') return 'GENERATOR';
-    if (title === 'Energy Metering') return 'ENERGY_METER';
-    if (title === 'Water Management') return 'WATER';
-    if (title === 'Motors') return 'MOTOR';
-    if (title === 'Transformer') return 'TRANSFORMER';
-    if (title === 'LT Panel') return 'LT_PANEL';
-    if (title === 'HVAC') return 'HVAC';
-    if (title === 'Fire') return 'FIRE_PUMP';
-    return null;
-  }, [moduleHeader?.title]);
-
-  const assetLabel = useMemo(() => {
-    const title = moduleHeader?.title || '';
-    if (title === 'DG Set') return 'DGs';
-    if (title === 'Energy Metering') return 'Meters';
-    if (title === 'Water Management') return 'Tanks';
-    if (title === 'Motors') return 'Motors';
-    if (title === 'Transformer') return 'XFMRs';
-    if (title === 'LT Panel') return 'Panels';
-    return 'Assets';
-  }, [moduleHeader?.title]);
-
-  const renderAssetIcon = (size = 15) => {
-    const title = moduleHeader?.title || '';
-    if (title === 'DG Set') return <DgGeneratorIcon size={size} />;
-    if (title === 'Energy Metering') return <Zap size={size} />;
-    if (title === 'Water Management') return <Droplets size={size} />;
-    if (title === 'Motors') return <Activity size={size} />;
-    if (title === 'Transformer') return <Zap size={size} />;
-    if (title === 'LT Panel') return <LayoutDashboard size={size} />;
-    if (title === 'HVAC') return <Thermometer size={size} />;
-    return <Cpu size={size} />;
-  };
-
-  // Pre-fetch and aggregate sub-devices/assets for each site across the active module
-  useEffect(() => {
-    if (!activeSites || activeSites.length === 0) return;
-
-    let isMounted = true;
-    const fetchAllSiteDevices = async () => {
-      setLoadingDevices(true);
-      const newMap = {};
-
-      const localKeys = [
-        'dg_generator_devices',
-        'scada_devices_db',
-        'bms_registered_devices',
-        'scada_device_mappings',
-        'tb_devices'
-      ];
-      const localDevices = [];
-      localKeys.forEach(k => {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            const arr = Array.isArray(parsed) ? parsed : [parsed];
-            arr.forEach(d => {
-              if (d && (d.id || d.deviceId || d._id)) localDevices.push(d);
-            });
-          }
-        } catch (e) {}
-      });
-
-      for (const site of activeSites) {
-        const sId = String(getSiteId(site));
-        if (!sId) continue;
-        const siteDeviceList = [];
-        const seenIds = new Set();
-
-        const addDev = (d) => {
-          if (!d) return;
-          const devId = String(d.id || d.deviceId || d._id || '').trim();
-          if (!devId || seenIds.has(devId)) return;
-
-          const devSiteId = d.siteId !== undefined && d.siteId !== null ? String(d.siteId) : null;
-          if (devSiteId && devSiteId !== sId) return;
-
-          if (currentCategory === 'GENERATOR') {
-            const cat = String(d.category || d.type || '').toUpperCase();
-            const name = String(d.name || d.deviceName || d.label || d.title || '').toUpperCase();
-            const mod = String(d.module || '').toUpperCase();
-            const isDG = 
-              cat.includes('GEN') || 
-              cat.includes('DG') || 
-              mod.includes('DG') || 
-              mod.includes('GEN') || 
-              name.includes('DG') || 
-              name.includes('GENERATOR') || 
-              name.includes('GENSET') || 
-              d.module === 'DG Set';
-            if (!isDG) return;
-          } else if (currentCategory) {
-            const cat = String(d.category || d.type || '').toUpperCase();
-            if (!cat.includes(currentCategory)) return;
-          }
-
-          seenIds.add(devId);
-          siteDeviceList.push({
-            ...d,
-            id: devId,
-            name: d.name || d.deviceName || d.label || d.title || `${assetLabel}-${siteDeviceList.length + 1}`
-          });
-        };
-
-        // 1. Fetch from API for this site
-        try {
-          const params = currentCategory ? { category: currentCategory } : {};
-          const res = await bmsService.getSiteDevices(sId, params).catch(() => null);
-          const list = normalizeList(res, 'devices');
-          if (Array.isArray(list)) list.forEach(addDev);
-        } catch (e) {}
-
-        // 2. Fallback /devices?siteId=...
-        try {
-          const queryParams = new URLSearchParams({ siteId: sId });
-          if (currentCategory) queryParams.set('category', currentCategory);
-          const url = getApiUrl(`/devices?${queryParams.toString()}`);
-          const res = await fetch(url, { headers: getAuthHeaders() }).catch(() => null);
-          if (res && res.ok) {
-            const json = await res.json();
-            const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
-            list.forEach(addDev);
-          }
-        } catch (e) {}
-
-        // 3. Merge local storage devices
-        localDevices.forEach(addDev);
-
-        newMap[sId] = siteDeviceList;
-      }
-
-      if (isMounted) {
-        setSiteDevicesMap(newMap);
-        setLoadingDevices(false);
-      }
-    };
-
-    fetchAllSiteDevices();
-    return () => { isMounted = false; };
-  }, [activeSites, moduleHeader?.title, currentCategory, assetLabel]);
-
-  const currentSiteId = String(getSiteId(selectedSite) || '');
-  const currentSiteDevices = siteDevicesMap[currentSiteId] || [];
-
-  const currentActiveDeviceObj = useMemo(() => {
-    if (!currentSiteDevices || currentSiteDevices.length === 0) return null;
-    if (selectedDeviceId) {
-      const found = currentSiteDevices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId));
-      if (found) return found;
-    }
-    return currentSiteDevices[0];
-  }, [selectedDeviceId, currentSiteDevices]);
-
-  const handleMouseEnterDropdown = () => {
-    if (dropdownTimerRef.current) {
-      clearTimeout(dropdownTimerRef.current);
-      dropdownTimerRef.current = null;
-    }
-    setHoveredSiteId(String(getSiteId(selectedSite) || getSiteId(activeSites[0]) || ''));
-    setIsSiteDropdownOpen(true);
-  };
-
-  const handleMouseLeaveDropdown = () => {
-    if (dropdownTimerRef.current) {
-      clearTimeout(dropdownTimerRef.current);
-    }
-    dropdownTimerRef.current = setTimeout(() => {
-      setIsSiteDropdownOpen(false);
-    }, 280);
-  };
-
-  const handleToggleSiteDropdown = (e) => {
-    if (e) e.stopPropagation();
-    if (dropdownTimerRef.current) {
-      clearTimeout(dropdownTimerRef.current);
-      dropdownTimerRef.current = null;
-    }
-    setIsSiteDropdownOpen(prev => {
-      const next = !prev;
-      if (next) {
-        setHoveredSiteId(String(getSiteId(selectedSite) || getSiteId(activeSites[0]) || ''));
-        setSiteSearchQuery('');
-      }
-      return next;
-    });
-  };
-
-  const handleSelectDevice = (site, device) => {
-    if (dropdownTimerRef.current) {
-      clearTimeout(dropdownTimerRef.current);
-      dropdownTimerRef.current = null;
-    }
-    if (site && setSelectedSite) {
-      setSelectedSite(site);
-    }
-    const devId = String(device.id || device.deviceId || '');
-    setSelectedDeviceId(devId);
-    
-    if (moduleHeader?.title === 'DG Set') {
-      localStorage.setItem('selected_dg_device_id', devId);
-    }
-    localStorage.setItem('selected_device_id', devId);
-
-    window.dispatchEvent(new CustomEvent('scada_device_changed', {
-      detail: {
-        deviceId: devId,
-        device,
-        siteId: String(getSiteId(site)),
-        module: moduleHeader?.title
-      }
-    }));
-
-    setIsSiteDropdownOpen(false);
-  };
-
-  const handleSelectSiteOnly = (site) => {
-    if (dropdownTimerRef.current) {
-      clearTimeout(dropdownTimerRef.current);
-      dropdownTimerRef.current = null;
-    }
-    if (site && setSelectedSite) {
-      setSelectedSite(site);
-    }
-    const sId = String(getSiteId(site));
-    const devices = siteDevicesMap[sId] || [];
-    if (devices.length > 0) {
-      handleSelectDevice(site, devices[0]);
-    } else {
-      setSelectedDeviceId('');
-      localStorage.removeItem('selected_dg_device_id');
-      localStorage.removeItem('selected_device_id');
-      window.dispatchEvent(new CustomEvent('scada_device_changed', {
-        detail: {
-          deviceId: '',
-          device: null,
-          siteId: sId,
-          module: moduleHeader?.title
-        }
-      }));
-      setIsSiteDropdownOpen(false);
-    }
-  };
-
-  const hoveredSiteObj = useMemo(() => {
-    return activeSites.find(s => String(getSiteId(s)) === String(hoveredSiteId)) || selectedSite || activeSites[0];
-  }, [activeSites, hoveredSiteId, selectedSite]);
-
-  const hoveredDevices = useMemo(() => {
-    if (!hoveredSiteObj) return [];
-    const sId = String(getSiteId(hoveredSiteObj));
-    return siteDevicesMap[sId] || [];
-  }, [hoveredSiteObj, siteDevicesMap]);
-
-  const filteredActiveSites = useMemo(() => {
-    if (!siteSearchQuery.trim()) return activeSites;
-    const q = siteSearchQuery.toLowerCase().trim();
-    return activeSites.filter(site => {
-      const sName = (site.name || site.siteName || '').toLowerCase();
-      if (sName.includes(q)) return true;
-      const sId = String(getSiteId(site));
-      const devs = siteDevicesMap[sId] || [];
-      return devs.some(d => (d.name || d.deviceName || '').toLowerCase().includes(q));
-    });
-  }, [activeSites, siteSearchQuery, siteDevicesMap]);
-
-  const displayedHoveredDevices = useMemo(() => {
-    if (!siteSearchQuery.trim()) return hoveredDevices;
-    const q = siteSearchQuery.toLowerCase().trim();
-    return hoveredDevices.filter(d => (d.name || d.deviceName || '').toLowerCase().includes(q));
-  }, [hoveredDevices, siteSearchQuery]);
+  const { userRole, logout, user } = useAuth();
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
 
   return (
     <header 
@@ -388,246 +55,53 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
 
       {moduleHeader && (
         <div className="global-module-context d-flex align-items-center justify-content-between gap-3 ms-3 me-auto px-3">
-          <div className="d-flex align-items-center gap-2 text-white fw-bold text-nowrap">
+          <div className="global-module-title d-flex align-items-center gap-2 fw-bold text-nowrap">
             {ModuleIcon && <ModuleIcon size={19} />}
             <span>{moduleHeader.title}</span>
           </div>
           {activeSites.length > 0 && (
-            <div 
-              className="global-site-select-wrap position-relative" 
-              ref={siteDropdownRef}
-              onMouseEnter={handleMouseEnterDropdown}
-              onMouseLeave={handleMouseLeaveDropdown}
-            >
-              <button
-                type="button"
-                onClick={handleToggleSiteDropdown}
-                className={`global-site-cascading-toggle d-flex align-items-center justify-content-between ${isSiteDropdownOpen ? 'active' : ''}`}
-                aria-expanded={isSiteDropdownOpen}
-                title="Select Site & Asset"
-              >
-                <div className="d-flex align-items-center gap-1.5 overflow-hidden me-1">
-                  <Building2 size={15} className="global-site-icon flex-shrink-0" />
-                  <span className="global-site-current-name text-truncate">
-                    {selectedSite?.name || selectedSite?.siteName || `Site ${getSiteId(selectedSite)}` || 'Select Site'}
-                  </span>
-                  {currentActiveDeviceObj ? (
-                    <>
-                      <span className="global-site-divider opacity-50 px-0.5">›</span>
-                      <span className="global-device-current-name d-flex align-items-center gap-1 text-truncate">
-                        {renderAssetIcon(13)}
-                        <span className="text-truncate">{currentActiveDeviceObj.name}</span>
-                      </span>
-                    </>
-                  ) : (
-                    <span className="global-device-badge-empty ms-1">
-                      (0 {assetLabel})
-                    </span>
-                  )}
-                </div>
-                <ChevronDown size={14} className={`global-site-chevron flex-shrink-0 ms-1 ${isSiteDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* CASCADING FLYOUT DROPDOWN MENU WITH SMOOTH TRANSITION */}
-              <div 
-                className={`global-cascading-menu-container shadow-2xl ${isSiteDropdownOpen ? 'open' : ''}`}
-                onMouseEnter={handleMouseEnterDropdown}
-                onMouseLeave={handleMouseLeaveDropdown}
-              >
-                  {/* SEARCH FILTER BAR */}
-                  <div className="global-cascading-search-box p-2 border-bottom">
-                    <div className="d-flex align-items-center gap-2 px-2.5 py-1.5 rounded-2 bg-dark bg-opacity-60 border border-secondary border-opacity-30">
-                      <Search size={13} className="text-muted flex-shrink-0" />
-                      <input
-                        type="text"
-                        value={siteSearchQuery}
-                        onChange={(e) => setSiteSearchQuery(e.target.value)}
-                        placeholder={`Search site or ${assetLabel.toLowerCase()}...`}
-                        className="bg-transparent border-0 text-white fs-12 w-100 shadow-none"
-                        style={{ outline: 'none' }}
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      {siteSearchQuery && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setSiteSearchQuery(''); }}
-                          className="btn btn-link p-0 text-muted fs-11 text-decoration-none"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="d-flex" style={{ minHeight: '260px' }}>
-                    {/* LEFT PANEL: SITES LIST */}
-                    <div className="global-cascading-sites-panel">
-                      <div className="global-cascading-panel-header d-flex align-items-center justify-content-between">
-                        <span>Sites</span>
-                        <span className="text-dim fs-10 fw-normal">({filteredActiveSites.length})</span>
-                      </div>
-                      <div className="global-cascading-list-scroll">
-                        {filteredActiveSites.length === 0 ? (
-                          <div className="text-muted text-center py-3 fs-11">No matching site</div>
-                        ) : (
-                          filteredActiveSites.map(site => {
-                            const sId = String(getSiteId(site));
-                            const isSelectedSite = String(getSiteId(selectedSite)) === sId;
-                            const isHovered = hoveredSiteId === sId;
-                            const siteDevs = siteDevicesMap[sId] || [];
-                            const devCount = siteDevs.length;
-
-                            return (
-                              <div
-                                key={sId}
-                                onMouseEnter={() => setHoveredSiteId(sId)}
-                                onClick={() => {
-                                  if (devCount === 0) {
-                                    handleSelectSiteOnly(site);
-                                  } else {
-                                    setHoveredSiteId(sId);
-                                  }
-                                }}
-                                className={`global-cascading-site-item d-flex align-items-center justify-content-between ${isHovered ? 'hovered' : ''} ${isSelectedSite ? 'active' : ''}`}
-                                style={{ cursor: 'pointer' }}
-                                title={devCount === 0 ? `Click to select ${site.name}` : `View ${site.name} ${assetLabel.toLowerCase()}`}
-                              >
-                                <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
-                                  <Building2 size={15} className={`flex-shrink-0 ${isSelectedSite ? 'text-primary' : 'text-dim'}`} />
-                                  <span className="global-cascading-item-name text-truncate">
-                                    {site.name || site.siteName || `Site ${sId}`}
-                                  </span>
-                                </div>
-                                <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
-                                  {devCount > 0 ? (
-                                    <span className="global-cascading-count-pill" title={`${devCount} ${assetLabel} mapped`}>
-                                      {devCount} {assetLabel}
-                                    </span>
-                                  ) : (
-                                    <span className="global-cascading-count-pill zero" title="0 sub-assets • Click to select">0</span>
-                                  )}
-                                  <ChevronRight size={13} className={`global-cascading-chevron-right ${isHovered ? 'active' : 'opacity-60'}`} />
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    {/* RIGHT PANEL: ASSETS FLYOUT FOR HOVERED SITE */}
-                    <div className="global-cascading-assets-panel">
-                      <div className="global-cascading-panel-header d-flex align-items-center justify-content-between">
-                        <div className="d-flex align-items-center gap-1.5 overflow-hidden">
-                          <span className="text-truncate fw-bold">
-                            {hoveredSiteObj?.name || 'Assets'}
-                          </span>
-                        </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <span className="global-cascading-count-pill">
-                            {hoveredDevices.length} {assetLabel}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSelectSiteOnly(hoveredSiteObj)}
-                            className="btn btn-link p-0 text-cyan-glow fs-10 text-decoration-none fw-bold"
-                            title="Select this site"
-                          >
-                            Select Site
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="global-cascading-list-scroll">
-                        {hoveredDevices.length === 0 ? (
-                          <div 
-                            className="global-cascading-empty text-center py-4 px-3"
-                            onClick={() => handleSelectSiteOnly(hoveredSiteObj)}
-                            style={{ cursor: 'pointer' }}
-                            title={`Click to select ${hoveredSiteObj?.name || 'this site'}`}
-                          >
-                            <Cpu size={24} className="text-muted opacity-40 mb-2" />
-                            <div className="fs-12 fw-bold text-white mb-1">No {assetLabel} Mapped</div>
-                            <div className="fs-11 text-muted mb-3">No {assetLabel.toLowerCase()} registered under {hoveredSiteObj?.name || 'this site'}</div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectSiteOnly(hoveredSiteObj);
-                              }}
-                              className="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fs-11 fw-bold"
-                            >
-                              Select {hoveredSiteObj?.name || 'Site'} Directly
-                            </button>
-                          </div>
-                        ) : displayedHoveredDevices.length === 0 ? (
-                          <div className="text-muted text-center py-4 fs-11">No {assetLabel.toLowerCase()} match "{siteSearchQuery}"</div>
-                        ) : (
-                          displayedHoveredDevices.map((dev, idx) => {
-                            const dId = String(dev.id || dev.deviceId || idx);
-                            const isDevActive = String(selectedDeviceId) === dId && String(getSiteId(selectedSite)) === hoveredSiteId;
-
-                            return (
-                              <button
-                                key={dId}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectDevice(hoveredSiteObj, dev);
-                                }}
-                                className={`global-cascading-asset-item w-100 d-flex align-items-center justify-content-between text-start ${isDevActive ? 'active' : ''}`}
-                              >
-                                <div className="d-flex align-items-center gap-2.5 overflow-hidden me-2">
-                                  <div className={`global-cascading-asset-icon-box ${isDevActive ? 'active' : ''}`}>
-                                    {renderAssetIcon(15)}
-                                  </div>
-                                  <div className="d-flex flex-column overflow-hidden">
-                                    <span className="global-cascading-item-name text-truncate">
-                                      {dev.name || dev.deviceName || `${assetLabel}-${idx + 1}`}
-                                    </span>
-                                    <span className="fs-10 text-muted text-truncate opacity-75">
-                                      {dev.type || dev.category || assetLabel} {isDevActive ? '• Active' : ''}
-                                    </span>
-                                  </div>
-                                </div>
-                                {isDevActive ? (
-                                  <Check size={14} className="text-success stroke-2 flex-shrink-0" />
-                                ) : (
-                                  <span className="global-cascading-select-hint fs-10 text-muted opacity-60">
-                                    Select
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-            </div>
+            <GlobalSiteAssetDropdown
+              activeSites={activeSites}
+              selectedSite={selectedSite}
+              setSelectedSite={setSelectedSite}
+              moduleHeader={moduleHeader}
+              ModuleIcon={ModuleIcon}
+            />
           )}
         </div>
       )}
 
-      <div className="header-right d-flex align-items-center">
-        {/* Settings Dropdown with Embedded Notifications & Theme Switch */}
-        <Dropdown align="end" className="settings-dropdown-wrapper">
+
+      {/* Right Controls: User Profile & Settings Areas */}
+      <div className="header-right d-flex align-items-center gap-2">
+        {/* 1. USER PROFILE AREA: [ SA ⌵ ] Dropdown */}
+        <Dropdown align="end" className="user-dropdown-wrapper">
           <Dropdown.Toggle 
             variant="custom" 
-            className="settings-toggle-btn d-flex align-items-center gap-2 text-decoration-none border-0"
-            id="header-settings-toggle"
+            className="header-user-avatar-pill border-0 text-decoration-none shadow-none"
+            id="header-user-toggle"
+            aria-label="User profile menu"
           >
-            <div className="settings-icon-circle d-flex align-items-center justify-content-center">
-              <Settings size={16} className="settings-gear-icon" />
+            <div
+              className="d-flex align-items-center justify-content-center rounded-circle fw-bold header-user-avatar-circle"
+              style={{
+                width: '26px',
+                height: '26px',
+                backgroundColor: '#14532d',
+                color: '#4ade80',
+                border: '1px solid rgba(74, 222, 128, 0.5)',
+                fontSize: '11px',
+                letterSpacing: '0.02em',
+                userSelect: 'none'
+              }}
+            >
+              {user?.name ? getUserInitials(user.name) : (userRole?.slice(0, 2).toUpperCase() || 'SA')}
             </div>
-            <span className="settings-toggle-text fw-bold">Settings</span>
-            <ChevronDown size={14} className="settings-chevron-icon opacity-75" />
+            <ChevronDown size={13} className="header-user-chevron" />
           </Dropdown.Toggle>
 
-          <Dropdown.Menu className="settings-dropdown-menu mt-2 p-0 shadow-lg border">
-            {/* Header User Profile Card */}
+          <Dropdown.Menu className="user-dropdown-menu mt-2 p-0 shadow-lg border">
+            {/* User Profile Card */}
             <div className="settings-user-header p-3 border-bottom d-flex align-items-center gap-3">
               <div className="settings-avatar-box rounded-circle d-flex align-items-center justify-content-center">
                 <User size={18} />
@@ -635,23 +109,71 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
               <div className="flex-grow-1 overflow-hidden">
                 <div className="d-flex align-items-center gap-2">
                   <span className="settings-user-name fw-bold text-truncate">
-                    {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : 
-                     userRole?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User'}
+                    {user?.name || (userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Super Admin' : userRole?.toLowerCase() === 'admin' ? 'Administrator' : 'Field User')}
                   </span>
-                  <span className="settings-online-badge">Online</span>
+                  <span className="settings-online-badge">ONLINE</span>
                 </div>
                 <div className="settings-user-role text-muted small text-truncate">
-                  {userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' :
-                   userRole?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator'}
+                  {user?.role || (userRole?.toUpperCase() === 'SUPER_ADMIN' ? 'Global Overseer' : userRole?.toLowerCase() === 'admin' ? 'System Engineer' : 'Operator')}
                 </div>
               </div>
             </div>
 
+            {/* User Account Navigation Items */}
+            <div className="p-2 d-flex flex-column gap-1">
+              <button 
+                type="button" 
+                onClick={() => navigate('/admin/manage-users')}
+                className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+              >
+                <User size={15} className="text-info" />
+                <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Profile</span>
+                <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
+              </button>
+              <button 
+                type="button" 
+                onClick={() => navigate('/audit-logs')}
+                className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+              >
+                <FileText size={15} className="text-primary" />
+                <span className="flex-grow-1" style={{ fontSize: '13px' }}>Activity & Audit Logs</span>
+                <span className="text-muted" style={{ fontSize: '11px' }}>View</span>
+              </button>
+            </div>
+
+            {/* Dropdown Footer: Sign Out */}
+            <div className="p-2 border-top">
+              <button 
+                type="button"
+                className="settings-signout-btn d-flex align-items-center justify-content-center gap-2 w-100 py-2 rounded-2 border-0 fw-bold"
+                onClick={logout}
+              >
+                <LogOut size={15} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </Dropdown.Menu>
+        </Dropdown>
+
+        {/* 2. SETTINGS AREA: [ ⚙ Settings ⌵ ] Dropdown */}
+        <Dropdown align="end" className="settings-dropdown-wrapper">
+          <Dropdown.Toggle 
+            variant="custom" 
+            className="settings-toggle-btn border-0 text-decoration-none shadow-none"
+            id="header-settings-toggle"
+            aria-label="Settings and preferences menu"
+          >
+            <Settings size={15} className="settings-gear-icon" />
+            <span className="settings-toggle-text">Settings</span>
+            <ChevronDown size={13} className="settings-chevron-icon" />
+          </Dropdown.Toggle>
+
+          <Dropdown.Menu className="settings-dropdown-menu mt-2 p-0 shadow-lg border">
             <div className="p-3 d-flex flex-column gap-3">
               {/* Theme Mode Switcher */}
               <div className="settings-section">
                 <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="settings-section-title">Theme Mode</span>
+                  <span className="settings-section-title">THEME MODE</span>
                   <span className="settings-active-pill">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
                 </div>
                 <div className="theme-toggle-segmented d-flex p-1 rounded-3">
@@ -677,7 +199,7 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
               {/* Notifications Setting */}
               <div className="settings-section">
                 <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="settings-section-title">Notifications</span>
+                  <span className="settings-section-title">NOTIFICATIONS</span>
                   <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-0.5 rounded-pill" style={{ fontSize: '10px' }}>
                     3 Alerts
                   </span>
@@ -704,31 +226,36 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
                 </div>
               </div>
 
-              {/* Navigation Items */}
-              <div className="settings-nav-links d-flex flex-column gap-1">
-                <button type="button" className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100">
-                  <User size={15} className="text-info" />
-                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Profile</span>
+              {/* System Navigation Links */}
+              <div className="settings-nav-links d-flex flex-column gap-1 pt-1 border-top" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/settings?tab=global')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <Settings size={15} className="text-warning" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Global Settings</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>Configure</span>
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/manage-organisation')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <Building2 size={15} className="text-primary" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Manage Organisation</span>
                   <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
                 </button>
-                <button type="button" className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100">
-                  <FileText size={15} className="text-primary" />
-                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Activity & Audit Logs</span>
-                  <span className="text-muted" style={{ fontSize: '11px' }}>View</span>
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/admin/manage-users')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <Users size={15} className="text-info" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Management</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
                 </button>
               </div>
-            </div>
-
-            {/* Dropdown Footer / Sign Out */}
-            <div className="p-2 border-top">
-              <button 
-                type="button"
-                className="settings-signout-btn d-flex align-items-center justify-content-center gap-2 w-100 py-2 rounded-2 border-0 fw-bold"
-                onClick={logout}
-              >
-                <LogOut size={15} />
-                <span>Sign Out</span>
-              </button>
             </div>
           </Dropdown.Menu>
         </Dropdown>
@@ -756,6 +283,16 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           background-color: #ffffff !important;
           border-color: #cbd5e1 !important;
           color: #0f172a !important;
+        }
+        body.light-mode .global-module-context {
+          background: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+        }
+        body.light-mode .global-module-title {
+          color: #0f172a !important;
+        }
+        .global-module-title {
+          color: #f8fafc;
         }
         .leading-tight { line-height: 1.1; }
         .fs-8 { font-size: 0.62rem; }
@@ -1146,19 +683,115 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           color: #94a3b8;
         }
 
-        /* ── SETTINGS DROPDOWN & TOGGLE ── */
+        /* ── SETTINGS & USER DROPDOWN TOGGLES ── */
+        .user-dropdown-wrapper .custom-toggle::after,
+        .user-dropdown-wrapper .dropdown-toggle::after,
         .settings-dropdown-wrapper .custom-toggle::after,
         .settings-dropdown-wrapper .dropdown-toggle::after {
           display: none !important;
         }
 
+        /* User Avatar Pill */
+        .header-user-avatar-pill {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          padding: 4px 10px 4px 5px !important;
+          border-radius: 9999px !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          cursor: pointer !important;
+          transition: all 0.18s ease !important;
+          text-decoration: none !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+        }
+
+        .header-user-avatar-pill:hover,
+        .header-user-avatar-pill:focus,
+        .user-dropdown-wrapper.show .header-user-avatar-pill {
+          background: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(255, 255, 255, 0.38) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+        }
+
+        .header-user-chevron {
+          color: #cbd5e1 !important;
+          opacity: 0.85 !important;
+          transition: transform 0.18s ease;
+        }
+
+        .user-dropdown-wrapper.show .header-user-chevron {
+          transform: rotate(180deg);
+        }
+
+        /* Settings Toggle Button Pill */
         .settings-toggle-btn {
-          padding: 6px 14px !important;
-          border-radius: 20px !important;
-          background: rgba(255, 255, 255, 0.07) !important;
-          border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          color: #f8fafc !important;
-          transition: all 0.22s ease !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 7px !important;
+          padding: 5px 14px !important;
+          border-radius: 9999px !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          color: #ffffff !important;
+          font-size: 13.5px !important;
+          font-weight: 600 !important;
+          line-height: 1.2 !important;
+          cursor: pointer !important;
+          transition: all 0.18s ease !important;
+          text-decoration: none !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+        }
+
+        .settings-toggle-btn:hover,
+        .settings-toggle-btn:focus,
+        .settings-dropdown-wrapper.show .settings-toggle-btn {
+          background: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(255, 255, 255, 0.38) !important;
+          color: #ffffff !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+        }
+
+        .settings-toggle-btn .settings-gear-icon {
+          color: #ffffff !important;
+          opacity: 0.95 !important;
+          flex-shrink: 0;
+        }
+
+        .settings-toggle-btn .settings-toggle-text {
+          color: #ffffff !important;
+          font-weight: 600 !important;
+          font-size: 13.5px !important;
+          letter-spacing: -0.01em;
+        }
+
+        .settings-toggle-btn .settings-chevron-icon {
+          color: #cbd5e1 !important;
+          opacity: 0.85 !important;
+          margin-left: 1px !important;
+          transition: transform 0.18s ease;
+        }
+
+        .settings-dropdown-wrapper.show .settings-chevron-icon {
+          transform: rotate(180deg);
+        }
+
+        /* Light Mode Pill Overrides */
+        body.light-mode .header-user-avatar-pill {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+        }
+
+        body.light-mode .header-user-avatar-pill:hover,
+        body.light-mode .header-user-avatar-pill:focus,
+        body.light-mode .user-dropdown-wrapper.show .header-user-avatar-pill {
+          background: #f1f5f9 !important;
+          border-color: #0284c7 !important;
+        }
+
+        body.light-mode .header-user-chevron {
+          color: #64748b !important;
         }
 
         body.light-mode .settings-toggle-btn {
@@ -1168,24 +801,34 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
         }
 
-        .settings-toggle-btn:hover {
-          background: rgba(56, 189, 248, 0.15) !important;
-          border-color: #38bdf8 !important;
-          color: #38bdf8 !important;
-        }
-
-        body.light-mode .settings-toggle-btn:hover {
+        body.light-mode .settings-toggle-btn:hover,
+        body.light-mode .settings-toggle-btn:focus,
+        body.light-mode .settings-dropdown-wrapper.show .settings-toggle-btn {
           background: #f1f5f9 !important;
           border-color: #0284c7 !important;
           color: #0284c7 !important;
         }
 
-        .settings-gear-icon {
-          transition: transform 0.35s ease;
+        body.light-mode .settings-toggle-btn .settings-gear-icon {
+          color: #0f172a !important;
         }
 
-        .settings-toggle-btn:hover .settings-gear-icon {
-          transform: rotate(45deg);
+        body.light-mode .settings-toggle-btn .settings-toggle-text {
+          color: #0f172a !important;
+        }
+
+        body.light-mode .settings-toggle-btn .settings-chevron-icon {
+          color: #64748b !important;
+        }
+
+        .user-dropdown-menu,
+        .settings-dropdown-menu {
+          min-width: 320px !important;
+          border-radius: 14px !important;
+          overflow: hidden !important;
+          background: #0f172a !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65) !important;
         }
 
         .settings-dropdown-menu {

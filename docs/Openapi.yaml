@@ -6,7 +6,7 @@ info:
 servers:
   - url: http://localhost:3001/api/v1
     description: Local Development Gateway
-  - url: https://api.bms.com/v1
+  - url: https://bms-api.sochiot.com/api/v1
     description: Production Gateway
 
 security:
@@ -17,6 +17,12 @@ tags:
     description: Authentication & Identity Management
   - name: Users
     description: User Profile & Role Administration
+  - name: Roles
+    description: Role-Based Access Control (RBAC) Management
+  - name: Permissions
+    description: RBAC System Permissions Catalog
+  - name: Health
+    description: Server Health & Liveness Checks
   - name: Invitations
     description: User Invitation & Access Delegation
   - name: Notifications
@@ -86,6 +92,49 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register New User
+      description: Self-registers a new BMS user account.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "usr_123456789"
+                      name:
+                        type: string
+                        example: "John Doe"
+                      email:
+                        type: string
+                        format: email
+                        example: "john@example.com"
+                      role:
+                        $ref: '#/components/schemas/UserRole'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /auth/refresh:
     post:
       tags: [Auth]
@@ -146,6 +195,48 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Logout All Devices
+      description: Revokes all refresh tokens and sessions across all devices for the current user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out from all devices successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change Current User Password
+      description: Changes password for the authenticated user and revokes existing sessions.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /auth/forgot-password:
     post:
       tags: [Auth]
@@ -198,32 +289,6 @@ paths:
       responses:
         '200':
           description: Password reset successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessMessageResponse'
-
-  /auth/verify-email:
-    post:
-      tags: [Auth]
-      summary: Verify Email Address
-      description: Verifies user account using verification token.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [token]
-              properties:
-                token:
-                  type: string
-            example:
-              token: "v9u8t7s6r5q4..."
-      responses:
-        '200':
-          description: Email verified successfully
           content:
             application/json:
               schema:
@@ -296,7 +361,7 @@ paths:
     post:
       tags: [Users]
       summary: Create User
-      description: Admin endpoint to create a user with multi-node zoneLocations and trigger an email invitation.
+      description: Admin endpoint to create a user with granular locationMappings.
       requestBody:
         required: true
         content:
@@ -307,15 +372,11 @@ paths:
               name: "Rajesh Padhi"
               email: "rajesh@sochiot.com"
               role: "ADMIN"
-              roleId: 2
+              roleId: "cm01ab23cd45ef67gh89"
               tenantId: "c2a8b410-449e-11ee-be56-0242ac120002"
-              zoneLocations:
-                - zoneNodeType: "ZONE"
-                  zoneNodeId: "18"
-                - zoneNodeType: "SITE"
-                  zoneNodeId: "7"
-                - zoneNodeType: "ASSET"
-                  zoneNodeId: "room_101"
+              locationMappings:
+                - siteId: 7
+                  deviceId: 45
       responses:
         '201':
           description: User created successfully
@@ -323,6 +384,132 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get Current User Profile
+      description: Returns the authenticated user's profile with granular dynamically resolved RBAC permissions (`resolvedPermissions`).
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/scope/{scopeType}/{scopeId}:
+    get:
+      tags: [Users]
+      summary: Get Users by Scope
+      description: Retrieve users assigned to a specific hierarchical zone, area, or site node. Requires user:read permission.
+      parameters:
+        - name: scopeType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [ROOT, CLIENT, COMPANY, CONSUMER, ZONE, LOCATION, SITE, ASSET, BUILDING, FLOOR, ROOM]
+        - name: scopeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scoped users list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/bulk-import:
+    post:
+      tags: [Users]
+      summary: Bulk Import Users
+      description: Batch import users from a JSON array or CSV payload. Creates pending users and sends activation email invitations. Requires user:write permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkImportRequest'
+          text/csv:
+            schema:
+              type: string
+              example: "email,name,role,phone\njane@example.com,Jane Doe,OPERATOR,+1234567890"
+      responses:
+        '200':
+          description: Users imported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/export:
+    get:
+      tags: [Users]
+      summary: Export Users
+      description: Export all accessible users in CSV or JSON format. Requires user:read permission.
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+          description: Desired export format
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+          description: Filter export by tenant ID (SuperAdmin only)
+      responses:
+        '200':
+          description: Exported users payload
+          content:
+            text/csv:
+              schema:
+                type: string
+                example: "ID,Name,Email,Role,Role ID,Status,Tenant ID,Created At\n\"cm123\",\"Jane Doe\",\"jane@example.com\",\"OPERATOR\",,\"ACTIVE\",\"tenant_1\",\"2026-10-01T12:00:00.000Z\""
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 25
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /users/{id}:
     get:
@@ -458,8 +645,320 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /users/{id}/permissions:
+    patch:
+      tags: [Users]
+      summary: Update User Feature Permissions
+      description: Updates user feature permissions JSON. Automatically creates or assigns a custom tenant role and sets role to VIEWER (Option b). Requires user:write permission.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [features]
+              properties:
+                features:
+                  type: object
+                  description: Feature permission map or boolean flags
+      responses:
+        '200':
+          description: Feature permissions updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ============================================================
+  # C. RBAC ROLES & PERMISSIONS SERVICE
   # ============================================================
-  # B1. INVITATIONS SERVICE
+  /roles:
+    get:
+      tags: [Roles]
+      summary: List Roles
+      description: Retrieve list of system predefined roles and tenant custom roles. Requires role:manage permission.
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional tenant ID filter (Super Admin only).
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoleResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Roles]
+      summary: Create Custom Role
+      description: Create a custom role with a subset of tenant-entitled permissions. Requires role:manage permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/RoleDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /roles/{id}:
+    get:
+      tags: [Roles]
+      summary: Get Role by ID
+      description: Retrieve details of a specific role by its unique ID. Requires role:manage permission.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Role unique ID
+      responses:
+        '200':
+          description: Role details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/RoleDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Roles]
+      summary: Update Custom Role
+      description: Update name, description, or permissions for a custom role. Predefined system roles are immutable. Requires role:manage permission.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Role unique ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/RoleDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Roles]
+      summary: Delete Custom Role
+      description: Soft delete a custom tenant role. Cannot delete predefined roles or roles assigned to active users. Requires role:manage permission.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Role unique ID
+      responses:
+        '200':
+          description: Role deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      deleted:
+                        type: boolean
+                        example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /roles/{id}/clone:
+    post:
+      tags: [Roles]
+      summary: Clone Role
+      description: Clone an existing predefined or custom role into a new custom tenant role with an explicit unique name. Requires role:manage permission.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of role to clone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloneRoleRequest'
+      responses:
+        '201':
+          description: Role cloned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/RoleDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /permissions:
+    get:
+      tags: [Permissions]
+      summary: List Permissions Catalog
+      description: Retrieve catalog permissions, automatically filtered by the tenant's enabled modules and entitlements. Requires role:manage permission.
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional tenant ID (Super Admin only).
+      responses:
+        '200':
+          description: List of available permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PermissionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ============================================================
+  # D. SYSTEM HEALTH SERVICE
+  # ============================================================
+  /health:
+    get:
+      tags: [Health]
+      summary: Server Health Check
+      description: Returns server operational status and current timestamp. Public endpoint without authentication.
+      security: []
+      responses:
+        '200':
+          description: Server is operational and accepting traffic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+  # ============================================================
+  # E. INVITATIONS SERVICE
   # ============================================================
   /invitations:
     post:
@@ -558,7 +1057,7 @@ paths:
                 $ref: '#/components/schemas/SuccessMessageResponse'
 
   # ============================================================
-  # B2. COMPANIES SERVICE
+  # F. COMPANIES SERVICE
   # ============================================================
   /companies:
     get:
@@ -717,7 +1216,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ============================================================
-  # C. TENANTS / ORGANIZATIONS SERVICE
+  # G. TENANTS / ORGANIZATIONS SERVICE
   # ============================================================
   /tenants:
     get:
@@ -913,7 +1412,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ============================================================
-  # D. ZONES SERVICE
+  # H. ZONES SERVICE
   # ============================================================
   /zones:
     get:
@@ -1030,7 +1529,7 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ============================================================
-  # E. TENANT AREAS SERVICE
+  # I. TENANT AREAS SERVICE
   # ============================================================
   /areas:
     get:
@@ -1176,8 +1675,50 @@ paths:
                 type: object
 
   # ============================================================
-  # F. SITES SERVICE
+  # J. SITES & LOCATIONS SERVICE
   # ============================================================
+  /locations/tree:
+    get:
+      tags: [Sites]
+      summary: Get Unified Location Hierarchy Tree
+      description: "Returns the complete recursive multi-level spatial hierarchy tree ([Company] -> Tenant -> Zone -> TenantArea -> Site -> Asset: Building -> Floor -> Room -> Equipment...). NOTE: Legacy Building model is deprecated; physical hierarchy below Site is derived exclusively from the Asset model."
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+          description: Filter hierarchy by tenant ID (SuperAdmin only)
+        - name: companyId
+          in: query
+          schema:
+            type: string
+          description: Filter hierarchy by company ID (SuperAdmin only)
+        - name: includeCompany
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: When true, returns the tree rooted at Company level (Company -> Tenant -> ...). When false/omitted, preserves backward-compatible Tenant-rooted structure.
+      responses:
+        '200':
+          description: Location hierarchy tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationTreeNode'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /sites:
     get:
       tags: [Sites]
@@ -1353,7 +1894,7 @@ paths:
     post:
       tags: [Telemetry]
       summary: Resync Telemetry Data
-      description: Re-aggregates raw MongoDB events into PostgreSQL rollups for a site over a date range. Requires PERM_INST_MANAGE_DEVICE permission.
+      description: Re-aggregates raw MongoDB events into PostgreSQL rollups for a site over a date range. Requires device:write permission.
       parameters:
         - name: siteId
           in: path
@@ -1375,7 +1916,7 @@ paths:
                 $ref: '#/components/schemas/SuccessMessageResponse'
 
   # ============================================================
-  # F1. BUILDINGS SERVICE
+  # J1. BUILDINGS SERVICE
   # ============================================================
   /sites/{siteId}/buildings:
     get:
@@ -1539,7 +2080,7 @@ paths:
                 $ref: '#/components/schemas/SuccessMessageResponse'
 
   # ============================================================
-  # G. ASSETS SERVICE (Building -> Floor -> Area -> Cubicle -> Equipment)
+  # K. ASSETS SERVICE (Building -> Floor -> Area -> Cubicle -> Equipment)
   # ============================================================
   /sites/{siteId}/assets:
     get:
@@ -2008,7 +2549,7 @@ paths:
                       $ref: '#/components/schemas/Device'
 
   # ============================================================
-  # H. DEVICE PROFILES, DEVICES, WIDGETS, RULES & COMMANDS SERVICE
+  # L. DEVICE PROFILES, DEVICES, WIDGETS, RULES & COMMANDS SERVICE
   # ============================================================
   /profiles:
     get:
@@ -2061,7 +2602,7 @@ paths:
     post:
       tags: [DeviceProfiles]
       summary: Create Device Profile
-      description: Creates a new device profile schema defining field mappings, default telemetry thresholds, and dashboard config. Requires ADMIN permission. Category must be unique.
+      description: Creates a new device profile schema defining field mappings, default telemetry thresholds, and dashboard config. Requires profile:manage permission. Category must be unique.
       requestBody:
         required: true
         content:
@@ -2224,7 +2765,7 @@ paths:
     patch:
       tags: [DeviceProfiles]
       summary: Update Device Profile
-      description: Updates an existing device profile's attributes, field mappings, thresholds, or dashboard configuration. Requires ADMIN permission.
+      description: Updates an existing device profile's attributes, field mappings, thresholds, or dashboard configuration. Requires profile:manage permission.
       parameters:
         - name: profileId
           in: path
@@ -2274,7 +2815,7 @@ paths:
     delete:
       tags: [DeviceProfiles]
       summary: Delete (Deactivate) Device Profile
-      description: Soft deletes a device profile by setting isActive to false. Requires ADMIN permission.
+      description: Soft deletes a device profile by setting isActive to false. Requires profile:manage permission.
       parameters:
         - name: profileId
           in: path
@@ -2395,7 +2936,7 @@ paths:
       description: |
         Update device attributes, category, relations (area, building, asset, energy group), or configuration by internal device ID.
         The associated `siteId` can be supplied via query parameter (`?siteId=...`), in the request body (`siteId`), or omitted completely (in which case it is automatically resolved from the device record).
-        Requires `PERM_INST_MANAGE_DEVICE` permission. For non-superadmin users, multi-tenant site access is strictly verified against the user's permitted sites.
+        Requires `device:write` permission. For non-superadmin users, multi-tenant site access is strictly verified against the user's permitted sites.
       security:
         - BearerAuth: []
       parameters:
@@ -2578,7 +3119,7 @@ paths:
     post:
       tags: [Devices]
       summary: Global Device Event & Telemetry Resync
-      description: Resyncs device raw telemetry events from MongoDB into PostgreSQL rollups starting from a given date. Requires PERM_INST_MANAGE_DEVICE permission.
+      description: Resyncs device raw telemetry events from MongoDB into PostgreSQL rollups starting from a given date. Requires device:write permission.
       requestBody:
         required: true
         content:
@@ -3214,7 +3755,7 @@ paths:
                           $ref: '#/components/schemas/ModuleActionLog'
 
   # ============================================================
-  # H1. DEVICE RULES SERVICE
+  # L1. DEVICE RULES SERVICE
   # ============================================================
   /sites/{siteId}/devices/{deviceId}/rules:
     get:
@@ -3497,7 +4038,7 @@ paths:
                 $ref: '#/components/schemas/SuccessMessageResponse'
 
   # ============================================================
-  # H2. DEVICE WIDGETS SERVICE
+  # L2. DEVICE WIDGETS SERVICE
   # ============================================================
   /sites/{siteId}/devices/{deviceId}/widgets:
     get:
@@ -3874,7 +4415,7 @@ paths:
                 $ref: '#/components/schemas/SuccessMessageResponse'
 
   # ============================================================
-  # H3. HARDWARE COMMANDS SERVICE
+  # L3. HARDWARE COMMANDS SERVICE
   # ============================================================
   /sites/{siteId}/devices/{deviceId}/commands:
     get:
@@ -3979,7 +4520,7 @@ paths:
                     $ref: '#/components/schemas/DeviceCommand'
 
   # ============================================================
-  # H4. TELEMETRY SERVICE
+  # L4. TELEMETRY SERVICE
   # ============================================================
   /sites/{siteId}/devices/{deviceId}/telemetry/snapshots:
     get:
@@ -4074,7 +4615,7 @@ paths:
     post:
       tags: [Telemetry]
       summary: Resync Single Device Telemetry
-      description: Re-aggregates raw MongoDB events into PostgreSQL rollups for a single device over a date range. Requires PERM_INST_MANAGE_DEVICE permission.
+      description: Re-aggregates raw MongoDB events into PostgreSQL rollups for a single device over a date range. Requires device:write permission.
       parameters:
         - name: siteId
           in: path
@@ -4217,7 +4758,7 @@ paths:
                 $ref: '#/components/schemas/SiteEnergySummaryResponse'
 
   # ============================================================
-  # I. NOTIFICATION SERVICE
+  # M. NOTIFICATION SERVICE
   # ============================================================
   /notifications/send:
     post:
@@ -4260,7 +4801,7 @@ paths:
           description: Paginated in-app notifications
 
   # ============================================================
-  # J. TICKETS, REPORTS & ALARMS
+  # N. TICKETS, REPORTS & ALARMS
   # ============================================================
   /reports/generate:
     post:
@@ -4289,6 +4830,7 @@ paths:
       responses:
         '201':
           description: Alarm triggered
+
 
 components:
   securitySchemes:
@@ -4356,87 +4898,561 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
-    # --- ENUMS ---
+    # ============================================================
+    # 1. AUTHENTICATION & IDENTITY SCHEMAS
+    # ============================================================
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        rememberMe:
+          type: boolean
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "StrongPassword@123"
+        phone:
+          type: string
+          nullable: true
+          example: "+1234567890"
+        tenantId:
+          type: string
+          example: "cm01ab23cd45ef67gh89"
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          example: "OldPassword@123"
+        newPassword:
+          type: string
+          minLength: 8
+          example: "NewStrongPassword@123"
+
+    AuthUser:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Super Admin"
+        email:
+          type: string
+          format: email
+          example: "sa@ismartaccess.com"
+        role:
+          $ref: '#/components/schemas/UserRole'
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["*"]
+        features:
+          type: object
+          additionalProperties:
+            type: boolean
+        locationMappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationMapping'
+        scopeType:
+          type: string
+          example: "TENANT"
+        scopeId:
+          type: string
+          example: "cmsfq874j0002bsiaumzb92j7"
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/AuthUser'
+            accessToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1Ni..."
+            refreshToken:
+              type: string
+              example: "7f9a8b1c2d3e4f5a6b7c8d9e0f..."
+            expiresIn:
+              type: integer
+              example: 900
+
+    SochiotTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              description: Sochiot auth bearer token
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    # ============================================================
+    # 2. USER MANAGEMENT SCHEMAS
+    # ============================================================
     UserRole:
       type: string
       enum: [SUPER_ADMIN, ADMIN, MANAGER, OPERATOR, VIEWER]
+
     UserStatus:
       type: string
       enum: [ACTIVE, INACTIVE, SUSPENDED, PENDING_VERIFICATION]
-    CompanyStatus:
-      type: string
-      enum: [ACTIVE, INACTIVE, SUSPENDED]
-    AssetType:
-      type: string
-      enum: [BUILDING, FLOOR, AREA, ROOM, CUBICLE, EQUIPMENT, MACHINE, LINE, PANEL, DG, LT_ROOM, PUMP_ROOM, OTHER]
-    AssetStatus:
-      type: string
-      enum: [ACTIVE, INACTIVE, MAINTENANCE]
-    DeviceCategory:
-      type: string
-      enum:
-        - ENERGY_METER
-        - MAIN_ENERGY_METER
-        - SUB_ENERGY_METER
-        - UG_TANK
-        - AG_TANK
-        - PUMP
-        - VALVE
-        - GENERATOR
-        - LT_PANEL
-        - FIRE_PUMP
-        - HVAC_CHILLER
-        - HVAC_AHU
-        - HVAC_COOLING_TOWER
-        - VRV
-        - AQI_SENSOR
-        - BREAKER
-        - STP
-        - WTP
-        - LIFT
-        - LIGHTING
-        - FIRE_PANEL
-        - CONTROLLER
-        - SENSOR
-        - AC
-        - OTHER
-    FunctionalSystem:
-      type: string
-      enum:
-        - WATER_SUPPLY
-        - SEWAGE
-        - WATER_TREATMENT
-        - DG_POWER
-        - ELECTRICAL
-        - FIRE_SAFETY
-        - HVAC
-        - LIGHTING_CONTROL
-        - LIFT_ELEVATOR
-        - AIR_QUALITY
-        - GENERIC
-    AlarmSeverity:
-      type: string
-      enum: [INFO, WARNING, CRITICAL]
-    FieldDataType:
-      type: string
-      enum: [INTEGER, FLOAT, STRING, BOOLEAN, ENUM]
-    TelemetryType:
-      type: string
-      enum: [AVERAGE, MIN, MAX, SUM, LAST]
-    ReportWidgetType:
-      type: string
-      enum: [OVERALL, INDIVIDUAL, COMPARATIVE]
-    SamplingInterval:
-      type: string
-      enum: [MIN_15, HOURLY, DAILY, MONTHLY]
-    ActionSource:
-      type: string
-      enum: [USER, RULE_ENGINE, SCHEDULE, SYSTEM]
-    CommandStatus:
-      type: string
-      enum: [SENT, ACKNOWLEDGED, FAILED, TIMED_OUT]
 
-    # --- RESPONSES ---
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "usr_123456789"
+        name:
+          type: string
+          example: "Rajesh Padhi"
+        email:
+          type: string
+          format: email
+          example: "rajesh@sochiot.com"
+        role:
+          $ref: '#/components/schemas/UserRole'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        tenantId:
+          type: string
+          nullable: true
+        roleId:
+          type: string
+          nullable: true
+          example: "cm01ab23cd45ef67gh89"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["device:read", "ticket:read", "report:read"]
+        resolvedPermissions:
+          type: array
+          items:
+            type: string
+        locationMappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationMapping'
+        createdAt:
+          type: string
+          format: date-time
+
+    LocationMapping:
+      type: object
+      description: Granular location mapping associating a user to a specific node in the hierarchy
+      properties:
+        companyId:
+          type: string
+          nullable: true
+          example: "comp-1"
+        tenantId:
+          type: string
+          nullable: true
+          example: "c2a8b410-449e-11ee-be56-0242ac120002"
+        zoneId:
+          type: string
+          nullable: true
+          example: "zone-12"
+        tenantAreaId:
+          type: string
+          nullable: true
+          example: "area-3"
+        siteId:
+          type: integer
+          nullable: true
+          example: 7
+        areaId:
+          type: integer
+          nullable: true
+          example: 4
+        assetId:
+          type: string
+          nullable: true
+          example: "asset-101"
+        deviceId:
+          type: integer
+          nullable: true
+          example: 45
+
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          example: "Rajesh Padhi"
+        email:
+          type: string
+          format: email
+          example: "rajesh@sochiot.com"
+        role:
+          $ref: '#/components/schemas/UserRole'
+        roleId:
+          type: string
+          nullable: true
+          example: "cm01ab23cd45ef67gh89"
+        roleType:
+          type: string
+          nullable: true
+          example: "CUSTOM"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["device:read", "site:read"]
+        tenantId:
+          type: string
+          nullable: true
+          example: "c2a8b410-449e-11ee-be56-0242ac120002"
+        locationMappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationMapping'
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          description: New password for the user
+        phone:
+          type: string
+        employeeId:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        roleId:
+          oneOf:
+            - type: string
+            - type: integer
+          nullable: true
+          example: "cm01ab23cd45ef67gh89"
+        roleType:
+          type: string
+          nullable: true
+          example: "CUSTOM"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["device:read", "site:read"]
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        features:
+          type: object
+        locationMappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationMapping'
+
+    BulkImportUserItem:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user1@example.com"
+        name:
+          type: string
+          example: "Alex Johnson"
+        role:
+          $ref: '#/components/schemas/UserRole'
+        roleId:
+          oneOf:
+            - type: string
+            - type: integer
+          nullable: true
+        roleType:
+          type: string
+          nullable: true
+        tenantId:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        employeeId:
+          type: string
+          nullable: true
+        locationMappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationMapping'
+
+    BulkImportRequest:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkImportUserItem'
+
+    BulkImportResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 5
+            created:
+              type: integer
+              example: 4
+            failed:
+              type: integer
+              example: 1
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  row:
+                    type: integer
+                    example: 3
+                  email:
+                    type: string
+                    example: "duplicate@example.com"
+                  reason:
+                    type: string
+                    example: "User with this email already exists"
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    LocationTreeNode:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cm01ab23cd45ef67gh89"
+        name:
+          type: string
+          example: "North Wing Floor 2"
+        type:
+          type: string
+          enum: [COMPANY, TENANT, ZONE, AREA, SITE, BUILDING, FLOOR, ROOM, CUBICLE, EQUIPMENT, MACHINE, LINE, PANEL, DG, LT_ROOM, PUMP_ROOM, OTHER, ASSET]
+          example: "FLOOR"
+        parentId:
+          type: string
+          nullable: true
+          example: "cm01ab23cd45ef67gh00"
+        siteId:
+          type: integer
+          nullable: true
+          example: 7
+        sochiotLocationId:
+          type: integer
+          nullable: true
+          example: 7
+        address:
+          type: string
+          nullable: true
+          example: "Sector 63, Noida"
+        city:
+          type: string
+          nullable: true
+          example: "Noida"
+        assetType:
+          type: string
+          nullable: true
+          example: "FLOOR"
+        depth:
+          type: integer
+          nullable: true
+          example: 1
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationTreeNode'
+
+    # ============================================================
+    # 3. RBAC ROLES & PERMISSIONS SCHEMAS
+    # ============================================================
+    RoleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cm01ab23cd45ef67gh89"
+        name:
+          type: string
+          example: "Operations Supervisor"
+        description:
+          type: string
+          nullable: true
+          example: "Supervises site operators and controls assets"
+        isPredefined:
+          type: boolean
+          example: false
+        tenantId:
+          type: string
+          nullable: true
+          example: "c2a8b410-449e-11ee-be56-0242ac120002"
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["device:read", "device:control", "alarm:read", "alarm:acknowledge"]
+        userCount:
+          type: integer
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RoleDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/RoleResponse'
+
+    CreateRoleRequest:
+      type: object
+      required:
+        - name
+        - permissionCodes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Night Shift Operator"
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: "Night shift monitoring role"
+        permissionCodes:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          example: ["device:read", "alarm:read", "alarm:acknowledge"]
+        tenantId:
+          type: string
+          description: Optional tenant ID (Super Admin only).
+          example: "c2a8b410-449e-11ee-be56-0242ac120002"
+
+    UpdateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Lead Shift Operator"
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: "Updated description for lead operator"
+        permissionCodes:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          example: ["device:read", "alarm:read", "alarm:acknowledge", "ticket:create"]
+
+    CloneRoleRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Custom Facility Manager"
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: "Cloned from Facility Manager with adjustments"
+
+    PermissionResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "device:control"
+        name:
+          type: string
+          example: "Control Devices"
+        category:
+          type: string
+          example: "device"
+        description:
+          type: string
+          example: "Send control commands, reset setpoints, and trigger device actions"
+        implies:
+          type: array
+          items:
+            type: string
+          example: ["device:read"]
+
+    # ============================================================
+    # 4. COMMON RESPONSES & PAGINATION SCHEMAS
+    # ============================================================
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-01T06:22:30.000Z"
+
     SuccessMessageResponse:
       type: object
       properties:
@@ -4502,40 +5518,95 @@ components:
           example: 3
 
     # --- ENTITY MODELS ---
-    User:
-      type: object
-      properties:
-        id:
-          type: string
-          example: "usr_123456789"
-        name:
-          type: string
-          example: "Rajesh Padhi"
-        email:
-          type: string
-          format: email
-          example: "rajesh@sochiot.com"
-        role:
-          $ref: '#/components/schemas/UserRole'
-        status:
-          $ref: '#/components/schemas/UserStatus'
-        tenantId:
-          type: string
-          nullable: true
-        zoneLocations:
-          type: array
-          items:
-            type: object
-            properties:
-              zoneNodeType:
-                type: string
-                example: "ZONE"
-              zoneNodeId:
-                type: string
-                example: "18"
-        createdAt:
-          type: string
-          format: date-time
+
+    # ============================================================
+    # 5. DOMAIN ENTITY & REQUEST/RESPONSE SCHEMAS
+    # ============================================================
+    CompanyStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, SUSPENDED]
+
+    AssetType:
+      type: string
+      enum: [BUILDING, FLOOR, AREA, ROOM, CUBICLE, EQUIPMENT, MACHINE, LINE, PANEL, DG, LT_ROOM, PUMP_ROOM, OTHER]
+
+    AssetStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, MAINTENANCE]
+
+    DeviceCategory:
+      type: string
+      enum:
+        - ENERGY_METER
+        - MAIN_ENERGY_METER
+        - SUB_ENERGY_METER
+        - UG_TANK
+        - AG_TANK
+        - PUMP
+        - VALVE
+        - GENERATOR
+        - LT_PANEL
+        - FIRE_PUMP
+        - HVAC_CHILLER
+        - HVAC_AHU
+        - HVAC_COOLING_TOWER
+        - VRV
+        - AQI_SENSOR
+        - BREAKER
+        - STP
+        - WTP
+        - LIFT
+        - LIGHTING
+        - FIRE_PANEL
+        - CONTROLLER
+        - SENSOR
+        - AC
+        - OTHER
+
+    FunctionalSystem:
+      type: string
+      enum:
+        - WATER_SUPPLY
+        - SEWAGE
+        - WATER_TREATMENT
+        - DG_POWER
+        - ELECTRICAL
+        - FIRE_SAFETY
+        - HVAC
+        - LIGHTING_CONTROL
+        - LIFT_ELEVATOR
+        - AIR_QUALITY
+        - GENERIC
+
+    AlarmSeverity:
+      type: string
+      enum: [INFO, WARNING, CRITICAL]
+
+    FieldDataType:
+      type: string
+      enum: [INTEGER, FLOAT, STRING, BOOLEAN, ENUM]
+
+    TelemetryType:
+      type: string
+      enum: [AVERAGE, MIN, MAX, SUM, LAST]
+
+    ReportWidgetType:
+      type: string
+      enum: [OVERALL, INDIVIDUAL, COMPARATIVE]
+
+    SamplingInterval:
+      type: string
+      enum: [MIN_15, HOURLY, DAILY, MONTHLY]
+
+    ActionSource:
+      type: string
+      enum: [USER, RULE_ENGINE, SCHEDULE, SYSTEM]
+
+    CommandStatus:
+      type: string
+      enum: [SENT, ACKNOWLEDGED, FAILED, TIMED_OUT]
+
+    # --- RESPONSES ---
 
     Invitation:
       type: object
@@ -5767,168 +6838,6 @@ components:
           format: date-time
 
     # --- REQUEST BODY SCHEMAS ---
-    LoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-        rememberMe:
-          type: boolean
-
-    AuthUser:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "Super Admin"
-        email:
-          type: string
-          format: email
-          example: "sa@ismartaccess.com"
-        role:
-          $ref: '#/components/schemas/UserRole'
-        permissions:
-          type: array
-          items:
-            type: string
-          example: ["*"]
-        features:
-          type: object
-          additionalProperties:
-            type: boolean
-        zoneLocations:
-          type: array
-          items:
-            type: object
-        scopeType:
-          type: string
-          example: "TENANT"
-        scopeId:
-          type: string
-          example: "cmsfq874j0002bsiaumzb92j7"
-
-    AuthResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          properties:
-            user:
-              $ref: '#/components/schemas/AuthUser'
-            accessToken:
-              type: string
-              example: "eyJhbGciOiJIUzI1Ni..."
-            refreshToken:
-              type: string
-              example: "7f9a8b1c2d3e4f5a6b7c8d9e0f..."
-            expiresIn:
-              type: integer
-              example: 900
-
-    SochiotTokenResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          properties:
-            token:
-              type: string
-              description: Sochiot auth bearer token
-              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-
-    CreateUserRequest:
-      type: object
-      required: [name, email, role, roleId]
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        role:
-          $ref: '#/components/schemas/UserRole'
-        roleId:
-          type: integer
-        tenantId:
-          type: string
-        features:
-          type: object
-          description: Feature permission flags for the user
-          properties:
-            dashboard:
-              type: boolean
-              example: true
-            reports:
-              type: boolean
-              example: true
-            alarm:
-              type: boolean
-              example: true
-            ackAlarm:
-              type: boolean
-              example: true
-            ticket:
-              type: boolean
-              example: true
-            serviceHistory:
-              type: boolean
-              example: true
-            dpr:
-              type: boolean
-              example: true
-        zoneLocations:
-          type: array
-          items:
-            type: object
-            properties:
-              zoneNodeType:
-                type: string
-              zoneNodeId:
-                type: string
-
-    UpdateUserRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 6
-          description: New password for the user
-        phone:
-          type: string
-        employeeId:
-          type: string
-        role:
-          $ref: '#/components/schemas/UserRole'
-        roleId:
-          type: integer
-        status:
-          $ref: '#/components/schemas/UserStatus'
-        features:
-          type: object
-        zoneLocations:
-          type: array
-          items:
-            type: object
-            properties:
-              zoneNodeType:
-                type: string
-              zoneNodeId:
-                type: string
 
     CreateInvitationRequest:
       type: object
@@ -7092,3 +8001,5 @@ components:
                         totalKwh:
                           type: number
                           example: 14250.75
+
+    # --- RBAC SCHEMAS ---

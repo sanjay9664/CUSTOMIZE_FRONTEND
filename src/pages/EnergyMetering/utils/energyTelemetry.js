@@ -42,9 +42,9 @@ export const PARAMETER_SYNONYMS = {
   vLNAvg: ['AVG VOLTAGE L-N', 'V_LN_AVG', 'AVG VLN', 'VLN AVG', 'Avg Voltage L-N', 'Average Voltage Line-to-Neutral (V L-N)', 'AVERAGE VOLTAGE LINE-TO-NEUTRAL (V L-N)', 'Generator L-N voltage average', 'Phase-to-Neutral Voltage (V L-N)', '4,15'],
 
   // Currents
-  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current', 'R-PHASE CURRENT', 'Current', 'CURRENT', '4,22F', 'Phase L1 Current (A L1)', 'PHASE L1 CURRENT (A L1)', 'Phase L1 Current', 'Generator L1 current', 'Phase Current (A Amperes)', '4,21'],
-  iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current', 'Y-PHASE CURRENT', 'Phase L2 Current (A L2)', 'PHASE L2 CURRENT (A L2)', 'Phase L2 Current', 'Generator L2 current', '4,22'],
-  iB: ['3,173', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current', 'B-PHASE CURRENT', 'Phase L3 Current (A L3)', 'PHASE L3 CURRENT (A L3)', 'Phase L3 Current', 'Generator L3 current', '4,23'],
+  iR: ['3,171', '3,166', 'CURRENT R', 'CURRENT_R', 'IR', 'I_R', 'IA', 'A1', 'LINE AMPS (R)', 'R-CURRENT', 'R-Current', 'R-PHASE CURRENT', 'R-Phase Current (A)', 'R Phase Current', 'R Current (A)', 'Phase Current R', 'Current', 'CURRENT', '4,22F', 'Phase L1 Current (A L1)', 'PHASE L1 CURRENT (A L1)', 'Phase L1 Current', 'Current L1', 'Generator L1 current', 'Phase Current (A Amperes)', '4,21'],
+  iY: ['3,172', '3,167', 'CURRENT Y', 'CURRENT_Y', 'IY', 'I_Y', 'A2', 'LINE AMPS (Y)', 'Y-CURRENT', 'Y-current', 'Y-Current', 'Y-PHASE CURRENT', 'Y-Phase Current (A)', 'Y Phase Current', 'Y Current (A)', 'Phase Current Y', 'Phase L2 Current (A L2)', 'PHASE L2 CURRENT (A L2)', 'Phase L2 Current', 'Current L2', 'Generator L2 current', '4,22'],
+  iB: ['3,173', 'CURRENT B', 'CURRENT_B', 'IB', 'I_B', 'IC', 'A3', 'LINE AMPS (B)', 'B-CURRENT', 'B-current', 'B-Current', 'B-PHASE CURRENT', 'B-Phase Current (A)', 'B Phase Current', 'B Current (A)', 'Phase Current B', 'Phase L3 Current (A L3)', 'PHASE L3 CURRENT (A L3)', 'Phase L3 Current', 'Current L3', 'Generator L3 current', '4,23'],
   iAvg: ['AVG CURRENT', 'I_AVG', 'IAVG', 'Avg Current', 'AVERAGE CURRENT', 'Phase Current (A Amperes)', 'Generator Average Current'],
 
   // Power Factors
@@ -339,23 +339,35 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       const val = isNaN(num) ? item.value : num;
 
       if (
-        sName.includes('r-phase volt') || sName === 'voltage-r' || sName === 'voltage r' ||
-        sName === 'voltage ln' || sName.includes('voltage ln') || sName.includes('voltage line-to-neutral') ||
-        sName.includes('average voltage line-to-neutral') || sName === 'vln' || sName === 'ua' || sName === 'vr'
+        sName.includes('r-phase volt') || sName.includes('r-volt') || sName === 'voltage-r' || sName === 'voltage r' || sName === 'r voltage' ||
+        (!sName.includes('current') && (sName === 'voltage ln' || sName.includes('voltage ln') || sName.includes('voltage line-to-neutral') ||
+        sName.includes('average voltage line-to-neutral') || sName === 'vln' || sName === 'ua' || sName === 'vr' || sName.includes('phase l1 volt') || sName.includes('l1 volt')))
       ) {
         canonicalUpdates.vR = val;
         canonicalUpdates.vLNAvg = val;
-      } else if (sName.includes('y-phase volt') || sName === 'voltage-y' || sName === 'voltage y' || sName === 'ub' || sName === 'vy') canonicalUpdates.vY = val;
-      else if (sName.includes('b-phase volt') || sName === 'voltage-b' || sName === 'voltage b' || sName === 'uc' || sName === 'vb') canonicalUpdates.vB = val;
-      else if (sName.includes('line-to-line voltage') || sName.includes('voltage l1-l2') || sName.includes('l1-l2 voltage') || sName.includes('voltage r-y') || sName === 'vry') {
+      } else if (sName.includes('y-phase volt') || sName.includes('y-volt') || sName === 'voltage-y' || sName === 'voltage y' || sName === 'y voltage' || sName.includes('phase l2 volt') || sName.includes('l2 volt') || sName === 'ub' || sName === 'vy') {
+        canonicalUpdates.vY = val;
+      } else if (sName.includes('b-phase volt') || sName.includes('b-volt') || sName === 'voltage-b' || sName === 'voltage b' || sName === 'b voltage' || sName.includes('phase l3 volt') || sName.includes('l3 volt') || sName === 'uc' || sName === 'vb') {
+        canonicalUpdates.vB = val;
+      } else if (sName.includes('line-to-line voltage') || sName.includes('voltage l1-l2') || sName.includes('l1-l2 voltage') || sName.includes('voltage r-y') || sName === 'vry') {
         canonicalUpdates.vRY = val;
         canonicalUpdates.vLLAvg = val;
       } else if (
-        sName.includes('r-current') || sName === 'current-r' || sName === 'current r' || sName.includes('phase l1 current') || sName.includes('l1 current') ||
+        sName.includes('r-phase current') || sName.includes('r-current') || sName.includes('r current') || sName === 'current-r' || sName === 'current r' || sName.includes('phase current r') || sName.includes('phase l1 current') || sName.includes('l1 current') || sName.includes('current l1') ||
         sName === 'current' || sName === 'line amps (r)' || sName === 'ia' || sName === 'ir'
-      ) canonicalUpdates.iR = val;
-      else if (sName.includes('y-current') || sName === 'current-y' || sName === 'current y' || sName.includes('phase l2 current') || sName.includes('l2 current') || sName === 'ib' || sName === 'iy') canonicalUpdates.iY = val;
-      else if (sName.includes('b-current') || sName === 'current-b' || sName === 'current b' || sName.includes('phase l3 current') || sName.includes('l3 current') || sName === 'ic' || sName === 'ib') canonicalUpdates.iB = val;
+      ) {
+        canonicalUpdates.iR = val;
+      } else if (
+        sName.includes('y-phase current') || sName.includes('y-current') || sName.includes('y current') || sName === 'current-y' || sName === 'current y' || sName.includes('phase current y') || sName.includes('phase l2 current') || sName.includes('l2 current') || sName.includes('current l2') ||
+        sName === 'line amps (y)' || sName === 'iy' || sName === 'a2'
+      ) {
+        canonicalUpdates.iY = val;
+      } else if (
+        sName.includes('b-phase current') || sName.includes('b-current') || sName.includes('b current') || sName === 'current-b' || sName === 'current b' || sName.includes('phase current b') || sName.includes('phase l3 current') || sName.includes('l3 current') || sName.includes('current l3') ||
+        sName === 'line amps (b)' || sName === 'ib' || sName === 'ic' || sName === 'a3'
+      ) {
+        canonicalUpdates.iB = val;
+      }
       else if (
         sName.includes('max.dmd-kwh') || sName.includes('max.dmd kwh') || sName.includes('max demand kwh')
       ) canonicalUpdates.maxDmdKwh = val;

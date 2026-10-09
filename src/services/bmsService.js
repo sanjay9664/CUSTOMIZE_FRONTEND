@@ -1,4 +1,4 @@
-import apiClient, { normalizeList } from './apiClient';
+import apiClient, { normalizeList } from './apiClient.js';
 
 /**
  * Standardized BMS API Service Layer
@@ -10,6 +10,30 @@ export const bmsService = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   logout: () => apiClient.post('/auth/logout'),
   getCurrentUser: () => apiClient.get('/auth/me'),
+
+  // Users Service
+  getUsers: (params = {}) => apiClient.get('/users', params),
+  getUser: (id) => apiClient.get(`/users/${id}`),
+  createUser: (data) => apiClient.post('/users', data),
+  updateUser: (id, data) => apiClient.patch(`/users/${id}`, data),
+  deleteUser: (id) => apiClient.delete(`/users/${id}`),
+  unlockUser: (id) => apiClient.post(`/users/${id}/unlock`),
+  adminChangePassword: (id, data) => apiClient.post(`/users/${id}/change-password`, data),
+  updateUserPermissions: (id, data) => apiClient.patch(`/users/${id}/permissions`, data),
+
+  // RBAC Roles Service
+  getRoles: (params = {}) => apiClient.get('/roles', params),
+  getRole: (id) => apiClient.get(`/roles/${id}`),
+  createRole: (data) => apiClient.post('/roles', data),
+  updateRole: (id, data) => apiClient.patch(`/roles/${id}`, data),
+  deleteRole: (id) => apiClient.delete(`/roles/${id}`),
+  cloneRole: (id, data) => apiClient.post(`/roles/${id}/clone`, data),
+
+  // RBAC Permissions Catalog
+  getPermissions: (params = {}) => apiClient.get('/permissions', params),
+
+  // Unified Location Hierarchy
+  getLocationTree: (params = {}) => apiClient.get('/locations/tree', params),
 
   // Companies Service
   getCompanies: (params = {}) => apiClient.get('/companies', params),
