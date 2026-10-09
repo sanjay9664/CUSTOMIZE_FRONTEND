@@ -482,9 +482,16 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
                               <div
                                 key={sId}
                                 onMouseEnter={() => setHoveredSiteId(sId)}
-                                onClick={() => setHoveredSiteId(sId)}
+                                onClick={() => {
+                                  if (devCount === 0) {
+                                    handleSelectSiteOnly(site);
+                                  } else {
+                                    setHoveredSiteId(sId);
+                                  }
+                                }}
                                 className={`global-cascading-site-item d-flex align-items-center justify-content-between ${isHovered ? 'hovered' : ''} ${isSelectedSite ? 'active' : ''}`}
-                                title={`Click to view ${site.name} devices`}
+                                style={{ cursor: 'pointer' }}
+                                title={devCount === 0 ? `Click to select ${site.name}` : `View ${site.name} ${assetLabel.toLowerCase()}`}
                               >
                                 <div className="d-flex align-items-center gap-2 overflow-hidden me-2">
                                   <Building2 size={15} className={`flex-shrink-0 ${isSelectedSite ? 'text-primary' : 'text-dim'}`} />
@@ -498,7 +505,7 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
                                       {devCount} {assetLabel}
                                     </span>
                                   ) : (
-                                    <span className="global-cascading-count-pill zero">0</span>
+                                    <span className="global-cascading-count-pill zero" title="0 sub-assets • Click to select">0</span>
                                   )}
                                   <ChevronRight size={13} className={`global-cascading-chevron-right ${isHovered ? 'active' : 'opacity-60'}`} />
                                 </div>
@@ -534,16 +541,24 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
 
                       <div className="global-cascading-list-scroll">
                         {hoveredDevices.length === 0 ? (
-                          <div className="global-cascading-empty text-center py-4 px-3">
+                          <div 
+                            className="global-cascading-empty text-center py-4 px-3"
+                            onClick={() => handleSelectSiteOnly(hoveredSiteObj)}
+                            style={{ cursor: 'pointer' }}
+                            title={`Click to select ${hoveredSiteObj?.name || 'this site'}`}
+                          >
                             <Cpu size={24} className="text-muted opacity-40 mb-2" />
                             <div className="fs-12 fw-bold text-white mb-1">No {assetLabel} Mapped</div>
                             <div className="fs-11 text-muted mb-3">No {assetLabel.toLowerCase()} registered under {hoveredSiteObj?.name || 'this site'}</div>
                             <button
                               type="button"
-                              onClick={() => handleSelectSiteOnly(hoveredSiteObj)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectSiteOnly(hoveredSiteObj);
+                              }}
                               className="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fs-11 fw-bold"
                             >
-                              Select {hoveredSiteObj?.name || 'Site'} Anyway
+                              Select {hoveredSiteObj?.name || 'Site'} Directly
                             </button>
                           </div>
                         ) : displayedHoveredDevices.length === 0 ? (
