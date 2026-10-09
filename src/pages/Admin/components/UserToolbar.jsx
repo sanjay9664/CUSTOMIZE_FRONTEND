@@ -178,15 +178,15 @@ export const UserToolbar = ({
 
       {/* ── Right Action Controls: Export + Additional Action Buttons ── */}
       <div className="d-flex flex-wrap align-items-center gap-2">
-        {/* Export Button matching Figma */}
+        {/* Import / Export Button matching Figma */}
         <button
           type="button"
           onClick={onExport}
           className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 fw-medium user-toolbar-pill-btn user-toolbar-export-btn"
-          title="Export users data as CSV"
+          title="Import or Export users data"
         >
           <Download size={14} />
-          <span>Export</span>
+          <span>Import / Export</span>
         </button>
 
         {/* Our Additional Action: Manage Roles */}
@@ -203,7 +203,7 @@ export const UserToolbar = ({
         )}
 
         {/* Our Additional Action: Manage Organisation */}
-        {onManageOrg && (
+        {/* {onManageOrg && (
           <button
             type="button"
             onClick={onManageOrg}
@@ -213,7 +213,7 @@ export const UserToolbar = ({
             <Building2 size={14} className="text-primary" />
             <span>Manage Org</span>
           </button>
-        )}
+        )} */}
 
         {/* Primary Action Button: + Add User (matching Figma + manage button) */}
         {onAddUser && (
@@ -224,7 +224,7 @@ export const UserToolbar = ({
             title="Add a new user"
           >
             <Plus size={15} />
-            <span>+ Add User</span>
+            <span> Add User</span>
           </button>
         )}
       </div>

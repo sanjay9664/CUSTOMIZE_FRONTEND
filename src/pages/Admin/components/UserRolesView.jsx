@@ -2,11 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { Dropdown, Modal, Button, Form, Spinner, Badge } from 'react-bootstrap';
 import {
   Search, Shield, ShieldCheck, Plus, Download, ChevronDown, Check,
-  ArrowUpDown, ArrowUp, ArrowDown, Pencil, Copy, Trash2, Users, Eye, KeyRound
+  ArrowUpDown, ArrowUp, ArrowDown, Pencil, Copy, Trash2, Users, Eye, KeyRound,
+  Building2, User
 } from 'lucide-react';
 import { bmsService } from '../../../services/bmsService';
 import UserPagination from './UserPagination';
-import UserTypeTabs from './UserTypeTabs';
+import ImportExportModal from './ImportExportModal';
 
 /**
  * Tab definitions for Role Management
@@ -75,6 +76,7 @@ export const UserRolesView = ({
   const [isCloning, setIsCloning] = useState(false);
 
   const [inspectPermissionsRole, setInspectPermissionsRole] = useState(null);
+  const [showImportExportModal, setShowImportExportModal] = useState(false);
 
   // 1. Dynamic Counts for Role Tabs
   const tabCounts = useMemo(() => {
@@ -307,19 +309,12 @@ export const UserRolesView = ({
 
   return (
     <div className="user-roles-view w-100">
-      {/* ── 1. Category Tabs with Dynamic Counts [count] ── */}
-      <UserTypeTabs
-        tabs={visibleTabs}
-        activeTab={activeTab}
-        onSelectTab={handleTabSelect}
-      />
-
-      {/* ── 2. Top Toolbar (Figma Pill Style with Action Buttons) ── */}
+      {/* ── 1. Top Toolbar matching User Management Figma Design ── */}
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2.5 mb-3 user-toolbar-figma">
         {/* Left Filter Controls */}
         <div className="d-flex flex-wrap align-items-center gap-2">
-          {/* Search Pill Input */}
-          <div className="position-relative user-toolbar-search-wrap" style={{ width: '240px' }}>
+          {/* 1. Search Pill Input */}
+          <div className="position-relative user-toolbar-search-wrap" style={{ width: '220px' }}>
             <div
               className="position-absolute top-50 translate-middle-y ps-3 text-secondary d-flex align-items-center pointer-events-none"
               style={{ zIndex: 2 }}
@@ -330,21 +325,56 @@ export const UserRolesView = ({
               type="text"
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search roles..."
+              placeholder="Search"
               className="form-control ps-5 py-1.5 fs-13 text-white user-toolbar-pill-input"
               aria-label="Search roles"
             />
           </div>
 
-          {/* Nature / Type Filter Pill */}
+          {/* 2. Category Filter Pill Dropdown */}
+          <Dropdown>
+            <Dropdown.Toggle
+              variant="custom"
+              id="role-category-filter-dropdown"
+              className="d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 user-toolbar-pill-btn"
+            >
+              <User size={14} className="opacity-75" />
+              <span className="text-truncate" style={{ maxWidth: '130px' }}>
+                {activeTab === 'ALL'
+                  ? 'Category'
+                  : (ROLES_TABS_CONFIG.find((t) => t.id === activeTab)?.label || 'Category')}
+              </span>
+              <ChevronDown size={13} className="opacity-60 ms-0.5" />
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu className="shadow-lg border py-1 user-toolbar-menu">
+              {ROLES_TABS_CONFIG.map((t) => {
+                const count = tabCounts[t.id] ?? 0;
+                const isSelected = activeTab === t.id;
+                return (
+                  <Dropdown.Item
+                    key={t.id}
+                    active={isSelected}
+                    onClick={() => handleTabSelect(t.id)}
+                    className="d-flex align-items-center justify-content-between py-1.5 px-3 fs-13 text-light"
+                  >
+                    <span>{t.label} <span className="opacity-60">[{count}]</span></span>
+                    {isSelected && <Check size={13} className="text-primary" />}
+                  </Dropdown.Item>
+                );
+              })}
+            </Dropdown.Menu>
+          </Dropdown>
+
+          {/* 3. Nature / Type Filter Pill Dropdown */}
           <Dropdown>
             <Dropdown.Toggle
               variant="custom"
               id="role-type-filter-dropdown"
               className="d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 user-toolbar-pill-btn"
             >
-              <ShieldCheck size={14} className="opacity-75" />
-              <span>
+              <Shield size={14} className="opacity-75" />
+              <span className="text-truncate" style={{ maxWidth: '100px' }}>
                 {selectedType === 'ALL'
                   ? 'Type'
                   : selectedType === 'SYSTEM'
@@ -383,20 +413,46 @@ export const UserRolesView = ({
           </Dropdown>
         </div>
 
-        {/* Right Action Controls: Export + Additional Action Buttons */}
+        {/* Right Action Controls: Export + Additional Action Buttons matching UserToolbar */}
         <div className="d-flex flex-wrap align-items-center gap-2">
-          {/* Export Button */}
+          {/* Import / Export Button matching Figma */}
           <button
             type="button"
-            onClick={handleExportCSV}
-            className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 fw-medium user-toolbar-pill-btn"
-            title="Export roles data as CSV"
+            onClick={() => setShowImportExportModal(true)}
+            className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 fw-medium user-toolbar-pill-btn user-toolbar-export-btn"
+            title="Import or Export roles"
           >
             <Download size={14} />
-            <span>Export</span>
+            <span>Import / Export</span>
           </button>
 
-          {/* Primary Action Button: + Add Role */}
+          {/* Our Additional Action: Manage Users / Back to System Users */}
+          {onBackToUsers && (
+            <button
+              type="button"
+              onClick={onBackToUsers}
+              className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 fw-medium user-toolbar-pill-btn"
+              title="Back to System Users Management"
+            >
+              <Users size={14} className="text-info" />
+              <span>Manage Users</span>
+            </button>
+          )}
+
+          {/* Our Additional Action: Manage Organisation */}
+          {/* {onManageOrg && (
+            <button
+              type="button"
+              onClick={onManageOrg}
+              className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 fw-medium user-toolbar-pill-btn"
+              title="Manage Organisation and Clients"
+            >
+              <Building2 size={14} className="text-primary" />
+              <span>Manage Org</span>
+            </button>
+          )} */}
+
+          {/* Primary Action Button: + Add Role (matching Figma cyan button) */}
           {onAddRole && (
             <button
               type="button"
@@ -908,7 +964,19 @@ export const UserRolesView = ({
         </Modal.Footer>
       </Modal>
 
-      {/* ── 8. Scoped Visual Styling (Toolbar, Table, Buttons, Contrast) ── */}
+      {/* ── 8. Import & Export Modal ── */}
+      <ImportExportModal
+        show={showImportExportModal}
+        onHide={() => setShowImportExportModal(false)}
+        entityType="ROLES"
+        items={sortedRoles}
+        selectedIds={selectedIds}
+        onSuccess={() => {
+          if (onRefresh) onRefresh();
+        }}
+      />
+
+      {/* ── 9. Scoped Visual Styling (Toolbar, Table, Buttons, Contrast) ── */}
       <style dangerouslySetInnerHTML={{ __html: `
         .user-roles-view {
           color: #f8fafc;

@@ -607,16 +607,15 @@ const UserAdministration = () => {
     const selectedTenant = formData.tenantId || (tenants[0]?.id || '');
     const selectedScopeId = formData.scopeId || (formData.scopeType === 'ZONE' ? (zones[0]?.id || 'zone-north-01') : formData.scopeType === 'SITE' ? (sites[0]?.id || 'site-bms-01') : selectedTenant);
 
-    const locationMapping = {
-      companyId: null,
-      tenantId: selectedTenant ? String(selectedTenant) : null,
-      zoneId: formData.scopeType === 'ZONE' ? String(selectedScopeId) : null,
-      tenantAreaId: null,
-      siteId: formData.scopeType === 'SITE' ? (Number(selectedScopeId) || null) : null,
-      areaId: null,
-      assetId: null,
-      deviceId: null
-    };
+    const locationMapping = {};
+    if (formData.scopeType === 'SITE') {
+      const sId = Number(selectedScopeId);
+      locationMapping.siteId = !isNaN(sId) && sId > 0 ? sId : selectedScopeId;
+    } else if (formData.scopeType === 'ZONE') {
+      locationMapping.zoneId = String(selectedScopeId);
+    } else if (selectedTenant) {
+      locationMapping.tenantId = String(selectedTenant);
+    }
 
     const payload = {
       name: formData.name,
@@ -626,7 +625,7 @@ const UserAdministration = () => {
       tenantId: selectedTenant,
       status: formData.status || 'ACTIVE',
       ...(formData.password ? { password: formData.password } : {}),
-      locationMappings: [locationMapping]
+      locationMappings: Object.keys(locationMapping).length > 0 ? [locationMapping] : []
     };
 
     let createdUser = null;
@@ -688,16 +687,15 @@ const UserAdministration = () => {
     const selectedTenant = formData.tenantId || selectedUser.tenantId || (tenants[0]?.id || '');
     const selectedScopeId = formData.scopeId || (formData.scopeType === 'ZONE' ? (zones[0]?.id || 'zone-north-01') : formData.scopeType === 'SITE' ? (sites[0]?.id || 'site-bms-01') : selectedTenant);
 
-    const locationMapping = {
-      companyId: null,
-      tenantId: selectedTenant ? String(selectedTenant) : null,
-      zoneId: formData.scopeType === 'ZONE' ? String(selectedScopeId) : null,
-      tenantAreaId: null,
-      siteId: formData.scopeType === 'SITE' ? (Number(selectedScopeId) || null) : null,
-      areaId: null,
-      assetId: null,
-      deviceId: null
-    };
+    const locationMapping = {};
+    if (formData.scopeType === 'SITE') {
+      const sId = Number(selectedScopeId);
+      locationMapping.siteId = !isNaN(sId) && sId > 0 ? sId : selectedScopeId;
+    } else if (formData.scopeType === 'ZONE') {
+      locationMapping.zoneId = String(selectedScopeId);
+    } else if (selectedTenant) {
+      locationMapping.tenantId = String(selectedTenant);
+    }
 
     const payload = {
       name: formData.name,
@@ -706,7 +704,7 @@ const UserAdministration = () => {
       roleId: resolvedRoleId,
       status: formData.status,
       tenantId: selectedTenant,
-      locationMappings: [locationMapping]
+      locationMappings: Object.keys(locationMapping).length > 0 ? [locationMapping] : []
     };
 
     let updatedResult = null;

@@ -125,34 +125,6 @@ export const UserManagement = () => {
 
   return (
     <Container fluid className="user-management-page py-3 px-3 min-vh-100">
-      {/* 
-        When in ROLES view or nested forms, display dark breadcrumb header with navigation.
-        When in USERS view (LIST mode), SystemUsersView renders the full reference header.
-      */}
-      {activeSection === 'ROLES' && viewMode === 'LIST' && (
-        <div className="d-flex flex-wrap align-items-center justify-content-between mb-2.5 gap-2">
-          <div>
-            <h2 className="page-main-title fw-bold text-white mb-0" style={{ fontSize: '1.45rem', letterSpacing: '-0.02em' }}>
-              User Roles
-            </h2>
-            <p className="page-sub-description mb-0 fs-12" style={{ color: '#94a3b8' }}>
-              Manage access permission levels, custom roles, and authorization policies.
-            </p>
-          </div>
-
-          <div className="d-flex align-items-center gap-2">
-            <button
-              type="button"
-              className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 rounded-pill fs-13 fw-semibold user-toolbar-pill-btn"
-              onClick={() => handleSelectSection('USERS')}
-            >
-              <Users size={15} className="text-info" />
-              <span>Back to System Users</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main Views Container */}
       <div className="view-content-wrapper">
         {activeSection === 'USERS' ? (

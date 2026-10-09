@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap';
 import { ArrowLeft } from 'lucide-react';
 import LocationTreeSelector from './LocationTreeSelector';
+import { cleanLocationMapping } from '../../../utils/locationTreeUtils';
 import PasswordInput from '../../../components/PasswordInput';
 import { bmsService } from '../../../services/bmsService';
 
@@ -207,44 +208,13 @@ export const UserFormView = ({
       setSaving(true);
       setError(null);
 
-      // Convert selected location nodes to LocationMapping schema
-      const cleanedMappings = (locationMappings || []).map(loc => {
-        // If already formatted with LocationMapping fields
-        if (loc.siteId !== undefined || loc.assetId !== undefined || loc.zoneId !== undefined || loc.tenantId !== undefined) {
-          return {
-            companyId: loc.companyId ? String(loc.companyId) : null,
-            tenantId: loc.tenantId ? String(loc.tenantId) : null,
-            zoneId: loc.zoneId ? String(loc.zoneId) : null,
-            tenantAreaId: loc.tenantAreaId ? String(loc.tenantAreaId) : null,
-            siteId: loc.siteId ? (Number(loc.siteId) || null) : null,
-            areaId: loc.areaId ? (Number(loc.areaId) || null) : null,
-            assetId: loc.assetId ? String(loc.assetId) : null,
-            deviceId: loc.deviceId ? (Number(loc.deviceId) || null) : null
-          };
-        }
-        // If raw tree node or legacy item
-        const type = String(loc.type || loc.zoneNodeType || '').toUpperCase();
-        const id = loc.id || loc.zoneNodeId;
-        const mapping = {
-          companyId: loc.companyId ? String(loc.companyId) : null,
-          tenantId: loc.tenantId ? String(loc.tenantId) : null,
-          zoneId: loc.zoneId ? String(loc.zoneId) : null,
-          tenantAreaId: loc.tenantAreaId ? String(loc.tenantAreaId) : null,
-          siteId: loc.siteId ? (Number(loc.siteId) || null) : null,
-          areaId: loc.areaId ? (Number(loc.areaId) || null) : null,
-          assetId: loc.assetId ? String(loc.assetId) : null,
-          deviceId: loc.deviceId ? (Number(loc.deviceId) || null) : null
-        };
-        if (type === 'COMPANY') mapping.companyId = mapping.companyId || String(id);
-        else if (type === 'TENANT') mapping.tenantId = mapping.tenantId || String(id);
-        else if (type === 'ZONE') mapping.zoneId = mapping.zoneId || String(id);
-        else if (type === 'TENANT_AREA' || type === 'TENANTAREA') mapping.tenantAreaId = mapping.tenantAreaId || String(id);
-        else if (type === 'SITE') mapping.siteId = Number(id) || null;
-        else if (type === 'AREA') mapping.areaId = Number(id) || null;
-        else if (type === 'ASSET' || type === 'BUILDING' || type === 'PANEL' || type === 'DG' || type === 'EQUIPMENT') mapping.assetId = mapping.assetId || String(id);
-        else if (type === 'DEVICE') mapping.deviceId = Number(id) || null;
-        return mapping;
-      });
+      // Convert selected location nodes to clean LocationMapping objects without null keys or internal metadata
+      const cleanedMappings = (locationMappings || [])
+        .map(cleanLocationMapping)
+        .filter(Boolean);
+
+      const isCompany = selectedOrgObj?.type === 'COMPANY';
+      const orgId = organization?.trim() || undefined;
 
       if (isEdit) {
         const updatePayload = {
@@ -253,7 +223,7 @@ export const UserFormView = ({
           role,
           roleId: roleId || undefined,
           status,
-          tenantId: organization || undefined,
+          ...(isCompany ? { companyId: orgId } : { tenantId: orgId }),
           locationMappings: cleanedMappings
         };
         if (password && password.length >= 6) {
@@ -269,7 +239,7 @@ export const UserFormView = ({
           password,
           role,
           roleId: roleId || undefined,
-          tenantId: organization || undefined,
+          ...(isCompany ? { companyId: orgId } : { tenantId: orgId }),
           locationMappings: cleanedMappings
         };
 

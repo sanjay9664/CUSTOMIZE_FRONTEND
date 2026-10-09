@@ -3,6 +3,7 @@ import { Modal, Button, Form, Spinner } from 'react-bootstrap';
 import { Key, Unlock, Trash2 } from 'lucide-react';
 import UserToolbar from './UserToolbar';
 import UserTable from './UserTable';
+import ImportExportModal from './ImportExportModal';
 import PasswordInput from '../../../components/PasswordInput';
 import { bmsService } from '../../../services/bmsService';
 import { getUserUsername, formatJoinedDate, formatLastActive, getUserStatus } from '../../../utils/userUtils';
@@ -67,6 +68,7 @@ export const UserManagementPage = ({
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [deleteModalUser, setDeleteModalUser] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showImportExportModal, setShowImportExportModal] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [actionSuccess, setActionSuccess] = useState(null);
 
@@ -298,7 +300,7 @@ export const UserManagementPage = ({
         selectedEntity={selectedEntity}
         onEntityChange={handleEntityChange}
         entities={entities}
-        onExport={handleExportCSV}
+        onExport={() => setShowImportExportModal(true)}
         onAddUser={onAddUser}
         onManageRoles={onManageRoles}
         onManageOrg={onManageOrg}
@@ -484,6 +486,18 @@ export const UserManagementPage = ({
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* ── 4. Import & Export Modal ── */}
+      <ImportExportModal
+        show={showImportExportModal}
+        onHide={() => setShowImportExportModal(false)}
+        entityType="USERS"
+        items={sortedUsers}
+        selectedIds={selectedIds}
+        onSuccess={() => {
+          if (onRefresh) onRefresh();
+        }}
+      />
     </div>
   );
 };

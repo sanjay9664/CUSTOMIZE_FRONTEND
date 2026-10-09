@@ -71,63 +71,59 @@ const orgUsers = sampleUsers.filter(u => u.role === 'VIEWER');
 assert.strictEqual(orgUsers.length, 1, 'Should classify 1 organisation user');
 console.log('✓ User tab classification rules verified');
 
-// 4. LocationMapping conversion test (per OpenAPI LocationMapping schema)
-const rawNodes = [
-  { id: '7', name: 'Testing Site', type: 'SITE' },
-  { id: 'zone-12', name: 'Zone North', type: 'ZONE' },
-  { id: 'asset-101', name: 'Chiller 1', type: 'ASSET', siteId: 7 }
+// 4. LocationMapping conversion test (per user specification & OpenAPI schema)
+const { buildLocationMapping, cleanLocationMapping } = await import('../src/utils/locationTreeUtils.js');
+
+// Example 1: grant access to site 12
+const site12Node = { id: 12, name: 'Site 12', type: 'SITE' };
+const site12Mapping = cleanLocationMapping(buildLocationMapping(site12Node, []));
+assert.deepStrictEqual(site12Mapping, { siteId: 12 }, 'Should map site 12 to { siteId: 12 }');
+
+// Example 2: grant access to site 15
+const site15Node = { id: 15, name: 'Site 15', type: 'SITE' };
+const site15Mapping = cleanLocationMapping(buildLocationMapping(site15Node, []));
+assert.deepStrictEqual(site15Mapping, { siteId: 15 }, 'Should map site 15 to { siteId: 15 }');
+
+// Example 3: grant access to area 7 within site 12
+const area7Node = { id: 7, name: 'Area 7', type: 'AREA' };
+const site12Ancestor = { id: 12, name: 'Site 12', type: 'SITE' };
+const area7Mapping = cleanLocationMapping(buildLocationMapping(area7Node, [site12Ancestor]));
+assert.deepStrictEqual(area7Mapping, { siteId: 12, areaId: 7 }, 'Should map area 7 in site 12 to { siteId: 12, areaId: 7 }');
+
+// Example 4: grant access to a tenant
+const tenantNode = { id: 'clm_tenant_cuid', name: 'sochiot', type: 'TENANT' };
+const tenantMapping = cleanLocationMapping(buildLocationMapping(tenantNode, []));
+assert.deepStrictEqual(tenantMapping, { tenantId: 'clm_tenant_cuid' }, 'Should map tenant to { tenantId: "clm_tenant_cuid" }');
+
+// Example 5: grant access to a specific device 99 within site 12
+const device99Node = { id: 99, name: 'Device 99', type: 'DEVICE' };
+const device99Mapping = cleanLocationMapping(buildLocationMapping(device99Node, [site12Ancestor]));
+assert.deepStrictEqual(device99Mapping, { siteId: 12, deviceId: 99 }, 'Should map device 99 in site 12 to { siteId: 12, deviceId: 99 }');
+
+// Full user locationMappings array test:
+const combinedMappings = [
+  site12Mapping,
+  site15Mapping,
+  area7Mapping,
+  tenantMapping,
+  device99Mapping
 ];
 
-const convertNodeToMapping = (node) => {
-  const type = String(node.type || '').toUpperCase();
-  const id = node.id;
-  return {
-    companyId: node.companyId ? String(node.companyId) : null,
-    tenantId: node.tenantId ? String(node.tenantId) : null,
-    zoneId: type === 'ZONE' ? String(id) : (node.zoneId ? String(node.zoneId) : null),
-    tenantAreaId: type === 'TENANT_AREA' ? String(id) : null,
-    siteId: type === 'SITE' ? (Number(id) || null) : (node.siteId ? (Number(node.siteId) || null) : null),
-    areaId: type === 'AREA' ? (Number(id) || null) : null,
-    assetId: (type === 'ASSET' || type === 'BUILDING') ? String(id) : null,
-    deviceId: type === 'DEVICE' ? (Number(id) || null) : null
-  };
-};
+assert.deepStrictEqual(combinedMappings, [
+  { siteId: 12 },
+  { siteId: 15 },
+  { siteId: 12, areaId: 7 },
+  { tenantId: 'clm_tenant_cuid' },
+  { siteId: 12, deviceId: 99 }
+]);
 
-const locationMappings = rawNodes.map(convertNodeToMapping);
-
-assert.deepStrictEqual(locationMappings, [
-  {
-    companyId: null,
-    tenantId: null,
-    zoneId: null,
-    tenantAreaId: null,
-    siteId: 7,
-    areaId: null,
-    assetId: null,
-    deviceId: null
-  },
-  {
-    companyId: null,
-    tenantId: null,
-    zoneId: 'zone-12',
-    tenantAreaId: null,
-    siteId: null,
-    areaId: null,
-    assetId: null,
-    deviceId: null
-  },
-  {
-    companyId: null,
-    tenantId: null,
-    zoneId: null,
-    tenantAreaId: null,
-    siteId: 7,
-    areaId: null,
-    assetId: 'asset-101',
-    deviceId: null
-  }
-], 'Location tree node conversion must match OpenAPI LocationMapping schema');
-console.log('✓ Location tree locationMappings conversion verified');
+// Ensure zero null or undefined keys in any generated mapping
+combinedMappings.forEach((m, idx) => {
+  Object.entries(m).forEach(([k, v]) => {
+    assert(v !== null && v !== undefined, `Mapping at index ${idx} must not contain null/undefined for key ${k}`);
+  });
+});
+console.log('✓ Location tree locationMappings conversion verified with exact user specification');
 
 // 5. Predefined role deletion prevention check
 const deleteAllowed = (role) => !role.isPredefined;
@@ -260,7 +256,48 @@ assert.ok(tenant1Roles.some(r => r.name === 'ADMIN'), 'Must include ADMIN');
 assert.ok(tenant1Roles.some(r => r.name === 'Custom Org1 Role'), 'Must include Custom Org1 Role');
 assert.ok(!tenant1Roles.some(r => r.name === 'Custom Org2 Role'), 'Must NOT include Custom Org2 Role');
 assert.ok(!tenant1Roles.some(r => r.name === 'Company Specific Role'), 'Must NOT include Company Specific Role');
-console.log('✓ Organization-scoped role filtering verified');
+// 12. Payload generation verification: Company vs Tenant selection
+const buildUserPayload = (name, email, selectedOrgObj, locationMappings = []) => {
+  const isCompany = selectedOrgObj?.type === 'COMPANY';
+  const orgId = selectedOrgObj?.id;
+  return {
+    name,
+    email,
+    ...(isCompany ? { companyId: orgId } : { tenantId: orgId }),
+    ...(locationMappings.length > 0 ? { locationMappings } : {})
+  };
+};
+
+const tenantPayload = buildUserPayload('John', 'john@example.com', { id: 'clm_tenant_cuid', type: 'TENANT' });
+assert.deepStrictEqual(tenantPayload, {
+  name: 'John',
+  email: 'john@example.com',
+  tenantId: 'clm_tenant_cuid'
+});
+assert.strictEqual(tenantPayload.companyId, undefined, 'Tenant user payload must not have companyId');
+
+const companyPayload = buildUserPayload('Jane', 'jane@example.com', { id: 'clm_company_cuid', type: 'COMPANY' });
+assert.deepStrictEqual(companyPayload, {
+  name: 'Jane',
+  email: 'jane@example.com',
+  companyId: 'clm_company_cuid'
+});
+assert.strictEqual(companyPayload.tenantId, undefined, 'Company user payload must not have tenantId');
+
+const companyWithLocations = buildUserPayload('Alice', 'alice@example.com', { id: 'clm_company_cuid', type: 'COMPANY' }, [
+  { siteId: 12 },
+  { siteId: 15, areaId: 7 }
+]);
+assert.deepStrictEqual(companyWithLocations, {
+  name: 'Alice',
+  email: 'alice@example.com',
+  companyId: 'clm_company_cuid',
+  locationMappings: [
+    { siteId: 12 },
+    { siteId: 15, areaId: 7 }
+  ]
+});
+console.log('✓ Company vs Tenant payload routing verified');
 
 console.log('--- ALL USER & ROLE MANAGEMENT CHECKS PASSED ---');
 

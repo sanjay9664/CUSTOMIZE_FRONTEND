@@ -109,12 +109,28 @@ export const UserDetailView = ({
       return mappings.map((loc) => {
         if (typeof loc === 'string') return loc.toUpperCase();
         if (loc?.name) return String(loc.name).toUpperCase();
+        if (loc?.siteId && loc?.areaId) {
+          const siteName = sitesMap[loc.siteId] || `SITE #${loc.siteId}`;
+          return `${siteName} - AREA #${loc.areaId}`.toUpperCase();
+        }
+        if (loc?.siteId && loc?.deviceId) {
+          const siteName = sitesMap[loc.siteId] || `SITE #${loc.siteId}`;
+          return `${siteName} - DEV #${loc.deviceId}`.toUpperCase();
+        }
+        if (loc?.siteId && loc?.assetId) {
+          const siteName = sitesMap[loc.siteId] || `SITE #${loc.siteId}`;
+          return `${siteName} - ${loc.assetId}`.toUpperCase();
+        }
         if (loc?.siteId && sitesMap[loc.siteId]) {
           return String(sitesMap[loc.siteId]).toUpperCase();
         }
         if (loc?.siteId) return `SITE #${loc.siteId}`.toUpperCase();
+        if (loc?.areaId) return `AREA #${loc.areaId}`.toUpperCase();
+        if (loc?.tenantAreaId) return `AREA #${loc.tenantAreaId}`.toUpperCase();
+        if (loc?.tenantId) return `TENANT #${loc.tenantId}`.toUpperCase();
         if (loc?.assetId) return `ASSET #${loc.assetId}`.toUpperCase();
         if (loc?.zoneId) return `ZONE #${loc.zoneId}`.toUpperCase();
+        if (loc?.companyId) return `COMPANY #${loc.companyId}`.toUpperCase();
         if (loc?.zoneNodeType === 'SITE' && loc?.zoneNodeId && sitesMap[loc.zoneNodeId]) {
           return String(sitesMap[loc.zoneNodeId]).toUpperCase();
         }

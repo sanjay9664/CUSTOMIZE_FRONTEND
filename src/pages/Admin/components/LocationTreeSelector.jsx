@@ -5,6 +5,7 @@ import {
   Layers, Box, Server, Search, Compass, Map, Home
 } from 'lucide-react';
 import { bmsService } from '../../../services/bmsService';
+import { buildLocationMapping, cleanLocationMapping } from '../../../utils/locationTreeUtils';
 
 const getNodeIcon = (type) => {
   const normType = String(type || '').toUpperCase();
@@ -75,6 +76,7 @@ const getNodeTypeBadge = (type) => {
 const TreeNode = ({ 
   node, 
   level = 0, 
+  ancestors = [],
   selectedMap, 
   onToggleSelect, 
   expandedMap, 
@@ -118,7 +120,7 @@ const TreeNode = ({
           checked={isSelected}
           onChange={(e) => {
             e.stopPropagation();
-            onToggleSelect(node);
+            onToggleSelect(node, ancestors);
           }}
           aria-label={`Select ${node.name}`}
         />
@@ -131,7 +133,7 @@ const TreeNode = ({
         {/* Node Name */}
         <span 
           className="flex-grow-1 fs-13 text-truncate text-white tree-label"
-          onClick={() => onToggleSelect(node)}
+          onClick={() => onToggleSelect(node, ancestors)}
           title={`${node.name} (${node.type})`}
         >
           <span className="fw-medium">{node.name}</span>
@@ -149,6 +151,7 @@ const TreeNode = ({
               key={child.id}
               node={child}
               level={level + 1}
+              ancestors={[...ancestors, node]}
               selectedMap={selectedMap}
               onToggleSelect={onToggleSelect}
               expandedMap={expandedMap}
@@ -186,14 +189,15 @@ export const LocationTreeSelector = ({
           map[item] = item;
           return;
         }
+        if (item._nodeId) map[String(item._nodeId)] = item;
         const id = item.id || item.zoneNodeId;
         if (id) map[String(id)] = item;
-        if (item.siteId) map[String(item.siteId)] = item;
+        if (item.deviceId && !item.assetId) map[String(item.deviceId)] = item;
         if (item.assetId) map[String(item.assetId)] = item;
-        if (item.zoneId) map[String(item.zoneId)] = item;
+        if (item.areaId && !item.assetId && !item.deviceId) map[String(item.areaId)] = item;
+        if (item.siteId && !item.areaId && !item.assetId && !item.deviceId) map[String(item.siteId)] = item;
         if (item.tenantAreaId) map[String(item.tenantAreaId)] = item;
-        if (item.areaId) map[String(item.areaId)] = item;
-        if (item.deviceId) map[String(item.deviceId)] = item;
+        if (item.zoneId) map[String(item.zoneId)] = item;
         if (item.tenantId && !item.siteId && !item.zoneId) map[String(item.tenantId)] = item;
         if (item.companyId && !item.siteId && !item.zoneId) map[String(item.companyId)] = item;
       });
@@ -314,7 +318,7 @@ export const LocationTreeSelector = ({
     setExpandedMap({});
   };
 
-  const handleToggleSelect = (node) => {
+  const handleToggleSelect = (node, ancestors = []) => {
     if (disabled) return;
     const nodeId = String(node.id);
     const isCurrentlySelected = Boolean(selectedMap[nodeId]);
@@ -325,30 +329,21 @@ export const LocationTreeSelector = ({
       nextValues = (value || []).filter(item => {
         if (!item) return false;
         if (typeof item === 'string') return item !== nodeId;
-        const itemId = String(item.id || item.zoneNodeId || item.siteId || item.assetId || item.zoneId || item.tenantId || item.companyId);
-        return itemId !== nodeId;
+        if (item._nodeId && String(item._nodeId) === nodeId) return false;
+        if (item.id && String(item.id) === nodeId) return false;
+        if (item.deviceId && String(item.deviceId) === nodeId) return false;
+        if (item.assetId && String(item.assetId) === nodeId) return false;
+        if (item.areaId && String(item.areaId) === nodeId && !item.assetId && !item.deviceId) return false;
+        if (item.siteId && String(item.siteId) === nodeId && !item.areaId && !item.assetId && !item.deviceId) return false;
+        if (item.tenantAreaId && String(item.tenantAreaId) === nodeId) return false;
+        if (item.zoneId && String(item.zoneId) === nodeId) return false;
+        if (item.tenantId && String(item.tenantId) === nodeId && !item.siteId && !item.zoneId) return false;
+        if (item.companyId && String(item.companyId) === nodeId && !item.siteId && !item.zoneId) return false;
+        return true;
       });
     } else {
-      // Add node as locationMapping compatible item
-      const type = String(node.type || '').toUpperCase();
-      const newItem = {
-        id: nodeId,
-        name: node.name,
-        type: node.type,
-        companyId: node.companyId ? String(node.companyId) : null,
-        tenantId: node.tenantId ? String(node.tenantId) : null,
-        zoneId: node.zoneId ? String(node.zoneId) : null,
-        tenantAreaId: node.tenantAreaId ? String(node.tenantAreaId) : null,
-        siteId: type === 'SITE' ? (Number(node.id) || null) : (node.siteId ? (Number(node.siteId) || null) : null),
-        areaId: type === 'AREA' ? (Number(node.id) || null) : (node.areaId ? (Number(node.areaId) || null) : null),
-        assetId: (type === 'ASSET' || type === 'BUILDING' || type === 'PANEL' || type === 'DG' || type === 'EQUIPMENT') ? String(node.id) : (node.assetId ? String(node.assetId) : null),
-        deviceId: type === 'DEVICE' ? (Number(node.id) || null) : (node.deviceId ? (Number(node.deviceId) || null) : null)
-      };
-      if (type === 'COMPANY') newItem.companyId = newItem.companyId || nodeId;
-      if (type === 'TENANT') newItem.tenantId = newItem.tenantId || nodeId;
-      if (type === 'ZONE') newItem.zoneId = newItem.zoneId || nodeId;
-      if (type === 'TENANT_AREA' || type === 'TENANTAREA') newItem.tenantAreaId = newItem.tenantAreaId || nodeId;
-
+      // Add node as clean LocationMapping with hierarchical context
+      const newItem = buildLocationMapping(node, ancestors);
       nextValues = [...(value || []), newItem];
     }
 
@@ -472,6 +467,7 @@ export const LocationTreeSelector = ({
                     key={rootNode.id}
                     node={rootNode}
                     level={0}
+                    ancestors={[]}
                     selectedMap={selectedMap}
                     onToggleSelect={handleToggleSelect}
                     expandedMap={expandedMap}
