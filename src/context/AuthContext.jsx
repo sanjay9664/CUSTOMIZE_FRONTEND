@@ -9,12 +9,14 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     dispatch(bootstrapAuth());
+    // Only sync on cross-tab storage changes, NOT on window focus:
+    // focus fires syncAuth() which re-reads localStorage and can see a stale/missing
+    // isAuthenticated flag, causing a spurious logout when switching tabs.
+    // The authRefreshService already checks token expiry on visibilitychange/focus.
     const sync = () => dispatch(syncAuth());
     window.addEventListener('storage', sync);
-    window.addEventListener('focus', sync);
     return () => {
       window.removeEventListener('storage', sync);
-      window.removeEventListener('focus', sync);
     };
   }, [dispatch]);
 
@@ -30,4 +32,35 @@ export const AuthProvider = ({ children }) => {
 
   return children;
 };
-export const useAuth = () => { const dispatch = useDispatch(); const auth = useSelector((state) => state.auth); return { ...auth, login: (credentials) => dispatch(loginAction(credentials)).unwrap().then((result) => ({ success: true, data: result.data })), logout: () => { dispatch(logoutAction()); if (location.pathname !== '/login') location.href = '/login'; }, syncAuthState: () => dispatch(syncAuth()), hasRole: (roles) => !roles?.length || roles.some((role) => role.toUpperCase() === auth.userRole?.toUpperCase()) }; };
+export const checkPermission = (resolvedPermissions = [], requiredPermission) => {
+  if (!requiredPermission) return true;
+  if (!Array.isArray(resolvedPermissions) || resolvedPermissions.length === 0) return false;
+  // 1. Wildcard '*' grants full access to all actions
+  if (resolvedPermissions.includes('*')) return true;
+  // 2. Exact code matching (e.g. 'user:read')
+  if (resolvedPermissions.includes(requiredPermission)) return true;
+  // 3. Module wildcard '<module>:*' (e.g. 'user:*' grants 'user:read', 'user:write')
+  const [module] = requiredPermission.split(':');
+  if (module && resolvedPermissions.includes(`${module}:*`)) return true;
+  return false;
+};
+
+export const useAuth = () => {
+  const dispatch = useDispatch();
+  const auth = useSelector((state) => state.auth);
+  const permissions = auth.user?.resolvedPermissions || auth.user?.permissions || [];
+
+  return {
+    ...auth,
+    login: (credentials) => dispatch(loginAction(credentials)).unwrap().then((result) => ({ success: true, data: result.data })),
+    logout: () => {
+      dispatch(logoutAction());
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.replace('/login');
+      }
+    },
+    syncAuthState: () => dispatch(syncAuth()),
+    hasRole: (roles) => !roles?.length || roles.some((role) => role.toUpperCase() === auth.userRole?.toUpperCase()),
+    hasPermission: (code) => checkPermission(permissions, code)
+  };
+};

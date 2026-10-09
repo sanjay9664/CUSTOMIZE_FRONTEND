@@ -285,28 +285,7 @@ const AlarmConfig = () => {
   const [isCreatingRule, setIsCreatingRule] = useState(false);
   const [energyActive, setEnergyActive] = useState(true);
 
-  // Fetch templates on mount
-  useEffect(() => {
-    fetch(`${window.process?.env?.REACT_APP_BACKEND_URL || ''}/api/templates`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        const mapped = data.map(t => {
-          const hasDef = t.defaultValues && typeof t.defaultValues === 'object' && Object.keys(t.defaultValues).length > 0;
-          const defValues = hasDef ? t.defaultValues : null;
-          const mappingSource = defValues || t.settings?.[0]?.meta || {};
-          return {
-            id: t.id,
-            name: t.name,
-            category: (defValues && defValues.category) || t.category || 'Water Management',
-            module: (defValues && defValues.module) || t.settings?.[0]?.eventKey || 'AG Tank',
-            mapping: mappingSource
-          };
-        });
-        setTemplates(mapped);
-        localStorage.setItem('scada_templates', JSON.stringify(mapped));
-      })
-      .catch(err => console.error('Error fetching templates in AlarmConfig:', err));
-  }, []);
+
 
   // Filter meters based on current sub category
   const getMetersForSubCategory = () => {

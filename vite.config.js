@@ -21,6 +21,24 @@ export default defineConfig(({ mode }) => {
       rewrite: (path) => {
         if (path.startsWith('/api/v1')) return path;
         return path.replace(/^\/api/, '/api/v1');
+      },
+      configure: (proxy, _options) => {
+        proxy.on('proxyReq', (proxyReq, req, _res) => {
+          const cookieHeader = req.headers['cookie'];
+          if (cookieHeader && cookieHeader.includes('refresh_token=')) {
+            const parts = cookieHeader.split(';').map(s => s.trim());
+            const refreshTokens = parts.filter(p => p.startsWith('refresh_token='));
+            if (refreshTokens.length > 1) {
+              const nonRefreshParts = parts.filter(p => !p.startsWith('refresh_token='));
+              // If duplicate refresh_token cookies exist (e.g. from Path=/ and Path=/api/v1/auth),
+              // prioritize the backend-generated JWT token or the latest token
+              const jwtToken = refreshTokens.find(t => t.includes('=eyJ'));
+              const selectedToken = jwtToken || refreshTokens[refreshTokens.length - 1];
+              const cleanedCookie = [...nonRefreshParts, selectedToken].join('; ');
+              proxyReq.setHeader('cookie', cleanedCookie);
+            }
+          }
+        });
       }
     }
   } : {};
@@ -32,7 +50,10 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      proxy: proxyConfig
+      proxy: proxyConfig,
+      watch: {
+        ignored: ['**/docs/**', '**/graphify-out/**', '**/.git/**']
+      }
     },
     preview: {
       port: 4173,

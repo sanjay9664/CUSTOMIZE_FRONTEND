@@ -30,11 +30,48 @@ export const eraseCookie = (name) => {
   try {
     const isSecure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:';
     const secureFlag = isSecure ? '; Secure' : '';
-    document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax${secureFlag}`;
+    const paths = ['/', '/api', '/api/v1', '/api/v1/auth'];
+    paths.forEach((p) => {
+      document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${p}; SameSite=Lax${secureFlag}`;
+      document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${p}`;
+    });
   } catch (e) {
     console.warn('Failed to erase cookie:', e);
   }
 };
+
+export const sanitizeClientCookies = () => {
+  if (typeof document === 'undefined') return;
+  try {
+    const isSecure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:';
+    const secureVariants = isSecure ? ['; Secure', ''] : [''];
+    const sameSiteVariants = ['; SameSite=Lax', '; SameSite=Strict', '; SameSite=None', ''];
+    const paths = ['/', '/api', '/api/v1', '/api/v1/auth', '/auth', ''];
+    const host = (typeof window !== 'undefined' && window.location && window.location.hostname) || '';
+    const domains = ['', host ? `; domain=${host}` : ''];
+    const tokenNames = ['refresh_token', 'refreshToken'];
+
+    tokenNames.forEach((name) => {
+      paths.forEach((p) => {
+        domains.forEach((d) => {
+          sameSiteVariants.forEach((s) => {
+            secureVariants.forEach((sec) => {
+              const pathPart = p ? `; path=${p}` : '';
+              document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT${pathPart}${d}${s}${sec}`;
+            });
+          });
+        });
+      });
+    });
+  } catch (e) {
+    console.warn('Failed to sanitize client cookies:', e);
+  }
+};
+
+// Neutralize any legacy or rogue client-accessible refresh token cookies immediately on module evaluation
+if (typeof document !== 'undefined') {
+  sanitizeClientCookies();
+}
 
 let inMemoryAccessToken = null;
 
@@ -66,24 +103,27 @@ const safeStorageRemove = (key) => {
 
 export const getAuthToken = () => {
   return (
+    safeStorageGet('token') ||
+    safeStorageGet('accessToken') ||
+    safeStorageGet('access_token') ||
     inMemoryAccessToken ||
     getCookie('access_token') ||
     getCookie('token') ||
-    safeStorageGet('token') ||
-    safeStorageGet('access_token') ||
     safeStorageGet('sochiot_token') ||
+    safeStorageGet('auth_token') ||
     null
   );
 };
 
 export const getRefreshToken = () => {
-  return (
-    getCookie('refresh_token') ||
-    getCookie('refreshToken') ||
-    safeStorageGet('refresh_token') ||
+  // Only read from local storage; the backend HttpOnly cookie cannot and should not be read via document.cookie
+  const raw = (
     safeStorageGet('refreshToken') ||
+    safeStorageGet('refresh_token') ||
     null
   );
+  if (!raw || typeof raw !== 'string') return null;
+  return raw.trim();
 };
 
 export const getSochiotAccessToken = () => {
@@ -138,15 +178,17 @@ export const getUserData = () => {
   }
 };
 
-export const setAuthCookies = ({ token, refreshToken, userRole, userData }) => {
+export const setAuthCookies = ({ token, userRole, userData }) => {
   if (token) {
     setCookie('access_token', token, 7);
     setCookie('token', token, 7);
   }
-  if (refreshToken) {
-    setCookie('refresh_token', refreshToken, 7);
-    setCookie('refreshToken', refreshToken, 7);
-  }
+  // IMPORTANT SECURITY & ROTATION FIX:
+  // Do NOT set refresh_token in document.cookie.
+  // The backend manages refresh_token as an HttpOnly, Secure cookie with Path=/api/v1/auth.
+  // Erase any legacy client-accessible refresh_token cookie across all paths to prevent shadowing.
+  sanitizeClientCookies();
+
   if (userRole) {
     setCookie('userRole', userRole, 7);
   }
@@ -159,34 +201,37 @@ export const setAuthCookies = ({ token, refreshToken, userRole, userData }) => {
 export const setAuthSession = ({ token, refreshToken, userRole, userData }) => {
   if (token) {
     setMemoryToken(token);
+    safeStorageSet('token', token);
+    safeStorageSet('accessToken', token);
+    safeStorageSet('access_token', token);
   }
-  setAuthCookies({ token, refreshToken, userRole, userData });
+  setAuthCookies({ token, userRole, userData });
 
   // Keep non-sensitive metadata in storage for sync/reactivity across tabs
   if (userRole) safeStorageSet('userRole', userRole);
   if (userData) safeStorageSet('userData', typeof userData === 'string' ? userData : JSON.stringify(userData));
-  if (refreshToken) {
-    safeStorageSet('refresh_token', refreshToken);
-    safeStorageSet('refreshToken', refreshToken);
+  
+  // Store refreshToken in storage whenever provided (supports both JWT from login and rotated opaque hex tokens)
+  if (refreshToken && typeof refreshToken === 'string' && refreshToken.trim()) {
+    safeStorageSet('refresh_token', refreshToken.trim());
+    safeStorageSet('refreshToken', refreshToken.trim());
+  } else if (refreshToken === null) {
+    safeStorageRemove('refresh_token');
+    safeStorageRemove('refreshToken');
   }
   safeStorageSet('isAuthenticated', 'true');
-
-  // Remove redundant raw JWT tokens from localStorage to minimize XSS attack surface
-  safeStorageRemove('token');
-  safeStorageRemove('access_token');
-  safeStorageRemove('sochiot_token');
-  safeStorageRemove('auth_token');
 };
 
 export const clearAuthCookies = () => {
   eraseCookie('access_token');
   eraseCookie('token');
-  eraseCookie('refresh_token');
-  eraseCookie('refreshToken');
   eraseCookie('userRole');
   eraseCookie('userData');
   eraseCookie('isAuthenticated');
+  sanitizeClientCookies();
 };
+
+const PRESERVED_STORAGE_KEYS = new Set(['app_theme', 'remember_me', 'remembered_identifier']);
 
 let isRevokingSession = false;
 
@@ -196,33 +241,46 @@ export const clearAuthSession = () => {
   setMemoryToken(null);
   clearAuthCookies();
 
-  // Clear local storage and session storage immediately
-  safeStorageRemove('token');
-  safeStorageRemove('access_token');
-  safeStorageRemove('refresh_token');
-  safeStorageRemove('refreshToken');
-  safeStorageRemove('sochiot_token');
-  safeStorageRemove('auth_token');
-  safeStorageRemove('userData');
-  safeStorageRemove('userRole');
-  safeStorageRemove('isAuthenticated');
-  safeStorageRemove('remembered_password');
-  safeStorageRemove('impersonator_backup_user');
-  safeStorageRemove('impersonator_backup_role');
+  // Allowlist-based storage purge: removes all auth, operational, tenant, and device keys
+  // while preserving safe UI preferences (app_theme, remember_me, remembered_identifier)
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && !PRESERVED_STORAGE_KEYS.has(key)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+    }
+  } catch (e) {
+    console.warn('Failed to clear localStorage on auth session reset:', e);
+  }
+
   try {
     if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
   } catch (e) {
     console.warn('Failed to clear sessionStorage on auth session reset:', e);
   }
 
-  // Graceful server-side session revocation (fire-and-forget):
-  // Only call server logout ONCE and ONLY if there was an active token or session to revoke!
+  // Clear in-memory service singletons & caches
+  try {
+    import('../services/sochiotLocationService.js').then((m) => {
+      if (m?.clearSochiotCache) m.clearSochiotCache();
+    }).catch(() => {});
+  } catch (e) {}
+
+  // Graceful server-side session revocation with keepalive
   if ((currentToken || currentRefreshToken) && !isRevokingSession) {
     isRevokingSession = true;
     try {
       const nativeFetch = (typeof window !== 'undefined' && window._nativeFetch) ? window._nativeFetch : fetch;
       nativeFetch(AUTH_ENDPOINTS.logout, {
         method: 'POST',
+        keepalive: true,
         headers: {
           'Content-Type': 'application/json',
           ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {})
@@ -233,7 +291,7 @@ export const clearAuthSession = () => {
         .finally(() => {
           setTimeout(() => {
             isRevokingSession = false;
-          }, 2000);
+          }, 1500);
         });
     } catch (e) {
       isRevokingSession = false;

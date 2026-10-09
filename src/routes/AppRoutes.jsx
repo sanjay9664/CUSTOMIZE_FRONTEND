@@ -102,15 +102,19 @@ const PlaceholderPage = ({ title }) => (
 
 import { useAuth } from '../context/AuthContext';
 
-// Protected Route Guard for Role-based Access Control
-const ProtectedRoute = ({ allowedRoles, children }) => {
-  const { hasRole, isAuthenticated } = useAuth();
+// Protected Route Guard for Role-based Access Control & Permission Guarding
+const ProtectedRoute = ({ allowedRoles, requiredPermission, children }) => {
+  const { hasRole, hasPermission, isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   if (allowedRoles && !hasRole(allowedRoles)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -183,7 +187,7 @@ const AppRoutes = () => {
       {/* Settings & User Administration */}
       <Route path="/global-settings" element={<SettingsIndex />} />
       <Route path="/settings" element={<SettingsIndex />} />
-      <Route path="/settings/users" element={<Navigate to="/admin/manage-users" replace />} />
+      <Route path="/settings/users" element={<Navigate to="/settings?tab=users" replace />} />
       <Route path="/settings/sites" element={<SettingsIndex />} />
       <Route path="/settings/assets" element={<AssetManagement />} />
       <Route path="/asset-management" element={<AssetManagement />} />

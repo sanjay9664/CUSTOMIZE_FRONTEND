@@ -331,7 +331,20 @@ const AQIOverview = () => {
   const [samplingInterval, setSamplingInterval] = useState('DAILY'); // 'MIN_15' | 'MIN_30' | 'HOURLY' | 'DAILY'
 
   // View settings
-  const [useFahrenheit, setUseFahrenheit] = useState(true);
+  const [useFahrenheit, setUseFahrenheit] = useState(() => {
+    const saved = localStorage.getItem('aqi_use_fahrenheit');
+    if (saved !== null) return saved === 'true';
+    return true;
+  });
+
+  const toggleTempUnit = useCallback((val) => {
+    setUseFahrenheit((prev) => {
+      const nextVal = typeof val === 'boolean' ? val : !prev;
+      localStorage.setItem('aqi_use_fahrenheit', String(nextVal));
+      return nextVal;
+    });
+  }, []);
+
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
@@ -416,6 +429,31 @@ const AQIOverview = () => {
     fetchAqiDevices();
     return () => { isMounted = false; };
   }, [selectedSiteId]);
+
+  // Synchronize when active device is selected from the top Header cascading dropdown
+  useEffect(() => {
+    const handleGlobalDeviceChange = (e) => {
+      const detail = e.detail;
+      if (!detail) return;
+
+      const category = detail.category || detail.device?.category;
+      if (category && category !== 'AQI_SENSOR') {
+        return;
+      }
+
+      if (detail.deviceId && String(detail.deviceId) !== String(selectedDeviceId)) {
+        const dId = String(detail.deviceId);
+        setSelectedDeviceId(dId);
+        if (selectedSiteId) {
+          localStorage.setItem(`selected_aqi_device_id_${selectedSiteId}`, dId);
+        }
+        localStorage.setItem('selected_aqi_device_id', dId);
+      }
+    };
+
+    window.addEventListener('scada_device_changed', handleGlobalDeviceChange);
+    return () => window.removeEventListener('scada_device_changed', handleGlobalDeviceChange);
+  }, [selectedDeviceId, selectedSiteId]);
 
   const selectedDevice = useMemo(() => {
     if (!devices || devices.length === 0 || !selectedDeviceId) return null;
@@ -911,17 +949,53 @@ const AQIOverview = () => {
           }] : [])
         ]}
         actions={[
-          <Button
-            key="temp-toggle"
-            variant="outline-secondary"
-            size="sm"
-            className="context-banner-action-btn d-flex align-items-center gap-1 py-1 px-2.5 rounded-pill fs-8 fw-bold"
-            onClick={() => setUseFahrenheit(!useFahrenheit)}
-            title="Toggle Temperature Unit (°F / °C)"
+          <div
+            key="temp-toggle-group"
+            className="d-inline-flex align-items-center rounded-pill p-0.5"
+            style={{
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : '#ffffff',
+              border: isDark ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid #cbd5e1',
+              boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.05)',
+              userSelect: 'none'
+            }}
           >
-            <Thermometer size={14} className="text-info" />
-            <span>{useFahrenheit ? '°F' : '°C'}</span>
-          </Button>,
+            <button
+              type="button"
+              onClick={() => toggleTempUnit(false)}
+              className="btn btn-link p-0 px-2 text-decoration-none rounded-pill transition-all"
+              style={{
+                fontSize: '11px',
+                lineHeight: '18px',
+                height: '22px',
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: !useFahrenheit ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
+                color: !useFahrenheit ? (isDark ? '#081024' : '#ffffff') : (isDark ? '#94a3b8' : '#64748b'),
+                fontWeight: !useFahrenheit ? 700 : 500
+              }}
+              title="Display Temperature in Celsius (°C)"
+            >
+              °C
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleTempUnit(true)}
+              className="btn btn-link p-0 px-2 text-decoration-none rounded-pill transition-all"
+              style={{
+                fontSize: '11px',
+                lineHeight: '18px',
+                height: '22px',
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: useFahrenheit ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
+                color: useFahrenheit ? (isDark ? '#081024' : '#ffffff') : (isDark ? '#94a3b8' : '#64748b'),
+                fontWeight: useFahrenheit ? 700 : 500
+              }}
+              title="Display Temperature in Fahrenheit (°F)"
+            >
+              °F
+            </button>
+          </div>,
           <Button
             key="refresh-btn"
             variant="outline-info"
@@ -1118,40 +1192,90 @@ const AQIOverview = () => {
                 <Col sm={4} xs={12}>
                   <Card className="aqi-card aqi-metric-card h-100">
                     <div
-                      className="d-flex align-items-center justify-content-between cursor-pointer"
+                      className="d-flex align-items-center justify-content-between gap-3 cursor-pointer py-0.5"
                       onClick={() => availableMetrics.includes('tempC') && setSelectedChartMetric('tempC')}
                       title="Click to view Temperature trend"
                     >
-                      <div className="d-flex align-items-center gap-1.5 text-info">
-                        <Thermometer size={17} />
-                        <span className="aqi-metric-title">
+                      <div className="d-flex align-items-center gap-1.5 text-info overflow-hidden flex-grow-1">
+                        <Thermometer size={16} className="flex-shrink-0" />
+                        <span className="aqi-metric-title text-truncate">
                           {resolvedMetrics.tempC?.displayName || 'Temperature'}
                         </span>
                       </div>
-                      <span className="fw-black fs-5" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
+                      <span className="fw-black fs-6 text-nowrap flex-shrink-0 ps-1" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
                         {useFahrenheit
                           ? (liveTelemetry.tempF !== null ? `${fmt(liveTelemetry.tempF, 1)}°F` : '—')
                           : (liveTelemetry.tempC !== null ? `${fmt(liveTelemetry.tempC, 1)}°C` : '—')}
                       </span>
                     </div>
                     <div
-                      className="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-10 cursor-pointer"
+                      className="d-flex align-items-center justify-content-between gap-3 mt-2 pt-2 border-top border-secondary border-opacity-10 cursor-pointer py-0.5"
                       onClick={() => availableMetrics.includes('hum') && setSelectedChartMetric('hum')}
                       title="Click to view Humidity trend"
                     >
-                      <div className="d-flex align-items-center gap-1.5 text-info">
-                        <Droplets size={16} />
-                        <span className="aqi-metric-title">
+                      <div className="d-flex align-items-center gap-1.5 text-info overflow-hidden flex-grow-1">
+                        <Droplets size={16} className="flex-shrink-0" />
+                        <span className="aqi-metric-title text-truncate">
                           {resolvedMetrics.hum?.displayName || 'Humidity'}
                         </span>
                       </div>
-                      <span className="fs-5 fw-black" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
+                      <span className="fs-6 fw-black text-nowrap flex-shrink-0 ps-1" style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>
                         {liveTelemetry.hum !== null ? `${fmt(liveTelemetry.hum, 0)}%` : '—'}
                       </span>
                     </div>
-                    <div className="aqi-metric-sublabel d-flex align-items-center justify-content-between mt-auto pt-1">
-                      <span>Ambient Climate</span>
-                      <span className="text-secondary fs-9">{useFahrenheit ? '°F' : '°C'}</span>
+                    <div className="aqi-metric-sublabel d-flex align-items-center justify-content-between mt-auto pt-2">
+                      <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Ambient Climate</span>
+                      <div 
+                        className="d-inline-flex align-items-center rounded-pill p-0.5"
+                        style={{
+                          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : '#e2e8f0',
+                          border: isDark ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid #cbd5e1',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTempUnit(false);
+                          }}
+                          className="btn btn-link p-0 px-2 text-decoration-none rounded-pill transition-all"
+                          style={{
+                            fontSize: '10.5px',
+                            lineHeight: '14px',
+                            height: '18px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            backgroundColor: !useFahrenheit ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
+                            color: !useFahrenheit ? (isDark ? '#081024' : '#ffffff') : (isDark ? '#94a3b8' : '#64748b'),
+                            fontWeight: !useFahrenheit ? 700 : 500
+                          }}
+                          title="Switch to Celsius (°C)"
+                        >
+                          °C
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTempUnit(true);
+                          }}
+                          className="btn btn-link p-0 px-2 text-decoration-none rounded-pill transition-all"
+                          style={{
+                            fontSize: '10.5px',
+                            lineHeight: '14px',
+                            height: '18px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            backgroundColor: useFahrenheit ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
+                            color: useFahrenheit ? (isDark ? '#081024' : '#ffffff') : (isDark ? '#94a3b8' : '#64748b'),
+                            fontWeight: useFahrenheit ? 700 : 500
+                          }}
+                          title="Switch to Fahrenheit (°F)"
+                        >
+                          °F
+                        </button>
+                      </div>
                     </div>
                   </Card>
                 </Col>

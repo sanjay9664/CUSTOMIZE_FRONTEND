@@ -329,6 +329,134 @@ export const formatDisplayBreadcrumb = (pathNodes = [], displayOnlyChild = false
   return pathNodes.map((n) => n.label).join(' > ');
 };
 
+/**
+ * Builds a granular LocationMapping object from a selected tree node and its ancestors.
+ * Produces clean minimal mapping objects adhering strictly to OpenAPI schema without null fields.
+ *
+ * Examples:
+ * - Selecting site 12: { siteId: 12 }
+ * - Selecting site 15: { siteId: 15 }
+ * - Selecting area 7 within site 12: { siteId: 12, areaId: 7 }
+ * - Selecting tenant clm_tenant_cuid: { tenantId: 'clm_tenant_cuid' }
+ * - Selecting device 99 within site 12: { siteId: 12, deviceId: 99 }
+ */
+export const buildLocationMapping = (node, ancestors = []) => {
+  if (!node) return null;
+  const type = String(node.type || '').toUpperCase();
+  const id = node.id;
+  const mapping = {};
+
+  // Find ancestor site if node is descendant of a site
+  const parentSite = (ancestors || []).find(a => String(a.type || '').toUpperCase() === 'SITE');
+
+  if (type === 'COMPANY') {
+    mapping.companyId = String(id || node.companyId);
+  } else if (type === 'TENANT') {
+    mapping.tenantId = String(id || node.tenantId);
+  } else if (type === 'ZONE') {
+    mapping.zoneId = String(id || node.zoneId);
+  } else if (type === 'TENANT_AREA' || type === 'TENANTAREA') {
+    mapping.tenantAreaId = String(id || node.tenantAreaId);
+  } else if (type === 'SITE') {
+    const sId = Number(node.siteId || id);
+    mapping.siteId = !isNaN(sId) && sId > 0 ? sId : (node.siteId || id);
+  } else if (type === 'AREA') {
+    const aId = Number(node.areaId || id);
+    if (!isNaN(aId) && aId > 0) {
+      mapping.areaId = aId;
+    } else {
+      mapping.tenantAreaId = String(id);
+    }
+    // If area is within a site: { siteId: 12, areaId: 7 }
+    if (parentSite) {
+      const sId = Number(parentSite.siteId || parentSite.id);
+      if (!isNaN(sId) && sId > 0) mapping.siteId = sId;
+    } else if (node.siteId) {
+      const sId = Number(node.siteId);
+      if (!isNaN(sId) && sId > 0) mapping.siteId = sId;
+    }
+  } else if (type === 'DEVICE') {
+    const dId = Number(node.deviceId || id);
+    mapping.deviceId = !isNaN(dId) && dId > 0 ? dId : (node.deviceId || id);
+    // Device within a site: { siteId: 12, deviceId: 99 }
+    if (parentSite) {
+      const sId = Number(parentSite.siteId || parentSite.id);
+      if (!isNaN(sId) && sId > 0) mapping.siteId = sId;
+    } else if (node.siteId) {
+      const sId = Number(node.siteId);
+      if (!isNaN(sId) && sId > 0) mapping.siteId = sId;
+    }
+  } else {
+    // Physical entity / asset / building / room / floor / panel / dg / other within a site
+    mapping.assetId = String(node.assetId || id);
+    if (parentSite) {
+      const sId = Number(parentSite.siteId || parentSite.id);
+      if (!isNaN(sId) && sId > 0) mapping.siteId = sId;
+    } else if (node.siteId) {
+      const sId = Number(node.siteId);
+      if (!isNaN(sId) && sId > 0) mapping.siteId = sId;
+    }
+  }
+
+  // Preserve node identification for UI tracking
+  mapping._nodeId = String(id);
+  mapping._nodeName = node.name;
+  mapping._nodeType = type;
+
+  return mapping;
+};
+
+/**
+ * Strips internal tracking fields and omits null / undefined / empty string keys
+ * to produce clean, minimal LocationMapping payloads.
+ */
+export const cleanLocationMapping = (loc) => {
+  if (!loc) return null;
+  const clean = {};
+
+  if (loc.companyId != null && loc.companyId !== '') clean.companyId = String(loc.companyId);
+  if (loc.tenantId != null && loc.tenantId !== '') clean.tenantId = String(loc.tenantId);
+  if (loc.zoneId != null && loc.zoneId !== '') clean.zoneId = String(loc.zoneId);
+  if (loc.tenantAreaId != null && loc.tenantAreaId !== '') clean.tenantAreaId = String(loc.tenantAreaId);
+  if (loc.siteId != null && loc.siteId !== '') {
+    const s = Number(loc.siteId);
+    clean.siteId = !isNaN(s) && s > 0 ? s : loc.siteId;
+  }
+  if (loc.areaId != null && loc.areaId !== '') {
+    const a = Number(loc.areaId);
+    clean.areaId = !isNaN(a) && a > 0 ? a : loc.areaId;
+  }
+  if (loc.assetId != null && loc.assetId !== '') clean.assetId = String(loc.assetId);
+  if (loc.deviceId != null && loc.deviceId !== '') {
+    const d = Number(loc.deviceId);
+    clean.deviceId = !isNaN(d) && d > 0 ? d : loc.deviceId;
+  }
+
+  // Fallback if raw tree node or legacy item without explicit mapping keys
+  if (Object.keys(clean).length === 0) {
+    const type = String(loc.type || loc.zoneNodeType || '').toUpperCase();
+    const id = loc.id || loc.zoneNodeId;
+    if (type === 'COMPANY' && id) clean.companyId = String(id);
+    else if (type === 'TENANT' && id) clean.tenantId = String(id);
+    else if (type === 'ZONE' && id) clean.zoneId = String(id);
+    else if ((type === 'TENANT_AREA' || type === 'TENANTAREA') && id) clean.tenantAreaId = String(id);
+    else if (type === 'SITE' && id) {
+      const s = Number(id);
+      clean.siteId = !isNaN(s) && s > 0 ? s : id;
+    } else if (type === 'AREA' && id) {
+      const a = Number(id);
+      clean.areaId = !isNaN(a) && a > 0 ? a : id;
+    } else if (type === 'DEVICE' && id) {
+      const d = Number(id);
+      clean.deviceId = !isNaN(d) && d > 0 ? d : id;
+    } else if (id) {
+      clean.assetId = String(id);
+    }
+  }
+
+  return Object.keys(clean).length > 0 ? clean : null;
+};
+
 export default {
   parseLocationValue,
   generateTreeFromSochiot,
@@ -336,5 +464,7 @@ export default {
   transformGatewayDeviceHierarchy,
   findPathInTree,
   resolveLocationPath,
-  formatDisplayBreadcrumb
+  formatDisplayBreadcrumb,
+  buildLocationMapping,
+  cleanLocationMapping
 };

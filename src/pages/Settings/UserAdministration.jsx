@@ -1,25 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Form, Modal, InputGroup, Spinner, Alert } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import {
   Users, UserPlus, Search, Edit, Trash2, Eye, RefreshCcw,
   CheckCircle, XCircle, Globe, Shield, User, Building2, MapPin, Key, Layers, Mail,
-  UserCheck, Building, AlertTriangle, Send, MailCheck, Copy, Check, Link2, Clock, ExternalLink, ShieldAlert
+  UserCheck, Building, AlertTriangle, Send, MailCheck, Copy, Check, Link2, Clock, ExternalLink, ShieldAlert,
+  Unlock, Lock, ShieldPlus, ShieldCheck, CheckSquare, Square, FolderPlus, ChevronRight, ChevronDown,
+  Sliders, Settings, Radio, FileText, CheckCheck, Filter
 } from 'lucide-react';
 import { getApiUrl } from '../../utils/apiConfig';
+import { getAuthToken } from '../../utils/cookieUtils';
+import bmsService from '../../services/bmsService';
+import { useAuth } from '../../context/AuthContext';
 
 const API_BASE_URL = getApiUrl();
 
 const UserAdministration = () => {
+  const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [zones, setZones] = useState([]);
+  const [sites, setSites] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [permissionsCatalog, setPermissionsCatalog] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [rolesLoading, setRolesLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [message, setMessage] = useState(null);
 
-  // Invitations & Navigation state
-  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'invitations'
+  // Selector state for 'Manage Users' popover (ismartaccess-v2 style)
+  const [showManageSelector, setShowManageSelector] = useState(false);
+  const selectorRef = useRef(null);
+
+  // Pagination state for users table (meta alignment)
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Navigation tabs: 'all-users' | 'administrators' | 'operators' | 'viewers' | 'roles' | 'invitations'
+  const [activeTab, setActiveTab] = useState('all-users');
   const [invitations, setInvitations] = useState([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInviteCreatedModal, setShowInviteCreatedModal] = useState(false);
@@ -42,11 +65,28 @@ const UserAdministration = () => {
     password: ''
   });
 
-  // Modals state
+  // Modals state for Users
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Admin Change Password & Unlock state
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [passwordUserId, setPasswordUserId] = useState(null);
+  const [passwordUserName, setPasswordUserName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // RBAC Roles Modals State
+  const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
+  const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+  const [showCloneRoleModal, setShowCloneRoleModal] = useState(false);
+  const [showDeleteRoleModal, setShowDeleteRoleModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [roleFormData, setRoleFormData] = useState({ name: '', description: '', organizationId: '', roleType: 'ORGANIZATION', permissionCodes: [] });
+  const [cloneRoleName, setCloneRoleName] = useState('');
+  const [roleLoading, setRoleLoading] = useState(false);
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [emailError, setEmailError] = useState('');
@@ -54,11 +94,14 @@ const UserAdministration = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    roleType: 'SYSTEM',
     role: 'VIEWER',
+    roleId: '',
     tenantId: '',
     status: 'ACTIVE',
     scopeType: 'ZONE',
     scopeId: '',
+    password: '',
     permissions: 'read,write'
   });
 
@@ -75,54 +118,18 @@ const UserAdministration = () => {
     return '';
   };
 
-  const purgeExpiredTokens = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('sochiot_token');
-    localStorage.removeItem('auth_token');
-  };
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${getAuthToken() || ''}`
+  });
 
-  const getAuthHeaders = () => {
-    let token = localStorage.getItem('token') || 
-                localStorage.getItem('sochiot_token') || 
-                localStorage.getItem('auth_token') || 
-                localStorage.getItem('access_token') || '';
-                
-    if (!token || token === 'undefined' || token === 'null') {
-      token = 'bms-dev-token-admin';
-    } else {
-      // Decode JWT token payload if possible to check expiration (exp)
-      try {
-        const payloadBase64 = token.split('.')[1];
-        if (payloadBase64) {
-          const decoded = JSON.parse(atob(payloadBase64));
-          if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-            console.warn('Expired JWT token detected, clearing stale token from storage.');
-            purgeExpiredTokens();
-            token = 'bms-dev-token-admin';
-          }
-        }
-      } catch (e) {
-        // If non-JWT token, proceed with token as-is
-      }
-    }
-
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  // GET /api/tenants - Fetch Tenant List
+  // GET /api/v1/tenants - Fetch Tenant List
   const fetchTenants = async () => {
     let tenantList = [];
     try {
       const response = await fetch(`${API_BASE_URL}/tenants`, {
         headers: getAuthHeaders()
       });
-      if (response.status === 401) {
-        purgeExpiredTokens();
-      }
       if (response.ok) {
         const result = await response.json();
         tenantList = Array.isArray(result) ? result : (result.data || []);
@@ -146,30 +153,39 @@ const UserAdministration = () => {
       }
     } catch (e) {}
 
-
     if (tenantList.length > 0) {
       setTenants(tenantList);
     }
   };
 
-  // GET /api/users - Fetch User List
-  const fetchUsers = async () => {
+  // GET /api/v1/users - Fetch Paginated User List
+  const fetchUsers = async (targetPage = page, targetPageSize = pageSize) => {
     setLoading(true);
     let userList = [];
     try {
-      const response = await fetch(`${API_BASE_URL}/users`, {
-        headers: getAuthHeaders()
-      });
-      if (response.status === 401) {
-        purgeExpiredTokens();
-      }
-      if (response.ok) {
-        const result = await response.json();
-        const rawData = Array.isArray(result) ? result : (result.data || []);
-        userList = rawData.map(u => ({
-          ...u,
-          role: u.role === 'USER' ? 'VIEWER' : (u.role || 'VIEWER')
-        }));
+      const params = {
+        page: targetPage,
+        pageSize: targetPageSize,
+        ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+        ...(roleFilter !== 'ALL' ? { role: roleFilter } : {}),
+        ...(statusFilter !== 'ALL' ? { status: statusFilter } : {})
+      };
+      const res = await bmsService.getUsers(params);
+      const rawData = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
+      userList = rawData.map(u => ({
+        ...u,
+        role: u.role === 'USER' ? 'VIEWER' : (u.role || 'VIEWER'),
+        resolvedPermissions: u.resolvedPermissions || u.permissions || []
+      }));
+      const meta = res?.meta || res?.data?.meta;
+      if (meta) {
+        setPage(meta.page || targetPage);
+        setPageSize(meta.pageSize || targetPageSize);
+        setTotal(meta.total ?? userList.length);
+        setTotalPages(meta.totalPages || (meta.pageSize ? Math.ceil((meta.total || userList.length) / meta.pageSize) : 1));
+      } else {
+        setTotal(userList.length);
+        setTotalPages(Math.ceil(userList.length / targetPageSize) || 1);
       }
     } catch (error) {
       console.warn('API fetch error, loading from local cache:', error);
@@ -177,16 +193,17 @@ const UserAdministration = () => {
 
     if (!userList || userList.length === 0) {
       try {
-        userList = JSON.parse(localStorage.getItem('scada_users_db') || '[]');
+        const cached = JSON.parse(localStorage.getItem('scada_users_db') || '[]');
+        if (Array.isArray(cached) && cached.length > 0) userList = cached;
       } catch (e) {}
     }
 
     if (!userList || userList.length === 0) {
       userList = [
-        { id: 'usr-101', name: 'Rajesh Padhi', email: 'rajesh@sochiot.com', role: 'SUPER_ADMIN', status: 'ACTIVE', scopeType: 'TENANT', scopeId: 'cmsfq874j0002bsiaumzb92j7', permissions: ['*'], createdAt: '2026-08-01T10:00:00Z' },
-        { id: 'usr-102', name: 'Sanjay Gupta', email: 'sanjay@sochiot.com', role: 'ADMIN', status: 'ACTIVE', scopeType: 'TENANT', scopeId: 'tenant-sub-01', permissions: ['users:read', 'users:write'], createdAt: '2026-08-05T12:30:00Z' },
-        { id: 'usr-103', name: 'Priya Sharma', email: 'priya@sochiot.com', role: 'OPERATOR', status: 'ACTIVE', scopeType: 'ZONE', scopeId: 'zone-north-04', permissions: ['telemetry:read'], createdAt: '2026-08-08T09:15:00Z' },
-        { id: 'usr-104', name: 'Amit Verma', email: 'amit.verma@sochiot.com', role: 'VIEWER', status: 'INACTIVE', scopeType: 'SITE', scopeId: 'site-bms-02', permissions: ['reports:read'], createdAt: '2026-08-10T14:20:00Z' }
+        { id: 'usr-101', name: 'Rajesh Padhi', email: 'rajesh@sochiot.com', role: 'SUPER_ADMIN', roleId: 'cm01_super_admin', status: 'ACTIVE', scopeType: 'TENANT', scopeId: 'cmsfq874j0002bsiaumzb92j7', resolvedPermissions: ['*'], createdAt: '2026-08-01T10:00:00Z' },
+        { id: 'usr-102', name: 'Sanjay Gupta', email: 'sanjay@sochiot.com', role: 'ADMIN', roleId: 'cm02_admin', status: 'ACTIVE', scopeType: 'TENANT', scopeId: 'tenant-sub-01', resolvedPermissions: ['user:*', 'role:manage'], createdAt: '2026-08-05T12:30:00Z' },
+        { id: 'usr-103', name: 'Priya Sharma', email: 'priya@sochiot.com', role: 'OPERATOR', roleId: 'cm04_operator', status: 'ACTIVE', scopeType: 'ZONE', scopeId: 'zone-north-04', resolvedPermissions: ['device:read', 'alarm:read'], createdAt: '2026-08-08T09:15:00Z' },
+        { id: 'usr-104', name: 'Amit Verma', email: 'amit.verma@sochiot.com', role: 'VIEWER', roleId: 'cm05_viewer', status: 'INACTIVE', scopeType: 'SITE', scopeId: 'site-bms-02', resolvedPermissions: ['report:read'], createdAt: '2026-08-10T14:20:00Z' }
       ];
       localStorage.setItem('scada_users_db', JSON.stringify(userList));
     }
@@ -194,6 +211,121 @@ const UserAdministration = () => {
     setUsers(userList);
     setLoading(false);
   };
+
+  // GET /api/v1/roles - Fetch Predefined and Custom Roles
+  const fetchRoles = async () => {
+    setRolesLoading(true);
+    let roleList = [];
+    try {
+      const res = await bmsService.getRoles();
+      roleList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+    } catch (e) {
+      console.warn('Roles fetch warning:', e);
+    }
+
+    if (!roleList || roleList.length === 0) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('scada_roles_db') || '[]');
+        if (Array.isArray(saved) && saved.length > 0) roleList = saved;
+      } catch (e) {}
+    }
+
+    if (!roleList || roleList.length === 0) {
+      roleList = [
+        { id: 'cm01_super_admin', name: 'SUPER_ADMIN', description: 'Full access to all tenant and system operations', isPredefined: true, permissions: ['*'], userCount: 1 },
+        { id: 'cm02_admin', name: 'ADMIN', description: 'Full organizational administration for users, devices, alarms & reports', isPredefined: true, permissions: ['user:*', 'device:*', 'alarm:*', 'report:*', 'ticket:*', 'role:manage'], userCount: 1 },
+        { id: 'cm03_manager', name: 'MANAGER', description: 'Facility manager access for device control and incident resolution', isPredefined: true, permissions: ['device:read', 'device:control', 'alarm:*', 'ticket:*', 'report:*', 'user:read'], userCount: 0 },
+        { id: 'cm04_operator', name: 'OPERATOR', description: 'Day-to-day equipment monitoring and alarm acknowledgment', isPredefined: true, permissions: ['device:read', 'alarm:read', 'alarm:acknowledge', 'ticket:create', 'report:read'], userCount: 1 },
+        { id: 'cm05_viewer', name: 'VIEWER', description: 'Read-only visibility into operational dashboards and trends', isPredefined: true, permissions: ['device:read', 'report:read', 'alarm:read'], userCount: 1 }
+      ];
+      localStorage.setItem('scada_roles_db', JSON.stringify(roleList));
+    }
+
+    setRoles(roleList);
+    setRolesLoading(false);
+  };
+
+  // GET /api/v1/zones - Fetch Zones Hierarchy
+  const fetchZones = async () => {
+    try {
+      const res = await bmsService.getZones();
+      const raw = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.zones) ? res.zones : (Array.isArray(res) ? res : []));
+      if (raw.length > 0) {
+        setZones(raw);
+        return;
+      }
+    } catch (e) {
+      console.warn('Zones fetch warning:', e);
+    }
+    setZones([
+      { id: 'zone-north-01', name: 'North Sector Facility', code: 'Z-NORTH' },
+      { id: 'zone-south-02', name: 'South Operations Hub', code: 'Z-SOUTH' },
+      { id: 'zone-east-03', name: 'East Logistics Complex', code: 'Z-EAST' },
+      { id: 'zone-west-04', name: 'West Manufacturing Wing', code: 'Z-WEST' }
+    ]);
+  };
+
+  // GET /api/v1/sites - Fetch Sites Hierarchy
+  const fetchSites = async () => {
+    try {
+      const res = await bmsService.getSites();
+      const raw = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.sites) ? res.sites : (Array.isArray(res) ? res : []));
+      if (raw.length > 0) {
+        setSites(raw);
+        return;
+      }
+    } catch (e) {
+      console.warn('Sites fetch warning:', e);
+    }
+    setSites([
+      { id: 'site-bms-01', name: 'Central Plant & HVAC Facility', zoneId: 'zone-north-01' },
+      { id: 'site-bms-02', name: 'Chiller & Substation Plant', zoneId: 'zone-south-02' },
+      { id: 'site-bms-03', name: 'Cleanroom & Assembly Line', zoneId: 'zone-east-03' }
+    ]);
+  };
+
+  // GET /api/v1/permissions - Fetch RBAC Permissions Catalog
+  const fetchPermissions = async () => {
+    try {
+      const res = await bmsService.getPermissions();
+      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      if (list.length > 0) {
+        setPermissionsCatalog(list);
+        return;
+      }
+    } catch (e) {
+      console.warn('Permissions catalog warning:', e);
+    }
+
+    const defaultCatalog = [
+      { code: 'device:read', name: 'View Devices', category: 'device', description: 'View real-time telemetry, telemetry graphs, and status' },
+      { code: 'device:control', name: 'Control Devices', category: 'device', description: 'Send hardware control commands and modify setpoints' },
+      { code: 'device:manage', name: 'Manage Devices', category: 'device', description: 'Provision, configure, and delete IoT devices' },
+      { code: 'alarm:read', name: 'View Alarms', category: 'alarm', description: 'Access active alarms, warning notifications, and history' },
+      { code: 'alarm:acknowledge', name: 'Acknowledge Alarms', category: 'alarm', description: 'Acknowledge active alarms and silence sirens' },
+      { code: 'ticket:read', name: 'View Tickets', category: 'ticket', description: 'View maintenance, servicing, and repair tickets' },
+      { code: 'ticket:create', name: 'Create Tickets', category: 'ticket', description: 'Open new maintenance or incident tickets' },
+      { code: 'ticket:manage', name: 'Manage Tickets', category: 'ticket', description: 'Assign, escalate, and resolve maintenance tickets' },
+      { code: 'report:read', name: 'View Reports', category: 'report', description: 'View and export daily DPR and telemetry logs' },
+      { code: 'report:generate', name: 'Generate Reports', category: 'report', description: 'Trigger asynchronous report generation jobs' },
+      { code: 'user:read', name: 'View Users', category: 'user', description: 'View user directory and user access scopes' },
+      { code: 'user:write', name: 'Manage Users', category: 'user', description: 'Create, update, unlock, and delete user profiles' },
+      { code: 'role:manage', name: 'Manage Roles', category: 'role', description: 'Create, configure, clone, and remove RBAC roles' },
+      { code: 'tenant:read', name: 'View Organization', category: 'tenant', description: 'View company and tenant administrative details' },
+      { code: 'tenant:write', name: 'Manage Organization', category: 'tenant', description: 'Update organization parameters, zones, and subscription' }
+    ];
+    setPermissionsCatalog(defaultCatalog);
+  };
+
+  const permissionsByCategory = useMemo(() => {
+    const groups = {};
+    for (const perm of permissionsCatalog) {
+      const cat = (perm.category || 'general').toLowerCase();
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(perm);
+    }
+    return groups;
+  }, [permissionsCatalog]);
 
   // Fetch Invitations List from storage
   const fetchInvitations = () => {
@@ -359,30 +491,59 @@ const UserAdministration = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(page, pageSize);
     fetchTenants();
     fetchInvitations();
+    fetchRoles();
+    fetchPermissions();
+    fetchZones();
+    fetchSites();
   }, []);
 
-  // Auto-dismiss toast notification after 3.5 seconds
   useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => {
-        setMessage(null);
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
+    fetchUsers(page, pageSize);
+  }, [page, pageSize, roleFilter, statusFilter]);
 
-  // Filter users based on search & filters
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (user.id || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'ALL' || user.role === roleFilter || (roleFilter === 'VIEWER' && user.role === 'USER');
-    const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  // Close manage selector popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (selectorRef.current && !selectorRef.current.contains(e.target)) {
+        setShowManageSelector(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter users based on search & filters & role-scoped tabs
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const q = (searchTerm || '').toLowerCase();
+      const matchesSearch = !q ||
+        (user.name || '').toLowerCase().includes(q) ||
+        (user.email || '').toLowerCase().includes(q) ||
+        (user.id || '').toLowerCase().includes(q);
+
+      let matchesTab = true;
+      if (activeTab === 'administrators') {
+        matchesTab = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
+      } else if (activeTab === 'operators') {
+        matchesTab = user.role === 'MANAGER' || user.role === 'OPERATOR';
+      } else if (activeTab === 'viewers') {
+        matchesTab = user.role === 'VIEWER' || user.role === 'USER';
+      }
+
+      const matchesRole = roleFilter === 'ALL' || user.role === roleFilter || (roleFilter === 'VIEWER' && user.role === 'USER');
+      const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
+      return matchesSearch && matchesTab && matchesRole && matchesStatus;
+    });
+  }, [users, searchTerm, activeTab, roleFilter, statusFilter]);
+
+  const isUserTab = activeTab !== 'roles' && activeTab !== 'invitations';
+  const adminCount = useMemo(() => users.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length, [users]);
+  const opCount = useMemo(() => users.filter(u => u.role === 'OPERATOR' || u.role === 'MANAGER').length, [users]);
+  const viewerCount = useMemo(() => users.filter(u => u.role === 'VIEWER' || u.role === 'USER').length, [users]);
+  const pendingInvitesCount = useMemo(() => invitations.filter(i => i.status === 'PENDING').length, [invitations]);
 
   // Filter invitations based on search & filters
   const filteredInvitations = invitations.filter(inv => {
@@ -393,6 +554,12 @@ const UserAdministration = () => {
                           (statusFilter === 'ACTIVE' && inv.status === 'PENDING') ||
                           (statusFilter === 'INACTIVE' && inv.status === 'ACCEPTED');
     return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Filter roles based on search
+  const filteredRoles = roles.filter(r => {
+    const q = (searchTerm || '').toLowerCase();
+    return (r.name || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q);
   });
 
   const getInviteStatusBadge = (status) => {
@@ -424,7 +591,7 @@ const UserAdministration = () => {
     }
   };
 
-  // POST /api/users - Create User
+  // POST /api/v1/users - Create User
   const handleCreateUser = async (e) => {
     if (e) e.preventDefault();
 
@@ -435,53 +602,53 @@ const UserAdministration = () => {
       return;
     }
 
-    const validRole = formData.role === 'USER' ? 'VIEWER' : formData.role;
-    const roleIdMap = { SUPER_ADMIN: 1, ADMIN: 2, OPERATOR: 3, VIEWER: 4, MANAGER: 5 };
-    const selectedTenant = formData.tenantId || '';
+    const matchedRole = roles.find(r => r.name === formData.role || r.id === formData.roleId);
+    const resolvedRoleId = matchedRole?.id || formData.roleId || formData.role;
+    const selectedTenant = formData.tenantId || (tenants[0]?.id || '');
+    const selectedScopeId = formData.scopeId || (formData.scopeType === 'ZONE' ? (zones[0]?.id || 'zone-north-01') : formData.scopeType === 'SITE' ? (sites[0]?.id || 'site-bms-01') : selectedTenant);
+
+    const locationMapping = {};
+    if (formData.scopeType === 'SITE') {
+      const sId = Number(selectedScopeId);
+      locationMapping.siteId = !isNaN(sId) && sId > 0 ? sId : selectedScopeId;
+    } else if (formData.scopeType === 'ZONE') {
+      locationMapping.zoneId = String(selectedScopeId);
+    } else if (selectedTenant) {
+      locationMapping.tenantId = String(selectedTenant);
+    }
 
     const payload = {
       name: formData.name,
       email: formData.email,
-      role: validRole,
-      roleId: roleIdMap[validRole] || 4,
+      role: formData.role || 'VIEWER',
+      roleId: resolvedRoleId,
       tenantId: selectedTenant,
       status: formData.status || 'ACTIVE',
-      scopeType: formData.scopeType || 'ZONE',
-      scopeId: formData.scopeId || '',
-      permissions: typeof formData.permissions === 'string' ? formData.permissions.split(',').map(s => s.trim()) : ['read', 'write']
+      ...(formData.password ? { password: formData.password } : {}),
+      locationMappings: Object.keys(locationMapping).length > 0 ? [locationMapping] : []
     };
 
     let createdUser = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/users`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const resJson = await response.json();
-        const apiUser = resJson.data || resJson.user || resJson;
-        createdUser = { ...apiUser, tenantId: selectedTenant };
-      } else {
-        const resErr = await response.json().catch(() => ({}));
-        const errMsg = resErr?.message || resErr?.error?.message || (typeof resErr?.error === 'string' ? resErr.error : null);
-        if (errMsg && typeof errMsg === 'string') {
-          setMessage({ type: 'error', text: errMsg });
-          setEmailError(errMsg);
-          return;
-        }
-      }
+      const res = await bmsService.createUser(payload);
+      const apiUser = res?.data || res?.user || res;
+      createdUser = {
+        ...payload,
+        id: apiUser?.id || `usr_${Date.now().toString(36)}`,
+        resolvedPermissions: apiUser?.resolvedPermissions || matchedRole?.permissions || ['*'],
+        createdAt: new Date().toISOString()
+      };
     } catch (err) {
-      console.warn('POST error:', err);
+      console.warn('bmsService.createUser warning:', err);
+      setMessage({ type: 'error', text: err?.message || 'Failed to create user on backend' });
     }
 
     if (!createdUser || !createdUser.id) {
       createdUser = {
-        id: `cmsoj${Date.now().toString(36)}${Math.random().toString(36).substring(2, 7)}`,
+        id: `usr_${Date.now().toString(36)}`,
         ...payload,
-        tenantId: selectedTenant,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        resolvedPermissions: matchedRole?.permissions || []
       };
     }
 
@@ -504,7 +671,7 @@ const UserAdministration = () => {
     return found?.name || tid || '—';
   };
 
-  // PATCH /api/users/{id} - Update User
+  // PATCH /api/v1/users/{id} - Update User
   const handleUpdateUser = async (e) => {
     if (e) e.preventDefault();
     if (!selectedUser) return;
@@ -515,33 +682,38 @@ const UserAdministration = () => {
       setMessage({ type: 'error', text: dupErr });
       return;
     }
-    const validRole = formData.role === 'USER' ? 'VIEWER' : formData.role;
-    const selectedTenant = formData.tenantId || '';
+    const matchedRole = roles.find(r => r.name === formData.role || r.id === formData.roleId);
+    const resolvedRoleId = matchedRole?.id || formData.roleId || formData.role;
+    const selectedTenant = formData.tenantId || selectedUser.tenantId || (tenants[0]?.id || '');
+    const selectedScopeId = formData.scopeId || (formData.scopeType === 'ZONE' ? (zones[0]?.id || 'zone-north-01') : formData.scopeType === 'SITE' ? (sites[0]?.id || 'site-bms-01') : selectedTenant);
+
+    const locationMapping = {};
+    if (formData.scopeType === 'SITE') {
+      const sId = Number(selectedScopeId);
+      locationMapping.siteId = !isNaN(sId) && sId > 0 ? sId : selectedScopeId;
+    } else if (formData.scopeType === 'ZONE') {
+      locationMapping.zoneId = String(selectedScopeId);
+    } else if (selectedTenant) {
+      locationMapping.tenantId = String(selectedTenant);
+    }
 
     const payload = {
       name: formData.name,
       email: formData.email,
-      role: validRole,
-      tenantId: selectedTenant,
+      role: formData.role,
+      roleId: resolvedRoleId,
       status: formData.status,
-      scopeType: formData.scopeType || 'ZONE',
-      scopeId: formData.scopeId !== undefined ? formData.scopeId : ''
+      tenantId: selectedTenant,
+      locationMappings: Object.keys(locationMapping).length > 0 ? [locationMapping] : []
     };
 
     let updatedResult = null;
     try {
-      const res = await fetch(`${API_BASE_URL}/users/${selectedUser.id}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const apiUser = json.data || json.user || json;
-        updatedResult = { ...apiUser, tenantId: selectedTenant };
-      }
+      const res = await bmsService.updateUser(selectedUser.id, payload);
+      const apiUser = res?.data || res?.user || res;
+      updatedResult = { ...apiUser, tenantId: selectedTenant };
     } catch (err) {
-      console.warn('PATCH error:', err);
+      console.warn('bmsService.updateUser warning:', err);
     }
 
     setUsers(prev => {
@@ -554,14 +726,11 @@ const UserAdministration = () => {
     setShowEditModal(false);
   };
 
-  // DELETE /api/users/{id} - Delete User
+  // DELETE /api/v1/users/{id} - Delete User
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
     try {
-      await fetch(`${API_BASE_URL}/users/${selectedUser.id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
+      await bmsService.deleteUser(selectedUser.id);
     } catch (err) {
       console.warn('DELETE error:', err);
     }
@@ -576,27 +745,158 @@ const UserAdministration = () => {
     setShowDeleteModal(false);
   };
 
-  // GET /api/users/{id} - Fetch Single User Details
+  // POST /api/v1/users/{id}/unlock - Admin Unlock User Account
+  const handleUnlockUser = async (user) => {
+    try {
+      await bmsService.unlockUser(user.id);
+      setUsers(prev => prev.map(u => String(u.id) === String(user.id) ? { ...u, status: 'ACTIVE' } : u));
+      setMessage({ type: 'success', text: `User account for "${user.name}" has been unlocked successfully.` });
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to unlock user account.' });
+    }
+  };
+
+  // POST /api/v1/users/{id}/change-password - Admin Change Password
+  const handleAdminChangePassword = async (e) => {
+    if (e) e.preventDefault();
+    if (!passwordUserId || !newPassword) return;
+    setPasswordLoading(true);
+    try {
+      await bmsService.adminChangePassword(passwordUserId, { password: newPassword, newPassword });
+      setMessage({ type: 'success', text: `Password for "${passwordUserName}" has been updated successfully.` });
+      setShowChangePasswordModal(false);
+      setNewPassword('');
+      setPasswordUserId(null);
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to change user password.' });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // GET /api/v1/users/{id} - Fetch Single User Details
   const handleViewDetails = async (user) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/users/${user.id}`, {
-        headers: getAuthHeaders()
-      });
-      if (res.status === 401) {
-        purgeExpiredTokens();
-      }
-      if (res.ok) {
-        const details = await res.json();
-        // Unwrap nested { success: true, data: { ... } } if returned by backend
-        const userObj = details.data || details.user || details;
-        setSelectedUser(userObj);
-      } else {
-        setSelectedUser(user);
-      }
+      const res = await bmsService.getUser(user.id);
+      const userObj = res?.data || res?.user || res;
+      setSelectedUser(userObj || user);
     } catch (e) {
       setSelectedUser(user);
     }
     setShowDetailModal(true);
+  };
+
+  // RBAC Roles Handlers
+  const handleCreateRole = async (e) => {
+    if (e) e.preventDefault();
+    if (!roleFormData.name.trim()) return;
+    setRoleLoading(true);
+    try {
+      const payload = {
+        name: roleFormData.name.trim(),
+        description: roleFormData.description || '',
+        permissionCodes: roleFormData.permissionCodes || []
+      };
+      const res = await bmsService.createRole(payload);
+      const created = res?.data || { ...payload, id: `role_${Date.now().toString(36)}`, isPredefined: false, userCount: 0 };
+      setRoles(prev => [...prev, created]);
+      setMessage({ type: 'success', text: `Custom role "${payload.name}" created successfully!` });
+      setShowCreateRoleModal(false);
+      setRoleFormData({ name: '', description: '', permissionCodes: [] });
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to create custom role' });
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleUpdateRole = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedRole || selectedRole.isPredefined) return;
+    setRoleLoading(true);
+    try {
+      const payload = {
+        name: roleFormData.name.trim(),
+        description: roleFormData.description || '',
+        permissionCodes: roleFormData.permissionCodes || []
+      };
+      await bmsService.updateRole(selectedRole.id, payload);
+      setRoles(prev => prev.map(r => r.id === selectedRole.id ? { ...r, ...payload, permissions: payload.permissionCodes } : r));
+      setMessage({ type: 'success', text: `Role "${payload.name}" updated successfully!` });
+      setShowEditRoleModal(false);
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to update role' });
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleCloneRole = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedRole || !cloneRoleName.trim()) return;
+    setRoleLoading(true);
+    try {
+      const payload = { name: cloneRoleName.trim(), description: `Cloned from ${selectedRole.name}` };
+      const res = await bmsService.cloneRole(selectedRole.id, payload);
+      const cloned = res?.data || {
+        id: `role_${Date.now().toString(36)}`,
+        name: payload.name,
+        description: payload.description,
+        isPredefined: false,
+        permissions: selectedRole.permissions || [],
+        userCount: 0
+      };
+      setRoles(prev => [...prev, cloned]);
+      setMessage({ type: 'success', text: `Role cloned as "${payload.name}" successfully!` });
+      setShowCloneRoleModal(false);
+      setCloneRoleName('');
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to clone role' });
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (!selectedRole) return;
+    if (selectedRole.isPredefined) {
+      setMessage({ type: 'error', text: 'Predefined system roles cannot be deleted.' });
+      return;
+    }
+    if ((selectedRole.userCount || 0) > 0) {
+      setMessage({ type: 'error', text: `Cannot delete role assigned to ${selectedRole.userCount} active users.` });
+      return;
+    }
+    try {
+      await bmsService.deleteRole(selectedRole.id);
+      setRoles(prev => prev.filter(r => r.id !== selectedRole.id));
+      setMessage({ type: 'success', text: `Role "${selectedRole.name}" deleted successfully.` });
+      setShowDeleteRoleModal(false);
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to delete role' });
+    }
+  };
+
+  const togglePermissionCode = (code) => {
+    setRoleFormData(prev => {
+      const current = prev.permissionCodes || [];
+      const updated = current.includes(code)
+        ? current.filter(c => c !== code)
+        : [...current, code];
+      return { ...prev, permissionCodes: updated };
+    });
+  };
+
+  const toggleCategoryPermissions = (categoryPerms) => {
+    setRoleFormData(prev => {
+      const current = prev.permissionCodes || [];
+      const categoryCodes = categoryPerms.map(p => p.code);
+      const allSelected = categoryCodes.every(c => current.includes(c));
+      const updated = allSelected
+        ? current.filter(c => !categoryCodes.includes(c))
+        : Array.from(new Set([...current, ...categoryCodes]));
+      return { ...prev, permissionCodes: updated };
+    });
   };
 
   const getAvatarColor = (role, name) => {
@@ -1277,49 +1577,227 @@ const UserAdministration = () => {
       {/* USER MANAGEMENT CONTAINER & TAB CONTROLS */}
       <div className="rounded-4 overflow-hidden shadow-lg scada-user-container">
         
-        {/* Top Navigation Bar: Users vs Invitations */}
+        {/* Top Navigation Bar: Manage Modules Popover & Role-Scoped Tabs */}
         <div className="p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3 scada-controls-header">
-          <div className="d-flex align-items-center gap-2">
-            <button 
-              onClick={() => setActiveTab('users')}
-              className={`btn btn-sm px-3.5 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'users' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
-              style={{ fontSize: '0.86rem', backgroundColor: activeTab === 'users' ? '#6366f1' : 'transparent', borderColor: activeTab === 'users' ? '#6366f1' : '#334155' }}
-            >
-              <Users size={16} /> Active Users ({users.length})
-            </button>
-            <button 
-              onClick={() => setActiveTab('invitations')}
-              className={`btn btn-sm px-3.5 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'invitations' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
-              style={{ fontSize: '0.86rem', backgroundColor: activeTab === 'invitations' ? '#10b981' : 'transparent', borderColor: activeTab === 'invitations' ? '#10b981' : '#334155', color: activeTab === 'invitations' ? '#ffffff' : '#cbd5e1' }}
-            >
-              <Send size={15} /> Pending Invitations ({invitations.filter(i => i.status === 'PENDING').length})
-            </button>
+          <div className="d-flex flex-wrap align-items-center gap-2.5">
+            {/* Manage Modules Selector Popover (ismartaccess-v2 style) */}
+            <div className="position-relative" ref={selectorRef}>
+              <button
+                type="button"
+                onClick={() => setShowManageSelector(!showManageSelector)}
+                className="btn btn-sm px-3 py-2 rounded-3 fw-bold d-flex align-items-center gap-2"
+                style={{
+                  backgroundColor: '#1e293b',
+                  borderColor: '#334155',
+                  color: '#f8fafc',
+                  fontSize: '0.84rem'
+                }}
+              >
+                <Sliders size={15} className="text-cyan-400" />
+                <span>Manage Modules</span>
+                <ChevronDown size={14} className={`text-slate-400 transition-all ${showManageSelector ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showManageSelector && (
+                <div
+                  className="position-absolute shadow-2xl rounded-4 p-3 z-3"
+                  style={{
+                    top: '115%',
+                    left: 0,
+                    width: '320px',
+                    backgroundColor: '#0c1017',
+                    border: '1px solid #243044',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.7)',
+                    zIndex: 1050
+                  }}
+                >
+                  <div className="fs-11 fw-bold text-slate-400 text-uppercase mb-2 px-1" style={{ letterSpacing: '0.6px' }}>
+                    Access & User Management Modules
+                  </div>
+                  <div className="d-flex flex-column gap-2">
+                    {/* Module 1: Users */}
+                    <div
+                      onClick={() => {
+                        setActiveTab('all-users');
+                        setShowManageSelector(false);
+                      }}
+                      className="p-2.5 rounded-3 d-flex align-items-center gap-3 cursor-pointer transition-all"
+                      style={{
+                        backgroundColor: isUserTab ? 'rgba(99, 102, 241, 0.15)' : '#131924',
+                        border: `1px solid ${isUserTab ? '#6366f1' : '#1e293b'}`,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div className="p-2 rounded-2" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+                        <Users size={16} />
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="fw-bold fs-13 text-slate-100">Users Directory</div>
+                        <div className="fs-11 text-slate-400">All system & organization users ({users.length})</div>
+                      </div>
+                    </div>
+
+                    {/* Module 2: Manage Roles */}
+                    <div
+                      onClick={() => {
+                        setActiveTab('roles');
+                        setShowManageSelector(false);
+                      }}
+                      className="p-2.5 rounded-3 d-flex align-items-center gap-3 cursor-pointer transition-all"
+                      style={{
+                        backgroundColor: activeTab === 'roles' ? 'rgba(139, 92, 246, 0.15)' : '#131924',
+                        border: `1px solid ${activeTab === 'roles' ? '#8b5cf6' : '#1e293b'}`,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div className="p-2 rounded-2" style={{ backgroundColor: '#8b5cf6', color: '#fff' }}>
+                        <Shield size={16} />
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="fw-bold fs-13 text-slate-100">Manage Roles</div>
+                        <div className="fs-11 text-slate-400">RBAC permissions & policies ({roles.length})</div>
+                      </div>
+                    </div>
+
+                    {/* Module 3: Manage Organisation */}
+                    <div
+                      onClick={() => {
+                        setShowManageSelector(false);
+                        navigate('/manage-organisation');
+                      }}
+                      className="p-2.5 rounded-3 d-flex align-items-center gap-3 cursor-pointer transition-all"
+                      style={{
+                        backgroundColor: '#131924',
+                        border: '1px solid #1e293b',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div className="p-2 rounded-2" style={{ backgroundColor: '#0284c7', color: '#fff' }}>
+                        <Building2 size={16} />
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="fw-bold fs-13 text-slate-100">Manage Organisation</div>
+                        <div className="fs-11 text-slate-400">Tenants & facility hierarchy</div>
+                      </div>
+                      <ExternalLink size={13} className="text-slate-500" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 6 Role-Scoped Navigation Tabs */}
+            <div className="d-flex flex-wrap align-items-center gap-1.5">
+              <button 
+                onClick={() => setActiveTab('all-users')}
+                className={`btn btn-sm px-3 py-1.5 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'all-users' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
+                style={{ fontSize: '0.82rem', backgroundColor: activeTab === 'all-users' ? '#6366f1' : 'transparent', borderColor: activeTab === 'all-users' ? '#6366f1' : '#334155' }}
+              >
+                <Users size={14} /> All Users ({users.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('administrators')}
+                className={`btn btn-sm px-3 py-1.5 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'administrators' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
+                style={{ fontSize: '0.82rem', backgroundColor: activeTab === 'administrators' ? '#ef4444' : 'transparent', borderColor: activeTab === 'administrators' ? '#ef4444' : '#334155', color: activeTab === 'administrators' ? '#ffffff' : '#cbd5e1' }}
+              >
+                <ShieldAlert size={14} /> Administrator ({adminCount})
+              </button>
+              <button 
+                onClick={() => setActiveTab('operators')}
+                className={`btn btn-sm px-3 py-1.5 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'operators' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
+                style={{ fontSize: '0.82rem', backgroundColor: activeTab === 'operators' ? '#f59e0b' : 'transparent', borderColor: activeTab === 'operators' ? '#f59e0b' : '#334155', color: activeTab === 'operators' ? '#ffffff' : '#cbd5e1' }}
+              >
+                <Sliders size={14} /> Operator & Manager ({opCount})
+              </button>
+              <button 
+                onClick={() => setActiveTab('viewers')}
+                className={`btn btn-sm px-3 py-1.5 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'viewers' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
+                style={{ fontSize: '0.82rem', backgroundColor: activeTab === 'viewers' ? '#06b6d4' : 'transparent', borderColor: activeTab === 'viewers' ? '#06b6d4' : '#334155', color: activeTab === 'viewers' ? '#ffffff' : '#cbd5e1' }}
+              >
+                <Eye size={14} /> Viewer ({viewerCount})
+              </button>
+              <button 
+                onClick={() => setActiveTab('roles')}
+                className={`btn btn-sm px-3 py-1.5 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'roles' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
+                style={{ fontSize: '0.82rem', backgroundColor: activeTab === 'roles' ? '#8b5cf6' : 'transparent', borderColor: activeTab === 'roles' ? '#8b5cf6' : '#334155', color: activeTab === 'roles' ? '#ffffff' : '#cbd5e1' }}
+              >
+                <Shield size={14} /> RBAC Roles ({roles.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('invitations')}
+                className={`btn btn-sm px-3 py-1.5 rounded-3 fw-bold d-flex align-items-center gap-2 transition-all ${activeTab === 'invitations' ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
+                style={{ fontSize: '0.82rem', backgroundColor: activeTab === 'invitations' ? '#10b981' : 'transparent', borderColor: activeTab === 'invitations' ? '#10b981' : '#334155', color: activeTab === 'invitations' ? '#ffffff' : '#cbd5e1' }}
+              >
+                <Send size={14} /> Invitations ({pendingInvitesCount})
+              </button>
+            </div>
           </div>
 
           <div className="d-flex align-items-center gap-2">
-            <Button 
-              size="sm" 
-              onClick={() => {
-                setInviteFormData({ email: '', role: 'OPERATOR', tenantId: 'cmshedsk40002zsvnhajul18y', scopeType: 'ZONE', expirationDays: '7', note: '' });
-                setShowInviteModal(true);
-              }} 
-              className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2"
-              style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)' }}
-            >
-              <Send size={14} /> Send User Invitation
-            </Button>
-            <Button 
-              size="sm" 
-              onClick={() => {
-                setFormData({ name: '', email: '', role: 'VIEWER', tenantId: 'cmshedsk40002zsvnhajul18y', status: 'ACTIVE', scopeType: 'ZONE', scopeId: '', permissions: 'read,write' });
-                setEmailError('');
-                setShowCreateModal(true);
-              }} 
-              className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2 btn-add-new-user"
-              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)' }}
-            >
-              <UserPlus size={15} /> Add New User
-            </Button>
+            {activeTab === 'roles' ? (
+              <Button 
+                size="sm" 
+                onClick={() => {
+                  setRoleFormData({ 
+                    name: '', 
+                    description: '', 
+                    permissionCodes: [], 
+                    roleType: 'ORGANIZATION',
+                    organizationId: tenants[0]?.id || '' 
+                  });
+                  setShowCreateRoleModal(true);
+                }} 
+                className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(139, 92, 246, 0.4)' }}
+              >
+                <ShieldPlus size={15} /> Create Custom Role
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setInviteFormData({ 
+                      email: '', 
+                      role: 'OPERATOR', 
+                      tenantId: tenants[0]?.id || '', 
+                      scopeType: 'ZONE', 
+                      expirationDays: '7', 
+                      note: '' 
+                    });
+                    setShowInviteModal(true);
+                  }} 
+                  className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)' }}
+                >
+                  <Send size={14} /> Send User Invitation
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setFormData({ 
+                      name: '', 
+                      email: '', 
+                      password: '', 
+                      role: 'VIEWER', 
+                      roleId: '', 
+                      tenantId: tenants[0]?.id || '', 
+                      roleType: 'SYSTEM',
+                      status: 'ACTIVE', 
+                      scopeType: 'ZONE', 
+                      scopeId: zones[0]?.id || '', 
+                      permissions: 'read,write' 
+                    });
+                    setEmailError('');
+                    setShowCreateModal(true);
+                  }} 
+                  className="rounded-3 px-3.5 py-1.5 fw-bold border-0 d-flex align-items-center gap-2 btn-add-new-user"
+                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: '#ffffff', fontSize: '0.84rem', boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)' }}
+                >
+                  <UserPlus size={15} /> Add New User
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -1330,76 +1808,80 @@ const UserAdministration = () => {
             {/* Left Controls: Search, Roles Filter, Status Filter */}
             <div className="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
               {/* Search Bar */}
-              <InputGroup style={{ maxWidth: '300px' }}>
+              <InputGroup style={{ maxWidth: '320px' }}>
                 <InputGroup.Text className="scada-search-icon" style={{ paddingLeft: '12px', paddingRight: '8px' }}>
                   <Search size={15} />
                 </InputGroup.Text>
                 <Form.Control
                   className="scada-search-input"
-                  placeholder={activeTab === 'users' ? "Search user by name, email or ID..." : "Search invitation by email or token..."}
+                  placeholder={isUserTab ? "Search user by name, email or ID..." : (activeTab === 'roles' ? "Search role by name or description..." : "Search invitation by email or token...")}
                   style={{ boxShadow: 'none', fontSize: '0.86rem' }}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </InputGroup>
 
-              {/* Floating Filter Role Select */}
-              <div className="position-relative">
-                <span 
-                  className="position-absolute px-1 scada-floating-label" 
-                  style={{ 
-                    top: '-9px', 
-                    left: '12px', 
-                    fontSize: '0.68rem', 
-                    fontWeight: 700, 
-                    zIndex: 3,
-                    letterSpacing: '0.4px'
-                  }}
-                >
-                  Filter Role
-                </span>
-                <Form.Select 
-                  className="scada-select-input"
-                  style={{ boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                >
-                  <option value="ALL">All Roles</option>
-                  <option value="SUPER_ADMIN">SUPER ADMIN</option>
-                  <option value="ADMIN">ADMIN</option>
-                  <option value="OPERATOR">OPERATOR</option>
-                  <option value="VIEWER">VIEWER</option>
-                  <option value="MANAGER">MANAGER</option>
-                </Form.Select>
-              </div>
+              {activeTab !== 'roles' && (
+                <>
+                  {/* Floating Filter Role Select */}
+                  <div className="position-relative">
+                    <span 
+                      className="position-absolute px-1 scada-floating-label" 
+                      style={{ 
+                        top: '-9px', 
+                        left: '12px', 
+                        fontSize: '0.68rem', 
+                        fontWeight: 700, 
+                        zIndex: 3,
+                        letterSpacing: '0.4px'
+                      }}
+                    >
+                      Filter Role
+                    </span>
+                    <Form.Select 
+                      className="scada-select-input"
+                      style={{ boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
+                      value={roleFilter}
+                      onChange={(e) => setRoleFilter(e.target.value)}
+                    >
+                      <option value="ALL">All Roles</option>
+                      <option value="SUPER_ADMIN">SUPER ADMIN</option>
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="OPERATOR">OPERATOR</option>
+                      <option value="VIEWER">VIEWER</option>
+                      <option value="MANAGER">MANAGER</option>
+                    </Form.Select>
+                  </div>
 
-              {/* Floating Status Select */}
-              <div className="position-relative">
-                <span 
-                  className="position-absolute px-1 scada-floating-label" 
-                  style={{ 
-                    top: '-9px', 
-                    left: '12px', 
-                    fontSize: '0.68rem', 
-                    fontWeight: 700, 
-                    zIndex: 3,
-                    letterSpacing: '0.4px'
-                  }}
-                >
-                  Status
-                </span>
-                <Form.Select 
-                  className="scada-select-input"
-                  style={{ boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="ALL">All Status</option>
-                  <option value="ACTIVE">{activeTab === 'users' ? 'ACTIVE' : 'PENDING'}</option>
-                  <option value="INACTIVE">{activeTab === 'users' ? 'INACTIVE' : 'ACCEPTED'}</option>
-                  {activeTab === 'invitations' && <option value="DECLINED">DECLINED</option>}
-                </Form.Select>
-              </div>
+                  {/* Floating Status Select */}
+                  <div className="position-relative">
+                    <span 
+                      className="position-absolute px-1 scada-floating-label" 
+                      style={{ 
+                        top: '-9px', 
+                        left: '12px', 
+                        fontSize: '0.68rem', 
+                        fontWeight: 700, 
+                        zIndex: 3,
+                        letterSpacing: '0.4px'
+                      }}
+                    >
+                      Status
+                    </span>
+                    <Form.Select 
+                      className="scada-select-input"
+                      style={{ boxShadow: 'none', width: 'auto', fontSize: '0.86rem', minWidth: '130px', fontWeight: 600 }}
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="ALL">All Status</option>
+                      <option value="ACTIVE">{isUserTab ? 'ACTIVE' : 'PENDING'}</option>
+                      <option value="INACTIVE">{isUserTab ? 'INACTIVE' : 'ACCEPTED'}</option>
+                      {activeTab === 'invitations' && <option value="DECLINED">DECLINED</option>}
+                    </Form.Select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Right Controls: Refresh */}
@@ -1407,11 +1889,11 @@ const UserAdministration = () => {
               <Button 
                 variant="outline-light" 
                 size="sm" 
-                onClick={activeTab === 'users' ? fetchUsers : fetchInvitations} 
+                onClick={isUserTab ? () => fetchUsers(page, pageSize) : (activeTab === 'roles' ? fetchRoles : fetchInvitations)} 
                 className="rounded-3 px-3 py-1.5 d-flex align-items-center gap-1.5 btn-refresh-scada"
                 style={{ fontSize: '0.84rem', fontWeight: 600 }}
               >
-                <RefreshCcw size={14} style={{ color: '#a855f7' }} className={loading ? 'spin-anim' : ''} /> Refresh
+                <RefreshCcw size={14} style={{ color: '#a855f7' }} className={loading || rolesLoading ? 'spin-anim' : ''} /> Refresh
               </Button>
             </div>
 
@@ -1423,11 +1905,23 @@ const UserAdministration = () => {
           <table className="w-100 align-middle scada-table" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr className="scada-table-header">
-                <th className="py-3 px-4 text-start fw-bold">{activeTab === 'users' ? 'USER DETAILS' : 'INVITEE DETAILS'}</th>
-                <th className="py-3 text-start fw-bold">{activeTab === 'users' ? 'ROLE & STATUS' : 'ROLE & DELEGATED TENANT'}</th>
-                <th className="py-3 text-start fw-bold">{activeTab === 'users' ? 'SCOPE / TENANT' : 'INVITATION LINK / TOKEN'}</th>
-                <th className="py-3 text-start fw-bold">{activeTab === 'users' ? 'PERMISSIONS' : 'EXPIRATION & STATUS'}</th>
-                <th className="py-3 px-4 text-end fw-bold">ACTIONS</th>
+                {activeTab === 'roles' ? (
+                  <>
+                    <th className="py-3 px-4 text-start fw-bold">ROLE NAME & TYPE</th>
+                    <th className="py-3 text-start fw-bold">DESCRIPTION</th>
+                    <th className="py-3 text-start fw-bold">USERS COUNT</th>
+                    <th className="py-3 text-start fw-bold">PERMISSIONS</th>
+                    <th className="py-3 px-4 text-end fw-bold">ACTIONS</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="py-3 px-4 text-start fw-bold">{isUserTab ? 'USER DETAILS' : 'INVITEE DETAILS'}</th>
+                    <th className="py-3 text-start fw-bold">{isUserTab ? 'ROLE & STATUS' : 'ROLE & DELEGATED TENANT'}</th>
+                    <th className="py-3 text-start fw-bold">{isUserTab ? 'SCOPE / TENANT' : 'INVITATION LINK / TOKEN'}</th>
+                    <th className="py-3 text-start fw-bold">{isUserTab ? 'PERMISSIONS' : 'EXPIRATION & STATUS'}</th>
+                    <th className="py-3 px-4 text-end fw-bold">ACTIONS</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -1470,7 +1964,7 @@ const UserAdministration = () => {
                     </td>
                   </tr>
                 ))
-              ) : activeTab === 'users' ? (
+              ) : isUserTab ? (
                 filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center py-5 scada-table-empty">
@@ -1566,16 +2060,43 @@ const UserAdministration = () => {
                             <Eye size={14} />
                           </button>
                           <button 
+                            onClick={() => handleUnlockUser(u)}
+                            className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center btn-action-icon"
+                            style={{ width: 32, height: 32, backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981' }}
+                            title="Unlock User Account (Reset Rate-Limit Lockout)"
+                          >
+                            <Unlock size={14} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setPasswordUserId(u.id);
+                              setPasswordUserName(u.name || u.email);
+                              setNewPassword('');
+                              setShowChangePasswordModal(true);
+                            }}
+                            className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center btn-action-icon"
+                            style={{ width: 32, height: 32, backgroundColor: 'rgba(139, 92, 246, 0.15)', border: '1px solid #8b5cf6', color: '#a78bfa' }}
+                            title="Change User Password"
+                          >
+                            <Key size={14} />
+                          </button>
+                          <button 
                             onClick={() => {
                               setSelectedUser(u);
+                              const mapping = u.locationMappings?.[0] || u.zoneLocations?.[0];
+                              const parsedScopeType = mapping?.siteId ? 'SITE' : (mapping?.zoneId ? 'ZONE' : (mapping?.zoneNodeType || u.scopeType || 'ZONE'));
+                              const parsedScopeId = mapping?.siteId || mapping?.zoneId || mapping?.zoneNodeId || u.scopeId || (parsedScopeType === 'ZONE' ? zones[0]?.id : (parsedScopeType === 'SITE' ? sites[0]?.id : u.tenantId)) || '';
                               setFormData({
                                 name: u.name || '',
                                 email: u.email || '',
+                                password: '',
                                 role: u.role === 'USER' ? 'VIEWER' : (u.role || 'VIEWER'),
-                                tenantId: u.tenantId || u.scopeId || 'cmshedsk40002zsvnhajul18y',
+                                roleId: u.roleId || '',
+                                tenantId: u.tenantId || u.scopeId || tenants[0]?.id || '',
+                                roleType: u.roleType || 'SYSTEM',
                                 status: u.status || 'ACTIVE',
-                                scopeType: u.scopeType || 'TENANT',
-                                scopeId: u.scopeId || '',
+                                scopeType: parsedScopeType,
+                                scopeId: parsedScopeId,
                                 permissions: Array.isArray(u.permissions) ? u.permissions.join(', ') : 'read'
                               });
                               setEmailError('');
@@ -1594,6 +2115,117 @@ const UserAdministration = () => {
                             title="Delete User"
                           >
                             <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )
+              ) : activeTab === 'roles' ? (
+                /* RBAC ROLES TAB RENDERING */
+                filteredRoles.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-5 scada-table-empty">
+                      <div className="d-flex flex-column align-items-center justify-content-center py-3 gap-2">
+                        <Shield size={36} className="text-muted opacity-50 mb-1" />
+                        <span className="fw-bold fs-15 text-slate-400">No roles found matching query</span>
+                        <span className="fs-12 text-slate-500">Click "Create Custom Role" above to configure a new role.</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRoles.map(r => (
+                    <tr key={r.id} className="user-table-row">
+                      <td className="py-3 px-4">
+                        <div className="d-flex align-items-center gap-3">
+                          <div 
+                            className="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                            style={{ width: 40, height: 40, backgroundColor: r.isPredefined ? 'rgba(139, 92, 246, 0.2)' : 'rgba(6, 182, 212, 0.2)', border: `1px solid ${r.isPredefined ? '#8b5cf6' : '#06b6d4'}`, color: r.isPredefined ? '#c084fc' : '#22d3ee', fontSize: '1rem', flexShrink: 0 }}
+                          >
+                            <Shield size={18} />
+                          </div>
+                          <div>
+                            <div className="fw-bold user-name d-flex align-items-center gap-2" style={{ fontSize: '0.95rem' }}>
+                              {r.name}
+                              {r.isPredefined ? (
+                                <Badge bg="secondary" style={{ fontSize: '0.65rem', backgroundColor: '#334155' }}>SYSTEM</Badge>
+                              ) : (
+                                <Badge bg="info" style={{ fontSize: '0.65rem' }}>CUSTOM</Badge>
+                              )}
+                            </div>
+                            <div className="user-email font-monospace" style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              ID: {r.id}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <span className="fs-13 text-slate-300">
+                          {r.description || 'No description provided'}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <span className="badge rounded-pill px-3 py-1.5 fw-bold" style={{ backgroundColor: '#1e293b', color: '#38bdf8', border: '1px solid #334155', fontSize: '0.78rem' }}>
+                          <Users size={12} className="me-1 inline" /> {r.userCount || 0} Users
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="d-flex flex-wrap gap-1 align-items-center">
+                          <Badge bg="dark" className="border border-secondary font-monospace" style={{ fontSize: '0.78rem' }}>
+                            {r.permissions?.includes('*') ? 'Wildcard (*)' : `${r.permissions?.length || 0} permissions`}
+                          </Badge>
+                          {Array.isArray(r.permissions) && r.permissions.slice(0, 2).map((code, idx) => (
+                            <span key={idx} className="px-2 py-0.5 rounded font-monospace fs-11" style={{ backgroundColor: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                              {code}
+                            </span>
+                          ))}
+                          {Array.isArray(r.permissions) && r.permissions.length > 2 && (
+                            <span className="fs-11 text-slate-400">+{r.permissions.length - 2} more</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-end">
+                        <div className="d-flex justify-content-end gap-2">
+                          <button 
+                            onClick={() => {
+                              setSelectedRole(r);
+                              setCloneRoleName(`${r.name}_COPY`);
+                              setShowCloneRoleModal(true);
+                            }}
+                            className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center btn-action-icon"
+                            style={{ width: 32, height: 32, backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid #3b82f6', color: '#3b82f6' }}
+                            title="Clone Role"
+                          >
+                            <Copy size={13} />
+                          </button>
+                          <button 
+                            disabled={r.isPredefined}
+                            onClick={() => {
+                              setSelectedRole(r);
+                              setRoleFormData({
+                                name: r.name,
+                                description: r.description || '',
+                                permissionCodes: r.permissions || []
+                              });
+                              setShowEditRoleModal(true);
+                            }}
+                            className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center btn-action-icon"
+                            style={{ width: 32, height: 32, backgroundColor: r.isPredefined ? '#1e293b' : 'rgba(245, 158, 11, 0.15)', border: `1px solid ${r.isPredefined ? '#334155' : '#f59e0b'}`, color: r.isPredefined ? '#64748b' : '#f59e0b', cursor: r.isPredefined ? 'not-allowed' : 'pointer' }}
+                            title={r.isPredefined ? 'Predefined system roles cannot be modified' : 'Edit Role'}
+                          >
+                            <Edit size={13} />
+                          </button>
+                          <button 
+                            disabled={r.isPredefined || (r.userCount || 0) > 0}
+                            onClick={() => {
+                              setSelectedRole(r);
+                              setShowDeleteRoleModal(true);
+                            }}
+                            className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center btn-action-icon"
+                            style={{ width: 32, height: 32, backgroundColor: (r.isPredefined || (r.userCount || 0) > 0) ? '#1e293b' : 'rgba(239, 68, 68, 0.15)', border: `1px solid ${(r.isPredefined || (r.userCount || 0) > 0) ? '#334155' : '#ef4444'}`, color: (r.isPredefined || (r.userCount || 0) > 0) ? '#64748b' : '#ef4444', cursor: (r.isPredefined || (r.userCount || 0) > 0) ? 'not-allowed' : 'pointer' }}
+                            title={r.isPredefined ? 'System roles cannot be deleted' : ((r.userCount || 0) > 0 ? 'Cannot delete role with assigned users' : 'Delete Role')}
+                          >
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>
@@ -1717,7 +2349,11 @@ const UserAdministration = () => {
               size="sm" 
               className="scada-page-size-select"
               style={{ backgroundColor: '#0d111a', borderColor: '#232938', color: '#ffffff', width: 'auto', fontSize: '0.80rem', boxShadow: 'none' }}
-              defaultValue={10}
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -1728,175 +2364,538 @@ const UserAdministration = () => {
 
           <div className="d-flex align-items-center gap-3">
             <span className="text-slate-400 fs-13">
-              Showing 1 to {filteredUsers.length} of {users.length} entries
+              {isUserTab ? (
+                `Showing ${users.length > 0 ? (page - 1) * pageSize + 1 : 0} to ${Math.min(page * pageSize, total || users.length)} of ${total || users.length} entries`
+              ) : activeTab === 'roles' ? (
+                `Showing ${filteredRoles.length} of ${roles.length} roles`
+              ) : (
+                `Showing ${filteredInvitations.length} of ${invitations.length} invitations`
+              )}
             </span>
-            <div className="d-flex align-items-center gap-1">
-              <Button variant="outline-secondary" size="sm" className="px-2.5 py-1 border-secondary" disabled style={{ backgroundColor: '#0d111a', color: '#64748b' }}>
-                &lt;
-              </Button>
-              <Button size="sm" className="px-3 py-1 fw-bold border-0" style={{ backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '6px' }}>
-                1
-              </Button>
-              <Button variant="outline-secondary" size="sm" className="px-2.5 py-1 border-secondary" disabled style={{ backgroundColor: '#0d111a', color: '#64748b' }}>
-                &gt;
-              </Button>
-            </div>
+            {isUserTab && (
+              <div className="d-flex align-items-center gap-1">
+                <Button 
+                  variant="outline-secondary" 
+                  size="sm" 
+                  className="px-2.5 py-1 border-secondary" 
+                  disabled={page <= 1} 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  style={{ backgroundColor: '#0d111a', color: page <= 1 ? '#64748b' : '#ffffff' }}
+                >
+                  &lt;
+                </Button>
+                <span className="px-3 py-1 fw-bold fs-12 rounded-2" style={{ backgroundColor: '#6366f1', color: '#ffffff' }}>
+                  {page} / {totalPages || 1}
+                </span>
+                <Button 
+                  variant="outline-secondary" 
+                  size="sm" 
+                  className="px-2.5 py-1 border-secondary" 
+                  disabled={page >= totalPages} 
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  style={{ backgroundColor: '#0d111a', color: page >= totalPages ? '#64748b' : '#ffffff' }}
+                >
+                  &gt;
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* CREATE USER MODAL */}
-      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered className="scada-animated-modal">
+      {/* CREATE USER MODAL (POST /api/v1/users) */}
+      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered size="xl" className="scada-animated-modal">
         <Modal.Header closeButton style={{ backgroundColor: '#0c1017', color: '#ffffff', borderColor: '#1e293b' }}>
           <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#00bfff' }}>
-            <UserPlus size={18} /> Create New User
+            <UserPlus size={18} /> Create New User (RBAC & Scope)
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleCreateUser}>
-          <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff' }}>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Full Name</Form.Label>
-              <Form.Control type="text" style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Email Address</Form.Label>
-              <Form.Control 
-                type="email" 
-                style={{ 
-                  backgroundColor: '#131924', 
-                  color: '#ffffff', 
-                  borderColor: emailError ? '#ef4444' : '#243044', 
-                  boxShadow: emailError ? '0 0 12px rgba(239, 68, 68, 0.4)' : 'none' 
-                }} 
-                value={formData.email} 
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setFormData({ ...formData, email: val });
-                  setEmailError(checkDuplicateEmail(val));
-                }} 
-                required 
-              />
-              {emailError && (
-                <div className="mt-1.5 fs-12 fw-bold d-flex align-items-center gap-1" style={{ color: '#ef4444' }}>
-                  <AlertTriangle size={14} /> {emailError}
+          <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff', maxHeight: '75vh', overflowY: 'auto' }}>
+            <Row className="g-4">
+              {/* Left Column: User Profile & Role Info */}
+              <Col lg={6} className="d-flex flex-column gap-3">
+                <div className="fs-12 fw-bold text-uppercase text-cyan-400 d-flex align-items-center gap-1.5 pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <User size={14} /> User Profile & Credentials
                 </div>
-              )}
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Organization</Form.Label>
-              <Form.Select 
-                style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
-                value={formData.tenantId} 
-                onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
-              >
-                {tenants.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-            <Row className="g-2 mb-3">
-              <Col md={6}>
-                <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role</Form.Label>
-                <Form.Select style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                  <option value="ADMIN">ADMIN</option>
-                  <option value="OPERATOR">OPERATOR</option>
-                  <option value="VIEWER">VIEWER</option>
-                  <option value="MANAGER">MANAGER</option>
-                </Form.Select>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Full Name *</Form.Label>
+                  <Form.Control 
+                    type="text" 
+                    placeholder="e.g. John Doe"
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                    required 
+                  />
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Email Address *</Form.Label>
+                  <Form.Control 
+                    type="email" 
+                    placeholder="user@organization.com"
+                    style={{ 
+                      backgroundColor: '#131924', 
+                      color: '#ffffff', 
+                      borderColor: emailError ? '#ef4444' : '#243044', 
+                      boxShadow: emailError ? '0 0 12px rgba(239, 68, 68, 0.4)' : 'none' 
+                    }} 
+                    value={formData.email} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, email: val });
+                      setEmailError(checkDuplicateEmail(val));
+                    }} 
+                    required 
+                  />
+                  {emailError && (
+                    <div className="mt-1.5 fs-12 fw-bold d-flex align-items-center gap-1" style={{ color: '#ef4444' }}>
+                      <AlertTriangle size={14} /> {emailError}
+                    </div>
+                  )}
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Initial Password (Optional)</Form.Label>
+                  <Form.Control 
+                    type="password" 
+                    placeholder="Leave blank for auto-generated or default"
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
+                    value={formData.password || ''} 
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
+                  />
+                  <Form.Text style={{ color: '#64748b', fontSize: '0.74rem' }}>
+                    If empty, the user can activate their account or set password via invitation.
+                  </Form.Text>
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Tenant Organization *</Form.Label>
+                  <Form.Select 
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
+                    value={formData.tenantId} 
+                    onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
+                  >
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+
+                <Row className="g-2">
+                  <Col md={6}>
+                    <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role Type</Form.Label>
+                    <Form.Select 
+                      style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
+                      value={formData.roleType || 'SYSTEM'} 
+                      onChange={(e) => setFormData({ ...formData, roleType: e.target.value })}
+                    >
+                      <option value="SYSTEM">SYSTEM (Global)</option>
+                      <option value="ORGANIZATION">ORGANIZATION (Scoped)</option>
+                    </Form.Select>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Account Status</Form.Label>
+                    <Form.Select 
+                      style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
+                      value={formData.status} 
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </Form.Select>
+                  </Col>
+                </Row>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Assigned Role *</Form.Label>
+                  <Form.Select 
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} 
+                    value={formData.role} 
+                    onChange={(e) => {
+                      const found = roles.find(r => r.name === e.target.value || r.id === e.target.value);
+                      setFormData({ 
+                        ...formData, 
+                        role: found?.name || e.target.value,
+                        roleId: found?.id || ''
+                      });
+                    }}
+                  >
+                    <optgroup label="System Predefined Roles">
+                      {['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'].map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </optgroup>
+                    {roles.filter(r => !r.isPredefined).length > 0 && (
+                      <optgroup label="Custom Roles">
+                        {roles.filter(r => !r.isPredefined).map(cr => (
+                          <option key={cr.id} value={cr.name}>{cr.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </Form.Select>
+                </Form.Group>
               </Col>
-              <Col md={6}>
-                <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Status</Form.Label>
-                <Form.Select style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </Form.Select>
+
+              {/* Right Column: Location Scope Hierarchy (ismartaccess-v2 LocationInput style) */}
+              <Col lg={6} className="d-flex flex-column gap-3">
+                <div className="fs-12 fw-bold text-uppercase text-cyan-400 d-flex align-items-center gap-1.5 pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <MapPin size={14} /> Location Hierarchy & Scope Restriction
+                </div>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Hierarchy Scope Level</Form.Label>
+                  <div className="d-flex gap-2">
+                    {['TENANT', 'ZONE', 'SITE'].map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => {
+                          let defId = '';
+                          if (lvl === 'TENANT') defId = formData.tenantId || tenants[0]?.id || '';
+                          else if (lvl === 'ZONE') defId = zones[0]?.id || 'zone-north-01';
+                          else if (lvl === 'SITE') defId = sites[0]?.id || 'site-delhi-01';
+                          setFormData({ ...formData, scopeType: lvl, scopeId: defId });
+                        }}
+                        className={`btn btn-sm flex-grow-1 py-2 rounded-3 fw-bold transition-all ${formData.scopeType === lvl ? 'btn-primary' : 'btn-outline-secondary text-slate-300'}`}
+                        style={{
+                          backgroundColor: formData.scopeType === lvl ? '#0284c7' : '#131924',
+                          borderColor: formData.scopeType === lvl ? '#0284c7' : '#243044',
+                          fontSize: '0.80rem'
+                        }}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
+                </Form.Group>
+
+                {formData.scopeType === 'TENANT' && (
+                  <Form.Group>
+                    <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Selected Tenant Boundary</Form.Label>
+                    <Form.Control
+                      type="text"
+                      disabled
+                      value={tenants.find(t => t.id === formData.tenantId)?.name || formData.tenantId}
+                      style={{ backgroundColor: '#131924', color: '#94a3b8', borderColor: '#243044', boxShadow: 'none' }}
+                    />
+                    <Form.Text style={{ color: '#64748b', fontSize: '0.74rem' }}>
+                      User will have access across all zones and sites within this tenant.
+                    </Form.Text>
+                  </Form.Group>
+                )}
+
+                {formData.scopeType === 'ZONE' && (
+                  <Form.Group>
+                    <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Target Zone Node *</Form.Label>
+                    <Form.Select
+                      style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                      value={formData.scopeId}
+                      onChange={(e) => setFormData({ ...formData, scopeId: e.target.value })}
+                    >
+                      {zones.length > 0 ? (
+                        zones.map(z => (
+                          <option key={z.id} value={z.id}>{z.name} ({z.code || z.id})</option>
+                        ))
+                      ) : (
+                        <option value="zone-north-01">Default North Zone (zone-north-01)</option>
+                      )}
+                    </Form.Select>
+                    <Form.Text style={{ color: '#64748b', fontSize: '0.74rem' }}>
+                      Restricts user to devices, alarms, and telemetry within this operational zone.
+                    </Form.Text>
+                  </Form.Group>
+                )}
+
+                {formData.scopeType === 'SITE' && (
+                  <Form.Group>
+                    <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Target Site Facility *</Form.Label>
+                    <Form.Select
+                      style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                      value={formData.scopeId}
+                      onChange={(e) => setFormData({ ...formData, scopeId: e.target.value })}
+                    >
+                      {sites.length > 0 ? (
+                        sites.map(s => (
+                          <option key={s.id} value={s.id}>{s.name} ({s.code || s.id})</option>
+                        ))
+                      ) : (
+                        <option value="site-delhi-01">Main Data Center Site (site-delhi-01)</option>
+                      )}
+                    </Form.Select>
+                    <Form.Text style={{ color: '#64748b', fontSize: '0.74rem' }}>
+                      Restricts user to this specific physical site facility.
+                    </Form.Text>
+                  </Form.Group>
+                )}
+
+                {/* Scope Preview Card */}
+                <div className="p-3 rounded-3" style={{ backgroundColor: '#0c1017', border: '1px solid #1e293b' }}>
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <span className="fs-12 fw-bold text-slate-300">Generated Zone Location Scope</span>
+                    <span className="badge bg-primary fs-11 text-uppercase">{formData.scopeType}</span>
+                  </div>
+                  <div className="font-monospace fs-11 p-2 rounded-2" style={{ backgroundColor: '#131924', color: '#38bdf8' }}>
+                    {`locationMappings: [{ ${formData.scopeType === 'SITE' ? `siteId: ${formData.scopeId || 'null'}` : `zoneId: "${formData.scopeId || formData.tenantId}"`} }]`}
+                  </div>
+                  <div className="fs-11 text-slate-400 mt-2 d-flex align-items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-emerald-400" />
+                    <span>Enforced at backend gateway level for telemetry streams and alarms.</span>
+                  </div>
+                </div>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Explicit Permissions Override (Optional)</Form.Label>
+                  <Form.Control 
+                    type="text" 
+                    placeholder="e.g. read, write or leave empty for role defaults"
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', fontSize: '0.84rem' }} 
+                    value={formData.permissions} 
+                    onChange={(e) => setFormData({ ...formData, permissions: e.target.value })} 
+                  />
+                </Form.Group>
               </Col>
             </Row>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Permissions (Comma Separated)</Form.Label>
-              <Form.Control type="text" style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }} value={formData.permissions} onChange={(e) => setFormData({ ...formData, permissions: e.target.value })} />
-            </Form.Group>
           </Modal.Body>
           <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
             <Button variant="outline-secondary" size="sm" className="rounded-3 px-3 border-secondary btn-modal-cancel" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button type="submit" size="sm" disabled={!!emailError} className="rounded-3 fw-bold px-4 border-0 btn-modal-create" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.35)' }}>Create User</Button>
+            <Button type="submit" size="sm" disabled={!!emailError} className="rounded-3 fw-bold px-4 border-0 btn-modal-create" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #00bfff 100%)', color: '#ffffff', boxShadow: '0 4px 14px rgba(0, 191, 255, 0.35)' }}>
+              Create User
+            </Button>
           </Modal.Footer>
         </Form>
       </Modal>
 
-      {/* EDIT USER MODAL */}
-      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered className="scada-animated-modal-edit">
+      {/* EDIT USER MODAL (PATCH /api/v1/users/{id}) */}
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered size="xl" className="scada-animated-modal-edit">
         <Modal.Header closeButton style={{ backgroundColor: '#0a0d14', color: '#ffffff', borderColor: '#1c2433' }}>
           <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#f59e0b' }}>
-            <Edit size={18} /> Update User
+            <Edit size={18} /> Update User: {selectedUser?.name || selectedUser?.email}
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleUpdateUser}>
-          <Modal.Body style={{ backgroundColor: '#0a0d14', color: '#ffffff' }}>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Full Name</Form.Label>
-              <Form.Control type="text" style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Email Address</Form.Label>
-              <Form.Control 
-                type="email" 
-                style={{ 
-                  backgroundColor: '#151c28', 
-                  color: '#ffffff', 
-                  borderColor: emailError ? '#ef4444' : '#243044', 
-                  boxShadow: emailError ? '0 0 12px rgba(239, 68, 68, 0.4)' : 'none', 
-                  borderRadius: '8px', 
-                  padding: '8px 12px' 
-                }} 
-                value={formData.email} 
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setFormData({ ...formData, email: val });
-                  setEmailError(checkDuplicateEmail(val, selectedUser?.id));
-                }} 
-                required 
-              />
-              {emailError && (
-                <div className="mt-1.5 fs-12 fw-bold d-flex align-items-center gap-1" style={{ color: '#ef4444' }}>
-                  <AlertTriangle size={14} /> {emailError}
+          <Modal.Body style={{ backgroundColor: '#0a0d14', color: '#ffffff', maxHeight: '75vh', overflowY: 'auto' }}>
+            <Row className="g-4">
+              {/* Left Column: User Profile & Role Info */}
+              <Col lg={6} className="d-flex flex-column gap-3">
+                <div className="fs-12 fw-bold text-uppercase text-amber-400 d-flex align-items-center gap-1.5 pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <User size={14} /> User Profile & Credentials
                 </div>
-              )}
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Organization</Form.Label>
-              <Form.Select 
-                disabled
-                style={{ backgroundColor: '#151c28', color: '#94a3b8', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'not-allowed', opacity: 0.7 }} 
-                value={formData.tenantId} 
-                onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
-              >
-                {tenants.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </Form.Select>
-              <Form.Text style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                User organization cannot be changed after creation.
-              </Form.Text>
-            </Form.Group>
-            <Row className="g-2 mb-3">
-              <Col md={6}>
-                <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Role</Form.Label>
-                <Form.Select style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                  <option value="ADMIN">ADMIN</option>
-                  <option value="OPERATOR">OPERATOR</option>
-                  <option value="VIEWER">VIEWER</option>
-                  <option value="MANAGER">MANAGER</option>
-                </Form.Select>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Full Name *</Form.Label>
+                  <Form.Control 
+                    type="text" 
+                    style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px' }} 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                    required 
+                  />
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Email Address *</Form.Label>
+                  <Form.Control 
+                    type="email" 
+                    style={{ 
+                      backgroundColor: '#151c28', 
+                      color: '#ffffff', 
+                      borderColor: emailError ? '#ef4444' : '#243044', 
+                      boxShadow: emailError ? '0 0 12px rgba(239, 68, 68, 0.4)' : 'none', 
+                      borderRadius: '8px' 
+                    }} 
+                    value={formData.email} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, email: val });
+                      setEmailError(checkDuplicateEmail(val, selectedUser?.id));
+                    }} 
+                    required 
+                  />
+                  {emailError && (
+                    <div className="mt-1.5 fs-12 fw-bold d-flex align-items-center gap-1" style={{ color: '#ef4444' }}>
+                      <AlertTriangle size={14} /> {emailError}
+                    </div>
+                  )}
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Organization</Form.Label>
+                  <Form.Select 
+                    disabled
+                    style={{ backgroundColor: '#151c28', color: '#94a3b8', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', cursor: 'not-allowed', opacity: 0.7 }} 
+                    value={formData.tenantId} 
+                    onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
+                  >
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                    ))}
+                  </Form.Select>
+                  <Form.Text style={{ color: '#64748b', fontSize: '0.74rem' }}>
+                    User tenant organization cannot be changed after creation.
+                  </Form.Text>
+                </Form.Group>
+
+                <Row className="g-2">
+                  <Col md={6}>
+                    <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Role Type</Form.Label>
+                    <Form.Select 
+                      style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px' }} 
+                      value={formData.roleType || 'SYSTEM'} 
+                      onChange={(e) => setFormData({ ...formData, roleType: e.target.value })}
+                    >
+                      <option value="SYSTEM">SYSTEM (Global)</option>
+                      <option value="ORGANIZATION">ORGANIZATION (Scoped)</option>
+                    </Form.Select>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Account Status</Form.Label>
+                    <Form.Select 
+                      style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px' }} 
+                      value={formData.status} 
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </Form.Select>
+                  </Col>
+                </Row>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Role *</Form.Label>
+                  <Form.Select 
+                    style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px' }} 
+                    value={formData.role} 
+                    onChange={(e) => {
+                      const found = roles.find(r => r.name === e.target.value || r.id === e.target.value);
+                      setFormData({ 
+                        ...formData, 
+                        role: found?.name || e.target.value,
+                        roleId: found?.id || ''
+                      });
+                    }}
+                  >
+                    <optgroup label="System Predefined Roles">
+                      {['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'].map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </optgroup>
+                    {roles.filter(r => !r.isPredefined).length > 0 && (
+                      <optgroup label="Custom Roles">
+                        {roles.filter(r => !r.isPredefined).map(cr => (
+                          <option key={cr.id} value={cr.name}>{cr.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </Form.Select>
+                </Form.Group>
               </Col>
-              <Col md={6}>
-                <Form.Label style={{ color: '#ffffff', fontSize: '0.86rem', fontWeight: 700, marginBottom: '6px' }}>Status</Form.Label>
-                <Form.Select style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', padding: '8px 12px' }} value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </Form.Select>
+
+              {/* Right Column: Location Scope Hierarchy */}
+              <Col lg={6} className="d-flex flex-column gap-3">
+                <div className="fs-12 fw-bold text-uppercase text-amber-400 d-flex align-items-center gap-1.5 pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <MapPin size={14} /> Location Hierarchy & Scope Restriction
+                </div>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Hierarchy Scope Level</Form.Label>
+                  <div className="d-flex gap-2">
+                    {['TENANT', 'ZONE', 'SITE'].map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => {
+                          let defId = '';
+                          if (lvl === 'TENANT') defId = formData.tenantId || tenants[0]?.id || '';
+                          else if (lvl === 'ZONE') defId = zones[0]?.id || 'zone-north-01';
+                          else if (lvl === 'SITE') defId = sites[0]?.id || 'site-delhi-01';
+                          setFormData({ ...formData, scopeType: lvl, scopeId: defId });
+                        }}
+                        className={`btn btn-sm flex-grow-1 py-2 rounded-3 fw-bold transition-all ${formData.scopeType === lvl ? 'btn-warning text-dark' : 'btn-outline-secondary text-slate-300'}`}
+                        style={{
+                          backgroundColor: formData.scopeType === lvl ? '#f59e0b' : '#151c28',
+                          borderColor: formData.scopeType === lvl ? '#f59e0b' : '#243044',
+                          fontSize: '0.80rem'
+                        }}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
+                </Form.Group>
+
+                {formData.scopeType === 'TENANT' && (
+                  <Form.Group>
+                    <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Selected Tenant Boundary</Form.Label>
+                    <Form.Control
+                      type="text"
+                      disabled
+                      value={tenants.find(t => t.id === formData.tenantId)?.name || formData.tenantId}
+                      style={{ backgroundColor: '#151c28', color: '#94a3b8', borderColor: '#243044', boxShadow: 'none' }}
+                    />
+                  </Form.Group>
+                )}
+
+                {formData.scopeType === 'ZONE' && (
+                  <Form.Group>
+                    <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Target Zone Node *</Form.Label>
+                    <Form.Select
+                      style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px' }}
+                      value={formData.scopeId}
+                      onChange={(e) => setFormData({ ...formData, scopeId: e.target.value })}
+                    >
+                      {zones.length > 0 ? (
+                        zones.map(z => (
+                          <option key={z.id} value={z.id}>{z.name} ({z.code || z.id})</option>
+                        ))
+                      ) : (
+                        <option value="zone-north-01">Default North Zone (zone-north-01)</option>
+                      )}
+                    </Form.Select>
+                  </Form.Group>
+                )}
+
+                {formData.scopeType === 'SITE' && (
+                  <Form.Group>
+                    <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Target Site Facility *</Form.Label>
+                    <Form.Select
+                      style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px' }}
+                      value={formData.scopeId}
+                      onChange={(e) => setFormData({ ...formData, scopeId: e.target.value })}
+                    >
+                      {sites.length > 0 ? (
+                        sites.map(s => (
+                          <option key={s.id} value={s.id}>{s.name} ({s.code || s.id})</option>
+                        ))
+                      ) : (
+                        <option value="site-delhi-01">Main Data Center Site (site-delhi-01)</option>
+                      )}
+                    </Form.Select>
+                  </Form.Group>
+                )}
+
+                {/* Scope Preview Card */}
+                <div className="p-3 rounded-3" style={{ backgroundColor: '#0a0d14', border: '1px solid #1c2433' }}>
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <span className="fs-12 fw-bold text-slate-300">Updated Scope Preview</span>
+                    <span className="badge bg-warning text-dark fs-11 text-uppercase">{formData.scopeType}</span>
+                  </div>
+                  <div className="font-monospace fs-11 p-2 rounded-2" style={{ backgroundColor: '#151c28', color: '#fbbf24' }}>
+                    {`locationMappings: [{ ${formData.scopeType === 'SITE' ? `siteId: ${formData.scopeId || 'null'}` : `zoneId: "${formData.scopeId || formData.tenantId}"`} }]`}
+                  </div>
+                </div>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Explicit Permissions Override</Form.Label>
+                  <Form.Control 
+                    type="text" 
+                    style={{ backgroundColor: '#151c28', color: '#ffffff', borderColor: '#243044', boxShadow: 'none', borderRadius: '8px', fontSize: '0.84rem' }} 
+                    value={formData.permissions} 
+                    onChange={(e) => setFormData({ ...formData, permissions: e.target.value })} 
+                  />
+                </Form.Group>
               </Col>
             </Row>
           </Modal.Body>
@@ -2227,6 +3226,425 @@ const UserAdministration = () => {
             )}
           </Modal.Footer>
         </Form>
+      </Modal>
+
+      {/* ADMIN CHANGE PASSWORD MODAL (POST /api/v1/users/{id}/change-password) */}
+      <Modal show={showChangePasswordModal} onHide={() => setShowChangePasswordModal(false)} centered className="scada-animated-modal">
+        <Form onSubmit={handleAdminChangePassword}>
+          <Modal.Header closeButton style={{ backgroundColor: '#0c1017', color: '#ffffff', borderColor: '#1e293b' }}>
+            <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#f59e0b' }}>
+              <Key size={18} /> Admin Change Password
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff' }}>
+            <p className="fs-13 text-slate-300 mb-3">
+              Reset account login password for user <strong className="text-light">{passwordUserName}</strong>.
+            </p>
+            <Form.Group className="mb-3">
+              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>New Password *</Form.Label>
+              <Form.Control
+                type="password"
+                required
+                minLength={8}
+                placeholder="Enter minimum 8 characters"
+                style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
+            <Button variant="outline-secondary" size="sm" onClick={() => setShowChangePasswordModal(false)}>Cancel</Button>
+            <Button type="submit" size="sm" disabled={passwordLoading || !newPassword} className="fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000' }}>
+              {passwordLoading ? 'Updating...' : 'Update Password'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* CREATE CUSTOM ROLE MODAL (POST /api/v1/roles) */}
+      <Modal show={showCreateRoleModal} onHide={() => setShowCreateRoleModal(false)} centered size="xl" className="scada-animated-modal">
+        <Form onSubmit={handleCreateRole}>
+          <Modal.Header closeButton style={{ backgroundColor: '#0c1017', color: '#ffffff', borderColor: '#1e293b' }}>
+            <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#8b5cf6' }}>
+              <ShieldPlus size={18} /> Create Custom RBAC Role
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff', maxHeight: '75vh', overflowY: 'auto' }}>
+            <Row className="g-4">
+              {/* Left Column: Role Details & Scope */}
+              <Col lg={5} className="d-flex flex-column gap-3">
+                <div className="fs-12 fw-bold text-uppercase text-purple-400 d-flex align-items-center gap-1.5 pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <Shield size={14} /> Role Definition & Scope
+                </div>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role Identifier / Name *</Form.Label>
+                  <Form.Control
+                    type="text"
+                    required
+                    placeholder="e.g. MAINTENANCE_SUPERVISOR"
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                    value={roleFormData.name}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value.toUpperCase().replace(/\s+/g, '_') })}
+                  />
+                  <Form.Text style={{ color: '#64748b', fontSize: '0.74rem' }}>
+                    Standard format: UPPERCASE_UNDERSCORE (e.g. OPERATIONS_DIRECTOR)
+                  </Form.Text>
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role Scope Type</Form.Label>
+                  <Form.Select
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                    value={roleFormData.roleType || 'ORGANIZATION'}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, roleType: e.target.value })}
+                  >
+                    <option value="ORGANIZATION">ORGANIZATION (Scoped to Tenant)</option>
+                    <option value="SYSTEM">SYSTEM (Global Application Role)</option>
+                  </Form.Select>
+                </Form.Group>
+
+                {roleFormData.roleType === 'ORGANIZATION' && (
+                  <Form.Group>
+                    <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Target Organization *</Form.Label>
+                    <Form.Select
+                      style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                      value={roleFormData.organizationId || tenants[0]?.id || ''}
+                      onChange={(e) => setRoleFormData({ ...roleFormData, organizationId: e.target.value })}
+                    >
+                      {tenants.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                )}
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role Description</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    placeholder="Describe role responsibilities, operational boundaries and access requirements..."
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                    value={roleFormData.description}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
+                  />
+                </Form.Group>
+
+                {/* RBAC Policy Summary Card */}
+                <div className="p-3 rounded-3" style={{ backgroundColor: '#0c1017', border: '1px solid #1e293b' }}>
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <span className="fs-12 fw-bold text-slate-300">RBAC Policy Summary</span>
+                    <Badge bg="purple" style={{ backgroundColor: '#8b5cf6' }}>
+                      {(roleFormData.permissionCodes || []).length} Granted
+                    </Badge>
+                  </div>
+                  <p className="fs-11 text-slate-400 mb-2">
+                    Users assigned to this role will inherit all selected capabilities across devices, alarm management, ticket dispatch, and reporting.
+                  </p>
+                  <div className="d-flex align-items-center gap-1.5 fs-11 text-purple-300 font-monospace">
+                    <ShieldCheck size={13} />
+                    <span>Payload: {(roleFormData.permissionCodes || []).length} Permission Codes</span>
+                  </div>
+                </div>
+              </Col>
+
+              {/* Right Column: Categorized Permissions Matrix */}
+              <Col lg={7} className="d-flex flex-column gap-3">
+                <div className="d-flex align-items-center justify-content-between pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <span className="fs-12 fw-bold text-uppercase text-purple-400 d-flex align-items-center gap-1.5">
+                    <ShieldCheck size={15} /> Permission Matrix & API Capabilities
+                  </span>
+                  <div className="d-flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRoleFormData({ ...roleFormData, permissionCodes: permissionsCatalog.map(p => p.code) })}
+                      className="btn btn-sm btn-outline-secondary py-0.5 px-2.5 fs-11 rounded-2"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRoleFormData({ ...roleFormData, permissionCodes: [] })}
+                      className="btn btn-sm btn-outline-secondary py-0.5 px-2.5 fs-11 rounded-2"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Categorized Permissions Grid */}
+                <div className="d-flex flex-column gap-3" style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '4px' }}>
+                  {Object.entries(permissionsByCategory).map(([cat, perms]) => (
+                    <div key={cat} className="p-3 rounded-3" style={{ backgroundColor: '#0d131f', border: '1px solid #1e293b' }}>
+                      <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-2" style={{ borderColor: '#1e293b' }}>
+                        <span className="fw-bold text-uppercase fs-12 text-slate-300" style={{ letterSpacing: '0.5px' }}>
+                          {cat} Module
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleCategoryPermissions(perms)}
+                          className="btn btn-link p-0 text-decoration-none fs-11 text-slate-400"
+                        >
+                          Toggle {cat}
+                        </button>
+                      </div>
+                      <Row className="g-2">
+                        {perms.map(p => {
+                          const checked = (roleFormData.permissionCodes || []).includes(p.code);
+                          return (
+                            <Col md={6} key={p.code}>
+                              <div 
+                                onClick={() => togglePermissionCode(p.code)}
+                                className="p-2 rounded-2 d-flex align-items-start gap-2 cursor-pointer transition-all"
+                                style={{ 
+                                  backgroundColor: checked ? 'rgba(139, 92, 246, 0.15)' : '#131924', 
+                                  border: `1px solid ${checked ? '#8b5cf6' : '#1e293b'}`,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  checked={checked} 
+                                  onChange={() => {}} 
+                                  className="mt-1" 
+                                  style={{ cursor: 'pointer' }}
+                                />
+                                <div className="flex-grow-1">
+                                  <div className="d-flex align-items-center justify-content-between">
+                                    <span className="fw-semibold fs-12 text-slate-200">{p.name || p.code}</span>
+                                    <span className="font-monospace fs-10 text-slate-400">{p.code}</span>
+                                  </div>
+                                  {p.description && (
+                                    <div className="fs-11 text-slate-400 mt-0.5">{p.description}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </div>
+                  ))}
+                </div>
+              </Col>
+            </Row>
+          </Modal.Body>
+          <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
+            <Button variant="outline-secondary" size="sm" onClick={() => setShowCreateRoleModal(false)}>Cancel</Button>
+            <Button type="submit" size="sm" disabled={roleLoading || !roleFormData.name.trim()} className="fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#ffffff' }}>
+              {roleLoading ? 'Creating...' : 'Create Role'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* EDIT CUSTOM ROLE MODAL (PATCH /api/v1/roles/{id}) */}
+      <Modal show={showEditRoleModal} onHide={() => setShowEditRoleModal(false)} centered size="xl" className="scada-animated-modal">
+        <Form onSubmit={handleUpdateRole}>
+          <Modal.Header closeButton style={{ backgroundColor: '#0c1017', color: '#ffffff', borderColor: '#1e293b' }}>
+            <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#f59e0b' }}>
+              <Edit size={18} /> Edit Custom Role: {selectedRole?.name}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff', maxHeight: '75vh', overflowY: 'auto' }}>
+            <Row className="g-4">
+              {/* Left Column: Role Details & Scope */}
+              <Col lg={5} className="d-flex flex-column gap-3">
+                <div className="fs-12 fw-bold text-uppercase text-amber-400 d-flex align-items-center gap-1.5 pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <Shield size={14} /> Role Definition & Scope
+                </div>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role Identifier / Name *</Form.Label>
+                  <Form.Control
+                    type="text"
+                    required
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                    value={roleFormData.name}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value.toUpperCase().replace(/\s+/g, '_') })}
+                  />
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role Scope Type</Form.Label>
+                  <Form.Select
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                    value={roleFormData.roleType || 'ORGANIZATION'}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, roleType: e.target.value })}
+                  >
+                    <option value="ORGANIZATION">ORGANIZATION (Scoped to Tenant)</option>
+                    <option value="SYSTEM">SYSTEM (Global Application Role)</option>
+                  </Form.Select>
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>Role Description</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                    value={roleFormData.description}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
+                  />
+                </Form.Group>
+
+                {/* RBAC Policy Summary Card */}
+                <div className="p-3 rounded-3" style={{ backgroundColor: '#0c1017', border: '1px solid #1e293b' }}>
+                  <div className="d-flex align-items-center justify-content-between mb-2">
+                    <span className="fs-12 fw-bold text-slate-300">RBAC Policy Summary</span>
+                    <Badge bg="warning" text="dark">
+                      {(roleFormData.permissionCodes || []).length} Granted
+                    </Badge>
+                  </div>
+                  <p className="fs-11 text-slate-400 mb-0">
+                    Modifying permissions will take effect on next token refresh or session validation for active users.
+                  </p>
+                </div>
+              </Col>
+
+              {/* Right Column: Categorized Permissions Matrix */}
+              <Col lg={7} className="d-flex flex-column gap-3">
+                <div className="d-flex align-items-center justify-content-between pb-1 border-bottom" style={{ borderColor: '#1e293b' }}>
+                  <span className="fs-12 fw-bold text-uppercase text-amber-400 d-flex align-items-center gap-1.5">
+                    <ShieldCheck size={15} /> Permission Matrix & Capabilities
+                  </span>
+                  <div className="d-flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRoleFormData({ ...roleFormData, permissionCodes: permissionsCatalog.map(p => p.code) })}
+                      className="btn btn-sm btn-outline-secondary py-0.5 px-2.5 fs-11 rounded-2"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRoleFormData({ ...roleFormData, permissionCodes: [] })}
+                      className="btn btn-sm btn-outline-secondary py-0.5 px-2.5 fs-11 rounded-2"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Categorized Permissions Grid */}
+                <div className="d-flex flex-column gap-3" style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '4px' }}>
+                  {Object.entries(permissionsByCategory).map(([cat, perms]) => (
+                    <div key={cat} className="p-3 rounded-3" style={{ backgroundColor: '#0d131f', border: '1px solid #1e293b' }}>
+                      <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-2" style={{ borderColor: '#1e293b' }}>
+                        <span className="fw-bold text-uppercase fs-12 text-slate-300" style={{ letterSpacing: '0.5px' }}>
+                          {cat} Module
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleCategoryPermissions(perms)}
+                          className="btn btn-link p-0 text-decoration-none fs-11 text-slate-400"
+                        >
+                          Toggle {cat}
+                        </button>
+                      </div>
+                      <Row className="g-2">
+                        {perms.map(p => {
+                          const checked = (roleFormData.permissionCodes || []).includes(p.code);
+                          return (
+                            <Col md={6} key={p.code}>
+                              <div 
+                                onClick={() => togglePermissionCode(p.code)}
+                                className="p-2 rounded-2 d-flex align-items-start gap-2 cursor-pointer transition-all"
+                                style={{ 
+                                  backgroundColor: checked ? 'rgba(245, 158, 11, 0.15)' : '#131924', 
+                                  border: `1px solid ${checked ? '#f59e0b' : '#1e293b'}`,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  checked={checked} 
+                                  onChange={() => {}} 
+                                  className="mt-1" 
+                                  style={{ cursor: 'pointer' }}
+                                />
+                                <div className="flex-grow-1">
+                                  <div className="d-flex align-items-center justify-content-between">
+                                    <span className="fw-semibold fs-12 text-slate-200">{p.name || p.code}</span>
+                                    <span className="font-monospace fs-10 text-slate-400">{p.code}</span>
+                                  </div>
+                                  {p.description && (
+                                    <div className="fs-11 text-slate-400 mt-0.5">{p.description}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </div>
+                  ))}
+                </div>
+              </Col>
+            </Row>
+          </Modal.Body>
+          <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
+            <Button variant="outline-secondary" size="sm" onClick={() => setShowEditRoleModal(false)}>Cancel</Button>
+            <Button type="submit" size="sm" disabled={roleLoading || !roleFormData.name.trim()} className="fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000' }}>
+              {roleLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* CLONE ROLE MODAL (POST /api/v1/roles/{id}/clone) */}
+      <Modal show={showCloneRoleModal} onHide={() => setShowCloneRoleModal(false)} centered className="scada-animated-modal">
+        <Form onSubmit={handleCloneRole}>
+          <Modal.Header closeButton style={{ backgroundColor: '#0c1017', color: '#ffffff', borderColor: '#1e293b' }}>
+            <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#38bdf8' }}>
+              <Copy size={18} /> Clone Role: {selectedRole?.name}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff' }}>
+            <p className="fs-13 text-slate-300 mb-3">
+              Create a duplicate custom role inheriting all permissions from <strong className="text-light">{selectedRole?.name}</strong>.
+            </p>
+            <Form.Group className="mb-3">
+              <Form.Label style={{ color: '#94a3b8', fontSize: '0.84rem', fontWeight: 600 }}>New Cloned Role Name *</Form.Label>
+              <Form.Control
+                type="text"
+                required
+                placeholder="e.g. SENIOR_OPERATOR"
+                style={{ backgroundColor: '#131924', color: '#ffffff', borderColor: '#243044', boxShadow: 'none' }}
+                value={cloneRoleName}
+                onChange={(e) => setCloneRoleName(e.target.value.toUpperCase().replace(/\s+/g, '_'))}
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
+            <Button variant="outline-secondary" size="sm" onClick={() => setShowCloneRoleModal(false)}>Cancel</Button>
+            <Button type="submit" size="sm" disabled={roleLoading || !cloneRoleName.trim()} className="fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)', color: '#ffffff' }}>
+              {roleLoading ? 'Cloning...' : 'Clone Role'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* DELETE ROLE MODAL (DELETE /api/v1/roles/{id}) */}
+      <Modal show={showDeleteRoleModal} onHide={() => setShowDeleteRoleModal(false)} centered className="scada-animated-modal-delete">
+        <Modal.Header closeButton style={{ backgroundColor: '#0c1017', color: '#ffffff', borderColor: '#1e293b' }}>
+          <Modal.Title className="fs-16 fw-bold d-flex align-items-center gap-2" style={{ color: '#ef4444' }}>
+            <Trash2 size={18} /> Confirm Delete Role
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ backgroundColor: '#070a0f', color: '#ffffff' }}>
+          <p className="fs-14 mb-0" style={{ color: '#cbd5e1' }}>
+            Are you sure you want to delete custom role <strong style={{ color: '#ef4444' }}>{selectedRole?.name}</strong>?
+          </p>
+        </Modal.Body>
+        <Modal.Footer style={{ backgroundColor: '#0c1017', borderColor: '#1e293b' }}>
+          <Button variant="outline-secondary" size="sm" onClick={() => setShowDeleteRoleModal(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleDeleteRole} className="fw-bold px-4 border-0" style={{ background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)', color: '#ffffff' }}>
+            Confirm Delete
+          </Button>
+        </Modal.Footer>
       </Modal>
 
     </Container>
