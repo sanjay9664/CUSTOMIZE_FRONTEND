@@ -520,7 +520,7 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
     { id: 1, name: 'PUMP P1', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: masterPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
     { id: 2, name: 'PUMP P2', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: masterPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
     { id: 3, name: 'PUMP P3', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: masterPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
-    { id: 4, name: 'PUMP P4', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: masterPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
+    { id: 4, name: 'PUMP P4', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: masterPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: false },
   ];
 
   const resolvedPumps = defaultPumps.map((p, idx) => {
@@ -571,13 +571,17 @@ export const resolveUgPumpDevice = (device, eventResult = null, activeStation = 
       if (num !== null) pumpPressure = num;
     }
 
+    const hasExplicitTelemetry = Boolean(pCurrentEvt || pStatusEvt || pPressureEvt);
+    const isMapped = (p.id <= 3) ? true : (hasExplicitTelemetry || (idx === targetPumpIdx && eventsList.length > 0));
+
     return {
       ...p,
       amp: currentAmp,
       hz: pumpHz,
       status: pumpStatus,
       pressure: pumpPressure,
-      isOnline
+      isOnline,
+      isMapped
     };
   });
 
@@ -808,31 +812,34 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
     }
   }
 
-  // Build the 4 pumps (P1, P2, P3, P4) from the individual devices
+  // Build the pumps from individual devices - P4 is strictly unmapped unless an explicit 4th pump device exists
   const defaultPumps = [
     { id: 1, name: 'PUMP P1', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: stationPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
     { id: 2, name: 'PUMP P2', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: stationPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
     { id: 3, name: 'PUMP P3', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: stationPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
-    { id: 4, name: 'PUMP P4', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: stationPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: true },
+    { id: 4, name: 'PUMP P4', status: 'Stopped', mode: 'AUTO', hz: '0.0', amp: '0.0', pressure: stationPressure, startLimit: 1.5, stopLimit: 4.5, isOnline, isMapped: false },
   ];
+
+  const isTankOrSump = (s) => {
+    if (!s) return false;
+    const n = normalizeKey(s.name || s.deviceName || s.assetName || '');
+    const cat = String(s.category || '').toUpperCase();
+    return n.includes('tank') || n.includes('sump') || n.includes('reservoir') || cat.includes('TANK');
+  };
 
   const assignedDevices = new Set();
   const pumps = defaultPumps.map(slot => {
-    // 1. Look for device explicitly named with slot number (e.g. "1", "P1", "Tank-1")
+    // 1. Look for device explicitly named with slot number (e.g. "p1", "pump1", "p2", etc.)
     let dev = resolvedStations.find(s => {
       if (assignedDevices.has(s.id)) return false;
-      const n = normalizeKey(s.name);
-      return n.includes(`p${slot.id}`) || n.includes(`pump${slot.id}`) || n.endsWith(`${slot.id}`) || n.includes(`tank${slot.id}`) || n.includes(`-${slot.id}-`);
+      const n = normalizeKey(s.name || s.deviceName || '');
+      if (isTankOrSump(s)) return false;
+      return n.includes(`p${slot.id}`) || n.includes(`pump${slot.id}`) || n.endsWith(`${slot.id}`) || n.includes(`-${slot.id}-`);
     });
 
-    // 2. If not found by name, pick next unassigned device that is a pump
-    if (!dev) {
-      dev = resolvedStations.find(s => !assignedDevices.has(s.id) && !normalizeKey(s.name).includes('tank'));
-    }
-
-    // 3. Fallback: next unassigned device
-    if (!dev) {
-      dev = resolvedStations.find(s => !assignedDevices.has(s.id));
+    // 2. If not found by name, pick next unassigned device that is genuinely a pump (and NOT a tank)
+    if (!dev && slot.id <= 3) {
+      dev = resolvedStations.find(s => !assignedDevices.has(s.id) && !isTankOrSump(s));
     }
 
     if (dev) {
@@ -850,13 +857,16 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
         status: isRunning ? 'Running' : 'Stopped',
         amp: runningPump.amp !== undefined ? runningPump.amp : (isRunning ? '16.7' : '0.0'),
         hz: runningPump.hz !== undefined && runningPump.hz !== '0.0' ? runningPump.hz : (isRunning ? '50.0' : '0.0'),
-        pressure: dev.masterPressure > 0 ? dev.masterPressure : stationPressure,
+        pressure: dev.masterPressure > 0 ? dev.masterPressure : (runningPump.pressure || stationPressure),
         isOnline: devOnline,
         isMapped: true
       };
     }
 
-    return slot;
+    return {
+      ...slot,
+      isMapped: false
+    };
   });
 
   const isAnyPumpRunning = pumps.some(p => p.status === 'Running');
@@ -975,6 +985,9 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
   const frequency = !isNaN(freqNum) && freqNum > 0 ? freqNum : (isOnline ? 49.98 : 0.0);
   const powerKw = hasKw ? totalKwSum : (parseFloat(electrical.total_kw) || (isAnyPumpRunning ? 9.4 : 0.0));
 
+  const mappedPumps = pumps.filter(p => p.isMapped);
+  const mappedReservoirs = reservoirs.filter(r => r.isMapped);
+
   return {
     id: 'ALL',
     deviceId: primaryStation.deviceId,
@@ -992,8 +1005,8 @@ export const buildCompositeStationModel = (resolvedStations = [], activeStation 
     avgVoltage,
     powerFactor,
     frequency,
-    reservoirs,
-    pumps,
+    reservoirs: mappedReservoirs.length > 0 ? mappedReservoirs : reservoirs,
+    pumps: mappedPumps.length > 0 ? mappedPumps : pumps.filter(p => p.id !== 4).slice(0, 3).map(p => ({ ...p, isMapped: true })),
     electrical,
     rawFields: activeStationDev.rawFields || []
   };

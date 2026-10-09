@@ -3,12 +3,12 @@ import { Droplets } from 'lucide-react';
 
 /**
  * PumpStationSchematic - SVG SCADA Digital Twin Visualization
- * 3D Industrial SCADA Schematic matching enterprise reference design:
- * - 3 Rounded Inlet Reservoirs with clear subtitles
+ * Dynamic 3D Industrial SCADA Schematic:
+ * - Dynamically renders only mapped Inlet Reservoirs (2 or 3 tanks)
  * - 3D Cylindrical Metallic Blue Piping with Flanges
- * - 4 Animated Pump Stations with Mini Power Gauges
- * - High-Contrast Master Analog Pressure Gauge
- * - Animated Flow to Rooftop Network
+ * - Dynamically renders only mapped Pump Stations (e.g. P1, P2, P3 — P4 hidden when unmapped)
+ * - Dedicated Analog Pressure Gauge for EVERY mapped pump in its own row ("kaun kiska gauge hai")
+ * - Dynamic animated flow to Rooftop Network
  */
 const PumpStationSchematic = ({
   tanks = [],
@@ -22,10 +22,71 @@ const PumpStationSchematic = ({
 }) => {
   const masterPressureNum = typeof masterPressure === 'number' ? masterPressure : parseFloat(masterPressure) || 0.0;
 
-  const masterRotation = useMemo(() => {
-    const angle = (masterPressureNum / 16) * 270 - 135;
-    return Math.min(Math.max(angle, -135), 135);
-  }, [masterPressureNum]);
+  // 1. FILTER ONLY MAPPED RESERVOIRS
+  const mappedTanks = useMemo(() => {
+    const list = (tanks || []).filter(t => t && t.isMapped !== false && (t.level !== null && t.level !== undefined || (t.name && t.name !== 'PROCESS TANK')));
+    return list.length > 0 ? list : (tanks || []).slice(0, 2);
+  }, [tanks]);
+
+  // 2. FILTER ONLY MAPPED PUMPS (Strictly exclude unmapped Pump P4)
+  const mappedPumps = useMemo(() => {
+    const list = (pumps || []).filter(p => {
+      if (!p) return false;
+      if (p.isMapped === false) return false;
+      // Pump 4 is unmapped unless an explicit 4th pump device is connected
+      if (p.id === 4) {
+        if (!p.deviceId || p.isMapped !== true) return false;
+        const name = String(p.deviceName || p.name || '').toLowerCase();
+        if (name.includes('tank') || name.includes('sump') || name.includes('reservoir')) return false;
+        if (!name.includes('p4') && !name.includes('pump4') && !name.endsWith('4')) return false;
+      }
+      return true;
+    });
+    return list.length > 0 ? list : (pumps || []).filter(p => p && p.id !== 4).slice(0, 3);
+  }, [pumps]);
+
+  // 3. DYNAMIC Y POSITIONS FOR TANKS
+  const tankConfigs = useMemo(() => {
+    const count = mappedTanks.length;
+    if (count === 1) {
+      return [{ y: 175, defaultName: 'WATER RESERVOIR' }];
+    }
+    if (count === 2) {
+      return [
+        { y: 95, defaultName: 'DOMESTIC SUMP' },
+        { y: 255, defaultName: 'RAW WATER TANK' }
+      ];
+    }
+    return [
+      { y: 38, defaultName: 'FIRE RESERVOIR' },
+      { y: 162, defaultName: 'DOMESTIC SUMP' },
+      { y: 286, defaultName: 'PROCESS TANK' }
+    ];
+  }, [mappedTanks.length]);
+
+  const tankOutletYs = useMemo(() => {
+    return tankConfigs.map(c => c.y + 43);
+  }, [tankConfigs]);
+
+  const intakeManifoldTop = useMemo(() => Math.min(...tankOutletYs) - 10, [tankOutletYs]);
+  const intakeManifoldBottom = useMemo(() => Math.max(...tankOutletYs) + 10, [tankOutletYs]);
+  const intakeMidY = useMemo(() => Math.round((intakeManifoldTop + intakeManifoldBottom) / 2), [intakeManifoldTop, intakeManifoldBottom]);
+
+  // 4. DYNAMIC Y POSITIONS FOR PUMPS
+  const pumpYs = useMemo(() => {
+    const count = mappedPumps.length;
+    if (count === 1) return [215];
+    if (count === 2) return [145, 295];
+    if (count === 3) return [90, 215, 340];
+    if (count === 4) return [65, 168, 272, 375];
+    return mappedPumps.map((_, i) => Math.round(55 + i * (350 / (count - 1))));
+  }, [mappedPumps.length]);
+
+  const distManifoldTop = useMemo(() => Math.min(...pumpYs) - 15, [pumpYs]);
+  const distManifoldBottom = useMemo(() => Math.max(...pumpYs) + 15, [pumpYs]);
+  const dischargeManifoldTop = useMemo(() => Math.min(...pumpYs) - 15, [pumpYs]);
+
+  const gaugeRadius = mappedPumps.length <= 3 ? 38 : 31;
 
   return (
     <div
@@ -102,10 +163,12 @@ const PumpStationSchematic = ({
             <animateTransform attributeName="patternTransform" type="translate" from="0 0" to="80 0" dur="3s" repeatCount="indefinite" />
           </pattern>
 
-          {/* Clip Paths for 3 Reservoirs */}
-          <clipPath id="clipTank0"><rect x="0" y="0" width="168" height="86" rx="8" /></clipPath>
-          <clipPath id="clipTank1"><rect x="0" y="0" width="168" height="86" rx="8" /></clipPath>
-          <clipPath id="clipTank2"><rect x="0" y="0" width="168" height="86" rx="8" /></clipPath>
+          {/* Clip Paths for Reservoirs */}
+          {mappedTanks.map((_, idx) => (
+            <clipPath key={`clipTank${idx}`} id={`clipTank${idx}`}>
+              <rect x="0" y="0" width="168" height="86" rx="8" />
+            </clipPath>
+          ))}
         </defs>
 
         {/* Canvas Background Grid */}
@@ -113,29 +176,27 @@ const PumpStationSchematic = ({
 
         {/* Top Header Labels */}
         <text x="60" y="26" fill="#f59e0b" fontSize="12" fontWeight="900" letterSpacing="0.8">
-          INLET RESERVOIRS
+          INLET RESERVOIRS ({mappedTanks.length})
         </text>
         <text x="560" y="26" fill="#94a3b8" fontSize="12" fontWeight="900" letterSpacing="0.8">
-          MAIN MANIFOLD SYSTEM
+          MAIN MANIFOLD SYSTEM ({mappedPumps.length} PUMPS)
+        </text>
+        <text x="950" y="26" fill="#38bdf8" fontSize="12" fontWeight="900" letterSpacing="0.8">
+          PUMP PRESSURE GAUGES
         </text>
 
-        {/* ── 1. THREE INLET RESERVOIRS (COLLISION FREE, MATCHING REFERENCE) ── */}
-        {[
-          { y: 38,  defaultName: 'FIRE RESERVOIR' },
-          { y: 162, defaultName: 'DOMESTIC SUMP' },
-          { y: 286, defaultName: 'PROCESS TANK' }
-        ].map((cfg, idx) => {
-          const tank = tanks[idx] || {};
-          const isDeviceMapped = Boolean(tanks[idx] && tanks[idx].isMapped !== false);
-          const hasLevel = isDeviceMapped && tank.level !== null && tank.level !== undefined && !isNaN(Number(tank.level));
+        {/* ── 1. DYNAMIC MAPPED INLET RESERVOIRS ── */}
+        {mappedTanks.map((tank, idx) => {
+          const cfg = tankConfigs[idx] || { y: 100 + idx * 150, defaultName: `RESERVOIR #${idx + 1}` };
+          const hasLevel = tank.level !== null && tank.level !== undefined && !isNaN(Number(tank.level));
           let rawLevelNum = hasLevel ? Number(tank.level) : 0;
           if (rawLevelNum > 0 && rawLevelNum <= 1) rawLevelNum = rawLevelNum * 100;
           else if (rawLevelNum > 100 && rawLevelNum <= 10000) rawLevelNum = rawLevelNum / 100;
           const levelVal = Math.min(100, Math.max(0, Math.round(rawLevelNum)));
-          const tankName = (isDeviceMapped && (tank.name || tank.deviceName)) ? (tank.name || tank.deviceName) : cfg.defaultName;
+          const tankName = (tank.name || tank.deviceName) ? (tank.name || tank.deviceName) : cfg.defaultName;
 
           return (
-            <g key={idx} transform={`translate(60, ${cfg.y})`}>
+            <g key={tank.id || idx} transform={`translate(60, ${cfg.y})`}>
               {/* Outer Tank Body */}
               <rect
                 width="168"
@@ -150,7 +211,7 @@ const PumpStationSchematic = ({
               {/* Metallic Top Lip */}
               <rect x="0" y="0" width="168" height="5" rx="2.5" fill="url(#flangeGrad)" />
 
-              {/* Liquid Wave & Level Fill — only when level > 0 */}
+              {/* Liquid Wave & Level Fill */}
               <g clipPath={`url(#clipTank${idx})`}>
                 {levelVal > 0 && (
                   <>
@@ -195,7 +256,7 @@ const PumpStationSchematic = ({
                       fontWeight="800"
                       letterSpacing="1.5"
                     >
-                      {hasLevel ? 'EMPTY' : 'NOT MAPPED'}
+                      {hasLevel ? 'EMPTY' : '0 L'}
                     </text>
                     <text
                       x="84"
@@ -205,13 +266,13 @@ const PumpStationSchematic = ({
                       fontSize="9"
                       fontWeight="700"
                     >
-                      {hasLevel ? '0 L — Awaiting Fill' : '-- No Device --'}
+                      Awaiting Fill
                     </text>
                   </>
                 )}
               </g>
 
-              {/* Subtitle Underneath Tank (Zero Collision) */}
+              {/* Subtitle Underneath Tank */}
               <text
                 x="84"
                 y="104"
@@ -230,12 +291,12 @@ const PumpStationSchematic = ({
         })}
 
         {/* ── 2. 3D INDUSTRIAL PIPING (RESERVOIRS TO INTAKE MANIFOLD) ── */}
-        {/* Horizontal Tank Outlet Pipes */}
-        {[81, 205, 329].map((y, i) => (
+        {/* Horizontal Tank Outlet Pipes (Only for mapped tanks) */}
+        {tankOutletYs.map((y, i) => (
           <g key={i}>
             {/* 3D Blue Pipe */}
             <rect x="228" y={y - 9} width="42" height="18" fill="url(#pipeHoriz3D)" rx="2" />
-            {/* Flange Collar at Tank Outlet */}
+            {/* Flange Collars */}
             <rect x="226" y={y - 12} width="4" height="24" fill="url(#flangeGrad)" rx="1" />
             <rect x="266" y={y - 12} width="4" height="24" fill="url(#flangeGrad)" rx="1" />
             {/* Flow stream */}
@@ -247,49 +308,72 @@ const PumpStationSchematic = ({
           </g>
         ))}
 
-        {/* Vertical Intake Manifold Pipe */}
-        <rect x="264" y="72" width="20" height="268" fill="url(#pipeVert3D)" rx="4" />
+        {/* Vertical Intake Manifold Pipe (Dynamic height matching mapped tanks) */}
+        <rect
+          x="264"
+          y={intakeManifoldTop}
+          width="20"
+          height={Math.max(20, intakeManifoldBottom - intakeManifoldTop)}
+          fill="url(#pipeVert3D)"
+          rx="4"
+        />
         {isAnyPumpRunning && (
-          <path d="M274 72 L274 340" stroke="#38bdf8" strokeWidth="8" strokeDasharray="20,15" filter="url(#liquidGlow)">
+          <path
+            d={`M274 ${intakeManifoldTop} L274 ${intakeManifoldBottom}`}
+            stroke="#38bdf8"
+            strokeWidth="8"
+            strokeDasharray="20,15"
+            filter="url(#liquidGlow)"
+          >
             <animate attributeName="stroke-dashoffset" from="35" to="0" dur="1s" repeatCount="indefinite" />
           </path>
         )}
 
         {/* Cross Connection to Distribution Manifold */}
-        <rect x="284" y="200" width="46" height="18" fill="url(#pipeHoriz3D)" rx="2" />
-        <rect x="326" y="197" width="4" height="24" fill="url(#flangeGrad)" rx="1" />
+        <rect x="284" y={intakeMidY - 9} width="46" height="18" fill="url(#pipeHoriz3D)" rx="2" />
+        <rect x="326" y={intakeMidY - 12} width="4" height="24" fill="url(#flangeGrad)" rx="1" />
         {isAnyPumpRunning && (
-          <path d="M284 209 L330 209" stroke="#38bdf8" strokeWidth="6" strokeDasharray="14,10" filter="url(#liquidGlow)">
+          <path d={`M284 ${intakeMidY} L330 ${intakeMidY}`} stroke="#38bdf8" strokeWidth="6" strokeDasharray="14,10" filter="url(#liquidGlow)">
             <animate attributeName="stroke-dashoffset" from="24" to="0" dur="0.8s" repeatCount="indefinite" />
           </path>
         )}
 
-        {/* Vertical Distribution Manifold Pipe */}
-        <rect x="326" y="55" width="20" height="330" fill="url(#pipeVert3D)" rx="4" />
+        {/* Vertical Distribution Manifold Pipe (Dynamic height matching mapped pumps) */}
+        <rect
+          x="326"
+          y={distManifoldTop}
+          width="20"
+          height={Math.max(30, distManifoldBottom - distManifoldTop)}
+          fill="url(#pipeVert3D)"
+          rx="4"
+        />
         {isAnyPumpRunning && (
-          <path d="M336 55 L336 385" stroke="#38bdf8" strokeWidth="8" strokeDasharray="20,15" filter="url(#liquidGlow)">
+          <path
+            d={`M336 ${distManifoldTop} L336 ${distManifoldBottom}`}
+            stroke="#38bdf8"
+            strokeWidth="8"
+            strokeDasharray="20,15"
+            filter="url(#liquidGlow)"
+          >
             <animate attributeName="stroke-dashoffset" from="35" to="0" dur="1.1s" repeatCount="indefinite" />
           </path>
         )}
 
-        {/* ── 3. FOUR PUMP BRANCHES WITH ANIMATED IMPELLERS & GAUGES ── */}
-        {[65, 168, 272, 375].map((y, i) => {
-          const p = pumps[i] || {
-            id: i + 1,
-            name: `PUMP P${i + 1}`,
-            status: i === 2 ? 'Stopped' : 'Running',
-            mode: 'AUTO',
-            amp: i === 0 ? '13.6' : (i === 1 ? '10.0' : (i === 2 ? '0.0' : '13.4')),
-            pressure: 12.2,
-            isOnline: true,
-            isMapped: true
-          };
-
+        {/* ── 3. DYNAMIC PUMP BRANCHES WITH ANIMATED IMPELLERS & PRESSURE GAUGES ── */}
+        {mappedPumps.map((p, i) => {
+          const y = pumpYs[i];
           const active = p.status === 'Running' || p.status === 'RUNNING';
           const ampVal = p.amp ? Number(p.amp).toFixed(1) : (active ? '13.5' : '0.0');
 
+          // Dedicated Pressure for this Pump
+          const pumpPressure = (p.pressure !== undefined && p.pressure !== null && !isNaN(Number(p.pressure)) && Number(p.pressure) > 0)
+            ? Number(p.pressure)
+            : (active ? (masterPressureNum > 0 ? masterPressureNum : 1.2) : 0.0);
+
+          const pumpRotation = (Math.min(Math.max(pumpPressure, 0), 16) / 16) * 270 - 135;
+
           return (
-            <g key={i} onClick={() => onOpenPumpSettings && onOpenPumpSettings(p)} style={{ cursor: 'pointer' }}>
+            <g key={p.id || p.deviceId || i}>
               {/* Branch Intake Pipe (Distribution Manifold to Impeller) */}
               <rect x="346" y={y - 8} width="58" height="16" fill="url(#pipeHoriz3D)" rx="2" />
               {active && (
@@ -299,7 +383,12 @@ const PumpStationSchematic = ({
               )}
 
               {/* Pump Circular Impeller */}
-              <g transform={`translate(424, ${y})`}>
+              <g
+                transform={`translate(424, ${y})`}
+                onClick={() => onOpenPumpSettings && onOpenPumpSettings(p)}
+                style={{ cursor: 'pointer' }}
+                title={`Click to inspect ${p.name || `PUMP P${i + 1}`}`}
+              >
                 <circle r="24" fill="#0b1322" stroke={active ? "#22c55e" : "#334155"} strokeWidth="3" />
                 {active && (
                   <circle r="29" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="8,6" opacity="0.9">
@@ -320,7 +409,12 @@ const PumpStationSchematic = ({
               <rect x="482" y={y - 10} width="4" height="20" fill="url(#flangeGrad)" rx="1" />
 
               {/* Pump Status Card */}
-              <g transform={`translate(486, ${y - 27})`}>
+              <g
+                transform={`translate(486, ${y - 27})`}
+                onClick={() => onOpenPumpSettings && onOpenPumpSettings(p)}
+                style={{ cursor: 'pointer' }}
+                title={`Click to inspect ${p.name || `PUMP P${i + 1}`}`}
+              >
                 <rect
                   width="196"
                   height="54"
@@ -363,7 +457,7 @@ const PumpStationSchematic = ({
                   </tspan>
                 </text>
 
-                {/* Mini Analog Pressure/Power Gauge */}
+                {/* Mini Power Load Indicator */}
                 <g transform="translate(162, 23)">
                   <circle r="15" fill="#111827" stroke="#334155" strokeWidth="1.2" />
                   {/* Tick Marks */}
@@ -405,84 +499,146 @@ const PumpStationSchematic = ({
                   <animate attributeName="stroke-dashoffset" from="20" to="0" dur="0.6s" repeatCount="indefinite" />
                 </path>
               )}
+
+              {/* Pipe Connecting Discharge Manifold to THIS PUMP'S DEDICATED PRESSURE GAUGE */}
+              <rect x="768" y={y - 7} width="78" height="14" fill="url(#pipeHoriz3D)" rx="2" />
+              <rect x="842" y={y - 10} width="4" height="20" fill="url(#flangeGrad)" rx="1" />
+              {active && (
+                <path d={`M768 ${y} L846 ${y}`} stroke="#38bdf8" strokeWidth="5" strokeDasharray="12,8" filter="url(#liquidGlow)">
+                  <animate attributeName="stroke-dashoffset" from="20" to="0" dur="0.6s" repeatCount="indefinite" />
+                </path>
+              )}
+
+              {/* ── DEDICATED ANALOG PRESSURE GAUGE FOR THIS SPECIFIC PUMP ── */}
+              <g
+                transform={`translate(892, ${y})`}
+                onClick={() => onOpenPumpSettings && onOpenPumpSettings(p)}
+                style={{ cursor: 'pointer' }}
+                title={`${p.name || `PUMP P${i + 1}`} Discharge Pressure: ${pumpPressure.toFixed(1)} BAR`}
+              >
+                {/* Dial Outer Metallic Bezel */}
+                <circle
+                  r={gaugeRadius}
+                  fill="#f8fafc"
+                  stroke={active ? "#38bdf8" : "#94a3b8"}
+                  strokeWidth="4.5"
+                  style={{ filter: active ? 'drop-shadow(0 0 10px rgba(56, 189, 248, 0.4))' : 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))' }}
+                />
+                <circle r={gaugeRadius - 4} fill="none" stroke="#334155" strokeWidth="0.8" />
+
+                {/* Dial Ticks (0 to 16 BAR) */}
+                {[...Array(13)].map((_, t) => (
+                  <line
+                    key={t}
+                    x1="0"
+                    y1={-(gaugeRadius - 5)}
+                    x2="0"
+                    y2={t % 2 === 0 ? -(gaugeRadius - 12) : -(gaugeRadius - 8)}
+                    stroke={t >= 10 ? "#ef4444" : "#1e293b"}
+                    strokeWidth={t % 2 === 0 ? "2" : "1"}
+                    transform={`rotate(${t * 22.5 - 135})`}
+                  />
+                ))}
+
+                {/* Pivot & Needle */}
+                <circle r="4.5" fill="#1e293b" />
+                <g transform={`rotate(${pumpRotation})`} style={{ transition: 'transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+                  <path d={`M-2.5 0 L0 ${-(gaugeRadius - 7)} L2.5 0 Z`} fill="#ef4444" />
+                </g>
+                <circle r="2" fill="#ffffff" />
+              </g>
+
+              {/* Digital Telemetry Readout for This Pump's Gauge */}
+              <g
+                transform={`translate(948, ${y})`}
+                onClick={() => onOpenPumpSettings && onOpenPumpSettings(p)}
+                style={{ cursor: 'pointer' }}
+              >
+                {/* Digital Pressure Number */}
+                <text
+                  x="0"
+                  y="-5"
+                  fill="#ffffff"
+                  fontSize={mappedPumps.length <= 3 ? "18" : "15"}
+                  fontWeight="900"
+                  filter="url(#liquidGlow)"
+                >
+                  {pumpPressure.toFixed(1)} BAR
+                </text>
+
+                {/* Pump Specific Gauge Label */}
+                <text
+                  x="0"
+                  y="12"
+                  fill="#38bdf8"
+                  fontSize={mappedPumps.length <= 3 ? "11" : "9.5"}
+                  fontWeight="800"
+                  letterSpacing="0.4"
+                >
+                  {p.name || `PUMP P${i + 1}`} PRESSURE
+                </text>
+
+                {/* Active / Standby Status Dot */}
+                <text
+                  x="0"
+                  y="26"
+                  fill={active ? "#4ade80" : "#64748b"}
+                  fontSize="9"
+                  fontWeight="800"
+                >
+                  ● {active ? 'DISCHARGE LIVE' : 'LINE STANDBY'}
+                </text>
+              </g>
             </g>
           );
         })}
 
         {/* ── 4. VERTICAL DISCHARGE MANIFOLD & ROOFTOP NETWORK PIPELINE ── */}
-        <rect x="748" y="55" width="20" height="375" fill="url(#pipeVert3D)" rx="4" />
+        <rect
+          x="748"
+          y={dischargeManifoldTop}
+          width="20"
+          height={Math.max(40, 420 - dischargeManifoldTop)}
+          fill="url(#pipeVert3D)"
+          rx="4"
+        />
+
         {/* Flange Collar at Elbow */}
         <rect x="746" y="420" width="24" height="4" fill="url(#flangeGrad)" rx="1" />
+
         {/* Horizontal Rooftop Network Delivery Pipe */}
-        <rect x="748" y="420" width="280" height="20" fill="url(#pipeHoriz3D)" rx="4" />
+        <rect x="748" y="420" width="380" height="20" fill="url(#pipeHoriz3D)" rx="4" />
 
         {isAnyPumpRunning && (
-          <g>
-            <path d="M758 55 L758 430 L1028 430" fill="none" stroke="#38bdf8" strokeWidth="9" strokeDasharray="30,20" filter="url(#liquidGlow)">
-              <animate attributeName="stroke-dashoffset" from="50" to="0" dur="1s" repeatCount="indefinite" />
-            </path>
-          </g>
-        )}
-
-        {/* ── 5. MASTER ANALOG PRESSURE GAUGE (WHITE DIAL, CRISP VISIBILITY) ── */}
-        <g transform="translate(915, 215)">
-          {/* Dial Outer Metallic Bezel */}
-          <circle r="66" fill="#f8fafc" stroke="#94a3b8" strokeWidth="6" style={{ filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.6))' }} />
-          <circle r="60" fill="none" stroke="#334155" strokeWidth="1" />
-
-          {/* Dial Ticks (0 to 16 BAR) */}
-          {[...Array(17)].map((_, t) => (
-            <line
-              key={t}
-              x1="0"
-              y1="-58"
-              x2="0"
-              y2={t % 2 === 0 ? "-44" : "-50"}
-              stroke={t >= 13 ? "#ef4444" : "#1e293b"}
-              strokeWidth={t % 2 === 0 ? "3" : "1.5"}
-              transform={`rotate(${t * 16.875 - 135})`}
-            />
-          ))}
-
-          {/* Pivot & Needle */}
-          <circle r="7" fill="#1e293b" />
-          <g transform={`rotate(${masterRotation})`} style={{ transition: 'transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
-            <path d="M-4 0 L0 -54 L4 0 Z" fill="#ef4444" />
-          </g>
-          <circle r="3" fill="#ffffff" />
-
-          {/* Master Pressure Large Bold Readout */}
-          <text
-            x="0"
-            y="94"
-            textAnchor="middle"
-            fill="#ffffff"
-            fontSize="24"
-            fontWeight="900"
+          <path
+            d={`M758 ${dischargeManifoldTop} L758 430 L1128 430`}
+            fill="none"
+            stroke="#38bdf8"
+            strokeWidth="9"
+            strokeDasharray="30,20"
             filter="url(#liquidGlow)"
           >
-            {masterPressureNum.toFixed(1)} BAR
-          </text>
-          <text
-            x="0"
-            y="112"
-            textAnchor="middle"
-            fill="#38bdf8"
-            fontSize="10"
-            fontWeight="800"
-            letterSpacing="0.8"
-          >
-            HEADER PRESSURE
+            <animate attributeName="stroke-dashoffset" from="50" to="0" dur="1s" repeatCount="indefinite" />
+          </path>
+        )}
+
+        {/* ── 5. SYSTEM HEADER PRESSURE SUMMARY BADGE & ROOFTOP NETWORK BANNER ── */}
+        <g transform="translate(770, 468)">
+          <rect width="170" height="24" rx="5" fill="#0f172a" stroke="#0284c7" strokeWidth="1.2" opacity="0.9" />
+          <text x="10" y="16" fill="#94a3b8" fontSize="10" fontWeight="800">
+            MAIN HEADER:
+            <tspan fill="#38bdf8" fontSize="12" fontWeight="900" dx="6">
+              {masterPressureNum.toFixed(1)} BAR
+            </tspan>
           </text>
         </g>
 
-        {/* ── 6. DIRECT TO ROOFTOP NETWORK ARROW BANNER ── */}
         <text
-          x="1028"
-          y="462"
+          x="1128"
+          y="468"
           textAnchor="end"
           fill="#38bdf8"
-          fontSize="17"
+          fontSize="16"
           fontWeight="900"
           filter="url(#liquidGlow)"
           letterSpacing="0.6"
