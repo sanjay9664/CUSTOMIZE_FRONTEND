@@ -169,10 +169,16 @@ export const GlobalSiteAssetDropdown = ({
     return null;
   }, [moduleHeader?.title, pathname]);
 
-  // Check if current tab is a site-wide overview (e.g. Overview, Sub Meters, Graphs, Reports) where device selection is unnecessary
+  // Check if current tab is a site-wide overview (e.g. Water Management, Overview, Sub Meters, Graphs, Reports) where device selection is unnecessary
   const isSiteOnlyMode = useMemo(() => {
     const path = (pathname || (typeof window !== 'undefined' ? window.location.pathname : '')).toLowerCase();
+    const title = (moduleHeader?.title || '').toLowerCase();
     
+    // Water Management operates at site level (multi-tank & multi-pump overview)
+    if (path.includes('/water') || title.includes('water')) {
+      return true;
+    }
+
     // In Energy Metering: only /energy-metering/main targets an individual main meter.
     // Overview (/energy-metering/overview), Sub Meters (/energy-metering/sub), Graphs (/energy-metering/graphs), Report (/energy-metering/report) are site-level views.
     if (path.includes('/energy-metering') || path.includes('/daily-dpr')) {
@@ -185,7 +191,7 @@ export const GlobalSiteAssetDropdown = ({
     }
 
     return false;
-  }, [pathname]);
+  }, [pathname, moduleHeader?.title]);
 
   // Derive plural asset label
   const assetLabel = useMemo(() => {
