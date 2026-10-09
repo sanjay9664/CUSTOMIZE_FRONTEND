@@ -35,6 +35,11 @@ export const SiteProvider = ({ children }) => {
   });
   const [selectedSite, setSelectedSiteState] = useState(() => {
     try {
+      const sessionStored = sessionStorage.getItem('scada_selected_site');
+      if (sessionStored) {
+        const parsed = JSON.parse(sessionStored);
+        if (parsed && (parsed.id ?? parsed.siteId ?? parsed._id)) return parsed;
+      }
       const stored = localStorage.getItem('scada_selected_site');
       if (stored) {
         const parsed = JSON.parse(stored);
@@ -49,9 +54,13 @@ export const SiteProvider = ({ children }) => {
     setSelectedSiteState(site);
     try {
       if (site) {
+        // Save to sessionStorage (isolated per screen/window/tab)
+        sessionStorage.setItem('scada_selected_site', JSON.stringify(site));
+        // Also save to localStorage as general fallback for brand new tabs
         localStorage.setItem('scada_selected_site', JSON.stringify(site));
         const siteId = String(site.id ?? site.siteId ?? site._id ?? '');
         if (siteId) {
+          sessionStorage.setItem('scada_selected_site_id', siteId);
           localStorage.setItem('selected_main_meter_site_id', siteId);
           localStorage.setItem('selected_sub_meter_site_id', siteId);
           localStorage.setItem('selected_energy_overview_site_id', siteId);
@@ -59,6 +68,7 @@ export const SiteProvider = ({ children }) => {
           localStorage.setItem('motors_selected_site', siteId);
         }
       } else {
+        sessionStorage.removeItem('scada_selected_site');
         localStorage.removeItem('scada_selected_site');
       }
     } catch (e) {}
@@ -236,14 +246,8 @@ export const SiteProvider = ({ children }) => {
           if (Array.isArray(parsed)) setSites(parsed);
         } catch (err) {}
       }
-      if (e.key === 'scada_selected_site' && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (parsed && (parsed.id ?? parsed.siteId ?? parsed._id)) {
-            setSelectedSiteState(parsed);
-          }
-        } catch (err) {}
-      }
+      // Note: We deliberately do NOT sync 'scada_selected_site' across tabs/windows,
+      // so dual-monitor / multi-screen setups can monitor different sites independently without interference.
     };
 
     window.addEventListener('bms_sites_updated', handleSitesUpdated);
@@ -269,7 +273,8 @@ export const SiteProvider = ({ children }) => {
     const currentId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
     if (!currentId) {
       try {
-        const stored = localStorage.getItem('scada_selected_site');
+        const sessionStored = sessionStorage.getItem('scada_selected_site');
+        const stored = sessionStored || localStorage.getItem('scada_selected_site');
         if (stored) {
           const parsed = JSON.parse(stored);
           const parsedId = String(parsed?.id ?? parsed?.siteId ?? parsed?._id ?? '');
