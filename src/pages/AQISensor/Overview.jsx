@@ -331,7 +331,20 @@ const AQIOverview = () => {
   const [samplingInterval, setSamplingInterval] = useState('DAILY'); // 'MIN_15' | 'MIN_30' | 'HOURLY' | 'DAILY'
 
   // View settings
-  const [useFahrenheit, setUseFahrenheit] = useState(true);
+  const [useFahrenheit, setUseFahrenheit] = useState(() => {
+    const saved = localStorage.getItem('aqi_use_fahrenheit');
+    if (saved !== null) return saved === 'true';
+    return true;
+  });
+
+  const toggleTempUnit = useCallback((val) => {
+    setUseFahrenheit((prev) => {
+      const nextVal = typeof val === 'boolean' ? val : !prev;
+      localStorage.setItem('aqi_use_fahrenheit', String(nextVal));
+      return nextVal;
+    });
+  }, []);
+
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
@@ -911,17 +924,41 @@ const AQIOverview = () => {
           }] : [])
         ]}
         actions={[
-          <Button
-            key="temp-toggle"
-            variant="outline-secondary"
-            size="sm"
-            className="context-banner-action-btn d-flex align-items-center gap-1 py-1 px-2.5 rounded-pill fs-8 fw-bold"
-            onClick={() => setUseFahrenheit(!useFahrenheit)}
-            title="Toggle Temperature Unit (°F / °C)"
+          <div
+            key="temp-toggle-group"
+            className="d-inline-flex align-items-center rounded-pill p-0.5"
+            style={{
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              border: '1px solid rgba(56, 189, 248, 0.3)'
+            }}
           >
-            <Thermometer size={14} className="text-info" />
-            <span>{useFahrenheit ? '°F' : '°C'}</span>
-          </Button>,
+            <button
+              type="button"
+              onClick={() => toggleTempUnit(false)}
+              className={`btn btn-link p-0 px-2 text-decoration-none rounded-pill transition-all ${
+                !useFahrenheit
+                  ? 'bg-info text-dark fw-bold shadow-sm'
+                  : 'text-muted'
+              }`}
+              style={{ fontSize: '11px', lineHeight: '18px', height: '22px', display: 'flex', alignItems: 'center' }}
+              title="Display Temperature in Celsius (°C)"
+            >
+              °C
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleTempUnit(true)}
+              className={`btn btn-link p-0 px-2 text-decoration-none rounded-pill transition-all ${
+                useFahrenheit
+                  ? 'bg-info text-dark fw-bold shadow-sm'
+                  : 'text-muted'
+              }`}
+              style={{ fontSize: '11px', lineHeight: '18px', height: '22px', display: 'flex', alignItems: 'center' }}
+              title="Display Temperature in Fahrenheit (°F)"
+            >
+              °F
+            </button>
+          </div>,
           <Button
             key="refresh-btn"
             variant="outline-info"
@@ -1151,7 +1188,47 @@ const AQIOverview = () => {
                     </div>
                     <div className="aqi-metric-sublabel d-flex align-items-center justify-content-between mt-auto pt-1">
                       <span>Ambient Climate</span>
-                      <span className="text-secondary fs-9">{useFahrenheit ? '°F' : '°C'}</span>
+                      <div 
+                        className="d-inline-flex align-items-center rounded-pill p-0.5"
+                        style={{
+                          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                          border: '1px solid rgba(56, 189, 248, 0.25)',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTempUnit(false);
+                          }}
+                          className={`btn btn-link p-0 px-1.5 text-decoration-none rounded-pill transition-all ${
+                            !useFahrenheit
+                              ? 'bg-info text-dark fw-bold shadow-sm'
+                              : 'text-muted'
+                          }`}
+                          style={{ fontSize: '10px', lineHeight: '14px', height: '18px', display: 'flex', alignItems: 'center' }}
+                          title="Switch to Celsius (°C)"
+                        >
+                          °C
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTempUnit(true);
+                          }}
+                          className={`btn btn-link p-0 px-1.5 text-decoration-none rounded-pill transition-all ${
+                            useFahrenheit
+                              ? 'bg-info text-dark fw-bold shadow-sm'
+                              : 'text-muted'
+                          }`}
+                          style={{ fontSize: '10px', lineHeight: '14px', height: '18px', display: 'flex', alignItems: 'center' }}
+                          title="Switch to Fahrenheit (°F)"
+                        >
+                          °F
+                        </button>
+                      </div>
                     </div>
                   </Card>
                 </Col>
