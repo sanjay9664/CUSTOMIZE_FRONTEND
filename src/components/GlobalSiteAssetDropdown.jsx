@@ -163,34 +163,29 @@ export const GlobalSiteAssetDropdown = ({
     if (title === 'Motors' || path.includes('/motors')) return 'MOTOR';
     if (title === 'Transformer' || path.includes('/transformer')) return 'TRANSFORMER';
     if (title === 'LT Panel' || path.includes('/lt-panel')) return 'LT_PANEL';
-    if (title === 'HVAC' || path.includes('/hvac') || title === 'VRV' || path.includes('/vrv')) return 'HVAC';
-    if (title === 'Fire' || path.includes('/fire') || path.includes('/fire-pumps') || path.includes('/acms')) return 'FIRE_PUMP';
+    if (title === 'HVAC' || path.includes('/hvac') || title === 'VRV' || path.includes('/vrv') || title === 'AC' || path.includes('/ac')) return 'HVAC';
+    if (title === 'Fire' || title === 'ACMS' || path.includes('/fire') || path.includes('/fire-pumps') || path.includes('/acms')) return 'FIRE_PUMP';
     if (title === 'AQI Sensor' || title === 'AQI' || path.includes('/aqi-sensor') || path.includes('/aqi')) return 'AQI_SENSOR';
     return null;
   }, [moduleHeader?.title, pathname]);
 
-  // Check if current tab is a site-wide overview (e.g. Water Management, Overview, Sub Meters, Graphs, Reports) where device selection is unnecessary
+  // Check if current tab is a site-wide overview (e.g. Water Management, Motors, Overview, Sub Meters, Graphs, Reports) where device selection is unnecessary
   const isSiteOnlyMode = useMemo(() => {
     const path = (pathname || (typeof window !== 'undefined' ? window.location.pathname : '')).toLowerCase();
     const title = (moduleHeader?.title || '').toLowerCase();
     
-    // Water Management operates at site level (multi-tank & multi-pump overview)
-    if (path.includes('/water') || title.includes('water')) {
-      return true;
+    // Modules that target individual sub-devices (like DG Set with generators, Main Energy Meter, or AQI individual sensor):
+    const isDeviceTargetedModule = 
+      title === 'dg set' || path.includes('/dg-set') ||
+      path.includes('/energy-metering/main') ||
+      path.includes('/aqi-sensor/overview');
+
+    if (isDeviceTargetedModule) {
+      return false;
     }
 
-    // In Energy Metering: only /energy-metering/main targets an individual main meter.
-    // Overview (/energy-metering/overview), Sub Meters (/energy-metering/sub), Graphs (/energy-metering/graphs), Report (/energy-metering/report) are site-level views.
-    if (path.includes('/energy-metering') || path.includes('/daily-dpr')) {
-      if (path.includes('/energy-metering/main')) return false;
-      return true;
-    }
-
-    if (path.includes('/submeters') || path.includes('/sub-meters')) {
-      return true;
-    }
-
-    return false;
+    // All other modules operate at site level (Water Management, Motors, Energy Overview, Sub Meters, Graphs, Reports, Daily DPR, LT Panel, Transformer, HVAC, VRV, AC, Fire, Alarms):
+    return true;
   }, [pathname, moduleHeader?.title]);
 
   // Derive plural asset label
@@ -606,20 +601,14 @@ export const GlobalSiteAssetDropdown = ({
           <span className="global-site-current-name text-truncate">
             {selectedSite?.name || selectedSite?.siteName || (getSiteId(selectedSite) ? `Site ${getSiteId(selectedSite)}` : 'Select Site')}
           </span>
-          {!isSiteOnlyMode && (
-            currentActiveDeviceObj ? (
-              <>
-                <span className="global-site-divider opacity-50 px-0.5">›</span>
-                <span className="global-device-current-name d-flex align-items-center gap-1 text-truncate">
-                  {renderAssetIcon(13)}
-                  <span className="text-truncate">{currentActiveDeviceObj.name}</span>
-                </span>
-              </>
-            ) : (
-              <span className="global-device-badge-empty ms-1">
-                ({currentSiteDevices.length} {assetLabel})
+          {!isSiteOnlyMode && currentActiveDeviceObj && (
+            <>
+              <span className="global-site-divider opacity-50 px-0.5">›</span>
+              <span className="global-device-current-name d-flex align-items-center gap-1 text-truncate">
+                {renderAssetIcon(13)}
+                <span className="text-truncate">{currentActiveDeviceObj.name}</span>
               </span>
-            )
+            </>
           )}
         </div>
         <ChevronDown size={14} className={`global-site-chevron flex-shrink-0 ms-1 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

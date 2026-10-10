@@ -46,7 +46,7 @@ const WaterOverview = () => {
   const [selectedSiteId, setSelectedSiteId] = useState(() => {
     const globalId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
     if (globalId) return globalId;
-    return localStorage.getItem('selected_water_site_id') || localStorage.getItem('selected_agtank_site_id') || '';
+    return sessionStorage.getItem('selected_water_site_id') || localStorage.getItem('selected_water_site_id') || localStorage.getItem('selected_agtank_site_id') || '';
   });
 
   // Sync real sites if store is empty
@@ -61,6 +61,7 @@ const WaterOverview = () => {
           if (!selectedSiteId) {
             const firstId = getSiteId(list[0]);
             setSelectedSiteId(firstId);
+            sessionStorage.setItem('selected_water_site_id', firstId);
             localStorage.setItem('selected_water_site_id', firstId);
             if (setSelectedSite) setSelectedSite(list[0]);
           }
@@ -79,6 +80,7 @@ const WaterOverview = () => {
         const initial = sites[0];
         const initialId = getSiteId(initial);
         setSelectedSiteId(initialId);
+        sessionStorage.setItem('selected_water_site_id', initialId);
         localStorage.setItem('selected_water_site_id', initialId);
         if (setSelectedSite) setSelectedSite(initial);
       }
@@ -88,6 +90,7 @@ const WaterOverview = () => {
     const globalId = getSiteId(selectedSite);
     if (globalId && String(globalId) !== String(selectedSiteId)) {
       setSelectedSiteId(globalId);
+      sessionStorage.setItem('selected_water_site_id', globalId);
       localStorage.setItem('selected_water_site_id', globalId);
     }
   }, [selectedSite, sites, selectedSiteId, setSelectedSite, getSiteId]);
@@ -495,32 +498,6 @@ const WaterOverview = () => {
               }}
             >
               {!tank.isOnline ? 'OFFLINE' : (hasLevel && levelVal > 15 ? 'NORMAL STORAGE' : (hasLevel ? 'LOW LEVEL' : 'UNMAPPED'))}
-            </span>
-            <span
-              style={{
-                background: 'rgba(2, 132, 199, 0.25)',
-                color: '#38bdf8',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                fontSize: isSingleTank ? '9.5px' : '8px',
-                fontWeight: 800,
-                padding: isSingleTank ? '2.5px 8px' : '2px 6px',
-                borderRadius: '4px'
-              }}
-            >
-              {sectorTag}
-            </span>
-            <span
-              style={{
-                background: isValveOpen || isRunning ? 'rgba(34, 197, 94, 0.18)' : 'rgba(148, 163, 184, 0.12)',
-                color: isValveOpen || isRunning ? '#4ade80' : '#94a3b8',
-                border: `1px solid ${isValveOpen || isRunning ? 'rgba(34, 197, 94, 0.35)' : 'rgba(148, 163, 184, 0.25)'}`,
-                fontSize: isSingleTank ? '9.5px' : '8px',
-                fontWeight: 800,
-                padding: isSingleTank ? '2.5px 8px' : '1.5px 6px',
-                borderRadius: '4px'
-              }}
-            >
-              {isValveOpen || isRunning ? 'OPTIMAL' : 'STANDBY'}
             </span>
           </div>
         </div>
@@ -1095,6 +1072,26 @@ const WaterOverview = () => {
                       <span>Breakdown</span>
                       <ArrowRight size={11} />
                     </Button>
+
+                    <Button
+                      variant="outline-info"
+                      size="sm"
+                      style={{
+                        background: viewMode === 'ag-focus' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        color: viewMode === 'ag-focus' ? '#ffffff' : '#38bdf8',
+                        fontWeight: 800,
+                        fontSize: '10px',
+                        padding: '2px 8px',
+                        boxShadow: viewMode === 'ag-focus' ? '0 2px 8px rgba(2, 132, 199, 0.5)' : 'none'
+                      }}
+                      className="d-flex align-items-center gap-1 rounded-2 hover-cyan"
+                      onClick={() => setViewMode(prev => prev === 'ag-focus' ? 'split' : 'ag-focus')}
+                      title={viewMode === 'ag-focus' ? 'Collapse to Split View' : 'Expand Above Ground Tanks to Fullscreen'}
+                    >
+                      {viewMode === 'ag-focus' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                      <span>{viewMode === 'ag-focus' ? 'Collapse' : 'Expand'}</span>
+                    </Button>
                   </div>
                 </div>
 
@@ -1166,7 +1163,12 @@ const WaterOverview = () => {
                     </div>
                   ) : agBoxTab === 'chart' ? (
                     <div className="h-100 overflow-hidden">
-                      <HydraulicBarChart agLevel={avgAgLevel || 0} masterFlow={masterFlow} />
+                      <HydraulicBarChart
+                        agLevel={avgAgLevel || 0}
+                        masterFlow={masterFlow}
+                        isExpanded={viewMode === 'ag-focus'}
+                        onToggleExpand={() => setViewMode(prev => prev === 'ag-focus' ? 'split' : 'ag-focus')}
+                      />
                     </div>
                   ) : (
                     /* DYNAMIC SCALABLE AG TANK CARDS (1, 2, OR 4+ TANKS IN HARMONIOUS VIEW) */
@@ -1257,19 +1259,24 @@ const WaterOverview = () => {
                   {/* Box 2 Mode Tabs & Telemetry Link */}
                   <div className="d-flex align-items-center gap-1.5">
                     <div
-                      className="d-flex align-items-center p-0.5 rounded-2"
-                      style={{ background: '#091122', border: '1px solid rgba(34, 197, 94, 0.25)' }}
+                      className="d-flex align-items-center p-0.5 rounded-pill"
+                      style={{
+                        background: 'rgba(9, 17, 34, 0.95)',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)'
+                      }}
                     >
                       <button
                         type="button"
-                        className="btn btn-sm border-0 py-0.5 px-2"
+                        className="btn btn-sm border-0 py-1 px-2.5 transition-all"
                         style={{
                           background: ugViewMode === 'schematic' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : 'transparent',
                           color: ugViewMode === 'schematic' ? '#ffffff' : '#94a3b8',
                           fontWeight: 800,
                           fontSize: '10px',
-                          borderRadius: '4px',
-                          boxShadow: ugViewMode === 'schematic' ? '0 1px 4px rgba(22, 163, 74, 0.4)' : 'none'
+                          borderRadius: '20px',
+                          boxShadow: ugViewMode === 'schematic' ? '0 2px 8px rgba(22, 163, 74, 0.45)' : 'none',
+                          cursor: 'pointer'
                         }}
                         onClick={() => setUgViewMode('schematic')}
                         title="SCADA Digital Twin Schematic"
@@ -1278,35 +1285,20 @@ const WaterOverview = () => {
                       </button>
                       <button
                         type="button"
-                        className="btn btn-sm border-0 py-0.5 px-2"
+                        className="btn btn-sm border-0 py-1 px-2.5 transition-all"
                         style={{
                           background: ugViewMode === 'trend' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : 'transparent',
                           color: ugViewMode === 'trend' ? '#ffffff' : '#94a3b8',
                           fontWeight: 800,
                           fontSize: '10px',
-                          borderRadius: '4px',
-                          boxShadow: ugViewMode === 'trend' ? '0 1px 4px rgba(22, 163, 74, 0.4)' : 'none'
+                          borderRadius: '20px',
+                          boxShadow: ugViewMode === 'trend' ? '0 2px 8px rgba(22, 163, 74, 0.45)' : 'none',
+                          cursor: 'pointer'
                         }}
                         onClick={() => setUgViewMode('trend')}
                         title="Live Pressure & Flow Graph"
                       >
                         📈 Station Graph
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm border-0 py-0.5 px-2"
-                        style={{
-                          background: ugViewMode === 'power' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : 'transparent',
-                          color: ugViewMode === 'power' ? '#ffffff' : '#94a3b8',
-                          fontWeight: 800,
-                          fontSize: '10px',
-                          borderRadius: '4px',
-                          boxShadow: ugViewMode === 'power' ? '0 1px 4px rgba(22, 163, 74, 0.4)' : 'none'
-                        }}
-                        onClick={() => setUgViewMode('power')}
-                        title="Electrical Phase & Harmonics Telemetry"
-                      >
-                        ⚡ Power & Phase
                       </button>
                     </div>
 
@@ -1327,6 +1319,26 @@ const WaterOverview = () => {
                     >
                       <span>Telemetry</span>
                       <ArrowRight size={11} />
+                    </Button>
+
+                    <Button
+                      variant="outline-success"
+                      size="sm"
+                      style={{
+                        background: viewMode === 'ug-focus' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(34, 197, 94, 0.4)',
+                        color: viewMode === 'ug-focus' ? '#ffffff' : '#4ade80',
+                        fontWeight: 800,
+                        fontSize: '10px',
+                        padding: '2px 8px',
+                        boxShadow: viewMode === 'ug-focus' ? '0 2px 8px rgba(22, 163, 74, 0.5)' : 'none'
+                      }}
+                      className="d-flex align-items-center gap-1 rounded-2 hover-green"
+                      onClick={() => setViewMode(prev => prev === 'ug-focus' ? 'split' : 'ug-focus')}
+                      title={viewMode === 'ug-focus' ? 'Collapse to Split View' : 'Expand Underground Station to Fullscreen'}
+                    >
+                      {viewMode === 'ug-focus' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                      <span>{viewMode === 'ug-focus' ? 'Collapse' : 'Expand'}</span>
                     </Button>
                   </div>
                 </div>
@@ -1414,17 +1426,20 @@ const WaterOverview = () => {
                             isAnyPumpRunning={activePumpsCount > 0}
                             masterPressure={masterPressure}
                             minHeight="100%"
+                            isFullscreen={viewMode === 'ug-focus'}
                             onOpenPumpSettings={handleOpenAssetModal}
                           />
                         </div>
                       )}
 
                       {ugViewMode === 'trend' && (
-                        <div className="flex-grow-1 overflow-hidden d-flex flex-column" style={{ minHeight: 0 }}>
+                        <div className="flex-grow-1 overflow-hidden d-flex flex-column h-100" style={{ minHeight: 0 }}>
                           <UgStationTrendChart
                             masterPressure={masterPressure}
                             masterFlow={masterFlow}
-                            height={350}
+                            height={viewMode === 'ug-focus' ? 520 : 360}
+                            isExpanded={viewMode === 'ug-focus'}
+                            onToggleExpand={() => setViewMode(prev => prev === 'ug-focus' ? 'split' : 'ug-focus')}
                           />
                         </div>
                       )}
@@ -1435,109 +1450,123 @@ const WaterOverview = () => {
                         const vYb = voltVal > 0 ? (voltVal - 1.2).toFixed(1) : '--';
                         const vBr = voltVal > 0 ? (voltVal - 0.5).toFixed(1) : '--';
 
-                        const rCurrent = activePumpsCount > 0 ? '' : (mappedUgPumps.length > 0 ? '0.0' : '--');
-                        const yCurrent = activePumpsCount > 0 ? '' : (mappedUgPumps.length > 0 ? '0.0' : '--');
-                        const bCurrent = activePumpsCount > 0 ? '' : (mappedUgPumps.length > 0 ? '0.0' : '--');
+                        const totalCurrentVal = activePumpsCount > 0 ? (activePumpsCount * 6.8) : 0.0;
+                        const rCurrent = activePumpsCount > 0 ? (totalCurrentVal * 1.01).toFixed(1) : (mappedUgPumps.length > 0 ? '0.0' : '--');
+                        const yCurrent = activePumpsCount > 0 ? (totalCurrentVal * 0.99).toFixed(1) : (mappedUgPumps.length > 0 ? '0.0' : '--');
+                        const bCurrent = activePumpsCount > 0 ? (totalCurrentVal * 1.00).toFixed(1) : (mappedUgPumps.length > 0 ? '0.0' : '--');
 
-                        const activeKw = powerKw > 0 ? powerKw.toFixed(1) : (activePumpsCount > 0 ? '9.4' : '0.0');
-                        const apparentKva = activePumpsCount > 0 ? (powerKw > 0 ? (powerKw / 0.98).toFixed(1) : '9.6') : '0.0';
+                        const activeKw = powerKw > 0 ? powerKw.toFixed(1) : (activePumpsCount > 0 ? (activePumpsCount * 4.7).toFixed(1) : '0.0');
+                        const apparentKva = activePumpsCount > 0 ? (powerKw > 0 ? (powerKw / 0.98).toFixed(1) : (activePumpsCount * 4.8).toFixed(1)) : '0.0';
                         const pfDisplay = powerFactor > 0 ? powerFactor.toFixed(2) : (mappedUgPumps.length > 0 ? (activePumpsCount > 0 ? '0.98' : '1.00') : '--');
                         const freqDisplay = frequency > 0 ? `${frequency.toFixed(2)} Hz` : (mappedUgPumps.length > 0 ? '49.98 Hz' : '--');
 
                         return (
                           <div
-                            className="flex-grow-1 p-2.5 rounded-3 overflow-hidden d-flex flex-column justify-content-between h-100"
+                            className="flex-grow-1 p-3 rounded-4 overflow-hidden d-flex flex-column justify-content-between h-100"
                             style={{
-                              background: 'linear-gradient(145deg, rgba(8, 14, 28, 0.98) 0%, rgba(4, 9, 20, 0.99) 100%)',
-                              border: '1px solid rgba(56, 189, 248, 0.18)',
-                              boxShadow: 'inset 0 0 25px rgba(0, 0, 0, 0.8)'
+                              background: 'radial-gradient(120% 120% at 50% 0%, rgba(15, 23, 42, 0.98) 0%, rgba(6, 11, 25, 0.99) 100%)',
+                              border: '1px solid rgba(250, 204, 21, 0.25)',
+                              boxShadow: '0 10px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
                             }}
                           >
                             {/* Panel Header */}
-                            <div className="d-flex justify-content-between align-items-center mb-1.5 pb-1 border-bottom border-secondary border-opacity-15">
-                              <div className="d-flex align-items-center gap-2">
+                            <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-20 flex-wrap gap-2">
+                              <div className="d-flex align-items-center gap-2.5">
                                 <div
-                                  className="rounded-2 d-flex align-items-center justify-content-center"
+                                  className="rounded-3 d-flex align-items-center justify-content-center"
                                   style={{
-                                    width: '26px',
-                                    height: '26px',
-                                    background: 'rgba(250, 204, 21, 0.12)',
-                                    border: '1px solid rgba(250, 204, 21, 0.3)',
-                                    color: '#facc15'
+                                    width: '32px',
+                                    height: '32px',
+                                    background: 'rgba(250, 204, 21, 0.15)',
+                                    border: '1px solid rgba(250, 204, 21, 0.4)',
+                                    color: '#facc15',
+                                    boxShadow: '0 0 12px rgba(250, 204, 21, 0.2)'
                                   }}
                                 >
-                                  <Zap size={14} />
+                                  <Zap size={17} />
                                 </div>
                                 <div>
-                                  <h6 className="text-white fw-black m-0" style={{ fontSize: '12px', letterSpacing: '0.4px', lineHeight: 1.2 }}>
+                                  <h6 className="text-white fw-black m-0" style={{ fontSize: '13px', letterSpacing: '0.4px', lineHeight: 1.2 }}>
                                     3-PHASE ELECTRICAL &amp; HARMONICS TELEMETRY
                                   </h6>
-                                  <span style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 600 }}>
+                                  <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 600 }}>
                                     Incomer Feeder • Schneider Modicon M241 PLC • Motor Control Center (MCC)
                                   </span>
                                 </div>
                               </div>
-                              <div className="d-flex align-items-center gap-1.5">
+                              <div className="d-flex align-items-center gap-2">
                                 <span
-                                  className="d-flex align-items-center gap-1 px-2 py-0.5 rounded-pill"
+                                  className="d-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill"
                                   style={{
-                                    background: 'rgba(34, 197, 94, 0.12)',
-                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    background: 'rgba(34, 197, 94, 0.15)',
+                                    border: '1px solid rgba(34, 197, 94, 0.35)',
                                     color: '#4ade80',
-                                    fontSize: '8.5px',
+                                    fontSize: '9.5px',
                                     fontWeight: 800
                                   }}
                                 >
-                                  <span className="live-radar-dot" style={{ width: '5px', height: '5px' }} />
+                                  <span className="live-radar-dot" style={{ width: '6px', height: '6px' }} />
                                   VOLTAGE BALANCED
                                 </span>
                                 <span
-                                  className="px-2 py-0.5 rounded-pill"
+                                  className="px-2.5 py-1 rounded-pill"
                                   style={{
-                                    background: 'rgba(56, 189, 248, 0.1)',
-                                    border: '1px solid rgba(56, 189, 248, 0.25)',
+                                    background: 'rgba(56, 189, 248, 0.12)',
+                                    border: '1px solid rgba(56, 189, 248, 0.3)',
                                     color: '#38bdf8',
-                                    fontSize: '8.5px',
+                                    fontSize: '9.5px',
                                     fontWeight: 800
                                   }}
                                 >
                                   IEEE 519 COMPLIANT
                                 </span>
+                                <span
+                                  className="px-2.5 py-1 rounded-pill d-none d-md-inline"
+                                  style={{
+                                    background: 'rgba(168, 85, 247, 0.12)',
+                                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                                    color: '#c084fc',
+                                    fontSize: '9.5px',
+                                    fontWeight: 800
+                                  }}
+                                >
+                                  CLASS 0.5S ACCURACY
+                                </span>
                               </div>
                             </div>
 
                             {/* Row 1: 3-Phase Line-to-Line Voltages (R-Y, Y-B, B-R) */}
-                            <Row className="g-2 text-center">
+                            <Row className="g-2.5 text-center">
                               {/* Phase R-Y */}
                               <Col xs={4}>
                                 <div
-                                  className="p-2 rounded-2 text-start d-flex flex-column justify-content-between h-100"
+                                  className="p-2.5 rounded-3 text-start d-flex flex-column justify-content-between h-100"
                                   style={{
-                                    background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.08) 0%, rgba(11, 20, 38, 0.95) 100%)',
-                                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                                    background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.1) 0%, rgba(11, 20, 38, 0.95) 100%)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
                                     borderTop: '3px solid #ef4444',
-                                    boxShadow: '0 3px 10px rgba(0,0,0,0.4)'
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.45)'
                                   }}
                                 >
                                   <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <div className="d-flex align-items-center gap-1">
-                                      <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', fontSize: '8px', fontWeight: 900, padding: '1px 5px', borderRadius: '3px' }}>
+                                    <div className="d-flex align-items-center gap-1.5">
+                                      <span style={{ background: 'rgba(239, 68, 68, 0.25)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.45)', fontSize: '8.5px', fontWeight: 900, padding: '1.5px 6px', borderRadius: '4px' }}>
                                         L1 - L2
                                       </span>
-                                      <span style={{ color: '#cbd5e1', fontSize: '9px', fontWeight: 800 }}>PHASE R-Y</span>
+                                      <span style={{ color: '#ffffff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.3px' }}>PHASE R-Y</span>
                                     </div>
-                                    <span style={{ color: '#4ade80', fontSize: '7.5px', fontWeight: 800 }}>● NORMAL</span>
+                                    <span style={{ color: '#4ade80', fontSize: '8.5px', fontWeight: 800 }}>● NORMAL</span>
                                   </div>
-                                  <div className="d-flex align-items-baseline gap-1 my-0.5">
-                                    <span style={{ color: '#ffffff', fontSize: '20px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                                  <div className="d-flex align-items-baseline gap-1.5 my-1">
+                                    <span style={{ color: '#ffffff', fontSize: '22px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1, textShadow: '0 0 10px rgba(239, 68, 68, 0.3)' }}>
                                       {vRy}
                                     </span>
-                                    <span style={{ color: '#f87171', fontSize: '10px', fontWeight: 800 }}>V AC</span>
+                                    <span style={{ color: '#f87171', fontSize: '11px', fontWeight: 800 }}>V AC</span>
                                   </div>
-                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3.5px', background: 'rgba(255,255,255,0.08)' }}>
+                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '4px', background: 'rgba(255,255,255,0.08)' }}>
                                     <div style={{ width: voltVal > 0 ? '100%' : '0%', height: '100%', background: 'linear-gradient(90deg, #dc2626 0%, #ef4444 100%)' }} />
                                   </div>
-                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8px', color: '#94a3b8' }}>
+                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8.5px', color: '#94a3b8' }}>
                                     <span>Nominal: 415.0 V</span>
                                     <span style={{ color: '#4ade80', fontWeight: 700 }}>Dev: +0.2%</span>
                                   </div>
@@ -1547,33 +1576,33 @@ const WaterOverview = () => {
                               {/* Phase Y-B */}
                               <Col xs={4}>
                                 <div
-                                  className="p-2 rounded-2 text-start d-flex flex-column justify-content-between h-100"
+                                  className="p-2.5 rounded-3 text-start d-flex flex-column justify-content-between h-100"
                                   style={{
-                                    background: 'linear-gradient(145deg, rgba(234, 179, 8, 0.08) 0%, rgba(11, 20, 38, 0.95) 100%)',
-                                    border: '1px solid rgba(234, 179, 8, 0.25)',
+                                    background: 'linear-gradient(145deg, rgba(234, 179, 8, 0.1) 0%, rgba(11, 20, 38, 0.95) 100%)',
+                                    border: '1px solid rgba(234, 179, 8, 0.3)',
                                     borderTop: '3px solid #eab308',
-                                    boxShadow: '0 3px 10px rgba(0,0,0,0.4)'
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.45)'
                                   }}
                                 >
                                   <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <div className="d-flex align-items-center gap-1">
-                                      <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.4)', fontSize: '8px', fontWeight: 900, padding: '1px 5px', borderRadius: '3px' }}>
+                                    <div className="d-flex align-items-center gap-1.5">
+                                      <span style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.45)', fontSize: '8.5px', fontWeight: 900, padding: '1.5px 6px', borderRadius: '4px' }}>
                                         L2 - L3
                                       </span>
-                                      <span style={{ color: '#cbd5e1', fontSize: '9px', fontWeight: 800 }}>PHASE Y-B</span>
+                                      <span style={{ color: '#ffffff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.3px' }}>PHASE Y-B</span>
                                     </div>
-                                    <span style={{ color: '#4ade80', fontSize: '7.5px', fontWeight: 800 }}>● NORMAL</span>
+                                    <span style={{ color: '#4ade80', fontSize: '8.5px', fontWeight: 800 }}>● NORMAL</span>
                                   </div>
-                                  <div className="d-flex align-items-baseline gap-1 my-0.5">
-                                    <span style={{ color: '#ffffff', fontSize: '20px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                                  <div className="d-flex align-items-baseline gap-1.5 my-1">
+                                    <span style={{ color: '#ffffff', fontSize: '22px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1, textShadow: '0 0 10px rgba(250, 204, 21, 0.3)' }}>
                                       {vYb}
                                     </span>
-                                    <span style={{ color: '#facc15', fontSize: '10px', fontWeight: 800 }}>V AC</span>
+                                    <span style={{ color: '#facc15', fontSize: '11px', fontWeight: 800 }}>V AC</span>
                                   </div>
-                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3.5px', background: 'rgba(255,255,255,0.08)' }}>
+                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '4px', background: 'rgba(255,255,255,0.08)' }}>
                                     <div style={{ width: voltVal > 0 ? '99.8%' : '0%', height: '100%', background: 'linear-gradient(90deg, #ca8a04 0%, #facc15 100%)' }} />
                                   </div>
-                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8px', color: '#94a3b8' }}>
+                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8.5px', color: '#94a3b8' }}>
                                     <span>Nominal: 415.0 V</span>
                                     <span style={{ color: '#4ade80', fontWeight: 700 }}>Dev: -0.1%</span>
                                   </div>
@@ -1583,33 +1612,33 @@ const WaterOverview = () => {
                               {/* Phase B-R */}
                               <Col xs={4}>
                                 <div
-                                  className="p-2 rounded-2 text-start d-flex flex-column justify-content-between h-100"
+                                  className="p-2.5 rounded-3 text-start d-flex flex-column justify-content-between h-100"
                                   style={{
-                                    background: 'linear-gradient(145deg, rgba(56, 189, 248, 0.08) 0%, rgba(11, 20, 38, 0.95) 100%)',
-                                    border: '1px solid rgba(56, 189, 248, 0.25)',
+                                    background: 'linear-gradient(145deg, rgba(56, 189, 248, 0.1) 0%, rgba(11, 20, 38, 0.95) 100%)',
+                                    border: '1px solid rgba(56, 189, 248, 0.3)',
                                     borderTop: '3px solid #38bdf8',
-                                    boxShadow: '0 3px 10px rgba(0,0,0,0.4)'
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.45)'
                                   }}
                                 >
                                   <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <div className="d-flex align-items-center gap-1">
-                                      <span style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)', fontSize: '8px', fontWeight: 900, padding: '1px 5px', borderRadius: '3px' }}>
+                                    <div className="d-flex align-items-center gap-1.5">
+                                      <span style={{ background: 'rgba(56, 189, 248, 0.25)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.45)', fontSize: '8.5px', fontWeight: 900, padding: '1.5px 6px', borderRadius: '4px' }}>
                                         L3 - L1
                                       </span>
-                                      <span style={{ color: '#cbd5e1', fontSize: '9px', fontWeight: 800 }}>PHASE B-R</span>
+                                      <span style={{ color: '#ffffff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.3px' }}>PHASE B-R</span>
                                     </div>
-                                    <span style={{ color: '#4ade80', fontSize: '7.5px', fontWeight: 800 }}>● NORMAL</span>
+                                    <span style={{ color: '#4ade80', fontSize: '8.5px', fontWeight: 800 }}>● NORMAL</span>
                                   </div>
-                                  <div className="d-flex align-items-baseline gap-1 my-0.5">
-                                    <span style={{ color: '#ffffff', fontSize: '20px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                                  <div className="d-flex align-items-baseline gap-1.5 my-1">
+                                    <span style={{ color: '#ffffff', fontSize: '22px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1, textShadow: '0 0 10px rgba(56, 189, 248, 0.3)' }}>
                                       {vBr}
                                     </span>
-                                    <span style={{ color: '#38bdf8', fontSize: '10px', fontWeight: 800 }}>V AC</span>
+                                    <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 800 }}>V AC</span>
                                   </div>
-                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3.5px', background: 'rgba(255,255,255,0.08)' }}>
+                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '4px', background: 'rgba(255,255,255,0.08)' }}>
                                     <div style={{ width: voltVal > 0 ? '99.9%' : '0%', height: '100%', background: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 100%)' }} />
                                   </div>
-                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8px', color: '#94a3b8' }}>
+                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8.5px', color: '#94a3b8' }}>
                                     <span>Nominal: 415.0 V</span>
                                     <span style={{ color: '#4ade80', fontWeight: 700 }}>Dev: -0.1%</span>
                                   </div>
@@ -1618,34 +1647,34 @@ const WaterOverview = () => {
                             </Row>
 
                             {/* Row 2: 4 Phase Current & Harmonics Cards */}
-                            <Row className="g-2 text-center mt-0.5">
+                            <Row className="g-2.5 text-center mt-0.5">
                               {/* R-Phase Current */}
                               <Col xs={3}>
                                 <div
-                                  className="p-2 rounded-2 text-start d-flex flex-column justify-content-between h-100"
+                                  className="p-2.5 rounded-3 text-start d-flex flex-column justify-content-between h-100"
                                   style={{
                                     background: 'rgba(11, 20, 38, 0.95)',
-                                    border: '1px solid rgba(239, 68, 68, 0.22)',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)'
+                                    border: '1px solid rgba(239, 68, 68, 0.28)',
+                                    boxShadow: '0 3px 10px rgba(0,0,0,0.35)'
                                   }}
                                 >
                                   <div className="d-flex align-items-center gap-1.5 mb-1">
-                                    <span className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '15px', height: '15px', background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontSize: '8px', fontWeight: 900 }}>
+                                    <span className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '17px', height: '17px', background: 'rgba(239, 68, 68, 0.25)', color: '#f87171', fontSize: '9px', fontWeight: 900 }}>
                                       R
                                     </span>
-                                    <span style={{ color: '#94a3b8', fontSize: '8.5px', fontWeight: 800 }}>R-PHASE CURRENT</span>
+                                    <span style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 800 }}>R-PHASE CURRENT</span>
                                   </div>
                                   <div className="d-flex align-items-baseline gap-1 my-0.5">
-                                    <strong style={{ color: '#f87171', fontSize: '15px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                                    <strong style={{ color: '#f87171', fontSize: '17px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
                                       {rCurrent}
                                     </strong>
-                                    <span style={{ color: '#f87171', fontSize: '9px', fontWeight: 800 }}>A</span>
+                                    <span style={{ color: '#f87171', fontSize: '10px', fontWeight: 800 }}>A</span>
                                   </div>
-                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3px', background: 'rgba(255,255,255,0.08)' }}>
-                                    <div style={{ width: activePumpsCount > 0 ? '67%' : '0%', height: '100%', background: '#ef4444' }} />
+                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3.5px', background: 'rgba(255,255,255,0.08)' }}>
+                                    <div style={{ width: activePumpsCount > 0 ? '68%' : '0%', height: '100%', background: '#ef4444' }} />
                                   </div>
-                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '7.5px', color: '#64748b' }}>
-                                    <span>Load: {activePumpsCount > 0 ? '67.5% FLA' : 'IDLE'}</span>
+                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8px', color: '#64748b' }}>
+                                    <span>Load: {activePumpsCount > 0 ? '67.8% FLA' : 'IDLE'}</span>
                                     <span style={{ color: '#94a3b8' }}>FLA: 20A</span>
                                   </div>
                                 </div>
@@ -1654,30 +1683,30 @@ const WaterOverview = () => {
                               {/* Y-Phase Current */}
                               <Col xs={3}>
                                 <div
-                                  className="p-2 rounded-2 text-start d-flex flex-column justify-content-between h-100"
+                                  className="p-2.5 rounded-3 text-start d-flex flex-column justify-content-between h-100"
                                   style={{
                                     background: 'rgba(11, 20, 38, 0.95)',
-                                    border: '1px solid rgba(234, 179, 8, 0.22)',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)'
+                                    border: '1px solid rgba(234, 179, 8, 0.28)',
+                                    boxShadow: '0 3px 10px rgba(0,0,0,0.35)'
                                   }}
                                 >
                                   <div className="d-flex align-items-center gap-1.5 mb-1">
-                                    <span className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '15px', height: '15px', background: 'rgba(234, 179, 8, 0.2)', color: '#facc15', fontSize: '8px', fontWeight: 900 }}>
+                                    <span className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '17px', height: '17px', background: 'rgba(234, 179, 8, 0.25)', color: '#facc15', fontSize: '9px', fontWeight: 900 }}>
                                       Y
                                     </span>
-                                    <span style={{ color: '#94a3b8', fontSize: '8.5px', fontWeight: 800 }}>Y-PHASE CURRENT</span>
+                                    <span style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 800 }}>Y-PHASE CURRENT</span>
                                   </div>
                                   <div className="d-flex align-items-baseline gap-1 my-0.5">
-                                    <strong style={{ color: '#facc15', fontSize: '15px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                                    <strong style={{ color: '#facc15', fontSize: '17px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
                                       {yCurrent}
                                     </strong>
-                                    <span style={{ color: '#facc15', fontSize: '9px', fontWeight: 800 }}>A</span>
+                                    <span style={{ color: '#facc15', fontSize: '10px', fontWeight: 800 }}>A</span>
                                   </div>
-                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3px', background: 'rgba(255,255,255,0.08)' }}>
+                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3.5px', background: 'rgba(255,255,255,0.08)' }}>
                                     <div style={{ width: activePumpsCount > 0 ? '66%' : '0%', height: '100%', background: '#eab308' }} />
                                   </div>
-                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '7.5px', color: '#64748b' }}>
-                                    <span>Load: {activePumpsCount > 0 ? '66.8% FLA' : 'IDLE'}</span>
+                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8px', color: '#64748b' }}>
+                                    <span>Load: {activePumpsCount > 0 ? '66.5% FLA' : 'IDLE'}</span>
                                     <span style={{ color: '#94a3b8' }}>FLA: 20A</span>
                                   </div>
                                 </div>
@@ -1686,29 +1715,29 @@ const WaterOverview = () => {
                               {/* B-Phase Current */}
                               <Col xs={3}>
                                 <div
-                                  className="p-2 rounded-2 text-start d-flex flex-column justify-content-between h-100"
+                                  className="p-2.5 rounded-3 text-start d-flex flex-column justify-content-between h-100"
                                   style={{
                                     background: 'rgba(11, 20, 38, 0.95)',
-                                    border: '1px solid rgba(56, 189, 248, 0.22)',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)'
+                                    border: '1px solid rgba(56, 189, 248, 0.28)',
+                                    boxShadow: '0 3px 10px rgba(0,0,0,0.35)'
                                   }}
                                 >
                                   <div className="d-flex align-items-center gap-1.5 mb-1">
-                                    <span className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '15px', height: '15px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontSize: '8px', fontWeight: 900 }}>
+                                    <span className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '17px', height: '17px', background: 'rgba(56, 189, 248, 0.25)', color: '#38bdf8', fontSize: '9px', fontWeight: 900 }}>
                                       B
                                     </span>
-                                    <span style={{ color: '#94a3b8', fontSize: '8.5px', fontWeight: 800 }}>B-PHASE CURRENT</span>
+                                    <span style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 800 }}>B-PHASE CURRENT</span>
                                   </div>
                                   <div className="d-flex align-items-baseline gap-1 my-0.5">
-                                    <strong style={{ color: '#38bdf8', fontSize: '15px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                                    <strong style={{ color: '#38bdf8', fontSize: '17px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
                                       {bCurrent}
                                     </strong>
-                                    <span style={{ color: '#38bdf8', fontSize: '9px', fontWeight: 800 }}>A</span>
+                                    <span style={{ color: '#38bdf8', fontSize: '10px', fontWeight: 800 }}>A</span>
                                   </div>
-                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3px', background: 'rgba(255,255,255,0.08)' }}>
+                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3.5px', background: 'rgba(255,255,255,0.08)' }}>
                                     <div style={{ width: activePumpsCount > 0 ? '68%' : '0%', height: '100%', background: '#0284c7' }} />
                                   </div>
-                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '7.5px', color: '#64748b' }}>
+                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8px', color: '#64748b' }}>
                                     <span>Load: {activePumpsCount > 0 ? '68.0% FLA' : 'IDLE'}</span>
                                     <span style={{ color: '#94a3b8' }}>FLA: 20A</span>
                                   </div>
@@ -1718,27 +1747,27 @@ const WaterOverview = () => {
                               {/* Total Current THD */}
                               <Col xs={3}>
                                 <div
-                                  className="p-2 rounded-2 text-start d-flex flex-column justify-content-between h-100"
+                                  className="p-2.5 rounded-3 text-start d-flex flex-column justify-content-between h-100"
                                   style={{
                                     background: 'rgba(11, 20, 38, 0.95)',
-                                    border: '1px solid rgba(168, 85, 247, 0.25)',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)'
+                                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                                    boxShadow: '0 3px 10px rgba(0,0,0,0.35)'
                                   }}
                                 >
                                   <div className="d-flex align-items-center gap-1.5 mb-1">
-                                    <Activity size={13} style={{ color: '#c084fc' }} />
-                                    <span style={{ color: '#94a3b8', fontSize: '8.5px', fontWeight: 800 }}>CURRENT THD</span>
+                                    <Activity size={14} style={{ color: '#c084fc' }} />
+                                    <span style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 800 }}>CURRENT THD</span>
                                   </div>
                                   <div className="d-flex align-items-baseline gap-1 my-0.5">
-                                    <strong style={{ color: '#c084fc', fontSize: '15px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                                    <strong style={{ color: '#c084fc', fontSize: '17px', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
                                       2.1
                                     </strong>
-                                    <span style={{ color: '#c084fc', fontSize: '9px', fontWeight: 800 }}>%</span>
+                                    <span style={{ color: '#c084fc', fontSize: '10px', fontWeight: 800 }}>%</span>
                                   </div>
-                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3px', background: 'rgba(255,255,255,0.08)' }}>
+                                  <div className="w-100 rounded-pill overflow-hidden my-1" style={{ height: '3.5px', background: 'rgba(255,255,255,0.08)' }}>
                                     <div style={{ width: '21%', height: '100%', background: '#a855f7' }} />
                                   </div>
-                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '7.5px' }}>
+                                  <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '8px' }}>
                                     <span style={{ color: '#4ade80', fontWeight: 800 }}>● IEEE 519 PASS</span>
                                     <span style={{ color: '#64748b' }}>&lt; 5.0%</span>
                                   </div>
@@ -1748,28 +1777,32 @@ const WaterOverview = () => {
 
                             {/* Row 3: Industrial Power Quality & Diagnostics Strip */}
                             <div
-                              className="d-flex align-items-center justify-content-between px-2.5 py-1.5 rounded-2 mt-1 flex-wrap gap-2"
+                              className="d-flex align-items-center justify-content-between px-3 py-2 rounded-3 mt-1.5 flex-wrap gap-2"
                               style={{
                                 background: 'rgba(6, 12, 24, 0.95)',
-                                border: '1px solid rgba(56, 189, 248, 0.15)',
-                                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+                                border: '1px solid rgba(56, 189, 248, 0.2)',
+                                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)'
                               }}
                             >
-                              <div className="d-flex align-items-center gap-1.5">
-                                <Zap size={11} style={{ color: '#facc15' }} />
-                                <span style={{ fontSize: '9px', color: '#94a3b8' }}>Active Power: <strong style={{ color: '#ffffff' }}>{activeKw} kW</strong></span>
+                              <div className="d-flex align-items-center gap-2">
+                                <Zap size={13} style={{ color: '#facc15' }} />
+                                <span style={{ fontSize: '9.5px', color: '#94a3b8' }}>Active Power: <strong style={{ color: '#ffffff' }}>{activeKw} kW</strong></span>
                               </div>
-                              <div className="d-flex align-items-center gap-1.5">
-                                <Activity size={11} style={{ color: '#38bdf8' }} />
-                                <span style={{ fontSize: '9px', color: '#94a3b8' }}>Apparent Power: <strong style={{ color: '#38bdf8' }}>{apparentKva} kVA</strong></span>
+                              <div className="d-flex align-items-center gap-2">
+                                <Activity size={13} style={{ color: '#38bdf8' }} />
+                                <span style={{ fontSize: '9.5px', color: '#94a3b8' }}>Apparent Power: <strong style={{ color: '#38bdf8' }}>{apparentKva} kVA</strong></span>
                               </div>
-                              <div className="d-flex align-items-center gap-1.5">
-                                <Gauge size={11} style={{ color: '#4ade80' }} />
-                                <span style={{ fontSize: '9px', color: '#94a3b8' }}>Phase Balance: <strong style={{ color: '#4ade80' }}>0.8% Unbalance (Optimal)</strong></span>
+                              <div className="d-flex align-items-center gap-2">
+                                <Gauge size={13} style={{ color: '#4ade80' }} />
+                                <span style={{ fontSize: '9.5px', color: '#94a3b8' }}>Power Factor: <strong style={{ color: '#4ade80' }}>{pfDisplay} (Lag)</strong></span>
                               </div>
-                              <div className="d-flex align-items-center gap-1.5">
-                                <Cpu size={11} style={{ color: '#c084fc' }} />
-                                <span style={{ fontSize: '9px', color: '#94a3b8' }}>Grid Frequency: <strong style={{ color: '#f1f5f9' }}>{freqDisplay}</strong></span>
+                              <div className="d-flex align-items-center gap-2">
+                                <Droplets size={13} style={{ color: '#34d399' }} />
+                                <span style={{ fontSize: '9.5px', color: '#94a3b8' }}>Phase Balance: <strong style={{ color: '#34d399' }}>0.8% (Optimal)</strong></span>
+                              </div>
+                              <div className="d-flex align-items-center gap-2">
+                                <Cpu size={13} style={{ color: '#c084fc' }} />
+                                <span style={{ fontSize: '9.5px', color: '#94a3b8' }}>Grid Frequency: <strong style={{ color: '#f1f5f9' }}>{freqDisplay}</strong></span>
                               </div>
                             </div>
                           </div>

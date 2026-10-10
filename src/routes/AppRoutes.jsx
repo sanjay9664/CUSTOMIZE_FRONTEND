@@ -224,7 +224,16 @@ const AppRoutes = () => {
       <Route path="/energy-metering/sub" element={<EnergySubMeters />} />
       <Route path="/energy-metering/graphs" element={<EnergyGraphs />} />
       <Route path="/energy-metering/report" element={<EnergyPDFReport />} />
+      {/* Daily DPR */}
+      <Route path="/daily-dpr" element={<Navigate to="/daily-dpr/overview" replace />} />
       <Route path="/daily-dpr/overview" element={<EnergyOverview />} />
+      <Route path="/daily-dpr/aggregation" element={<EnergyOverview />} />
+      <Route path="/daily-dpr/logs" element={<EnergyOverview />} />
+      <Route path="/daily-dpr/report" element={<EnergyOverview />} />
+      <Route path="/dpr" element={<Navigate to="/daily-dpr/overview" replace />} />
+      <Route path="/dpr/aggregation" element={<EnergyOverview />} />
+      <Route path="/dpr/logs" element={<EnergyOverview />} />
+      <Route path="/dpr/report" element={<EnergyOverview />} />
 
       {/* VRV*/}
       <Route path="/VRV/overview" element={<VRVOverview />} />
