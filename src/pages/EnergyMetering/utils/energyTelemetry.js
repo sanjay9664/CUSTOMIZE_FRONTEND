@@ -341,7 +341,7 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       if (
         sName.includes('r-phase volt') || sName.includes('r-volt') || sName === 'voltage-r' || sName === 'voltage r' || sName === 'r voltage' ||
         (!sName.includes('current') && (sName === 'voltage ln' || sName.includes('voltage ln') || sName.includes('voltage line-to-neutral') ||
-        sName.includes('average voltage line-to-neutral') || sName === 'vln' || sName === 'ua' || sName === 'vr' || sName.includes('phase l1 volt') || sName.includes('l1 volt')))
+        sName.includes('average voltage line-to-neutral') || sName.includes('generator l-n voltage average') || sName === 'vln' || sName === 'ua' || sName === 'vr' || sName.includes('phase l1 volt') || sName.includes('l1 volt')))
       ) {
         canonicalUpdates.vR = val;
         canonicalUpdates.vLNAvg = val;
@@ -349,21 +349,21 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
         canonicalUpdates.vY = val;
       } else if (sName.includes('b-phase volt') || sName.includes('b-volt') || sName === 'voltage-b' || sName === 'voltage b' || sName === 'b voltage' || sName.includes('phase l3 volt') || sName.includes('l3 volt') || sName === 'uc' || sName === 'vb') {
         canonicalUpdates.vB = val;
-      } else if (sName.includes('line-to-line voltage') || sName.includes('voltage l1-l2') || sName.includes('l1-l2 voltage') || sName.includes('voltage r-y') || sName === 'vry') {
+      } else if (sName.includes('line-to-line voltage') || sName.includes('generator l1-l2 voltage') || sName.includes('voltage l1-l2') || sName.includes('l1-l2 voltage') || sName.includes('voltage r-y') || sName === 'vry') {
         canonicalUpdates.vRY = val;
         canonicalUpdates.vLLAvg = val;
       } else if (
-        sName.includes('r-phase current') || sName.includes('r-current') || sName.includes('r current') || sName === 'current-r' || sName === 'current r' || sName.includes('phase current r') || sName.includes('phase l1 current') || sName.includes('l1 current') || sName.includes('current l1') ||
+        sName.includes('r-phase current') || sName.includes('r-current') || sName.includes('r current') || sName === 'current-r' || sName === 'current r' || sName.includes('phase current r') || sName.includes('phase l1 current') || sName.includes('l1 current') || sName.includes('current l1') || sName.includes('generator l1 current') ||
         sName === 'current' || sName === 'line amps (r)' || sName === 'ia' || sName === 'ir'
       ) {
         canonicalUpdates.iR = val;
       } else if (
-        sName.includes('y-phase current') || sName.includes('y-current') || sName.includes('y current') || sName === 'current-y' || sName === 'current y' || sName.includes('phase current y') || sName.includes('phase l2 current') || sName.includes('l2 current') || sName.includes('current l2') ||
+        sName.includes('y-phase current') || sName.includes('y-current') || sName.includes('y current') || sName === 'current-y' || sName === 'current y' || sName.includes('phase current y') || sName.includes('phase l2 current') || sName.includes('l2 current') || sName.includes('current l2') || sName.includes('generator l2 current') ||
         sName === 'line amps (y)' || sName === 'iy' || sName === 'a2'
       ) {
         canonicalUpdates.iY = val;
       } else if (
-        sName.includes('b-phase current') || sName.includes('b-current') || sName.includes('b current') || sName === 'current-b' || sName === 'current b' || sName.includes('phase current b') || sName.includes('phase l3 current') || sName.includes('l3 current') || sName.includes('current l3') ||
+        sName.includes('b-phase current') || sName.includes('b-current') || sName.includes('b current') || sName === 'current-b' || sName === 'current b' || sName.includes('phase current b') || sName.includes('phase l3 current') || sName.includes('l3 current') || sName.includes('current l3') || sName.includes('generator l3 current') ||
         sName === 'line amps (b)' || sName === 'ib' || sName === 'ic' || sName === 'a3'
       ) {
         canonicalUpdates.iB = val;
@@ -375,30 +375,33 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
         sName.includes('max.dmd-kvah') || sName.includes('max.dmd kvah') || sName.includes('max demand kvah')
       ) canonicalUpdates.maxDmdKvah = val;
       else if (
-        sName.includes('total kw') || sName.includes('active power') || sName.includes('total watts') || sName === 'kw' || sName === 'p'
+        sName.includes('total kw') || sName.includes('active power') || sName.includes('total watts') || sName.includes('generator total watts') || sName === 'kw' || sName === 'p'
       ) {
         canonicalUpdates.totalKw = val;
         canonicalUpdates.activePower = val;
       } else if (
-        sName.includes('total reactive energy') || sName.includes('reactive energy') || sName.includes('kvarh')
+        sName.includes('total reactive energy') || sName.includes('reactive energy') || sName.includes('kvarh') || sName.includes('kvar hours')
       ) {
         canonicalUpdates.reactiveEnergy = val;
       } else if (
-        sName.includes('eb kwh') || sName.includes('total active energy') || (sName.includes('active energy') && !sName.includes('reactive')) || sName === 'kwh' || sName === 'ep'
+        sName.includes('eb kwh') || sName.includes('total active energy') || (sName.includes('active energy') && !sName.includes('reactive')) || sName === 'kwh' || sName === 'ep' || sName.includes('kw hours') || sName.includes('dg kwh') || sName.includes('generator energy')
       ) {
         canonicalUpdates.ebKwh = val;
         canonicalUpdates.cumulativekWh = val;
+        canonicalUpdates.dgKwh = val;
+        canonicalUpdates.kwHours = val;
+        canonicalUpdates['KW Hours'] = val;
       } else if (
-        sName.includes('eb kvah') || sName.includes('apparent energy') || sName === 'kvah' || sName === 's'
+        sName.includes('eb kvah') || sName.includes('apparent energy') || sName === 'kvah' || sName === 's' || sName.includes('kva hours')
       ) {
         canonicalUpdates.ebKvah = val;
       } else if (
-        sName.includes('total kva') || sName.includes('apparent power') || sName.includes('total va') || sName === 'kva'
+        sName.includes('total kva') || sName.includes('apparent power') || sName.includes('total va') || sName.includes('generator total va') || sName === 'kva'
       ) {
         canonicalUpdates.totalKva = val;
         canonicalUpdates.apparentPower = val;
       } else if (
-        sName.includes('reactive power') || sName.includes('total var') || sName === 'kvar' || sName === 'q'
+        sName.includes('reactive power') || sName.includes('total var') || sName.includes('generator total var') || sName === 'kvar' || sName === 'q'
       ) {
         canonicalUpdates.reactivePower = val;
       } else if (sName.includes('power factor') || sName.includes('pf')) {
@@ -411,7 +414,11 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       else if (sName.includes('engine speed') || sName.includes('rpm')) canonicalUpdates.engineSpeed = val;
       else if (sName.includes('fuel')) canonicalUpdates.fuelLevel = val;
       else if (sName.includes('balance')) canonicalUpdates.balance = val;
-      else if (sName.includes('dg kwh')) canonicalUpdates.dgKwh = val;
+      else if (sName.includes('dg kwh') || sName.includes('kw hours')) {
+        canonicalUpdates.dgKwh = val;
+        canonicalUpdates.kwHours = val;
+        canonicalUpdates['KW Hours'] = val;
+      }
     });
 
     return {
@@ -472,6 +479,20 @@ export const mapLatestEventsToTelemetry = (eventsPayload, templateMapping = {}) 
       balance: 'balance',
       dg: 'dgKwh',
       dgkwh: 'dgKwh',
+      kwhours: 'dgKwh',
+      generatortotalwatts: 'totalKw',
+      generatortotalva: 'totalKva',
+      generatortotalvar: 'reactivePower',
+      generatorlnvoltageaverage: 'vR',
+      generatorl1l2voltage: 'vRY',
+      generatorl1current: 'iR',
+      generatorl2current: 'iY',
+      generatorl3current: 'iB',
+      fuellevel: 'fuelLevel',
+      batteryvoltage: 'batteryVoltage',
+      coolanttemperature: 'coolantTemp',
+      oilpressure: 'oilPressure',
+      enginespeed: 'engineSpeed',
       src: 'ebDgStatus',
       ebdgtoggle: 'ebDgStatus',
       ebdgstatus: 'ebDgStatus',

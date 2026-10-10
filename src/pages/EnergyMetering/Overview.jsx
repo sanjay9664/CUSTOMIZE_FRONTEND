@@ -59,9 +59,11 @@ const categorizeDevices = (devices = []) => {
       cat === 'GENERATOR' ||
       cat === 'DG_SET' ||
       cat === 'DG' ||
-      name.includes('DG SET') ||
+      cat.includes('GEN') ||
+      name.includes('DG') ||
       name.includes('GENERATOR') ||
-      name.includes('DIESEL')
+      name.includes('DIESEL') ||
+      name.includes('GENSET')
     ) {
       dgDevices.push(d);
     } else if (
@@ -79,6 +81,7 @@ const categorizeDevices = (devices = []) => {
     solarDevice: solarDevices[0] || null,
     upsDevice: upsDevices[0] || null,
     dgDevice: dgDevices[0] || null,
+    dgDevices,
     subMeters
   };
 };
@@ -112,6 +115,8 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
   const rawPower =
     updates.totalKw ??
     updates.activePower ??
+    updates['Generator Total Watts'] ??
+    updates.generatorTotalWatts ??
     updates.solarGenerationPower ??
     updates.outputPower ??
     updates.totalActivePower;
@@ -129,8 +134,11 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
   const vR =
     updates.vR ??
     updates.vLNAvg ??
+    updates['Generator L-N voltage average'] ??
+    updates.generatorLNvoltageAverage ??
     updates.vRY ??
     updates.vLLAvg ??
+    updates['Generator L1-L2 voltage'] ??
     updates.acOutputVoltage ??
     updates.dcInputVoltage ??
     updates.voltage ??
@@ -142,14 +150,16 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
   let rawCurrent =
     updates.iR ??
     updates.iAvg ??
+    updates['Generator L1 current'] ??
+    updates.generatorL1Current ??
     updates.acOutputCurrent ??
     updates.dcInputCurrent ??
     updates.current;
 
   if (rawCurrent === undefined || rawCurrent === null || Number(rawCurrent) === 0) {
-    const i1 = Number(updates.iR || 0);
-    const i2 = Number(updates.iY || 0);
-    const i3 = Number(updates.iB || 0);
+    const i1 = Number(updates.iR || updates['Generator L1 current'] || 0);
+    const i2 = Number(updates.iY || updates['Generator L2 current'] || 0);
+    const i3 = Number(updates.iB || updates['Generator L3 current'] || 0);
     if (i1 + i2 + i3 > 0) {
       rawCurrent = Math.max(i1, i2, i3);
     }
@@ -171,9 +181,13 @@ const extractDeviceMetrics = (device, telemetryUpdates = {}) => {
   // Energy
   const rawKwh =
     updates.ebKwh ??
-    updates.dailyEnergyGeneration ??
     updates.dgKwh ??
+    updates.kwHours ??
+    updates['KW Hours'] ??
+    updates.kwhours ??
+    updates.dailyEnergyGeneration ??
     updates.cumulativekWh ??
+    updates.cumulativeEnergy ??
     updates.kwh;
 
   let todayKwh = '0.00';
@@ -500,6 +514,10 @@ const EnergyMeteringOverview = () => {
       ? extractDeviceMetrics(categorized.dgDevice, getTelemetry(categorized.dgDevice))
       : null;
 
+    const dgMetricsList = (categorized.dgDevices || []).map(d =>
+      extractDeviceMetrics(d, getTelemetry(d))
+    );
+
     const subMeterMetrics = categorized.subMeters.map(sm =>
       extractDeviceMetrics(sm, getTelemetry(sm))
     );
@@ -509,6 +527,7 @@ const EnergyMeteringOverview = () => {
       categorized.solarDevice ||
       categorized.upsDevice ||
       categorized.dgDevice ||
+      (categorized.dgDevices && categorized.dgDevices.length > 0) ||
       categorized.subMeters.length > 0
     );
 
@@ -517,6 +536,7 @@ const EnergyMeteringOverview = () => {
       solarMetrics?.isOnline ||
       upsMetrics?.isOnline ||
       dgMetrics?.isOnline ||
+      dgMetricsList.some(d => d.isOnline) ||
       subMeterMetrics.some(sm => sm.isOnline)
     );
 
@@ -525,6 +545,7 @@ const EnergyMeteringOverview = () => {
       solarDevice: solarMetrics,
       upsDevice: upsMetrics,
       dgDevice: dgMetrics,
+      dgDevices: dgMetricsList,
       subMeters: subMeterMetrics,
       hasAnyDevice,
       isAnyOnline
@@ -648,6 +669,7 @@ const EnergyMeteringOverview = () => {
             solarDevice={scadaData.solarDevice}
             upsDevice={scadaData.upsDevice}
             dgDevice={scadaData.dgDevice}
+            dgDevices={scadaData.dgDevices}
             subMeters={scadaData.subMeters}
             loading={devicesLoading}
             error={fetchError}

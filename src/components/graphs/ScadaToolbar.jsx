@@ -21,10 +21,15 @@
  *   getTodayIst        () => string           returns today YYYY-MM-DD in IST (injected to avoid circular dep)
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronDown, Calendar, Search, Grid, Columns, Check } from 'lucide-react';
+import { ChevronDown, Calendar, Search, Grid, Columns, Check, Zap } from 'lucide-react';
 import './ScadaToolbar.css';
 
 const ScadaToolbar = ({
+  deviceOptions = [],
+  selectedDeviceId,
+  selectedDeviceName,
+  onDeviceChange,
+  deviceLoading = false,
   rangePresets = [],
   rangePreset,
   onRangeChange,
@@ -43,14 +48,17 @@ const ScadaToolbar = ({
   loading = false,
   getTodayIst,
 }) => {
+  const [deviceOpen, setDeviceOpen] = useState(false);
   const [rangeOpen, setRangeOpen] = useState(false);
   const [intervalOpen, setIntervalOpen] = useState(false);
 
+  const deviceRef = useRef(null);
   const rangeRef = useRef(null);
   const intervalRef = useRef(null);
 
   // Close dropdowns on outside click
   const handleOutside = useCallback((e) => {
+    if (deviceRef.current && !deviceRef.current.contains(e.target)) setDeviceOpen(false);
     if (rangeRef.current && !rangeRef.current.contains(e.target)) setRangeOpen(false);
     if (intervalRef.current && !intervalRef.current.contains(e.target)) setIntervalOpen(false);
   }, []);
@@ -67,6 +75,60 @@ const ScadaToolbar = ({
 
   return (
     <div className="scada-toolbar">
+
+      {/* -- Meter / Device Dropdown (Sub-Meter / Device Selector directly on the graph toolbar) -- */}
+      {Array.isArray(deviceOptions) && deviceOptions.length > 0 && (
+        <div className={`scada-tb-dropdown${deviceOpen ? ' is-open' : ''}`} ref={deviceRef}>
+          <button
+            className="scada-tb-pill active"
+            onClick={() => { setDeviceOpen(o => !o); setRangeOpen(false); setIntervalOpen(false); }}
+            aria-expanded={deviceOpen}
+            aria-haspopup="listbox"
+            title="Select Meter Device"
+            style={{
+              borderColor: 'rgba(56, 189, 248, 0.45)',
+              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.22) 0%, rgba(14, 165, 233, 0.15) 100%)',
+              color: '#38bdf8'
+            }}
+          >
+            <Zap size={14} style={{ color: '#38bdf8', flexShrink: 0 }} />
+            <span className="scada-tb-pill-value fw-bold">
+              {selectedDeviceName || deviceOptions.find(d => String(d.value) === String(selectedDeviceId))?.label || 'Select Meter'}
+            </span>
+            <ChevronDown size={13} className="scada-tb-chevron" />
+          </button>
+
+          {deviceOpen && (
+            <div className="scada-tb-menu" role="listbox" aria-label="Meter Devices" style={{ minWidth: '220px' }}>
+              <div className="px-3 py-1.5 border-bottom border-secondary border-opacity-25 fs-11 fw-bold text-muted text-uppercase d-flex justify-content-between align-items-center">
+                <span>Select Meter Device</span>
+                <span className="badge bg-secondary bg-opacity-30 text-white rounded-pill fs-10">{deviceOptions.length}</span>
+              </div>
+              {deviceOptions.map(dev => {
+                const isSelected = String(selectedDeviceId) === String(dev.value);
+                return (
+                  <button
+                    key={dev.value}
+                    className={`scada-tb-menu-item${isSelected ? ' selected' : ''}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      setDeviceOpen(false);
+                      onDeviceChange?.(dev.value);
+                    }}
+                  >
+                    <Zap size={13} style={{ color: isSelected ? '#38bdf8' : '#94a3b8', flexShrink: 0 }} />
+                    <span className="text-truncate">{dev.label}</span>
+                    {isSelected && (
+                      <Check size={12} style={{ marginLeft: 'auto', color: '#38bdf8' }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* -- Range Dropdown -- */}
       <div className={`scada-tb-dropdown${rangeOpen ? ' is-open' : ''}`} ref={rangeRef}>

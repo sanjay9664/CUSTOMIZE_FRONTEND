@@ -27,14 +27,14 @@ const GridIconBig = () => (
     <path d="M22 20 L10 35 M38 20 L50 35 M17 35 L12 50 M43 35 L48 50" />
     <path d="M22 20 L38 35 M38 20 L22 35 M17 35 L33 50 M43 35 L27 50" />
     <path d="M5 20 L5 25 M55 20 L55 25" />
-    <path d="M5 25 Q 17 30 30 30 Q 43 30 55 25" stroke="#4a5568" strokeDasharray="4 4"/>
+    <path d="M5 25 Q 17 30 30 30 Q 43 30 55 25" stroke="#4a5568" strokeDasharray="4 4" />
   </svg>
 );
 
 const SolarIconBig = () => (
   <svg width="55" height="50" viewBox="0 0 60 50" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="30" cy="20" r="12" fill="url(#sunGradOverview)" />
-    <path d="M30 2 L30 5 M30 35 L30 38 M12 20 L15 20 M45 20 L48 20 M17 7 L19 9 M43 33 L41 31 M17 33 L19 31 M43 7 L41 9" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M30 2 L30 5 M30 35 L30 38 M12 20 L15 20 M45 20 L48 20 M17 7 L19 9 M43 33 L41 31 M17 33 L19 31 M43 7 L41 9" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
     <defs>
       <linearGradient id="sunGradOverview" x1="30" y1="8" x2="30" y2="32" gradientUnits="userSpaceOnUse">
         <stop stopColor="#fde047" />
@@ -45,9 +45,9 @@ const SolarIconBig = () => (
         <stop offset="1" stopColor="#1e3a8a" />
       </linearGradient>
     </defs>
-    <path d="M10 25 L50 25 L55 40 L5 40 Z" fill="url(#panelGradOverview)" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round"/>
-    <path d="M20 25 L16 40 M30 25 L30 40 M40 25 L44 40 M10 25 L50 25 M7 32 L53 32 M5 40 L55 40" stroke="#93c5fd" strokeWidth="1"/>
-    <path d="M28 40 L28 45 L32 45 L32 40 M24 45 L36 45" stroke="#475569" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M10 25 L50 25 L55 40 L5 40 Z" fill="url(#panelGradOverview)" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M20 25 L16 40 M30 25 L30 40 M40 25 L44 40 M10 25 L50 25 M7 32 L53 32 M5 40 L55 40" stroke="#93c5fd" strokeWidth="1" />
+    <path d="M28 40 L28 45 L32 45 L32 40 M24 45 L36 45" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
@@ -64,10 +64,10 @@ const BuildingIcon = () => (
   <svg width="28" height="28" viewBox="0 0 30 30" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 4px rgba(168,85,247,0.8))' }}>
     <path d="M6 28 V8 L16 4 V28 M16 12 H26 V28" />
     <path d="M2 28 H28" />
-    <rect x="9" y="12" width="2" height="3" fill="#a855f7"/><rect x="9" y="18" width="2" height="3" fill="#a855f7"/><rect x="9" y="24" width="2" height="3" fill="#a855f7"/>
-    <rect x="12" y="8" width="2" height="3" fill="#a855f7"/><rect x="12" y="14" width="2" height="3" fill="#a855f7"/><rect x="12" y="20" width="2" height="3" fill="#a855f7"/>
-    <rect x="19" y="16" width="2" height="3" fill="#a855f7"/><rect x="19" y="22" width="2" height="3" fill="#a855f7"/>
-    <rect x="23" y="16" width="2" height="3" fill="#a855f7"/><rect x="23" y="22" width="2" height="3" fill="#a855f7"/>
+    <rect x="9" y="12" width="2" height="3" fill="#a855f7" /><rect x="9" y="18" width="2" height="3" fill="#a855f7" /><rect x="9" y="24" width="2" height="3" fill="#a855f7" />
+    <rect x="12" y="8" width="2" height="3" fill="#a855f7" /><rect x="12" y="14" width="2" height="3" fill="#a855f7" /><rect x="12" y="20" width="2" height="3" fill="#a855f7" />
+    <rect x="19" y="16" width="2" height="3" fill="#a855f7" /><rect x="19" y="22" width="2" height="3" fill="#a855f7" />
+    <rect x="23" y="16" width="2" height="3" fill="#a855f7" /><rect x="23" y="22" width="2" height="3" fill="#a855f7" />
   </svg>
 );
 
@@ -96,26 +96,26 @@ const LampIcon = () => (
   <svg width="28" height="28" viewBox="0 0 30 30" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 4px rgba(168,85,247,0.8))' }}>
     <path d="M12 28 H22 M17 28 V12 C17 6 12 5 7 5 H3" />
     <path d="M3 3 L9 7 L8 9 H2 Z" fill="rgba(168,85,247,0.3)" />
-    <circle cx="5" cy="9" r="2" fill="#fff" stroke="none" style={{ filter: 'drop-shadow(0 0 6px #fff)' }}/>
+    <circle cx="5" cy="9" r="2" fill="#fff" stroke="none" style={{ filter: 'drop-shadow(0 0 6px #fff)' }} />
   </svg>
 );
 
 const MiniWave = ({ color }) => (
   <svg width="100%" height="24" viewBox="0 0 200 24" preserveAspectRatio="none" className="mt-1" style={{ overflow: 'hidden' }}>
     <defs>
-      <linearGradient id={`gradOverview-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor={color} stopOpacity="0.35"/>
-        <stop offset="100%" stopColor={color} stopOpacity="0"/>
+      <linearGradient id={`gradOverview-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+        <stop offset="100%" stopColor={color} stopOpacity="0" />
       </linearGradient>
     </defs>
     <g style={{ animation: 'waveMove 5s linear infinite' }}>
-      <path d="M0,14 Q10,4 20,14 T40,14 T60,14 T80,14 T100,14 T120,14 T140,14 T160,14 T180,14 T200,14 T220,14 T240,14 T260,14 L260,28 L0,28 Z" fill={`url(#gradOverview-${color.replace('#','')})`} />
+      <path d="M0,14 Q10,4 20,14 T40,14 T60,14 T80,14 T100,14 T120,14 T140,14 T160,14 T180,14 T200,14 T220,14 T240,14 T260,14 L260,28 L0,28 Z" fill={`url(#gradOverview-${color.replace('#', '')})`} />
       <path d="M0,14 Q10,4 20,14 T40,14 T60,14 T80,14 T100,14 T120,14 T140,14 T160,14 T180,14 T200,14 T220,14 T240,14 T260,14" fill="none" stroke={color} strokeWidth="1.5" style={{ filter: `drop-shadow(0 0 3px ${color})` }} />
     </g>
   </svg>
 );
 
-const FlowLine = ({ path, color, flowing = true, reverse = false }) => {
+const FlowLine = ({ path, color, flowing = true, reverse = false, showArrow = true }) => {
   const markerId = `arrow-${color.replace('#', '')}`;
   return (
     <>
@@ -124,7 +124,7 @@ const FlowLine = ({ path, color, flowing = true, reverse = false }) => {
           <path d="M 0 0 L 8 4 L 0 8 z" fill={color} />
         </marker>
       </defs>
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeOpacity="0.35" markerEnd={`url(#${markerId})`} />
+      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeOpacity="0.35" markerEnd={showArrow ? `url(#${markerId})` : undefined} />
       {flowing && (
         <path
           d={path}
@@ -165,43 +165,104 @@ const SolarDashboard = ({
   solarDevice = null,
   upsDevice = null,
   dgDevice = null,
+  dgDevices = [],
   subMeters = []
 }) => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const [selectedDgIndex, setSelectedDgIndex] = useState('merged');
+
+  // Active DG list (either passed as dgDevices array or fallback to dgDevice)
+  const activeDgList = useMemo(() => {
+    if (Array.isArray(dgDevices) && dgDevices.length > 0) return dgDevices;
+    if (dgDevice) return [dgDevice];
+    return [];
+  }, [dgDevices, dgDevice]);
+
+  const isMerged = activeDgList.length > 1 && selectedDgIndex === 'merged';
+
+  const mergedDg = useMemo(() => {
+    if (activeDgList.length === 0) return null;
+    const isConfigured = activeDgList.some(d => d?.isConfigured);
+    const isOnline = activeDgList.some(d => d?.isOnline);
+    const powerW = activeDgList.reduce((sum, d) => sum + (Math.round(Number(d?.powerW) || 0)), 0);
+    const current = activeDgList.reduce((sum, d) => sum + (Number(d?.current) || 0), 0);
+    const todayKwh = activeDgList.reduce((sum, d) => sum + (Number(d?.todayKwh) || 0), 0);
+
+    const activeWithV = activeDgList.filter(d => Number(d?.voltage) > 0);
+    const voltage = activeWithV.length > 0
+      ? (activeWithV.reduce((sum, d) => sum + Number(d.voltage), 0) / activeWithV.length)
+      : (Number(activeDgList[0]?.voltage) || 0);
+
+    const dgsWithFuel = activeDgList.filter(d => d?.fuelLevel !== undefined && d?.fuelLevel !== null);
+    const fuelLevel = dgsWithFuel.length > 0
+      ? Math.round(dgsWithFuel.reduce((sum, d) => sum + Number(d.fuelLevel), 0) / dgsWithFuel.length)
+      : null;
+
+    const dgsWithBat = activeDgList.filter(d => d?.batteryVoltage !== undefined && d?.batteryVoltage !== null);
+    const batteryVoltage = dgsWithBat.length > 0
+      ? (dgsWithBat.reduce((sum, d) => sum + Number(d.batteryVoltage), 0) / dgsWithBat.length).toFixed(1)
+      : null;
+
+    const dgsWithTemp = activeDgList.filter(d => d?.coolantTemp !== undefined && d?.coolantTemp !== null);
+    const coolantTemp = dgsWithTemp.length > 0
+      ? (dgsWithTemp.reduce((sum, d) => sum + Number(d.coolantTemp), 0) / dgsWithTemp.length).toFixed(1)
+      : null;
+
+    const status = (powerW > 50 || activeDgList.some(d => d?.status === 'RUNNING')) ? 'RUNNING' : 'STANDBY';
+
+    return {
+      name: 'DG Sets Total',
+      shortName: 'DG Total',
+      isConfigured,
+      isOnline,
+      powerW,
+      voltage,
+      current,
+      todayKwh,
+      fuelLevel,
+      batteryVoltage,
+      coolantTemp,
+      status
+    };
+  }, [activeDgList]);
+
+  const safeDgIndex = (typeof selectedDgIndex === 'number' && selectedDgIndex >= 0 && selectedDgIndex < activeDgList.length) ? selectedDgIndex : 0;
+  const currentDg = isMerged ? mergedDg : (activeDgList[safeDgIndex] || dgDevice || null);
+
   const currentTheme = isDark
     ? {
-        bg: '#0a101d',
-        panelBg: '#131b2c',
-        cardBg: '#1b2436',
-        border: 'rgba(255, 255, 255, 0.08)',
-        text: '#e2e8f0',
-        muted: '#94a3b8',
-        accent: '#f97316',
-        green: '#10b981',
-        blue: '#0ea5e9',
-        red: '#ef4444',
-        purple: '#a855f7',
-        yellow: '#f59e0b',
-        shadow: '0 8px 32px 0 rgba(0, 0, 0, 0.35)',
-        progressGrad: 'linear-gradient(90deg, #a855f7, #d946ef)'
-      }
+      bg: '#0a101d',
+      panelBg: '#131b2c',
+      cardBg: '#1b2436',
+      border: 'rgba(255, 255, 255, 0.08)',
+      text: '#e2e8f0',
+      muted: '#94a3b8',
+      accent: '#f97316',
+      green: '#10b981',
+      blue: '#0ea5e9',
+      red: '#ef4444',
+      purple: '#a855f7',
+      yellow: '#f59e0b',
+      shadow: '0 8px 32px 0 rgba(0, 0, 0, 0.35)',
+      progressGrad: 'linear-gradient(90deg, #a855f7, #d946ef)'
+    }
     : {
-        bg: '#f1f5f9',
-        panelBg: '#ffffff',
-        cardBg: '#ffffff',
-        border: '#e2e8f0',
-        text: '#1e293b',
-        muted: '#64748b',
-        accent: '#ea580c',
-        green: '#059669',
-        blue: '#0284c7',
-        red: '#dc2626',
-        purple: '#9333ea',
-        yellow: '#d97706',
-        shadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
-        progressGrad: 'linear-gradient(90deg, #9333ea, #c026d3)'
-      };
+      bg: '#f1f5f9',
+      panelBg: '#ffffff',
+      cardBg: '#ffffff',
+      border: '#e2e8f0',
+      text: '#1e293b',
+      muted: '#64748b',
+      accent: '#ea580c',
+      green: '#059669',
+      blue: '#0284c7',
+      red: '#dc2626',
+      purple: '#9333ea',
+      yellow: '#d97706',
+      shadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+      progressGrad: 'linear-gradient(90deg, #9333ea, #c026d3)'
+    };
 
   const [scale, setScale] = useState(1);
   const containerRef = useRef(null);
@@ -260,19 +321,20 @@ const SolarDashboard = ({
   const upsCharge = isUpsConfigured && upsDevice.todayCharge ? upsDevice.todayCharge : (isUpsConfigured ? '0.00 kWh' : '—');
 
   // 4. DG Set
-  const isDgConfigured = Boolean(dgDevice?.isConfigured);
-  const isDgOnline = Boolean(dgDevice?.isOnline);
-  const dgW = isDgConfigured ? Math.round(Number(dgDevice.powerW) || 0) : 0;
-  const dgV = isDgConfigured && dgDevice.voltage !== undefined && dgDevice.voltage !== null ? Number(dgDevice.voltage).toFixed(1) : (isDgConfigured ? '0.0' : '—');
-  const dgA = isDgConfigured && dgDevice.current !== undefined && dgDevice.current !== null ? Number(dgDevice.current).toFixed(2) : (isDgConfigured ? '0.00' : '—');
-  const dgKwh = isDgConfigured && dgDevice.todayKwh !== undefined && dgDevice.todayKwh !== null ? Number(dgDevice.todayKwh).toFixed(2) : '0.00';
-  const dgStatus = isDgConfigured ? (dgDevice.status || (dgW > 50 ? 'RUNNING' : 'STANDBY')) : 'Not Configured';
-  const dgFuel = isDgConfigured && dgDevice?.fuelLevel !== undefined && dgDevice?.fuelLevel !== null ? `${dgDevice.fuelLevel}%` : null;
-  const dgBattery = isDgConfigured && dgDevice?.batteryVoltage !== undefined && dgDevice?.batteryVoltage !== null ? `${dgDevice.batteryVoltage} V` : null;
-  const dgCoolant = isDgConfigured && dgDevice?.coolantTemp !== undefined && dgDevice?.coolantTemp !== null ? `${dgDevice.coolantTemp} °C` : null;
+  const isDgConfigured = Boolean(currentDg?.isConfigured);
+  const isDgOnline = Boolean(currentDg?.isOnline);
+  const dgW = isDgConfigured ? Math.round(Number(currentDg.powerW) || 0) : 0;
+  const dgV = isDgConfigured && currentDg.voltage !== undefined && currentDg.voltage !== null ? Number(currentDg.voltage).toFixed(1) : (isDgConfigured ? '0.0' : '—');
+  const dgA = isDgConfigured && currentDg.current !== undefined && currentDg.current !== null ? Number(currentDg.current).toFixed(2) : (isDgConfigured ? '0.00' : '—');
+  const dgKwh = isDgConfigured && currentDg.todayKwh !== undefined && currentDg.todayKwh !== null ? Number(currentDg.todayKwh).toFixed(2) : '0.00';
+  const dgStatus = isDgConfigured ? (currentDg.status || (dgW > 50 ? 'RUNNING' : 'STANDBY')) : 'Not Configured';
+  const dgFuel = isDgConfigured && currentDg?.fuelLevel !== undefined && currentDg?.fuelLevel !== null ? `${currentDg.fuelLevel}%` : null;
+  const dgBattery = isDgConfigured && currentDg?.batteryVoltage !== undefined && currentDg?.batteryVoltage !== null ? `${currentDg.batteryVoltage} V` : null;
+  const dgCoolant = isDgConfigured && currentDg?.coolantTemp !== undefined && currentDg?.coolantTemp !== null ? `${currentDg.coolantTemp} °C` : null;
 
   // 5. Inflow Totals & Outgoing Distribution Totals
-  const totalInflowW = gridW + solarW + dgW;
+  const totalDgW = activeDgList.reduce((sum, d) => sum + (Math.round(Number(d?.powerW) || 0)), 0);
+  const totalInflowW = gridW + solarW + (totalDgW > 0 ? totalDgW : dgW);
   const totalOutgoingW = subMeters.reduce((sum, sm) => sum + (Math.round(Number(sm.powerW) || 0)), 0);
 
   // Central combiner throughput
@@ -376,7 +438,7 @@ const SolarDashboard = ({
                 borderRadius: '16px',
                 border: `1px solid ${currentTheme.border}`,
                 boxShadow: currentTheme.shadow,
-                minHeight: '700px',
+                minHeight: '740px',
                 overflow: 'hidden'
               }}
             >
@@ -384,7 +446,7 @@ const SolarDashboard = ({
                 ref={containerRef}
                 style={{
                   width: '100%',
-                  height: `${700 * scale}px`,
+                  height: `${740 * scale}px`,
                   position: 'relative',
                   display: 'flex',
                   justifyContent: 'center',
@@ -396,7 +458,7 @@ const SolarDashboard = ({
                     position: 'absolute',
                     top: 0,
                     width: '1150px',
-                    height: '700px',
+                    height: '740px',
                     transform: `scale(${scale})`,
                     transformOrigin: 'top center'
                   }}
@@ -405,21 +467,26 @@ const SolarDashboard = ({
                   <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
                     {/* Source 1 (Grid) -> Central Combiner */}
                     <FlowLine path="M 300 88 L 340 88 L 340 140 L 380 140" color={currentTheme.blue} flowing={gridFlowing} />
-                    
+
                     {/* Source 2 (Solar) -> Central Combiner */}
                     <FlowLine path="M 300 258 L 340 258 L 340 200 L 380 200" color={currentTheme.yellow} flowing={solarFlowing} />
-                    
+
                     {/* Source 3 (UPS) -> Central Combiner */}
                     <FlowLine path="M 300 428 L 340 428 L 340 260 L 380 260" color={currentTheme.green} flowing={upsFlowing} />
-                    
+
                     {/* Source 4 (DG Set) -> Central Combiner */}
                     <FlowLine path="M 300 598 L 340 598 L 340 320 L 380 320" color={currentTheme.red} flowing={dgFlowing} />
-                    
+
                     {/* Central Combiner -> Total Output */}
                     <FlowLine path="M 510 380 L 510 430" color={currentTheme.purple} flowing={centerFlowing} />
-                    
-                    {/* Total Output -> Outgoing Distribution Bus */}
-                    <FlowLine path="M 640 500 L 700 500 L 700 25 L 735 25" color={currentTheme.purple} flowing={outputFlowing} />
+
+                    {/* Total Output -> Outgoing Distribution Bus Spine */}
+                    <FlowLine
+                      path={`M 640 500 L 700 500 L 700 ${processedSubmeters.length > 0 ? 56 : 500}`}
+                      color={currentTheme.purple}
+                      flowing={outputFlowing}
+                      showArrow={false}
+                    />
 
                     {/* Outgoing feeder tap lines into submeter cards */}
                     {processedSubmeters.slice(0, 6).map((sm, i) => {
@@ -605,7 +672,12 @@ const SolarDashboard = ({
 
                   {/* 1.4 DG SET */}
                   <div
-                    onClick={() => navigate('/dg-set')}
+                    onClick={() => {
+                      if (currentDg?.id) {
+                        localStorage.setItem('selected_dg_device_id', String(currentDg.id));
+                      }
+                      navigate('/dg-set/overview');
+                    }}
                     title="Click to view Generator Overview & Details"
                     style={{
                       position: 'absolute',
@@ -614,9 +686,9 @@ const SolarDashboard = ({
                       background: currentTheme.cardBg,
                       border: `1px solid ${currentTheme.border}`,
                       borderRadius: '12px',
-                      padding: '12px 18px',
+                      padding: '10px 14px 12px 14px',
                       width: '280px',
-                      height: '155px',
+                      minHeight: '175px',
                       zIndex: 10,
                       display: 'flex',
                       flexDirection: 'column',
@@ -629,42 +701,171 @@ const SolarDashboard = ({
                     className="submeter-card"
                   >
                     <div className="d-flex w-100">
-                      <div className="me-3 d-flex align-items-start justify-content-center" style={{ width: '48px' }}>
-                        <Zap color={currentTheme.red} size={42} strokeWidth={1.5} />
+                      <div className="me-2.5 d-flex align-items-start justify-content-center" style={{ width: '38px', paddingTop: '2px' }}>
+                        <Zap color={currentTheme.red} size={36} strokeWidth={1.5} />
                       </div>
                       <div className="overflow-hidden w-100">
                         <div className="d-flex align-items-center justify-content-between mb-1">
-                          <span className={`fw-bold text-${isDark ? 'white' : 'dark'} text-truncate`} style={{ fontSize: '12.5px', letterSpacing: '0.4px' }}>
-                            {dgDevice?.name || 'DG SET'}
+                          <span
+                            className={`fw-bold text-${isDark ? 'white' : 'dark'} text-truncate`}
+                            style={{ fontSize: '13px', letterSpacing: '0.3px', maxWidth: '140px' }}
+                            title={isMerged ? `Merged (${activeDgList.map(d => d?.name || 'DG').join(' + ')})` : (currentDg?.name || 'DG Set')}
+                          >
+                            {isMerged ? 'DG Sets Total' : (currentDg?.name || 'DG Set')}
                           </span>
-                          {!isDgConfigured && (
-                            <span className="badge bg-secondary text-dark" style={{ fontSize: '9px' }}>UNMAPPED</span>
-                          )}
+                          <div className="d-flex align-items-center gap-1">
+                            {activeDgList.length > 1 && (
+                              <span
+                                className="badge"
+                                style={{
+                                  fontSize: '9px',
+                                  fontWeight: 600,
+                                  backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.15)',
+                                  color: isDark ? '#38bdf8' : '#0284c7',
+                                  border: `1px solid ${isDark ? 'rgba(56, 189, 248, 0.35)' : 'rgba(2, 132, 199, 0.35)'}`,
+                                  padding: '3px 6px',
+                                  borderRadius: '4px'
+                                }}
+                              >
+                                {activeDgList.length} DGS
+                              </span>
+                            )}
+                            {isMerged ? (
+                              <span
+                                className="badge fw-bold"
+                                style={{
+                                  fontSize: '9px',
+                                  backgroundColor: '#0284c7',
+                                  color: '#ffffff',
+                                  padding: '3px 7px',
+                                  borderRadius: '4px',
+                                  letterSpacing: '0.4px',
+                                  boxShadow: '0 0 6px rgba(2, 132, 199, 0.4)'
+                                }}
+                              >
+                                MERGED
+                              </span>
+                            ) : isDgConfigured ? (
+                              <span
+                                className="badge fw-bold"
+                                style={{
+                                  fontSize: '9px',
+                                  backgroundColor: '#16a34a',
+                                  color: '#ffffff',
+                                  padding: '3px 7px',
+                                  borderRadius: '4px',
+                                  letterSpacing: '0.4px'
+                                }}
+                              >
+                                MAPPED
+                              </span>
+                            ) : (
+                              <span
+                                className="badge fw-bold"
+                                style={{
+                                  fontSize: '9px',
+                                  backgroundColor: '#475569',
+                                  color: '#ffffff',
+                                  padding: '3px 7px',
+                                  borderRadius: '4px',
+                                  letterSpacing: '0.4px'
+                                }}
+                              >
+                                UNMAPPED
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ color: currentTheme.red, fontSize: '26px', fontWeight: 'bold', lineHeight: '1.1' }}>
+
+                        {/* DG-1 / DG-2 Selection Pills (Multi-DG switcher + Merged) */}
+                        {activeDgList.length > 1 && (
+                          <div
+                            className="d-flex align-items-center gap-1 mb-1 p-0.5 rounded-pill"
+                            style={{
+                              background: isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.06)',
+                              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                              width: 'fit-content'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {/* MERGED / TOTAL PILL */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDgIndex('merged');
+                              }}
+                              className="btn btn-sm py-0 px-2 rounded-pill fw-bold border-0"
+                              style={{
+                                fontSize: '9.5px',
+                                height: '19px',
+                                lineHeight: '19px',
+                                backgroundColor: isMerged ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
+                                color: isMerged ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                                transition: 'all 0.15s ease'
+                              }}
+                              title="View Merged Combined DG-1 + DG-2 Value"
+                            >
+                              TOTAL
+                            </button>
+
+                            {/* INDIVIDUAL DG PILLS */}
+                            {activeDgList.map((dg, idx) => {
+                              const isSelected = !isMerged && idx === safeDgIndex;
+                              const label = dg.name || `DG-${idx + 1}`;
+                              return (
+                                <button
+                                  key={dg.id || idx}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedDgIndex(idx);
+                                    if (dg.id) {
+                                      localStorage.setItem('selected_dg_device_id', String(dg.id));
+                                    }
+                                  }}
+                                  className="btn btn-sm py-0 px-2 rounded-pill fw-bold border-0"
+                                  style={{
+                                    fontSize: '9.5px',
+                                    height: '19px',
+                                    lineHeight: '19px',
+                                    backgroundColor: isSelected ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
+                                    color: isSelected ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  title={`Switch to ${label}`}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <div style={{ color: dgW > 50 ? currentTheme.green : currentTheme.red, fontSize: '24px', fontWeight: 'bold', lineHeight: '1.1' }}>
                           {dgW} W
                         </div>
                         <div className={`mt-0.5 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '11px', fontWeight: 600 }}>
                           {dgV} V <span className="text-muted mx-0.5">|</span> {dgA} A
                         </div>
                         {(dgFuel || dgBattery || dgCoolant) && (
-                          <div className="d-flex align-items-center gap-1 mt-1 overflow-hidden" style={{ fontSize: '9.5px', whiteSpace: 'nowrap' }}>
-                            {dgFuel && <span className="badge bg-dark text-info border border-info border-opacity-25 px-1.5 py-0.5">Fuel: {dgFuel}</span>}
-                            {dgBattery && <span className="badge bg-dark text-warning border border-warning border-opacity-25 px-1.5 py-0.5">Bat: {dgBattery}</span>}
-                            {dgCoolant && <span className="badge bg-dark text-danger border border-danger border-opacity-25 px-1.5 py-0.5">Temp: {dgCoolant}</span>}
+                          <div className="d-flex align-items-center gap-1 mt-1 overflow-hidden" style={{ fontSize: '9px', whiteSpace: 'nowrap' }}>
+                            {dgFuel && <span className="badge bg-dark text-info border border-info border-opacity-25 px-1 py-0.5">Fuel: {dgFuel}</span>}
+                            {dgBattery && <span className="badge bg-dark text-warning border border-warning border-opacity-25 px-1 py-0.5">Bat: {dgBattery}</span>}
+                            {dgCoolant && <span className="badge bg-dark text-danger border border-danger border-opacity-25 px-1 py-0.5">Temp: {dgCoolant}</span>}
                           </div>
                         )}
                       </div>
                     </div>
-                    <MiniWave color={currentTheme.red} />
-                    <div className="d-flex justify-content-between align-items-end mt-0.5">
+                    <MiniWave color={dgW > 50 ? currentTheme.green : currentTheme.red} />
+                    <div className="d-flex justify-content-between align-items-end mt-1 pt-1">
                       <div className="d-flex flex-column">
                         <span className="text-muted" style={{ fontSize: '10.5px' }}>Today's Energy</span>
                         <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12.5px' }}>
                           {dgKwh} kWh
                         </span>
                       </div>
-                      <span className="badge" style={{ background: dgW > 50 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.15)', color: dgW > 50 ? '#4ade80' : '#f87171', border: `1px solid ${dgW > 50 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`, fontSize: '10px' }}>
+                      <span className="badge px-2 py-1" style={{ background: dgW > 50 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.15)', color: dgW > 50 ? '#4ade80' : '#f87171', border: `1px solid ${dgW > 50 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`, fontSize: '9.5px' }}>
                         {dgStatus}
                       </span>
                     </div>
@@ -789,7 +990,7 @@ const SolarDashboard = ({
                   </div>
 
                   <div style={{ position: 'absolute', left: '652px', top: '465px', color: currentTheme.purple, fontSize: '10px', fontWeight: 'bold', zIndex: 10, letterSpacing: '0.4px', lineHeight: '1.2' }}>
-                    POWER<br/>FLOW
+                    POWER<br />FLOW
                   </div>
 
                   {/* ── COL 3: OUTGOING (DISTRIBUTION) ── */}
@@ -908,7 +1109,7 @@ const SolarDashboard = ({
                       )}
                     </div>
 
-                     {/* Total Outgoing Load Footer */}
+                    {/* Total Outgoing Load Footer */}
                     <div
                       className="d-flex justify-content-between align-items-center mt-2 px-2.5 py-1.5 rounded-2"
                       style={{

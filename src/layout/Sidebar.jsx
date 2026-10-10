@@ -13,26 +13,26 @@ import { bmsService } from '../services/bmsService';
 import { normalizeList } from '../services/apiClient';
 
 const THEMES = {
-  "Dashboard":        { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "Energy Metering": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
-  "DG Set":           { c: "#c084fc", bg: "rgba(192,132,252,0.10)", b: "rgba(192,132,252,0.28)" },
-  "LT Panel":        { c: "#fbbf24", bg: "rgba(251,191,36,0.10)",  b: "rgba(251,191,36,0.28)" },
-  "Transformer":     { c: "#fb923c", bg: "rgba(251,146,60,0.10)",  b: "rgba(251,146,60,0.28)" },
-  "HVAC":            { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "VRV":             { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "AC":              { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
-  "AQI Sensor":      { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
-  "Water Management": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "Motors":           { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
-  "Fire":            { c: "#ef4444", bg: "rgba(239,68,68,0.10)",   b: "rgba(239,68,68,0.28)" },
-  "ACMS":            { c: "#ef4444", bg: "rgba(239,68,68,0.10)",   b: "rgba(239,68,68,0.28)" },
-  "Alarm System":     { c: "#f87171", bg: "rgba(248,113,113,0.10)", b: "rgba(248,113,113,0.28)" },
-  "Ticketing":       { c: "#34d399", bg: "rgba(52,211,153,0.10)",  b: "rgba(52,211,153,0.28)" },
-  "Maintenance":     { c: "#818cf8", bg: "rgba(129,140,248,0.10)", b: "rgba(129,140,248,0.28)" },
+  "Dashboard": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "Energy Metering": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)", b: "rgba(96,165,250,0.28)" },
+  "DG Set": { c: "#c084fc", bg: "rgba(192,132,252,0.10)", b: "rgba(192,132,252,0.28)" },
+  "LT Panel": { c: "#fbbf24", bg: "rgba(251,191,36,0.10)", b: "rgba(251,191,36,0.28)" },
+  "Transformer": { c: "#fb923c", bg: "rgba(251,146,60,0.10)", b: "rgba(251,146,60,0.28)" },
+  "HVAC": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "VRV": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "AC": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)", b: "rgba(96,165,250,0.28)" },
+  "AQI Sensor": { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)", b: "rgba(45,212,191,0.28)" },
+  "Water Management": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "Motors": { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)", b: "rgba(45,212,191,0.28)" },
+  "Fire": { c: "#ef4444", bg: "rgba(239,68,68,0.10)", b: "rgba(239,68,68,0.28)" },
+  "ACMS": { c: "#ef4444", bg: "rgba(239,68,68,0.10)", b: "rgba(239,68,68,0.28)" },
+  "Alarm System": { c: "#f87171", bg: "rgba(248,113,113,0.10)", b: "rgba(248,113,113,0.28)" },
+  "Ticketing": { c: "#34d399", bg: "rgba(52,211,153,0.10)", b: "rgba(52,211,153,0.28)" },
+  "Maintenance": { c: "#818cf8", bg: "rgba(129,140,248,0.10)", b: "rgba(129,140,248,0.28)" },
   "Service History": { c: "#a78bfa", bg: "rgba(167,139,250,0.10)", b: "rgba(167,139,250,0.28)" },
-  "Daily DPR":       { c: "#f472b6", bg: "rgba(244,114,182,0.10)", b: "rgba(244,114,182,0.28)" },
-  "Audit Log":       { c: "#06b6d4", bg: "rgba(6,182,212,0.10)",   b: "rgba(6,182,212,0.28)" },
-  "Help":            { c: "#a855f7", bg: "rgba(168,85,247,0.10)", b: "rgba(168,85,247,0.28)" },
+  "Daily DPR": { c: "#f472b6", bg: "rgba(244,114,182,0.10)", b: "rgba(244,114,182,0.28)" },
+  "Audit Log": { c: "#06b6d4", bg: "rgba(6,182,212,0.10)", b: "rgba(6,182,212,0.28)" },
+  "Help": { c: "#a855f7", bg: "rgba(168,85,247,0.10)", b: "rgba(168,85,247,0.28)" },
 };
 
 const SIDEBAR_W = 270;     // expanded width
@@ -83,21 +83,21 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
         try {
           const stored = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
           if (stored.length > 0) siteId = stored[0].id;
-        } catch (e) {}
+        } catch (e) { }
       }
       if (!siteId) { setDgDevices([]); return; }
 
       try {
         const res = await bmsService.getSiteDevices(siteId, { category: 'GENERATOR' });
         const devices = normalizeList(res, 'devices');
-        const generators = devices.filter(d => 
-          d.category === 'GENERATOR' && 
-          d.isActive !== false && 
+        const generators = devices.filter(d =>
+          d.category === 'GENERATOR' &&
+          d.isActive !== false &&
           (d.isMapped === true || d.mapped === true || d.is_mapped === true)
         );
         setDgDevices(generators);
         // Cache for Overview page
-        try { localStorage.setItem('dg_generator_devices', JSON.stringify(generators)); } catch (e) {}
+        try { localStorage.setItem('dg_generator_devices', JSON.stringify(generators)); } catch (e) { }
       } catch (err) {
         console.warn('[Sidebar] Failed to fetch DG devices:', err);
         // Fallback to cached
@@ -105,7 +105,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           const cached = JSON.parse(localStorage.getItem('dg_generator_devices') || '[]');
           const mappedCached = cached.filter(d => d.isMapped === true || d.mapped === true || d.is_mapped === true);
           setDgDevices(mappedCached);
-        } catch (e) {}
+        } catch (e) { }
       }
     };
     fetchDgDevices();
@@ -116,10 +116,13 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const menuItems = useMemo(() => [
     { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", disabled: modulesConfig ? modulesConfig["Dashboard"] === false : false },
     // Energy Metering
-    { title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? modulesConfig["Energy Metering"] === false : false,
-      subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true) },
+    {
+      title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? modulesConfig["Energy Metering"] === false : false,
+      subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true)
+    },
     // DG Set
-    { title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? modulesConfig["DG Set"] === false : false,
+    {
+      title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? modulesConfig["DG Set"] === false : false,
       subItems: [
         { title: "Overview", path: "/dg-set/overview" },
         ...dgDevices.map((dev, idx) => ({
@@ -127,69 +130,100 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           path: `/dg-set/device/${dev.id}`
         })),
         { title: "Report", path: "/dg-set/report" }
-      ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
+      ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true)
+    },
     // LT Panel
-    { title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? modulesConfig["LT Panel"] === false : false,
-      subItems: [{ title: "Overview", path: "/lt-panel/overview" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
+    {
+      title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? modulesConfig["LT Panel"] === false : false,
+      subItems: [{ title: "Overview", path: "/lt-panel/overview" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true)
+    },
     // Transformer
-    { title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? modulesConfig["Transformer"] === false : false,
-      subItems: [{ title: "Overview", path: "/transformer/overview" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
+    {
+      title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? modulesConfig["Transformer"] === false : false,
+      subItems: [{ title: "Overview", path: "/transformer/overview" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true)
+    },
     // HVAC & Environmental Systems
-    { title: "HVAC", icon: <Thermometer size={20} />, disabled: modulesConfig ? modulesConfig["HVAC"] === false : false,
-      subItems: [{ title: "Chiller", path: "/hvac/chiller" }, { title: "AHU", path: "/hvac/ahu" }, { title: "Cooling Tower", path: "/hvac/cooling-tower" }, { title: "PDF Report", path: "/hvac/report" }].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true) },
-    { title: "VRV", icon: <Wind size={20} />, disabled: modulesConfig ? modulesConfig["VRV"] === false : false,
-      subItems: [{ title: "Overview", path: "/VRV/overview" }, { title: "Control Panel", path: "/VRV/control" }, { title: "Schedule", path: "/VRV/schedule" }, { title: "Human Sensor", path: "/VRV/human-sensor" }].filter(s => submodulesConfig.showVRV?.[s.title] ?? true) },
-    { title: "AC", icon: <Wind size={20} />, disabled: modulesConfig ? modulesConfig["AC"] === false : false,
-      subItems: [{ title: "Overview", path: "/ac/overview" }, { title: "PDF Report", path: "/ac/report" }].filter(s => submodulesConfig.showAC?.[s.title] ?? true) },
-    { title: "AQI Sensor", icon: <Leaf size={20} />, disabled: modulesConfig ? modulesConfig["AQI Sensor"] === false : false,
+    {
+      title: "HVAC", icon: <Thermometer size={20} />, disabled: modulesConfig ? modulesConfig["HVAC"] === false : false,
+      subItems: [{ title: "Chiller", path: "/hvac/chiller" }, { title: "AHU", path: "/hvac/ahu" }, { title: "Cooling Tower", path: "/hvac/cooling-tower" }, { title: "PDF Report", path: "/hvac/report" }].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true)
+    },
+    {
+      title: "VRV", icon: <Wind size={20} />, disabled: modulesConfig ? modulesConfig["VRV"] === false : false,
+      subItems: [{ title: "Overview", path: "/VRV/overview" }, { title: "Control Panel", path: "/VRV/control" }, { title: "Schedule", path: "/VRV/schedule" }, { title: "Human Sensor", path: "/VRV/human-sensor" }].filter(s => submodulesConfig.showVRV?.[s.title] ?? true)
+    },
+    {
+      title: "AC", icon: <Wind size={20} />, disabled: modulesConfig ? modulesConfig["AC"] === false : false,
+      subItems: [{ title: "Overview", path: "/ac/overview" }, { title: "PDF Report", path: "/ac/report" }].filter(s => submodulesConfig.showAC?.[s.title] ?? true)
+    },
+    {
+      title: "AQI Sensor", icon: <Leaf size={20} />, disabled: modulesConfig ? modulesConfig["AQI Sensor"] === false : false,
       subItems: [
         { title: "Overview", path: "/aqi-sensor/overview" },
         { title: "Graphs", path: "/aqi-sensor/graphs" },
         { title: "Reports", path: "/aqi-sensor/reports" }
-      ].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? (s.title === 'Reports' ? (submodulesConfig.showAQISensor?.['PDF Report'] ?? true) : true)) },
+      ].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? (s.title === 'Reports' ? (submodulesConfig.showAQISensor?.['PDF Report'] ?? true) : true))
+    },
     // Water & Utilities
-    { title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? modulesConfig["Water Management"] === false : false,
+    {
+      title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? modulesConfig["Water Management"] === false : false,
       subItems: [
         { title: "Overview", path: "/water-management/overview" },
         { title: "AG TANK", path: "/water-management/ag-pump" },
         { title: "UG TANK", path: "/water-management/ug-pump" },
         { title: "Report", path: "/water-management/report" }
-      ].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
-    { title: "Motors", icon: <Activity size={20} />, disabled: modulesConfig ? modulesConfig["Motors"] === false : false,
+      ].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true)
+    },
+    {
+      title: "Motors", icon: <Activity size={20} />, disabled: modulesConfig ? modulesConfig["Motors"] === false : false,
       subItems: [
         { title: "Overview", path: "/motors/overview" },
         { title: "Report", path: "/motors/report" }
-      ].filter(s => submodulesConfig.showMotors?.[s.title] ?? true) },
+      ].filter(s => submodulesConfig.showMotors?.[s.title] ?? true)
+    },
     // Safety & Life Safety Systems (ACMS)
-    { title: "ACMS", icon: <ShieldAlert size={20} />, disabled: modulesConfig ? (modulesConfig["ACMS"] === false && modulesConfig["Fire"] === false) : false,
+    {
+      title: "ACMS", icon: <ShieldAlert size={20} />, disabled: modulesConfig ? (modulesConfig["ACMS"] === false && modulesConfig["Fire"] === false) : false,
       subItems: [
         { title: "Overview", path: "/fire-pumps/overview" },
         { title: "Pump Status", path: "/fire-pumps/status" },
         { title: "Header Pressure", path: "/fire-pumps/pressure" },
         { title: "Jockey / Main", path: "/fire-pumps/jockey" },
         { title: "PDF Report", path: "/fire-pumps/report" }
-      ].filter(s => (submodulesConfig.showACMS?.[s.title] ?? submodulesConfig.showFirePumps?.[s.title] ?? true)) },
-    { title: "Alarm System", icon: <Bell size={20} />, disabled: modulesConfig ? modulesConfig["Alarm System"] === false : false,
-      subItems: [{ title: "Overview", path: "/alarm-system/overview" }, { title: "Alarm Config", path: "/alarm-system/config" }, { title: "Message Template Setting", path: "/alarm-system/message-templates" }, { title: "Active Alarms", path: "/alarm-system/active" }, { title: "Inactive Alarms", path: "/alarm-system/inactive" }, { title: "ACK (Acknowledge)", path: "/alarm-system/ack" }, { title: "Alarm History", path: "/alarm-system/history" }, { title: "PDF Report", path: "/alarm-system/report" }].filter(s => (submodulesConfig.showAlarms?.[s.title] ?? true) && !s.hidden) },
+      ].filter(s => (submodulesConfig.showACMS?.[s.title] ?? submodulesConfig.showFirePumps?.[s.title] ?? true))
+    },
+    {
+      title: "Alarm System", icon: <Bell size={20} />, disabled: modulesConfig ? modulesConfig["Alarm System"] === false : false,
+      subItems: [{ title: "Overview", path: "/alarm-system/overview" }, { title: "Alarm Config", path: "/alarm-system/config" }, { title: "Message Template Setting", path: "/alarm-system/message-templates" }, { title: "Active Alarms", path: "/alarm-system/active" }, { title: "Inactive Alarms", path: "/alarm-system/inactive" }, { title: "ACK (Acknowledge)", path: "/alarm-system/ack" }, { title: "Alarm History", path: "/alarm-system/history" }, { title: "PDF Report", path: "/alarm-system/report" }].filter(s => (submodulesConfig.showAlarms?.[s.title] ?? true) && !s.hidden)
+    },
     // Operations & Maintenance
     { title: "Ticketing", icon: <ClipboardList size={20} />, path: "/ticketing", disabled: modulesConfig ? modulesConfig["Ticketing"] === false : false },
-    { title: "Maintenance", icon: <PenTool size={20} />, disabled: modulesConfig ? modulesConfig["Maintenance"] === false : false,
-      subItems: [{ title: "Scheduled", path: "/maintenance/scheduled" }, { title: "Pending Tasks", path: "/maintenance/pending" }, { title: "PDF Report", path: "/maintenance/report" }].filter(s => submodulesConfig.showMaintenance?.[s.title] ?? true) },
-    { title: "Service History", icon: <History size={20} />, disabled: modulesConfig ? modulesConfig["Service History"] === false : false,
-      subItems: [{ title: "Equipment-wise", path: "/service/equipment" }, { title: "Service Records", path: "/service/records" }, { title: "PDF Report", path: "/service/report" }].filter(s => submodulesConfig.showServiceHistory?.[s.title] ?? true) },
-    { title: "Daily DPR", icon: <Gauge size={20} />, disabled: modulesConfig ? modulesConfig["Daily DPR"] === false : false,
-      subItems: [{ title: "Data Aggregation", path: "/dpr/aggregation" }, { title: "Daily Logs", path: "/dpr/logs" }, { title: "PDF Report", path: "/dpr/report" }].filter(s => submodulesConfig.showDailyDPR?.[s.title] ?? true) },
+    {
+      title: "Maintenance", icon: <PenTool size={20} />, disabled: modulesConfig ? modulesConfig["Maintenance"] === false : false,
+      subItems: [{ title: "Scheduled", path: "/maintenance/scheduled" }, { title: "Pending Tasks", path: "/maintenance/pending" }, { title: "PDF Report", path: "/maintenance/report" }].filter(s => submodulesConfig.showMaintenance?.[s.title] ?? true)
+    },
+    {
+      title: "Service History", icon: <History size={20} />, disabled: modulesConfig ? modulesConfig["Service History"] === false : false,
+      subItems: [{ title: "Equipment-wise", path: "/service/equipment" }, { title: "Service Records", path: "/service/records" }, { title: "PDF Report", path: "/service/report" }].filter(s => submodulesConfig.showServiceHistory?.[s.title] ?? true)
+    },
+    {
+      title: "Daily DPR", icon: <Gauge size={20} />, disabled: modulesConfig ? modulesConfig["Daily DPR"] === false : false,
+      subItems: [{ title: "Data Aggregation", path: "/dpr/aggregation" }, { title: "Daily Logs", path: "/dpr/logs" }, { title: "PDF Report", path: "/dpr/report" }].filter(s => submodulesConfig.showDailyDPR?.[s.title] ?? true)
+    },
     // Audit Log
-    { title: "Audit Log", icon: <FileText size={20} />, disabled: modulesConfig ? modulesConfig["Audit Log"] === false : false,
+    {
+      title: "Audit Log", icon: <FileText size={20} />, disabled: modulesConfig ? modulesConfig["Audit Log"] === false : false,
       subItems: [
         { title: "Overview", path: "/audit-logs" },
         { title: "System Logs", path: "/audit-logs/system" },
         { title: "Security Events", path: "/audit-logs/security" },
         { title: "PDF Report", path: "/audit-logs/report" }
-      ].filter(s => (submodulesConfig.showAuditLog?.[s.title] ?? true)) },
+      ].filter(s => (submodulesConfig.showAuditLog?.[s.title] ?? true))
+    },
     // Help & Support
-    { title: "Help", icon: <HelpCircle size={20} />, disabled: modulesConfig ? modulesConfig["Help"] === false : false,
-      subItems: [{ title: "Feedback", path: "/help/feedback" }, { title: "Policy & Condition", path: "/help/policy" }] }
+    {
+      title: "Help", icon: <HelpCircle size={20} />, disabled: modulesConfig ? modulesConfig["Help"] === false : false,
+      subItems: [{ title: "Feedback", path: "/help/feedback" }, { title: "Policy & Condition", path: "/help/policy" }]
+    }
   ], [modulesConfig, submodulesConfig, dgDevices]);
 
   const filteredItems = useMemo(() => {
@@ -261,7 +295,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       try {
         if (a) setModulesConfig(JSON.parse(a));
         if (b) setSubmodulesConfig(JSON.parse(b));
-      } catch {}
+      } catch { }
     };
     window.addEventListener('storage-update', upd);
     return () => window.removeEventListener('storage-update', upd);

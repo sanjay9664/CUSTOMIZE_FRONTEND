@@ -248,17 +248,51 @@ const EnergyGraphs = () => {
           }
         }
 
+        // Fallback local storage check if no devices returned from API
+        if (!items || items.length === 0) {
+          const localKeys = ['scada_devices_db', 'bms_registered_devices', 'scada_device_mappings', 'tb_devices'];
+          localKeys.forEach(k => {
+            try {
+              const raw = localStorage.getItem(k);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                const arr = Array.isArray(parsed) ? parsed : [parsed];
+                items.push(...arr);
+              }
+            } catch (e) {}
+          });
+        }
+
         if (isMounted) {
+          // Resilient site filter matching ID, siteId, _id, or name
+          const validSiteIds = [
+            selectedSiteId,
+            selectedSite?.id,
+            selectedSite?.siteId,
+            selectedSite?._id,
+            selectedSite?.name,
+            selectedSite?.siteName
+          ].filter(Boolean).map(s => String(s).toLowerCase().trim());
+
+          const siteFilteredItems = items.filter(d => {
+            if (!d) return false;
+            const devSiteId = d.siteId ?? d.site_id;
+            if (devSiteId !== undefined && devSiteId !== null && String(devSiteId).trim() !== '') {
+              return validSiteIds.includes(String(devSiteId).toLowerCase().trim());
+            }
+            return true;
+          });
+
           // Filter for Energy Meter devices
-          const energyCategories = ['MAIN_ENERGY_METER', 'SUB_ENERGY_METER', 'ENERGY_METER'];
-          const filtered = items.filter(d => {
+          const energyCategories = ['MAIN_ENERGY_METER', 'SUB_ENERGY_METER', 'ENERGY_METER', 'LT_PANEL', 'METER'];
+          const filtered = siteFilteredItems.filter(d => {
             const cat = String(d.category || '').toUpperCase();
             const tmpl = String(d.templateName || '').toUpperCase();
             const name = String(d.name || '').toUpperCase();
             return energyCategories.includes(cat) || tmpl.includes('METER') || name.includes('METER') || cat.includes('METER');
           });
 
-          const finalDevices = filtered.length > 0 ? filtered : items;
+          const finalDevices = filtered.length > 0 ? filtered : siteFilteredItems;
           setSiteDevices(finalDevices);
 
           if (finalDevices.length > 0) {
@@ -285,7 +319,18 @@ const EnergyGraphs = () => {
 
     fetchSiteDevices();
     return () => { isMounted = false; };
-  }, [selectedSiteId]);
+  }, [selectedSiteId, selectedSite]);
+
+  // Listen for global device changes from GlobalSiteAssetDropdown
+  useEffect(() => {
+    const handleDeviceEvent = (e) => {
+      if (e.detail?.deviceId) {
+        setSelectedDeviceId(String(e.detail.deviceId));
+      }
+    };
+    window.addEventListener('scada_device_changed', handleDeviceEvent);
+    return () => window.removeEventListener('scada_device_changed', handleDeviceEvent);
+  }, []);
 
   // Selected device object
   const selectedDevice = useMemo(() => {
@@ -523,7 +568,24 @@ const EnergyGraphs = () => {
       }
     });
 
-    return Array.from(settingsMap.values());
+    const allSettings = Array.from(settingsMap.values());
+
+    // Sort to prioritize settings with actual telemetry data, then primary load/energy metrics
+    allSettings.sort((a, b) => {
+      const aHasData = (a.snapshots && a.snapshots.length > 0) ? 1 : 0;
+      const bHasData = (b.snapshots && b.snapshots.length > 0) ? 1 : 0;
+      if (bHasData !== aHasData) return bHasData - aHasData;
+
+      const isPriorityParam = (s) => {
+        const name = (s.displayName || '').toUpperCase();
+        return name.includes('KWH') || name.includes('LOAD') || name.includes('KW') || name.includes('ENERGY') || name.includes('VOLTAGE') || name.includes('CURRENT');
+      };
+      const aPri = isPriorityParam(a) ? 1 : 0;
+      const bPri = isPriorityParam(b) ? 1 : 0;
+      return bPri - aPri;
+    });
+
+    return allSettings;
   }, [selectedDevice, telemetryData]);
 
   // Derive active expanded setting dynamically from eligibleSettings
@@ -635,6 +697,21 @@ const EnergyGraphs = () => {
     };
   }, [siteDevices, devicesLoading, selectedDeviceId]);
 
+  // Meter device options array for ScadaToolbar
+  const meterDeviceOptions = useMemo(() => {
+    if (!siteDevices || siteDevices.length === 0) return [];
+    const unique = [];
+    const seen = new Set();
+    for (const d of siteDevices) {
+      const id = String(d.id || d.deviceId || '');
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const name = d.name || d.deviceName || d.title || d.serialNumber || `Meter (${id})`;
+      unique.push({ value: id, label: name });
+    }
+    return unique;
+  }, [siteDevices]);
+
   const isDeviceConfigured = Boolean(siteDevices && siteDevices.length > 0);
 
   // Range preset and active interval labels for banner metadata
@@ -743,6 +820,16 @@ const EnergyGraphs = () => {
       {/* ── 2. Filter & Controls Toolbar ── */}
       {isDeviceConfigured && (
         <ScadaToolbar
+          deviceOptions={meterDeviceOptions}
+          selectedDeviceId={selectedDeviceId}
+          selectedDeviceName={selectedDevice ? (selectedDevice.name || selectedDevice.deviceName || `Meter #${selectedDeviceId}`) : ''}
+          onDeviceChange={(newId) => {
+            if (!newId || String(newId) === String(selectedDeviceId)) return;
+            setSelectedDeviceId(String(newId));
+            localStorage.setItem('selected_main_meter_id', String(newId));
+            window.dispatchEvent(new CustomEvent('scada_device_changed', { detail: { deviceId: String(newId) } }));
+          }}
+          deviceLoading={devicesLoading}
           rangePresets={RANGE_PRESETS}
           rangePreset={rangePreset}
           onRangeChange={handleRangeChange}
