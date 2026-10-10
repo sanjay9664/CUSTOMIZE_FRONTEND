@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { 
-  Thermometer, Wind, Snowflake, ShieldAlert, ClipboardList, Wrench, History, 
-  LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge, FileText, 
-  Database, Leaf, Sliders, Users 
+import {
+  Thermometer, Wind, Snowflake, ShieldAlert, ClipboardList, Wrench, History,
+  LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge, FileText,
+  Database, Leaf, Sliders, Users
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -12,7 +12,7 @@ import { useSiteStore } from '../context/SiteContext';
 const MODULE_HEADER_CONFIG = [
   { match: /^\/dashboard(?:\/|$)|^\/$/, title: 'Dashboard', icon: LayoutDashboard },
   { match: /^\/energy-metering(?:\/|$)/, title: 'Energy Metering', icon: Zap },
-  { match: /^\/dg-set(?:\/|$)/, title: 'DG Set', icon: Database },
+  { match: /^\/dg-set(?: \/|$)/, title: 'DG Set', icon: Database },
   { match: /^\/lt-panel(?:\/|$)/, title: 'LT Panel', icon: LayoutDashboard },
   { match: /^\/transformer(?:\/|$)/, title: 'Transformer', icon: Zap },
   { match: /^\/hvac(?:\/|$)|^\/ahu$|^\/cooling-tower$/, title: 'HVAC', icon: Thermometer },
@@ -56,7 +56,7 @@ const MainLayout = ({ children }) => {
     if (backupUser && backupRole) {
       localStorage.setItem('userData', backupUser);
       localStorage.setItem('userRole', backupRole);
-      
+
       localStorage.removeItem('impersonator_backup_user');
       localStorage.removeItem('impersonator_backup_role');
 
@@ -82,7 +82,7 @@ const MainLayout = ({ children }) => {
           };
           localStorage.setItem('scada_modules_config', JSON.stringify(sidebarModules));
           localStorage.setItem('scada_submodules_config', JSON.stringify(globalConfig.submoduleVisibility || {}));
-        } catch(e) {}
+        } catch (e) { }
       }
 
       window.location.href = '/dashboard';
@@ -115,7 +115,7 @@ const MainLayout = ({ children }) => {
         setSelectedSite={setSelectedSite}
       />
 
-      <div 
+      <div
         className={`scada-main-content w-100`}
         style={{
           marginLeft: sidebarWidth,
@@ -125,7 +125,7 @@ const MainLayout = ({ children }) => {
         }}
       >
         {isImpersonating && (
-          <div 
+          <div
             className="bg-warning text-dark px-4 py-2 d-flex justify-content-between align-items-center position-fixed top-0 z-3 shadow-sm border-bottom border-warning"
             style={{
               left: sidebarWidth,
@@ -143,7 +143,7 @@ const MainLayout = ({ children }) => {
                 Previewing as: {JSON.parse(localStorage.getItem('userData') || '{}')?.name}
               </span>
             </div>
-            <button 
+            <button
               className="btn btn-sm btn-dark fw-bold uppercase tracking-wider fs-8 px-3"
               onClick={handleExitVerification}
             >
@@ -157,7 +157,8 @@ const MainLayout = ({ children }) => {
       </div>
 
       {/* Responsive: On mobile remove sidebar margin */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .single-module-header-page .page-context-banner { display: none !important; }
         @media (max-width: 992px) {
           .scada-main-content { margin-left: 0 !important; }

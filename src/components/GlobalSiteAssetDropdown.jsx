@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { 
-  Building2, ChevronDown, ChevronRight, Search, Check, 
-  Cpu, Zap, Droplets, Activity, Thermometer, Layers, 
+import {
+  Building2, ChevronDown, ChevronRight, Search, Check,
+  Cpu, Zap, Droplets, Activity, Thermometer, Layers,
   LayoutDashboard, Flame, Wind, Loader2
 } from 'lucide-react';
 import { bmsService } from '../services/bmsService';
@@ -53,10 +53,10 @@ const isDeviceMatchingCategory = (device, category) => {
 
   // 3. ALL ENERGY METERS (Overview)
   if (category === 'ENERGY_METER') {
-    const isMeter = 
-      cat.includes('ENERGY') || 
-      cat.includes('METER') || 
-      mod.includes('ENERGY') || 
+    const isMeter =
+      cat.includes('ENERGY') ||
+      cat.includes('METER') ||
+      mod.includes('ENERGY') ||
       name.includes('METER');
     const isDG = cat.includes('GEN') || name.includes('GENSET') || name.includes('DG-');
     const isWater = cat.includes('WATER') || cat.includes('TANK');
@@ -65,14 +65,14 @@ const isDeviceMatchingCategory = (device, category) => {
 
   // 4. GENERATOR / DG SET
   if (category === 'GENERATOR') {
-    const isDG = 
-      cat.includes('GEN') || 
-      cat.includes('DG') || 
-      mod.includes('DG') || 
-      mod.includes('GEN') || 
-      name.includes('DG') || 
-      name.includes('GENERATOR') || 
-      name.includes('GENSET') || 
+    const isDG =
+      cat.includes('GEN') ||
+      cat.includes('DG') ||
+      mod.includes('DG') ||
+      mod.includes('GEN') ||
+      name.includes('DG') ||
+      name.includes('GENERATOR') ||
+      name.includes('GENSET') ||
       device.module === 'DG Set';
     const isMeter = cat.includes('METER') || name.includes('METER');
     return isDG && !isMeter;
@@ -169,22 +169,29 @@ export const GlobalSiteAssetDropdown = ({
     return null;
   }, [moduleHeader?.title, pathname]);
 
-  // Check if current tab is a site-wide overview (e.g. Water Management, Motors, Overview, Sub Meters, Graphs, Reports) where device selection is unnecessary
+  // Check if current tab is a site-wide overview where device selection is unnecessary
   const isSiteOnlyMode = useMemo(() => {
     const path = (pathname || (typeof window !== 'undefined' ? window.location.pathname : '')).toLowerCase();
     const title = (moduleHeader?.title || '').toLowerCase();
-    
-    // Modules that target individual sub-devices (like DG Set with generators, Main Energy Meter, or AQI individual sensor):
-    const isDeviceTargetedModule = 
+
+    // Modules that target individual sub-devices (like DG Set with generators, Main Energy Meter, Sub Meters, Graphs, Reports, or AQI individual sensor):
+    const isDeviceTargetedModule =
       title === 'dg set' || path.includes('/dg-set') ||
       path.includes('/energy-metering/main') ||
-      path.includes('/aqi-sensor/overview');
+      path.includes('/energy-metering/sub') ||
+      path.includes('/energy-metering/graphs') ||
+      path.includes('/energy-metering/reports') ||
+      path.includes('/submeters') ||
+      path.includes('/sub-meters') ||
+      path.includes('/aqi-sensor/overview') ||
+      path.includes('/aqi-sensor/graphs') ||
+      path.includes('/aqi-sensor/reports');
 
     if (isDeviceTargetedModule) {
       return false;
     }
 
-    // All other modules operate at site level (Water Management, Motors, Energy Overview, Sub Meters, Graphs, Reports, Daily DPR, LT Panel, Transformer, HVAC, VRV, AC, Fire, Alarms):
+    // All other modules operate at site level:
     return true;
   }, [pathname, moduleHeader?.title]);
 
@@ -275,8 +282,21 @@ export const GlobalSiteAssetDropdown = ({
       const devId = String(d.id || d.deviceId || d._id || '').trim();
       if (!devId || seenIds.has(devId)) return;
 
-      const devSiteId = d.siteId !== undefined && d.siteId !== null ? String(d.siteId) : null;
-      if (devSiteId && devSiteId !== sId) return;
+      const devSiteId = d.siteId !== undefined && d.siteId !== null ? String(d.siteId) : (d.site_id !== undefined && d.site_id !== null ? String(d.site_id) : null);
+      if (devSiteId) {
+        const validSiteIds = [
+          sId,
+          selectedSite?.id,
+          selectedSite?.siteId,
+          selectedSite?._id,
+          selectedSite?.name,
+          selectedSite?.siteName
+        ].filter(Boolean).map(s => String(s).toLowerCase().trim());
+
+        if (!validSiteIds.includes(devSiteId.toLowerCase().trim())) {
+          return;
+        }
+      }
 
       // Strict category check
       if (!isDeviceMatchingCategory(d, currentCategory)) {
@@ -306,7 +326,7 @@ export const GlobalSiteAssetDropdown = ({
       const res = await bmsService.getSiteDevices(sId, queryParams).catch(() => null);
       const list = normalizeList(res, 'devices');
       if (Array.isArray(list)) list.forEach(addDevice);
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       // 2. Fallback /devices endpoint
@@ -326,7 +346,7 @@ export const GlobalSiteAssetDropdown = ({
         const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
         list.forEach(addDevice);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // 3. Fallback check local storage items
     const localKeys = ['dg_generator_devices', 'scada_devices_db', 'bms_registered_devices', 'scada_device_mappings', 'tb_devices'];
@@ -338,7 +358,7 @@ export const GlobalSiteAssetDropdown = ({
           const arr = Array.isArray(parsed) ? parsed : [parsed];
           arr.forEach(addDevice);
         }
-      } catch (e) {}
+      } catch (e) { }
     });
 
     setDevicesBySiteCategory((prev) => ({ ...prev, [cacheKey]: siteDeviceList }));
@@ -445,7 +465,7 @@ export const GlobalSiteAssetDropdown = ({
     try {
       localStorage.setItem('selected_site_id', sId);
       localStorage.setItem('selected_site', JSON.stringify(site));
-    } catch (e) {}
+    } catch (e) { }
 
     if (isSiteOnlyMode) {
       // In Sub Meters tab: page shows all submeters of the site, no single device selected
@@ -552,8 +572,8 @@ export const GlobalSiteAssetDropdown = ({
   if (!activeSites || activeSites.length === 0) return null;
 
   return (
-    <div 
-      className="global-site-select-wrap position-relative" 
+    <div
+      className="global-site-select-wrap position-relative"
       ref={dropdownRef}
     >
       {/* ── 1. Header Capsule Button (Click to toggle) ── */}
@@ -584,7 +604,7 @@ export const GlobalSiteAssetDropdown = ({
 
       {/* ── 2. Cascading Menu (Click-only interaction) ── */}
       {isOpen && (
-        <div 
+        <div
           className={`global-cascading-menu-container open shadow-2xl ${isSiteOnlyMode ? 'site-only-mode' : ''}`}
           style={isSiteOnlyMode ? { width: '300px', maxWidth: '90vw' } : {}}
         >
@@ -838,7 +858,8 @@ export const GlobalSiteAssetDropdown = ({
       )}
 
       {/* ── 3. Component Styles ── */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .global-site-select-wrap {
           position: relative;
           z-index: 1050;

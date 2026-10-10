@@ -58,30 +58,74 @@ const EnergyPDFReport = () => {
     const loadSiteDevices = async () => {
       if (!selectedSiteId) return;
       try {
-        const res = await apiClient.get('/devices', { siteId: String(selectedSiteId) }).catch(() => null);
-        const list = normalizeList(res, 'devices');
+        let list = [];
+        try {
+          const res = await apiClient.get(`/sites/${selectedSiteId}/devices`).catch(() => null);
+          list = normalizeList(res, 'devices');
+        } catch (e) {}
 
-        if (isMounted && list && list.length > 0) {
-          // Prioritize ENERGY_METER devices
-          const energyMeters = list.filter(d =>
+        if (!list || list.length === 0) {
+          const res = await apiClient.get('/devices', { siteId: String(selectedSiteId) }).catch(() => null);
+          list = normalizeList(res, 'devices');
+        }
+
+        // Local storage fallbacks
+        if (!list || list.length === 0) {
+          const localKeys = ['scada_devices_db', 'bms_registered_devices', 'scada_device_mappings', 'tb_devices'];
+          localKeys.forEach(k => {
+            try {
+              const raw = localStorage.getItem(k);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                const arr = Array.isArray(parsed) ? parsed : [parsed];
+                list.push(...arr);
+              }
+            } catch (e) {}
+          });
+        }
+
+        const validSiteIds = [
+          selectedSiteId,
+          currentSite?.id,
+          currentSite?.siteId,
+          currentSite?._id,
+          currentSite?.name,
+          currentSite?.siteName
+        ].filter(Boolean).map(s => String(s).toLowerCase().trim());
+
+        const siteFiltered = (list || []).filter(d => {
+          if (!d) return false;
+          const devSiteId = d.siteId ?? d.site_id;
+          if (devSiteId !== undefined && devSiteId !== null && String(devSiteId).trim() !== '') {
+            return validSiteIds.includes(String(devSiteId).toLowerCase().trim());
+          }
+          return true;
+        });
+
+        if (isMounted) {
+          const energyMeters = siteFiltered.filter(d =>
             d.category === 'ENERGY_METER' ||
             d.category === 'MAIN_ENERGY_METER' ||
+            d.category === 'SUB_ENERGY_METER' ||
             d.category === 'LT_PANEL' ||
             (d.name && /meter|energy/i.test(d.name))
           );
           const devicesToUse = energyMeters.length > 0
             ? energyMeters
-            : list.filter(d => d.category !== 'AQI_SENSOR' && d.category !== 'SENSOR');
+            : siteFiltered.filter(d => d.category !== 'AQI_SENSOR' && d.category !== 'SENSOR');
+          
           setSiteDevices(devicesToUse);
 
-          setFilter(prev => {
-            const exists = devicesToUse.some(d => String(d.id || d.deviceId) === String(prev.deviceId));
-            if (!exists) {
-              const defaultDevId = String(devicesToUse[0]?.id || devicesToUse[0]?.deviceId || '9');
-              return { ...prev, deviceId: defaultDevId };
-            }
-            return prev;
-          });
+          if (devicesToUse.length > 0) {
+            setFilter(prev => {
+              const exists = devicesToUse.some(d => String(d.id || d.deviceId) === String(prev.deviceId));
+              if (!exists) {
+                const defaultDevId = String(devicesToUse[0]?.id || devicesToUse[0]?.deviceId || '');
+                return { ...prev, deviceId: defaultDevId };
+              }
+              return prev;
+            });
+          }
         }
       } catch (err) {
         console.warn('Error fetching devices for site:', err);
@@ -90,7 +134,18 @@ const EnergyPDFReport = () => {
 
     loadSiteDevices();
     return () => { isMounted = false; };
-  }, [selectedSiteId]);
+  }, [selectedSiteId, currentSite]);
+
+  // Listen for global device changes from GlobalSiteAssetDropdown
+  useEffect(() => {
+    const handleDeviceEvent = (e) => {
+      if (e.detail?.deviceId) {
+        setFilter(prev => ({ ...prev, deviceId: String(e.detail.deviceId) }));
+      }
+    };
+    window.addEventListener('scada_device_changed', handleDeviceEvent);
+    return () => window.removeEventListener('scada_device_changed', handleDeviceEvent);
+  }, []);
 
   // Resolve target meter display name
   const selectedMeterName = useMemo(() => {
