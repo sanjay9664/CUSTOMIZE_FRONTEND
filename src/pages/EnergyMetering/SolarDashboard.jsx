@@ -60,6 +60,20 @@ const BatteryIconBig = () => (
   </svg>
 );
 
+const GeneratorIconBig = () => (
+  <svg width="42" height="48" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="6" y="38" width="38" height="5" rx="2" fill="#475569" />
+    <rect x="10" y="43" width="6" height="3" rx="1" fill="#334155" />
+    <rect x="34" y="43" width="6" height="3" rx="1" fill="#334155" />
+    <rect x="8" y="14" width="34" height="24" rx="4" fill="rgba(239, 68, 68, 0.15)" stroke="#ef4444" strokeWidth="2.2" />
+    <path d="M14 14 V7 C14 5.5 15.5 4 17 4 H21" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
+    <rect x="18" y="2.5" width="5" height="3" rx="1" fill="#f87171" />
+    <circle cx="25" cy="26" r="7.5" stroke="#f87171" strokeWidth="1.8" strokeDasharray="3 2" />
+    <path d="M25 21 L23 26 H27 L25 31" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="36" cy="19" r="2" fill="#ef4444" />
+  </svg>
+);
+
 const BuildingIcon = () => (
   <svg width="28" height="28" viewBox="0 0 30 30" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 4px rgba(168,85,247,0.8))' }}>
     <path d="M6 28 V8 L16 4 V28 M16 12 H26 V28" />
@@ -686,9 +700,9 @@ const SolarDashboard = ({
                       background: currentTheme.cardBg,
                       border: `1px solid ${currentTheme.border}`,
                       borderRadius: '12px',
-                      padding: '10px 14px 12px 14px',
+                      padding: '12px 16px',
                       width: '280px',
-                      minHeight: '175px',
+                      minHeight: activeDgList.length > 1 ? '195px' : '170px',
                       zIndex: 10,
                       display: 'flex',
                       flexDirection: 'column',
@@ -700,172 +714,193 @@ const SolarDashboard = ({
                     }}
                     className="submeter-card"
                   >
+                    {/* Top Section: Industrial Generator Icon + Title/Badge */}
                     <div className="d-flex w-100">
-                      <div className="me-2.5 d-flex align-items-start justify-content-center" style={{ width: '38px', paddingTop: '2px' }}>
-                        <Zap color={currentTheme.red} size={36} strokeWidth={1.5} />
+                      <div className="me-3 d-flex align-items-start justify-content-center" style={{ width: '44px', paddingTop: '1px' }}>
+                        <GeneratorIconBig />
                       </div>
-                      <div className="overflow-hidden w-100">
+                      <div className="flex-grow-1 overflow-hidden">
                         <div className="d-flex align-items-center justify-content-between mb-1">
                           <span
                             className={`fw-bold text-${isDark ? 'white' : 'dark'} text-truncate`}
-                            style={{ fontSize: '13px', letterSpacing: '0.3px', maxWidth: '140px' }}
+                            style={{ fontSize: '12.5px', letterSpacing: '0.4px', maxWidth: '145px' }}
                             title={isMerged ? `Merged (${activeDgList.map(d => d?.name || 'DG').join(' + ')})` : (currentDg?.name || 'DG Set')}
                           >
                             {isMerged ? 'DG Sets Total' : (currentDg?.name || 'DG Set')}
                           </span>
-                          <div className="d-flex align-items-center gap-1">
-                            {activeDgList.length > 1 && (
-                              <span
-                                className="badge"
-                                style={{
-                                  fontSize: '9px',
-                                  fontWeight: 600,
-                                  backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.15)',
-                                  color: isDark ? '#38bdf8' : '#0284c7',
-                                  border: `1px solid ${isDark ? 'rgba(56, 189, 248, 0.35)' : 'rgba(2, 132, 199, 0.35)'}`,
-                                  padding: '3px 6px',
-                                  borderRadius: '4px'
-                                }}
-                              >
-                                {activeDgList.length} DGS
-                              </span>
-                            )}
-                            {isMerged ? (
-                              <span
-                                className="badge fw-bold"
-                                style={{
-                                  fontSize: '9px',
-                                  backgroundColor: '#0284c7',
-                                  color: '#ffffff',
-                                  padding: '3px 7px',
-                                  borderRadius: '4px',
-                                  letterSpacing: '0.4px',
-                                  boxShadow: '0 0 6px rgba(2, 132, 199, 0.4)'
-                                }}
-                              >
-                                MERGED
-                              </span>
-                            ) : isDgConfigured ? (
-                              <span
-                                className="badge fw-bold"
-                                style={{
-                                  fontSize: '9px',
-                                  backgroundColor: '#16a34a',
-                                  color: '#ffffff',
-                                  padding: '3px 7px',
-                                  borderRadius: '4px',
-                                  letterSpacing: '0.4px'
-                                }}
-                              >
-                                MAPPED
-                              </span>
-                            ) : (
-                              <span
-                                className="badge fw-bold"
-                                style={{
-                                  fontSize: '9px',
-                                  backgroundColor: '#475569',
-                                  color: '#ffffff',
-                                  padding: '3px 7px',
-                                  borderRadius: '4px',
-                                  letterSpacing: '0.4px'
-                                }}
-                              >
-                                UNMAPPED
-                              </span>
-                            )}
-                          </div>
+                          {activeDgList.length > 1 ? (
+                            <span
+                              className="badge rounded-pill fw-bold"
+                              style={{
+                                fontSize: '9px',
+                                backgroundColor: isMerged ? (isDark ? 'rgba(56, 189, 248, 0.16)' : 'rgba(2, 132, 199, 0.14)') : (isDark ? 'rgba(34, 197, 94, 0.16)' : 'rgba(22, 163, 74, 0.14)'),
+                                color: isMerged ? (isDark ? '#38bdf8' : '#0284c7') : (isDark ? '#4ade80' : '#16a34a'),
+                                border: `1px solid ${isMerged ? (isDark ? 'rgba(56, 189, 248, 0.35)' : 'rgba(2, 132, 199, 0.35)') : (isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(22, 163, 74, 0.35)')}`,
+                                padding: '2px 7px'
+                              }}
+                            >
+                              {isMerged ? `${activeDgList.length} DGS MERGED` : 'ACTIVE'}
+                            </span>
+                          ) : isDgConfigured ? (
+                            <span
+                              className="badge rounded-pill fw-bold"
+                              style={{
+                                fontSize: '9px',
+                                backgroundColor: isDark ? 'rgba(34, 197, 94, 0.16)' : 'rgba(22, 163, 74, 0.14)',
+                                color: isDark ? '#4ade80' : '#16a34a',
+                                border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.35)' : 'rgba(22, 163, 74, 0.35)'}`,
+                                padding: '2px 7px'
+                              }}
+                            >
+                              MAPPED
+                            </span>
+                          ) : (
+                            <span className="badge bg-secondary text-dark rounded-pill" style={{ fontSize: '9px' }}>
+                              UNMAPPED
+                            </span>
+                          )}
                         </div>
 
-                        {/* DG-1 / DG-2 Selection Pills (Multi-DG switcher + Merged) */}
-                        {activeDgList.length > 1 && (
-                          <div
-                            className="d-flex align-items-center gap-1 mb-1 p-0.5 rounded-pill"
-                            style={{
-                              background: isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.06)',
-                              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-                              width: 'fit-content'
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {/* MERGED / TOTAL PILL */}
+                        {/* Large Power Reading */}
+                        <div style={{ color: dgW > 50 ? currentTheme.green : currentTheme.red, fontSize: '28px', fontWeight: 'bold', lineHeight: '1.15' }}>
+                          {dgW} W
+                        </div>
+
+                        {/* Voltage & Current */}
+                        <div className={`mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '11.5px', fontWeight: 600 }}>
+                          {dgV} V <span className="text-muted mx-0.5">|</span> {dgA} A
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Multi-DG Segmented Selector Bar (Spans full width for clean symmetry) */}
+                    {activeDgList.length > 1 && (
+                      <div
+                        className="d-flex align-items-center justify-content-between p-0.5 rounded-pill mt-2 mb-1 w-100"
+                        style={{
+                          background: isDark ? 'rgba(15, 23, 42, 0.65)' : 'rgba(226, 232, 240, 0.75)',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDgIndex('merged');
+                          }}
+                          className="btn btn-sm py-0 px-2 rounded-pill fw-bold border-0 flex-fill text-center"
+                          style={{
+                            fontSize: '9.5px',
+                            height: '21px',
+                            lineHeight: '21px',
+                            background: isMerged ? (isDark ? '#0284c7' : '#0284c7') : 'transparent',
+                            color: isMerged ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                            boxShadow: isMerged ? '0 2px 6px rgba(2, 132, 199, 0.4)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="View Combined DG-1 + DG-2 Value"
+                        >
+                          TOTAL
+                        </button>
+                        {activeDgList.map((dg, idx) => {
+                          const isSelected = !isMerged && idx === safeDgIndex;
+                          const label = dg.name || `DG-${idx + 1}`;
+                          return (
                             <button
+                              key={dg.id || idx}
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedDgIndex('merged');
+                                setSelectedDgIndex(idx);
+                                if (dg.id) {
+                                  localStorage.setItem('selected_dg_device_id', String(dg.id));
+                                }
                               }}
-                              className="btn btn-sm py-0 px-2 rounded-pill fw-bold border-0"
+                              className="btn btn-sm py-0 px-2 rounded-pill fw-bold border-0 flex-fill text-center"
                               style={{
                                 fontSize: '9.5px',
-                                height: '19px',
-                                lineHeight: '19px',
-                                backgroundColor: isMerged ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
-                                color: isMerged ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                                height: '21px',
+                                lineHeight: '21px',
+                                background: isSelected ? (isDark ? '#0284c7' : '#0284c7') : 'transparent',
+                                color: isSelected ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                                boxShadow: isSelected ? '0 2px 6px rgba(2, 132, 199, 0.4)' : 'none',
                                 transition: 'all 0.15s ease'
                               }}
-                              title="View Merged Combined DG-1 + DG-2 Value"
+                              title={`Switch to ${label}`}
                             >
-                              TOTAL
+                              {label}
                             </button>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                            {/* INDIVIDUAL DG PILLS */}
-                            {activeDgList.map((dg, idx) => {
-                              const isSelected = !isMerged && idx === safeDgIndex;
-                              const label = dg.name || `DG-${idx + 1}`;
-                              return (
-                                <button
-                                  key={dg.id || idx}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedDgIndex(idx);
-                                    if (dg.id) {
-                                      localStorage.setItem('selected_dg_device_id', String(dg.id));
-                                    }
-                                  }}
-                                  className="btn btn-sm py-0 px-2 rounded-pill fw-bold border-0"
-                                  style={{
-                                    fontSize: '9.5px',
-                                    height: '19px',
-                                    lineHeight: '19px',
-                                    backgroundColor: isSelected ? (isDark ? '#38bdf8' : '#0284c7') : 'transparent',
-                                    color: isSelected ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                  title={`Switch to ${label}`}
-                                >
-                                  {label}
-                                </button>
-                              );
-                            })}
-                          </div>
+                    {/* Telemetry Micro Chips (Fuel, Bat, Temp) */}
+                    {(dgFuel || dgBattery || dgCoolant) && (
+                      <div className="d-flex align-items-center gap-1.5 my-1 overflow-hidden" style={{ fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+                        {dgFuel && (
+                          <span
+                            className="badge rounded-pill fw-semibold px-2 py-0.5"
+                            style={{
+                              background: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(2, 132, 199, 0.08)',
+                              border: `1px solid ${isDark ? 'rgba(56, 189, 248, 0.28)' : 'rgba(2, 132, 199, 0.22)'}`,
+                              color: isDark ? '#7dd3fc' : '#0284c7',
+                              fontSize: '9.5px'
+                            }}
+                          >
+                            Fuel: {dgFuel}
+                          </span>
                         )}
-
-                        <div style={{ color: dgW > 50 ? currentTheme.green : currentTheme.red, fontSize: '24px', fontWeight: 'bold', lineHeight: '1.1' }}>
-                          {dgW} W
-                        </div>
-                        <div className={`mt-0.5 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '11px', fontWeight: 600 }}>
-                          {dgV} V <span className="text-muted mx-0.5">|</span> {dgA} A
-                        </div>
-                        {(dgFuel || dgBattery || dgCoolant) && (
-                          <div className="d-flex align-items-center gap-1 mt-1 overflow-hidden" style={{ fontSize: '9px', whiteSpace: 'nowrap' }}>
-                            {dgFuel && <span className="badge bg-dark text-info border border-info border-opacity-25 px-1 py-0.5">Fuel: {dgFuel}</span>}
-                            {dgBattery && <span className="badge bg-dark text-warning border border-warning border-opacity-25 px-1 py-0.5">Bat: {dgBattery}</span>}
-                            {dgCoolant && <span className="badge bg-dark text-danger border border-danger border-opacity-25 px-1 py-0.5">Temp: {dgCoolant}</span>}
-                          </div>
+                        {dgBattery && (
+                          <span
+                            className="badge rounded-pill fw-semibold px-2 py-0.5"
+                            style={{
+                              background: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(217, 119, 6, 0.08)',
+                              border: `1px solid ${isDark ? 'rgba(245, 158, 11, 0.28)' : 'rgba(217, 119, 6, 0.22)'}`,
+                              color: isDark ? '#fcd34d' : '#b45309',
+                              fontSize: '9.5px'
+                            }}
+                          >
+                            Bat: {dgBattery}
+                          </span>
+                        )}
+                        {dgCoolant && (
+                          <span
+                            className="badge rounded-pill fw-semibold px-2 py-0.5"
+                            style={{
+                              background: isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(220, 38, 38, 0.08)',
+                              border: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.28)' : 'rgba(220, 38, 38, 0.22)'}`,
+                              color: isDark ? '#fca5a5' : '#dc2626',
+                              fontSize: '9.5px'
+                            }}
+                          >
+                            Temp: {dgCoolant}
+                          </span>
                         )}
                       </div>
-                    </div>
+                    )}
+
                     <MiniWave color={dgW > 50 ? currentTheme.green : currentTheme.red} />
-                    <div className="d-flex justify-content-between align-items-end mt-1 pt-1">
+
+                    {/* Bottom Footer: Today's Energy & Engine State */}
+                    <div className="d-flex justify-content-between align-items-end mt-1 pt-0.5">
                       <div className="d-flex flex-column">
                         <span className="text-muted" style={{ fontSize: '10.5px' }}>Today's Energy</span>
-                        <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12.5px' }}>
+                        <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>
                           {dgKwh} kWh
                         </span>
                       </div>
-                      <span className="badge px-2 py-1" style={{ background: dgW > 50 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.15)', color: dgW > 50 ? '#4ade80' : '#f87171', border: `1px solid ${dgW > 50 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`, fontSize: '9.5px' }}>
+                      <span
+                        className="badge rounded-pill px-2.5 py-1 fw-bold"
+                        style={{
+                          background: dgW > 50 ? 'rgba(34, 197, 94, 0.18)' : 'rgba(239, 68, 68, 0.15)',
+                          color: dgW > 50 ? '#4ade80' : '#f87171',
+                          border: `1px solid ${dgW > 50 ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.3)'}`,
+                          fontSize: '9.5px',
+                          letterSpacing: '0.4px'
+                        }}
+                      >
                         {dgStatus}
                       </span>
                     </div>
