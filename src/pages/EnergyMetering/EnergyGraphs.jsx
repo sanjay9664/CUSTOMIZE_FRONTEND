@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';
-import { useSiteStore } from '../../context/SiteContext';
-import { useDeviceStatus } from '../../services/DeviceStatusContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
+import { useDeviceStatus } from '../../hooks/useDeviceStatus';
 import { bmsService } from '../../services/bmsService';
 import { getApiUrl } from '../../utils/apiConfig';
 import { getAuthHeaders, normalizeList } from '../../services/apiClient';

@@ -102,6 +102,9 @@ export const performTokenRefresh = async (force = false) => {
           });
 
           console.info('[AuthRefresh] Token refreshed successfully.');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('bms_auth_refreshed', { detail: { token: newAccessToken } }));
+          }
           return newAccessToken;
         }
       } else if (response.status === 401 || response.status === 403) {

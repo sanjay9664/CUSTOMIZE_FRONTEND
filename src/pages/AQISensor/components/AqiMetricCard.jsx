@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from 'react-bootstrap';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../hooks/useTheme';
 
 /**
  * Reusable Props-Based AQI Metric Card Component

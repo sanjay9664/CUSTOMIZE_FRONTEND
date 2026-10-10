@@ -11,7 +11,7 @@ import {
 
 import { getAuthToken } from '../../utils/cookieUtils';
 import { getApiUrl } from '../../utils/apiConfig';
-import { useSiteStore } from '../../context/SiteContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
 import RegisterSiteModal from './modals/RegisterSiteModal';
 import SiteInspectorDrawer from './modals/SiteInspectorDrawer';
 

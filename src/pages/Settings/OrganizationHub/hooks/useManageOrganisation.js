@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getCookie, getAuthToken } from '../../../../utils/cookieUtils';
 import { getApiUrl } from '../../../../utils/apiConfig';
 import { Building2, MapPin, Cpu, Building, Sliders, Grid, Shield, Terminal, FileText } from 'lucide-react';
-import { useSiteStore } from '../../../../context/SiteContext';
+import { useSiteStore } from '../../../../hooks/useSiteStore';
 import { isCategoryMatch } from '../../../../constants/deviceTemplates';
 
 import useOrgHierarchy, { normalizeList } from './useOrgHierarchy';

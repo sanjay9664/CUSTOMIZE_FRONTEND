@@ -4,10 +4,9 @@ import { Zap, Activity, ShieldCheck, HelpCircle, ChevronLeft, ChevronRight, Play
 import StatusBadge from '../../components/StatusBadge';
 import PdfButton from '../../components/PdfButton';
 import PageContextBanner from '../../components/PageContextBanner';
-import { useSiteStore } from '../../context/SiteContext';
-import { useDeviceStatus } from '../../services/DeviceStatusContext';
-
-import { useTheme } from '../../context/ThemeContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
+import { useDeviceStatus } from '../../hooks/useDeviceStatus';
+import { useTheme } from '../../hooks/useTheme';
 
 import { getAuthHeaders, normalizeList } from '../../services/apiClient';
 import { bmsService } from '../../services/bmsService';

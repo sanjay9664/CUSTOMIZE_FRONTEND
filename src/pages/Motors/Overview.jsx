@@ -9,7 +9,7 @@ import {
   Compass, BarChart3, Layers, SlidersHorizontal, Droplets
 } from 'lucide-react';
 import motorImage from '../../assets/motor.png';
-import { useSiteStore } from '../../context/SiteContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
 import bmsService from '../../services/bmsService';
 import apiClient, { normalizeList } from '../../services/apiClient';
 

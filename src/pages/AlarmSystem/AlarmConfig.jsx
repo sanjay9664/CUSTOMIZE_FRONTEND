@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Badge, Spinner } from 'react-bootstrap';
 import { FiPlus, FiMail, FiBell, FiCheckCircle, FiXCircle, FiInbox, FiEdit2, FiTrash2, FiX, FiChevronRight, FiZap, FiAlertCircle, FiMessageSquare } from 'react-icons/fi';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../hooks/useTheme';
 import RuleEditModal from './RuleEditModal';
 import { 
   loginToSochiot, 

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { useSiteStore } from '../context/SiteContext';
+import { useSiteStore } from '../hooks/useSiteStore';
 
 const MODULE_HEADER_CONFIG = [
   { match: /^\/dashboard(?:\/|$)|^\/$/, title: 'Dashboard', icon: LayoutDashboard },

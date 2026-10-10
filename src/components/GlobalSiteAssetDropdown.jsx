@@ -329,24 +329,20 @@ export const GlobalSiteAssetDropdown = ({
     } catch (e) { }
 
     try {
-      // 2. Fallback /devices endpoint
-      const params = new URLSearchParams({ siteId: sId });
+      // 2. Fallback /devices endpoint via apiClient (benefits from auto 401 retry)
+      const params = { siteId: sId };
       if (currentCategory === 'MAIN_ENERGY_METER') {
-        params.set('category', 'MAIN_ENERGY_METER');
+        params.category = 'MAIN_ENERGY_METER';
       } else if (currentCategory === 'SUB_ENERGY_METER') {
-        params.set('category', 'SUB_ENERGY_METER');
+        params.category = 'SUB_ENERGY_METER';
       } else if (currentCategory) {
-        params.set('category', currentCategory);
+        params.category = currentCategory;
       }
 
-      const url = getApiUrl(`/devices?${params.toString()}`);
-      const res = await fetch(url, { headers: getAuthHeaders() }).catch(() => null);
-      if (res && res.ok) {
-        const json = await res.json();
-        const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
-        list.forEach(addDevice);
-      }
-    } catch (e) { }
+      const res = await bmsService.getDevices(params).catch(() => null);
+      const list = normalizeList(res, 'devices');
+      if (Array.isArray(list)) list.forEach(addDevice);
+    } catch (e) {}
 
     // 3. Fallback check local storage items
     const localKeys = ['dg_generator_devices', 'scada_devices_db', 'bms_registered_devices', 'scada_device_mappings', 'tb_devices'];
@@ -372,6 +368,23 @@ export const GlobalSiteAssetDropdown = ({
       fetchDevicesForSite(curSiteId);
     }
   }, [selectedSite, activeSites, currentCategory, fetchDevicesForSite]);
+
+  // Re-fetch on auth refresh or site updates
+  useEffect(() => {
+    const handleRefreshEvent = () => {
+      const curSiteId = String(getSiteId(selectedSite) || getSiteId(activeSites[0]) || '');
+      if (curSiteId) {
+        fetchDevicesForSite(curSiteId, true);
+      }
+    };
+
+    window.addEventListener('bms_auth_refreshed', handleRefreshEvent);
+    window.addEventListener('bms_sites_updated', handleRefreshEvent);
+    return () => {
+      window.removeEventListener('bms_auth_refreshed', handleRefreshEvent);
+      window.removeEventListener('bms_sites_updated', handleRefreshEvent);
+    };
+  }, [selectedSite, activeSites, fetchDevicesForSite]);
 
   // Listen to external device change events
   useEffect(() => {
@@ -519,10 +532,29 @@ export const GlobalSiteAssetDropdown = ({
     }
   };
 
+  // Effective sites list with persistent fallback to selectedSite / cache
+  const effectiveSites = useMemo(() => {
+    if (activeSites && activeSites.length > 0) return activeSites;
+    if (selectedSite) return [selectedSite];
+    try {
+      const stored = localStorage.getItem('scada_selected_site');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.id ?? parsed.siteId ?? parsed._id)) return [parsed];
+      }
+      const storedDb = localStorage.getItem('scada_sites_db');
+      if (storedDb) {
+        const parsedDb = JSON.parse(storedDb);
+        if (Array.isArray(parsedDb) && parsedDb.length > 0) return parsedDb;
+      }
+    } catch (e) {}
+    return [];
+  }, [activeSites, selectedSite]);
+
   // Computed state for active panel site & its devices
   const activePanelSiteObj = useMemo(() => {
-    return activeSites.find((s) => String(getSiteId(s)) === String(activePanelSiteId)) || selectedSite || activeSites[0];
-  }, [activeSites, activePanelSiteId, selectedSite]);
+    return effectiveSites.find((s) => String(getSiteId(s)) === String(activePanelSiteId)) || selectedSite || effectiveSites[0];
+  }, [effectiveSites, activePanelSiteId, selectedSite]);
 
   const activePanelDevices = useMemo(() => {
     if (!activePanelSiteObj || isSiteOnlyMode) return [];
@@ -536,9 +568,9 @@ export const GlobalSiteAssetDropdown = ({
 
   // Filter sites by search query
   const filteredSites = useMemo(() => {
-    if (!searchQuery.trim()) return activeSites;
+    if (!searchQuery.trim()) return effectiveSites;
     const q = searchQuery.toLowerCase().trim();
-    return activeSites.filter((site) => {
+    return effectiveSites.filter((site) => {
       const sName = (site.name || site.siteName || '').toLowerCase();
       if (sName.includes(q)) return true;
       if (isSiteOnlyMode) return false;
@@ -547,7 +579,7 @@ export const GlobalSiteAssetDropdown = ({
       const devs = devicesBySiteCategory[cacheKey] || [];
       return devs.some((d) => (d.name || d.deviceName || '').toLowerCase().includes(q));
     });
-  }, [activeSites, searchQuery, currentCategory, devicesBySiteCategory, getCacheKey, isSiteOnlyMode]);
+  }, [effectiveSites, searchQuery, currentCategory, devicesBySiteCategory, getCacheKey, isSiteOnlyMode]);
 
   // Filter devices in right panel by search query
   const filteredDevices = useMemo(() => {
@@ -569,7 +601,7 @@ export const GlobalSiteAssetDropdown = ({
     return currentSiteDevices[0];
   }, [selectedDeviceId, currentSiteDevices, isSiteOnlyMode]);
 
-  if (!activeSites || activeSites.length === 0) return null;
+  if (!effectiveSites || effectiveSites.length === 0) return null;
 
   return (
     <div

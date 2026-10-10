@@ -20,8 +20,8 @@ import {
 import StatusBadge from '../../components/StatusBadge';
 import PdfButton from '../../components/PdfButton';
 import PageContextBanner from '../../components/PageContextBanner';
-import { useSiteStore } from '../../context/SiteContext';
-import { useDeviceStatus } from '../../services/DeviceStatusContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
+import { useDeviceStatus } from '../../hooks/useDeviceStatus';
 import { useLocation } from 'react-router-dom';
 import { getAuthHeaders, normalizeList } from '../../services/apiClient';
 import { bmsService } from '../../services/bmsService';

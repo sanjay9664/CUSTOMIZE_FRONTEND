@@ -33,9 +33,9 @@ import {
 } from 'recharts';
 import { io } from 'socket.io-client';
 import PageContextBanner from '../../components/PageContextBanner';
-import { useSiteStore } from '../../context/SiteContext';
-import { useTheme } from '../../context/ThemeContext';
-import { useDeviceStatus } from '../../services/DeviceStatusContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
+import { useTheme } from '../../hooks/useTheme';
+import { useDeviceStatus } from '../../hooks/useDeviceStatus';
 import { bmsService } from '../../services/bmsService';
 import { getApiUrl } from '../../utils/apiConfig';
 import { getAuthHeaders, normalizeList } from '../../services/apiClient';

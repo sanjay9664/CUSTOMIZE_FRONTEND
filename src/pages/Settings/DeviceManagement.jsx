@@ -7,7 +7,7 @@ import {
   MoreVertical, ExternalLink, ChevronRight, Droplets, Flame, Wind,
   Snowflake, ShieldAlert, Sliders, Radio, ArrowUpRight
 } from 'lucide-react';
-import { useSiteStore } from '../../context/SiteContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
 import bmsService, { fetchAndStoreSochiotAccessToken } from '../../services/bmsService';
 import { normalizePaginatedResponse, normalizeList } from '../../services/apiClient';
 import DeviceModal, { DEVICE_CATEGORIES } from './modals/DeviceModal';

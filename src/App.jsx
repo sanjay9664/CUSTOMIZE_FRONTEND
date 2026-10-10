@@ -1,18 +1,64 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import Login from './pages/Login';
-import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { SiteProvider } from './context/SiteContext';
-import { DeviceStatusProvider } from './services/DeviceStatusContext';
+import { useAuth } from './hooks/useAuth.js';
+import { useThemeEffect } from './hooks/useTheme.js';
+import { bootstrapAuth, syncAuth } from './store/authSlice.js';
+import { fetchSitesThunk } from './store/siteSlice.js';
+import { startAutoTokenRefresh, stopAutoTokenRefresh } from './services/authRefreshService.js';
+import { getAuthToken } from './utils/cookieUtils.js';
 
 const MainLayout = lazy(() => import('./layout/MainLayout'));
 const AppRoutes = lazy(() => import('./routes/AppRoutes'));
 
-function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+function App() {
+  const dispatch = useDispatch();
+  const { isAuthenticated, isBootstrapping, isLoading } = useAuth();
+  useThemeEffect();
 
-  React.useEffect(() => {
+  // Bootstrap authentication and sites on initial load
+  useEffect(() => {
+    dispatch(bootstrapAuth());
+
+    const sync = () => dispatch(syncAuth());
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('storage', sync);
+    };
+  }, [dispatch]);
+
+  // Manage auto token refresh lifecycle based on auth state
+  useEffect(() => {
+    if (!isAuthenticated) {
+      stopAutoTokenRefresh();
+      return undefined;
+    }
+
+    startAutoTokenRefresh();
+    return stopAutoTokenRefresh;
+  }, [isAuthenticated]);
+
+  // Load and refresh sites on auth change
+  useEffect(() => {
+    if (getAuthToken()) {
+      dispatch(fetchSitesThunk());
+    }
+
+    const handleAuthRefreshed = () => {
+      dispatch(fetchSitesThunk());
+    };
+
+    window.addEventListener('bms_auth_refreshed', handleAuthRefreshed);
+    window.addEventListener('storage-update', handleAuthRefreshed);
+    return () => {
+      window.removeEventListener('bms_auth_refreshed', handleAuthRefreshed);
+      window.removeEventListener('storage-update', handleAuthRefreshed);
+    };
+  }, [dispatch, isAuthenticated]);
+
+  // Handle browser back/forward cache restore
+  useEffect(() => {
     const handlePageShow = (event) => {
       if (event.persisted && !isAuthenticated) {
         window.location.replace('/login');
@@ -22,7 +68,7 @@ function AppContent() {
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, [isAuthenticated]);
 
-  if (isLoading) {
+  if (isBootstrapping ?? isLoading) {
     return (
       <div className="d-flex align-items-center justify-content-center min-vh-100 bg-dark text-white">
         <div className="spinner-border text-info" role="status">
@@ -58,20 +104,6 @@ function AppContent() {
         />
       </Routes>
     </Router>
-  );
-}
-
-function App() {
-  return (
-    <ThemeProvider>
-      <AuthProvider>
-        <SiteProvider>
-          <DeviceStatusProvider>
-            <AppContent />
-          </DeviceStatusProvider>
-        </SiteProvider>
-      </AuthProvider>
-    </ThemeProvider>
   );
 }
 

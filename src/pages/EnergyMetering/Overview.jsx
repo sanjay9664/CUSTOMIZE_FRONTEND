@@ -3,9 +3,9 @@ import { Row, Col, Card, Container, Button, Spinner, Alert } from 'react-bootstr
 import { Zap, RefreshCw, AlertTriangle, Clock, Layers, Building2 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PageContextBanner from '../../components/PageContextBanner';
-import { useSiteStore } from '../../context/SiteContext';
-import { useDeviceStatus } from '../../services/DeviceStatusContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
+import { useDeviceStatus } from '../../hooks/useDeviceStatus';
+import { useTheme } from '../../hooks/useTheme';
 import { bmsService } from '../../services/bmsService';
 import { apiClient, getAuthHeaders, normalizeList } from '../../services/apiClient';
 import { getApiUrl } from '../../utils/apiConfig';
