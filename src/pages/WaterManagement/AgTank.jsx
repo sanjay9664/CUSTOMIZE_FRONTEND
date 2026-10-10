@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';
-import { useSiteStore } from '../../context/SiteContext';
+import { useSiteStore } from '../../hooks/useSiteStore';
 import bmsService from '../../services/bmsService';
 import { apiClient, normalizeList } from '../../services/apiClient';
 import { isCategoryMatch } from '../../constants/deviceTemplates';

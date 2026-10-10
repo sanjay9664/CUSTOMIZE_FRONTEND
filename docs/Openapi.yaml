@@ -332,18 +332,61 @@ paths:
     get:
       tags: [Users]
       summary: List Users
-      description: Retrieve paginated list of users with role, status, and tenant filtering.
+      description: Retrieve paginated list of users with role, status, company, tenant, site, search, and scope filtering.
       parameters:
         - $ref: '#/components/parameters/PageQuery'
         - $ref: '#/components/parameters/LimitQuery'
+        - name: search
+          in: query
+          description: Search term matching user name or email
+          schema:
+            type: string
         - name: role
           in: query
           schema:
             $ref: '#/components/schemas/UserRole'
+        - name: roleId
+          in: query
+          description: Filter by role ID (string CUID or integer)
+          schema:
+            oneOf:
+              - type: string
+              - type: integer
         - name: status
           in: query
           schema:
             $ref: '#/components/schemas/UserStatus'
+        - name: companyId
+          in: query
+          description: Filter users by company CUID (Super Admin only)
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          description: Filter users by tenant CUID
+          schema:
+            type: string
+        - name: siteId
+          in: query
+          description: Filter users mapped to a specific site
+          schema:
+            type: integer
+        - name: scopeType
+          in: query
+          description: Filter by scope type
+          schema:
+            type: string
+            enum: [ROOT, CLIENT, COMPANY, CONSUMER, ZONE, LOCATION, SITE, ASSET, BUILDING, FLOOR, ROOM, TENANT]
+        - name: scopeId
+          in: query
+          description: Filter by scope ID
+          schema:
+            type: string
+        - name: enabled
+          in: query
+          description: Filter by active/enabled status
+          schema:
+            type: boolean
       responses:
         '200':
           description: Paginated users list
@@ -361,7 +404,7 @@ paths:
     post:
       tags: [Users]
       summary: Create User
-      description: Admin endpoint to create a user with granular locationMappings.
+      description: Admin endpoint to create a user with company or tenant membership and granular location mappings atomically.
       requestBody:
         required: true
         content:
@@ -371,11 +414,19 @@ paths:
             example:
               name: "Rajesh Padhi"
               email: "rajesh@sochiot.com"
+              password: "Password@123"
               role: "ADMIN"
               roleId: "cm01ab23cd45ef67gh89"
+              companyId: "cmudwh99x00020un32qk3bv5q"
               tenantId: "c2a8b410-449e-11ee-be56-0242ac120002"
+              access: "BOTH"
+              features:
+                alarm: true
+                reports: true
+                dpr: true
               locationMappings:
-                - siteId: 7
+                - companyId: "cmudwh99x00020un32qk3bv5q"
+                  siteId: 7
                   deviceId: 45
       responses:
         '201':
@@ -479,6 +530,11 @@ paths:
             enum: [csv, json]
             default: csv
           description: Desired export format
+        - name: companyId
+          in: query
+          schema:
+            type: string
+          description: Filter export by company ID (SuperAdmin only)
         - name: tenantId
           in: query
           schema:
@@ -5026,6 +5082,14 @@ components:
       type: string
       enum: [ACTIVE, INACTIVE, SUSPENDED, PENDING_VERIFICATION]
 
+    AccessLevel:
+      type: string
+      enum: [WEB, APP, BOTH]
+
+    ScopeType:
+      type: string
+      enum: [ROOT, CLIENT, COMPANY, CONSUMER, ZONE, LOCATION, SITE, ASSET, BUILDING, FLOOR, ROOM, TENANT]
+
     User:
       type: object
       properties:
@@ -5039,17 +5103,55 @@ components:
           type: string
           format: email
           example: "rajesh@sochiot.com"
+        phone:
+          type: string
+          nullable: true
+          example: "+91-9876543210"
+        employeeId:
+          type: string
+          nullable: true
+          example: "EMP-042"
         role:
           $ref: '#/components/schemas/UserRole'
         status:
           $ref: '#/components/schemas/UserStatus'
+        access:
+          $ref: '#/components/schemas/AccessLevel'
+        preferredView:
+          type: string
+          nullable: true
+          example: "GRID"
+        companyId:
+          type: string
+          nullable: true
+          example: "cmudwh99x00020un32qk3bv5q"
         tenantId:
           type: string
           nullable: true
+          example: "c2a8b410-449e-11ee-be56-0242ac120002"
         roleId:
           type: string
           nullable: true
           example: "cm01ab23cd45ef67gh89"
+        roleType:
+          type: string
+          nullable: true
+          example: "CUSTOM"
+        scopeType:
+          $ref: '#/components/schemas/ScopeType'
+        scopeId:
+          type: string
+          nullable: true
+          example: "cmudwh99x00020un32qk3bv5q"
+        locationRestricted:
+          type: boolean
+          example: true
+        features:
+          type: object
+          example:
+            alarm: true
+            reports: true
+            dpr: true
         permissions:
           type: array
           items:
@@ -5059,11 +5161,15 @@ components:
           type: array
           items:
             type: string
+          example: ["device:read", "ticket:read", "report:read", "alarm:read"]
         locationMappings:
           type: array
           items:
             $ref: '#/components/schemas/LocationMapping'
         createdAt:
+          type: string
+          format: date-time
+        updatedAt:
           type: string
           format: date-time
 
@@ -5074,7 +5180,7 @@ components:
         companyId:
           type: string
           nullable: true
-          example: "comp-1"
+          example: "cmudwh99x00020un32qk3bv5q"
         tenantId:
           type: string
           nullable: true
@@ -5082,11 +5188,11 @@ components:
         zoneId:
           type: string
           nullable: true
-          example: "zone-12"
+          example: "zone_noida"
         tenantAreaId:
           type: string
           nullable: true
-          example: "area-3"
+          example: "area_sector_63"
         siteId:
           type: integer
           nullable: true
@@ -5098,7 +5204,7 @@ components:
         assetId:
           type: string
           nullable: true
-          example: "asset-101"
+          example: "ast_cm71a8bc0001"
         deviceId:
           type: integer
           nullable: true
@@ -5117,25 +5223,65 @@ components:
           type: string
           format: email
           example: "rajesh@sochiot.com"
+        password:
+          type: string
+          minLength: 6
+          example: "Password@123"
+        phone:
+          type: string
+          nullable: true
+          example: "+91-9876543210"
+        employeeId:
+          type: string
+          nullable: true
+          example: "EMP-042"
         role:
           $ref: '#/components/schemas/UserRole'
         roleId:
-          type: string
+          oneOf:
+            - type: string
+            - type: integer
           nullable: true
           example: "cm01ab23cd45ef67gh89"
         roleType:
           type: string
           nullable: true
           example: "CUSTOM"
+        companyId:
+          type: string
+          nullable: true
+          description: Company CUID for company-level membership (sets scopeType=COMPANY)
+          example: "cmudwh99x00020un32qk3bv5q"
+        tenantId:
+          type: string
+          nullable: true
+          description: Tenant CUID for tenant-level membership (sets scopeType=TENANT)
+          example: "c2a8b410-449e-11ee-be56-0242ac120002"
+        scopeType:
+          $ref: '#/components/schemas/ScopeType'
+        scopeId:
+          type: string
+          nullable: true
+        access:
+          $ref: '#/components/schemas/AccessLevel'
+          default: "BOTH"
+        features:
+          type: object
+          example:
+            alarm: true
+            reports: true
+        preferredView:
+          type: string
+          nullable: true
+          example: "GRID"
+        status:
+          $ref: '#/components/schemas/UserStatus'
+          default: "ACTIVE"
         permissions:
           type: array
           items:
             type: string
           example: ["device:read", "site:read"]
-        tenantId:
-          type: string
-          nullable: true
-          example: "c2a8b410-449e-11ee-be56-0242ac120002"
         locationMappings:
           type: array
           items:
@@ -5155,8 +5301,10 @@ components:
           description: New password for the user
         phone:
           type: string
+          nullable: true
         employeeId:
           type: string
+          nullable: true
         role:
           $ref: '#/components/schemas/UserRole'
         roleId:
@@ -5169,6 +5317,24 @@ components:
           type: string
           nullable: true
           example: "CUSTOM"
+        companyId:
+          type: string
+          nullable: true
+        tenantId:
+          type: string
+          nullable: true
+        scopeType:
+          $ref: '#/components/schemas/ScopeType'
+        scopeId:
+          type: string
+          nullable: true
+        access:
+          $ref: '#/components/schemas/AccessLevel'
+        features:
+          type: object
+        preferredView:
+          type: string
+          nullable: true
         permissions:
           type: array
           items:
@@ -5176,8 +5342,6 @@ components:
           example: ["device:read", "site:read"]
         status:
           $ref: '#/components/schemas/UserStatus'
-        features:
-          type: object
         locationMappings:
           type: array
           items:
@@ -5204,6 +5368,9 @@ components:
             - type: integer
           nullable: true
         roleType:
+          type: string
+          nullable: true
+        companyId:
           type: string
           nullable: true
         tenantId:

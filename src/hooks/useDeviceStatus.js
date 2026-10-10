@@ -1,14 +1,12 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getSochiotGatewayStatus, getSochiotDeviceStatus, getSochiotDeviceDetails } from './authService';
-import { setDeviceStatus, setGatewayStatus } from '../store/deviceStatusSlice';
+import { getSochiotGatewayStatus, getSochiotDeviceStatus, getSochiotDeviceDetails } from '../services/authService.js';
+import { setDeviceStatus, setGatewayStatus } from '../store/deviceStatusSlice.js';
 import { getAuthToken } from '../utils/cookieUtils.js';
-
-const isOnlineResponse = (res) => Boolean(res && (res.status === 'ONLINE' || res.status === 'online' || res.mode?.name === 'ONLINE' || res.we?.mode?.name === 'ONLINE' || res.online === true || res.active === true));
 
 export const useDeviceStatus = () => {
   const dispatch = useDispatch();
-  const { deviceStatuses, gatewayStatuses } = useSelector((state) => state.deviceStatus);
+  const { deviceStatuses = {}, gatewayStatuses = {} } = useSelector((state) => state.deviceStatus || {});
 
   const checkDeviceStatus = useCallback(async (deviceId) => {
     if (!deviceId) return false;
@@ -36,21 +34,20 @@ export const useDeviceStatus = () => {
           console.warn(`getSochiotDeviceStatus failed for ${deviceId}, falling back to getSochiotDeviceDetails:`, statusErr);
         }
         
-        // Fallback: try details endpoint
         try {
           res = await getSochiotDeviceDetails(deviceId);
         } catch (detailsErr) {
           console.error(`Fallback getSochiotDeviceDetails also failed for ${deviceId}:`, detailsErr);
         }
       }
-      const isOnline = res && (
+      const isOnline = Boolean(res && (
         res.status === 'ONLINE' || 
         res.status === 'online' ||
         res.mode?.name === 'ONLINE' ||
         res.we?.mode?.name === 'ONLINE' ||
         res.online === true ||
         res.active === true
-      );
+      ));
       dispatch(setDeviceStatus({ id: deviceId, online: isOnline }));
       return isOnline;
     } catch (e) {
@@ -62,8 +59,6 @@ export const useDeviceStatus = () => {
 
   const checkGatewayStatus = useCallback(async (clusterId) => {
     if (!clusterId) return false;
-    
-    // If gateway/cluster ID is numeric, treat it as online (true) as a legacy fallback
     const isNumeric = /^\d+$/.test(String(clusterId));
     if (isNumeric) {
       dispatch(setGatewayStatus({ id: clusterId, online: true }));
@@ -72,14 +67,14 @@ export const useDeviceStatus = () => {
 
     try {
       const res = await getSochiotGatewayStatus(clusterId);
-      const isOnline = res && (
+      const isOnline = Boolean(res && (
         res.status === 'ONLINE' || 
         res.status === 'online' ||
         res.mode?.name === 'ONLINE' ||
         res.we?.mode?.name === 'ONLINE' ||
         res.online === true ||
         res.active === true
-      );
+      ));
       dispatch(setGatewayStatus({ id: clusterId, online: isOnline }));
       return isOnline;
     } catch (e) {
@@ -89,7 +84,6 @@ export const useDeviceStatus = () => {
     }
   }, [dispatch]);
 
-  // Method to poll statuses for all devices/gateways found in savedTemplates
   const pollAllStatuses = useCallback(async () => {
     if (!getAuthToken()) return;
     try {
@@ -102,31 +96,26 @@ export const useDeviceStatus = () => {
 
       if (Array.isArray(templates)) {
         templates.forEach(t => {
-          if (t.mapping) {
-            // Check if mapping has global deviceId/gatewayUuid
+          if (t?.mapping) {
             if (t.mapping.deviceId) deviceIds.add(t.mapping.deviceId);
             if (t.mapping.gatewayUuid) gatewayUuids.add(t.mapping.gatewayUuid);
 
-            // Fallback check: look through any section mappings for device fields
             Object.values(t.mapping).forEach(sec => {
-              if (sec && typeof sec === 'object') {
-                if (sec.device) deviceIds.add(sec.device);
+              if (sec && typeof sec === 'object' && sec.device) {
+                deviceIds.add(sec.device);
               }
             });
           }
         });
       }
 
-      // Poll devices
       await Promise.all(Array.from(deviceIds).map(id => checkDeviceStatus(id)));
-      // Poll gateways
       await Promise.all(Array.from(gatewayUuids).map(uuid => checkGatewayStatus(uuid)));
     } catch (e) {
       console.error('Error polling statuses:', e);
     }
   }, [checkDeviceStatus, checkGatewayStatus]);
 
-  // Helper function to resolve overall status
   const getOverallStatus = useCallback((deviceId, gatewayUuid) => {
     const isDevOnline = deviceId ? (deviceStatuses[deviceId] ?? true) : true;
     const isGwyOnline = gatewayUuid ? (gatewayStatuses[gatewayUuid] ?? true) : true;
@@ -136,9 +125,4 @@ export const useDeviceStatus = () => {
   return { deviceStatuses, gatewayStatuses, checkDeviceStatus, checkGatewayStatus, getOverallStatus, refreshStatuses: pollAllStatuses };
 };
 
-export const DeviceStatusProvider = ({ children }) => {
-  // Ponytail: background polling of localStorage('scada_templates') causes unwanted network requests
-  // on login for stale/mock device UUIDs (e.g. f40a4dc8-0be6-44f2-8eb2-fbc459a872f3, 1280, 1281).
-  // Device statuses should be checked on-demand by the specific pages that need them.
-  return children;
-};
+export default useDeviceStatus;

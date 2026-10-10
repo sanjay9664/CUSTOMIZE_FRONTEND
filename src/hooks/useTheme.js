@@ -1,8 +1,14 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toggleTheme as toggle } from '../store/themeSlice';
+import { toggleTheme as toggle } from '../store/themeSlice.js';
 
-export const ThemeProvider = ({ children }) => {
+export const useTheme = () => {
+  const dispatch = useDispatch();
+  const isDark = useSelector((state) => state.theme.isDark);
+  return { isDark, toggleTheme: () => dispatch(toggle()) };
+};
+
+export const useThemeEffect = () => {
   const isDark = useSelector((state) => state.theme.isDark);
 
   useEffect(() => {
@@ -19,13 +25,6 @@ export const ThemeProvider = ({ children }) => {
       document.documentElement.setAttribute('data-theme', 'light');
     }
   }, [isDark]);
-
-  return children;
 };
 
-export const useTheme = () => {
-  const dispatch = useDispatch();
-  const isDark = useSelector((state) => state.theme.isDark);
-  return { isDark, toggleTheme: () => dispatch(toggle()) };
-};
-
+export default useTheme;

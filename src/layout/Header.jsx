@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { Button, Form, InputGroup, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '../hooks/useAuth';
 import { bmsService } from '../services/bmsService';
 import { normalizeList, getAuthHeaders } from '../services/apiClient';
 import { getApiUrl } from '../utils/apiConfig';

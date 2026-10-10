@@ -7,8 +7,8 @@ import {
   ChevronDown, X, HelpCircle, FileText
 } from 'lucide-react';
 import logo from "../assets/logo.png";
-import { useTheme } from '../context/ThemeContext';
-import { useSiteStore } from '../context/SiteContext';
+import { useTheme } from '../hooks/useTheme';
+import { useSiteStore } from '../hooks/useSiteStore';
 import { bmsService } from '../services/bmsService';
 import { normalizeList } from '../services/apiClient';
 

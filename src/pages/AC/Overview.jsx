@@ -6,8 +6,8 @@ import {
   CheckCircle, Check, X, ChevronDown, ChevronUp, ChevronRight, Cpu, Gauge, RefreshCw, Sliders, UserCheck, User,
   Wifi, Radio, Calendar, List, Hand, Maximize2, Sparkles
 } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
-import { useSiteStore } from '../../context/SiteContext';
+import { useTheme } from '../../hooks/useTheme';
+import { useSiteStore } from '../../hooks/useSiteStore';
 import { useNavigate } from 'react-router-dom';
 import apiClient, { normalizeList } from '../../services/apiClient';
 import { getDeviceTemplateSettings, extractTelemetryValue } from '../../utils/telemetryMatcher';

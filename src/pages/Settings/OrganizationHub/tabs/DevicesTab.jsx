@@ -4,7 +4,7 @@ import { Search, Cpu, Zap, Edit3, RefreshCw, Activity, Sliders, Shield, FileText
 import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
 import CommonFilterPopover from '../../../../components/common/CommonFilterPopover';
 import { DEVICE_CATEGORIES, formatCategoryLabel } from '../../../../constants/deviceTemplates';
-import { useSiteStore } from '../../../../context/SiteContext';
+import { useSiteStore } from '../../../../hooks/useSiteStore';
 
 const DevicesTab = ({
   searchTerm = '',

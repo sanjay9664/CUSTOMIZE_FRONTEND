@@ -100,7 +100,7 @@ const PlaceholderPage = ({ title }) => (
 );
 
 
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 // Protected Route Guard for Role-based Access Control & Permission Guarding
 const ProtectedRoute = ({ allowedRoles, requiredPermission, children }) => {

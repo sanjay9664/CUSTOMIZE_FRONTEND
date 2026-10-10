@@ -11,7 +11,7 @@ import PasswordInput from '../components/PasswordInput';
 import { setAuthCookies, setAuthSession } from '../utils/cookieUtils';
 import { startAutoTokenRefresh } from '../services/authRefreshService';
 import { AUTH_ENDPOINTS } from '../utils/apiConfig';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import logo from "../assets/logo.png";
 import heroImg from "./scada_hero.png";
 
@@ -286,7 +286,10 @@ const Login = () => {
       storeSessionAndRedirect(result.data);
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Invalid username/email or password');
+      const errorMsg = typeof err === 'string' 
+        ? err 
+        : (err?.message || err?.error?.message || (typeof err?.error === 'string' ? err.error : null) || 'Invalid email or password');
+      setError(errorMsg);
       setLoading(false);
     }
   };
@@ -312,11 +315,21 @@ const Login = () => {
         const data = await response.json();
         storeSessionAndRedirect(data);
       } else {
-        setError(`${provider} authentication failed.`);
+        if (response.status >= 500) {
+          setError('Technical issue. Please contact the team.');
+        } else {
+          let errData = null;
+          try { errData = await response.json(); } catch {}
+          const msg = errData?.error?.message 
+            || (typeof errData?.error === 'string' ? errData.error : null) 
+            || errData?.message 
+            || `${provider} authentication failed.`;
+          setError(msg);
+        }
         setLoading(false);
       }
     } catch (err) {
-      setError(`Unable to connect to ${provider} OAuth gateway.`);
+      setError('Technical issue. Please contact the team.');
       setLoading(false);
     }
   };
@@ -447,14 +460,14 @@ const Login = () => {
 
             {/* ALERTS */}
             {error && (
-                <Alert variant="danger" className="border-0 bg-red-glass text-red-glow fs-12 uppercase fw-bold mb-4 rounded-3 p-3 d-flex align-items-center gap-2 position-relative z-10">
-                   <Shield size={18} className="flex-shrink-0" /> <div>{error}</div>
+                <Alert variant="danger" className="border-0 bg-red-glass text-red-glow fs-13 fw-semibold mb-4 rounded-3 p-3 d-flex align-items-center gap-2 position-relative z-10">
+                   <Shield size={18} className="flex-shrink-0 text-danger" /> <div>{error}</div>
                 </Alert>
             )}
 
             {successMsg && (
-                <Alert variant="success" className="border-0 bg-green-glass text-green-glow fs-12 uppercase fw-bold mb-4 rounded-3 p-3 d-flex align-items-center gap-2 position-relative z-10">
-                   <CheckCircle2 size={18} className="flex-shrink-0" /> <div>{successMsg}</div>
+                <Alert variant="success" className="border-0 bg-green-glass text-green-glow fs-13 fw-semibold mb-4 rounded-3 p-3 d-flex align-items-center gap-2 position-relative z-10">
+                   <CheckCircle2 size={18} className="flex-shrink-0 text-success" /> <div>{successMsg}</div>
                 </Alert>
             )}
 
