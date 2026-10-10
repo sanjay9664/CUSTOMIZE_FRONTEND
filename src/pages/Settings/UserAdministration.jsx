@@ -11,7 +11,7 @@ import {
 import { getApiUrl } from '../../utils/apiConfig';
 import { getAuthToken } from '../../utils/cookieUtils';
 import bmsService from '../../services/bmsService';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const API_BASE_URL = getApiUrl();
 

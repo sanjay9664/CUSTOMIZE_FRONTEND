@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import auth from './authSlice.js';
 import theme from './themeSlice.js';
 import deviceStatus from './deviceStatusSlice.js';
+import site from './siteSlice.js';
 
 // Redact sensitive credentials from Redux DevTools inspection in development
 const actionSanitizer = (action) => {
@@ -62,7 +63,8 @@ export const store = configureStore({
   reducer: {
     auth,
     theme,
-    deviceStatus
+    deviceStatus,
+    site
   },
   // Strictly disable DevTools in production builds; sanitize trace & actions in dev
   devTools: isDev

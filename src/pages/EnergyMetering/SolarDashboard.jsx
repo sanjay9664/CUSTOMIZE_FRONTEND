@@ -16,7 +16,7 @@ import {
   Layers,
   AlertTriangle
 } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../hooks/useTheme';
 
 // --- CUSTOM SCADA SVG ICONS ---
 const GridIconBig = () => (

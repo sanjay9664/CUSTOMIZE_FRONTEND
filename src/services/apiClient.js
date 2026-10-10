@@ -4,6 +4,7 @@
  */
 import { getAuthToken } from '../utils/cookieUtils.js';
 import { getApiUrl } from '../utils/apiConfig.js';
+import { performTokenRefresh } from './authRefreshService.js';
 
 export class ApiError extends Error {
   constructor(message, status = 500, code = 'INTERNAL_ERROR', data = null) {
@@ -67,6 +68,33 @@ async function executeRequest(endpoint, options = {}) {
     res = await fetch(url, config);
   } catch (err) {
     throw new ApiError('Network error or backend service unreachable', 0, 'NETWORK_ERROR');
+  }
+
+  // Auto-refresh token and retry request once on 401 for non-auth endpoints
+  if (
+    res.status === 401 &&
+    !options._isRetry &&
+    !endpoint.includes('/auth/login') &&
+    !endpoint.includes('/auth/refresh') &&
+    !endpoint.includes('/auth/logout')
+  ) {
+    try {
+      const newToken = await performTokenRefresh(true);
+      if (newToken) {
+        const retryHeaders = {
+          ...headers,
+          'Authorization': `Bearer ${newToken}`
+        };
+        const retryRes = await fetch(url, {
+          ...options,
+          headers: retryHeaders,
+          credentials: 'include'
+        });
+        return retryRes;
+      }
+    } catch (refreshErr) {
+      console.warn('[apiClient] Auto-refresh on 401 failed:', refreshErr);
+    }
   }
 
   return res;

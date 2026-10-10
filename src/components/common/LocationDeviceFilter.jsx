@@ -13,7 +13,7 @@ import {
   fetchUserLocationHierarchy,
   fetchEntityHierarchy
 } from '../../services/sochiotLocationService';
-import { useLocationScope } from '../../context/SiteContext';
+import { useLocationScope } from '../../hooks/useSiteStore';
 import { parseApiError } from '../../utils/errorHandler';
 
 /**

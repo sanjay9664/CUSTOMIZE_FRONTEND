@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Form, Button } from 'react-bootstrap';
 import { Clock, Calendar as CalendarIcon, Settings, Plus, Trash2, Thermometer, Power } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../hooks/useTheme';
 
 const DAYS_OF_WEEK = [
   { id: 'monday', label: 'Monday' },

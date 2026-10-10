@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge, FileText } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { useSiteStore } from '../context/SiteContext';
+import { useSiteStore } from '../hooks/useSiteStore';
 
 const MODULE_HEADER_CONFIG = [
   { match: /^\/energy-metering(?:\/|$)/, title: 'Energy Metering', icon: Zap },

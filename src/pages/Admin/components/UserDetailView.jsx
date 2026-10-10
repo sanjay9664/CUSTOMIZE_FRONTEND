@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Modal, Button, Spinner, Alert } from 'react-bootstrap';
 import { ArrowLeft, User, Pencil, Trash2, AlertTriangle, Check, RefreshCw } from 'lucide-react';
 import { bmsService } from '../../../services/bmsService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { isUserActive, deriveUserType, deriveRoleName } from '../../../utils/userUtils';
 
 /**

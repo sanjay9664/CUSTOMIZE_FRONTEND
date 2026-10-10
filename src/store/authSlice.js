@@ -58,9 +58,32 @@ export const login = createAsyncThunk('auth/login', async ({ identifier, passwor
       credentials: 'include',
       body: JSON.stringify(payload)
     });
-    const result = await response.json();
+
+    let result = null;
+    try {
+      result = await response.json();
+    } catch {
+      result = null;
+    }
+
     if (!response.ok) {
-      return rejectWithValue(result?.error?.message || result?.message || 'Invalid username/email or password');
+      if (response.status >= 500) {
+        return rejectWithValue('Technical issue. Please contact the team.');
+      }
+      const msg = result?.error?.message 
+        || (typeof result?.error === 'string' ? result.error : null) 
+        || result?.message 
+        || result?.error?.code 
+        || 'Invalid email or password';
+      return rejectWithValue(msg);
+    }
+
+    if (result && result.success === false) {
+      const msg = result?.error?.message 
+        || (typeof result?.error === 'string' ? result.error : null) 
+        || result?.message 
+        || 'Invalid email or password';
+      return rejectWithValue(msg);
     }
 
     const data = result?.data?.data || result?.data || result;
@@ -77,14 +100,15 @@ export const login = createAsyncThunk('auth/login', async ({ identifier, passwor
 
     return { user, userRole, data };
   } catch (err) {
-    return rejectWithValue(`Unable to connect to authentication server at ${AUTH_ENDPOINTS.login}.`);
+    return rejectWithValue('Technical issue. Please contact the team.');
   }
 });
 
 const initialState = {
   ...getSafeSession(),
   'Sochiot-accesstoken': typeof localStorage !== 'undefined' ? localStorage.getItem('Sochiot-accesstoken') : null,
-  isLoading: true,
+  isBootstrapping: true,
+  isLoading: false,
   error: null
 };
 
@@ -130,17 +154,19 @@ const slice = createSlice({
       state.userRole = 'USER';
       state.error = null;
       state.isLoading = false;
+      state.isBootstrapping = false;
     }
   },
   extraReducers: (builder) => {
     builder
       .addCase(bootstrapAuth.pending, (state) => {
-        state.isLoading = true;
+        state.isBootstrapping = true;
       })
       .addCase(bootstrapAuth.fulfilled, (state, action) => {
         state.isAuthenticated = Boolean(action.payload?.isAuthenticated);
         state.user = action.payload?.user || null;
         state.userRole = action.payload?.userRole || 'USER';
+        state.isBootstrapping = false;
         state.isLoading = false;
         state.error = null;
       })
@@ -149,6 +175,7 @@ const slice = createSlice({
         state.isAuthenticated = current.isAuthenticated;
         state.user = current.user;
         state.userRole = current.userRole;
+        state.isBootstrapping = false;
         state.isLoading = false;
       })
       .addCase(login.pending, (state) => {
@@ -162,11 +189,10 @@ const slice = createSlice({
         state.isLoading = false;
         state.error = null;
         startAutoTokenRefresh();
-        // NOTE: action.payload.data (containing raw JWT tokens) is intentionally NOT stored on state to prevent XSS exposure
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = typeof action.payload === 'string' ? action.payload : 'Login failed';
+        state.error = typeof action.payload === 'string' ? action.payload : (action.payload?.message || 'Login failed');
       });
   }
 });
