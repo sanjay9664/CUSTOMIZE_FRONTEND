@@ -1,29 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Thermometer, Wind, Snowflake, Flame, ClipboardList, Wrench, History, LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge, FileText } from 'lucide-react';
+import { 
+  Thermometer, Wind, Snowflake, ShieldAlert, ClipboardList, Wrench, History, 
+  LifeBuoy, Droplets, Activity, Bell, LayoutDashboard, Zap, Gauge, FileText, 
+  Database, Leaf, Sliders, Users 
+} from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useSiteStore } from '../context/SiteContext';
 
 const MODULE_HEADER_CONFIG = [
+  { match: /^\/dashboard(?:\/|$)|^\/$/, title: 'Dashboard', icon: LayoutDashboard },
   { match: /^\/energy-metering(?:\/|$)/, title: 'Energy Metering', icon: Zap },
-  { match: /^\/dg-set(?:\/|$)/, title: 'DG Set', icon: Activity },
-  { match: /^\/water-management(?:\/|$)/, title: 'Water Management', icon: Droplets },
-  { match: /^\/motors(?:\/|$)/, title: 'Motors', icon: Activity },
-  { match: /^\/daily-dpr(?:\/|$)/, title: 'Daily DPR', icon: Gauge },
-  { match: /^\/audit-logs(?:\/|$)|^\/admin\/audit-logs(?:\/|$)/, title: 'Audit Log', icon: FileText },
+  { match: /^\/dg-set(?:\/|$)/, title: 'DG Set', icon: Database },
   { match: /^\/lt-panel(?:\/|$)/, title: 'LT Panel', icon: LayoutDashboard },
   { match: /^\/transformer(?:\/|$)/, title: 'Transformer', icon: Zap },
   { match: /^\/hvac(?:\/|$)|^\/ahu$|^\/cooling-tower$/, title: 'HVAC', icon: Thermometer },
   { match: /^\/VRV(?:\/|$)/i, title: 'VRV', icon: Wind },
   { match: /^\/ac(?:\/|$)/i, title: 'AC', icon: Snowflake },
+  { match: /^\/aqi-sensor(?:\/|$)/, title: 'AQI Sensor', icon: Leaf },
+  { match: /^\/water-management(?:\/|$)/, title: 'Water Management', icon: Droplets },
+  { match: /^\/motors(?:\/|$)/, title: 'Motors', icon: Activity },
+  { match: /^\/fire-pumps(?:\/|$)|^\/acms(?:\/|$)/, title: 'ACMS', icon: ShieldAlert },
   { match: /^\/alarm-system(?:\/|$)/, title: 'Alarm System', icon: Bell },
-  { match: /^\/fire-pumps(?:\/|$)/, title: 'Fire', icon: Flame },
   { match: /^\/ticketing(?:\/|$)/, title: 'Ticketing', icon: ClipboardList },
   { match: /^\/maintenance(?:\/|$)/, title: 'Maintenance', icon: Wrench },
   { match: /^\/service(?:\/|$)/, title: 'Service History', icon: History },
+  { match: /^\/daily-dpr(?:\/|$)|^\/dpr(?:\/|$)/, title: 'Daily DPR', icon: Gauge },
+  { match: /^\/audit-logs(?:\/|$)|^\/admin\/audit-logs(?:\/|$)/, title: 'Audit Log', icon: FileText },
+  { match: /^\/settings(?:\/|$)|^\/global-settings(?:\/|$)|^\/asset-management(?:\/|$)|^\/device-management(?:\/|$)|^\/manage-organisation(?:\/|$)/, title: 'Settings', icon: Sliders },
+  { match: /^\/admin\/manage-users(?:\/|$)/, title: 'User Management', icon: Users },
   { match: /^\/help(?:\/|$)/, title: 'Help', icon: LifeBuoy },
-  { match: /^\/aqi-sensor(?:\/|$)/, title: 'AQI Sensor', icon: Wind },
 ];
 
 const MainLayout = ({ children }) => {
@@ -88,7 +95,8 @@ const MainLayout = ({ children }) => {
 
   const isExpanded = !collapsed || sidebarHover;
   const sidebarWidth = isExpanded ? '270px' : '64px';
-  const moduleHeader = MODULE_HEADER_CONFIG.find(({ match }) => match.test(pathname));
+  const matchedHeader = MODULE_HEADER_CONFIG.find(({ match }) => match.test(pathname));
+  const moduleHeader = matchedHeader || { title: 'BMS SCADA', icon: LayoutDashboard };
   const ModuleIcon = moduleHeader?.icon;
   const currentSite = selectedSite || activeSites?.[0] || null;
 
