@@ -10,7 +10,8 @@ import {
   Maximize2,
   X,
   LayoutDashboard,
-  FileText
+  FileText,
+  Calendar
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import { useSiteStore } from '../../hooks/useSiteStore';

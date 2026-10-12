@@ -421,77 +421,77 @@ body.light-mode .page-context-banner.variant-teal,
 [data-theme="light"] .page-context-banner.variant-teal,
 body.light-mode .page-context-banner.variant-scada,
 [data-theme="light"] .page-context-banner.variant-scada {
-  background: linear-gradient(90deg, #f7f6f0 0%, #edebe4 50%, #f7f6f0 100%) !important;
-  border: 1px solid #dcd8cd !important;
-  box-shadow: 0 4px 16px rgba(28, 25, 23, 0.05) !important;
-  color: #1c1917 !important;
+  background: var(--surface, #FFFFFF) !important;
+  border: 1px solid var(--border, #D5DEE5) !important;
+  box-shadow: 0 1px 3px rgba(16, 63, 115, 0.05) !important;
+  color: var(--text-primary, #102A43) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-title,
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-title,
 body.light-mode .page-context-banner.variant-scada .context-banner-title,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-title {
-  color: #1c1917 !important;
+  color: var(--heading, #103F73) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-subtitle,
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-subtitle,
 body.light-mode .page-context-banner.variant-scada .context-banner-subtitle,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-subtitle {
-  color: #44403c !important;
+  color: var(--text-secondary, #526779) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-select,
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-select,
 body.light-mode .page-context-banner.variant-scada .context-banner-select,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-select {
-  background: #ffffff !important;
-  border-color: #dcd8cd !important;
-  color: #1c1917 !important;
-  box-shadow: 0 1px 3px rgba(28, 25, 23, 0.05) !important;
+  background: var(--surface, #FFFFFF) !important;
+  border-color: var(--border, #D5DEE5) !important;
+  color: var(--text-primary, #102A43) !important;
+  box-shadow: 0 1px 2px rgba(16, 63, 115, 0.04) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-select:hover,
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-select:hover,
 body.light-mode .page-context-banner.variant-scada .context-banner-select:hover,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-select:hover {
-  background: #ffffff !important;
-  border-color: #0284c7 !important;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15) !important;
+  background: var(--surface, #FFFFFF) !important;
+  border-color: var(--primary, #069FF0) !important;
+  box-shadow: 0 2px 8px rgba(6, 159, 240, 0.15) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-select-arrow,
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-select-arrow,
 body.light-mode .page-context-banner.variant-scada .context-banner-select-arrow,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-select-arrow {
-  color: #0284c7 !important;
+  color: var(--primary, #069FF0) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-meta-pill,
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-meta-pill,
 body.light-mode .page-context-banner.variant-scada .context-banner-meta-pill,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-meta-pill {
-  background: #ffffff !important;
-  border-color: #dcd8cd !important;
-  color: #1c1917 !important;
+  background: var(--surface, #FFFFFF) !important;
+  border-color: var(--border, #D5DEE5) !important;
+  color: var(--text-primary, #102A43) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-action-btn,
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-action-btn,
 body.light-mode .page-context-banner.variant-scada .context-banner-action-btn,
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-action-btn {
-  background: #ffffff !important;
-  border-color: #dcd8cd !important;
-  color: #1c1917 !important;
+  background: var(--surface, #FFFFFF) !important;
+  border-color: var(--border, #D5DEE5) !important;
+  color: var(--text-primary, #102A43) !important;
 }
 
 body.light-mode .page-context-banner.variant-teal .context-banner-action-btn:hover:not(:disabled),
 [data-theme="light"] .page-context-banner.variant-teal .context-banner-action-btn:hover:not(:disabled),
 body.light-mode .page-context-banner.variant-scada .context-banner-action-btn:hover:not(:disabled),
 [data-theme="light"] .page-context-banner.variant-scada .context-banner-action-btn:hover:not(:disabled) {
-  background: #f4f2eb !important;
-  border-color: #0284c7 !important;
-  color: #0369a1 !important;
+  background: var(--surface-secondary, #F7FAFD) !important;
+  border-color: var(--primary, #069FF0) !important;
+  color: var(--primary-hover, #168CE0) !important;
 }
 
 body.light-mode .context-banner-option,

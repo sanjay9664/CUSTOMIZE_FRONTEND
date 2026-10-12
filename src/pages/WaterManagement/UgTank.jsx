@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Row, Col, Card, Button, Alert } from 'react-bootstrap';
 import { RefreshCw, Layers, Cpu } from 'lucide-react';
+import PageContextBanner from '../../components/PageContextBanner';
+import PdfButton from '../../components/PdfButton';
 import { useSiteStore } from '../../hooks/useSiteStore';
 import bmsService from '../../services/bmsService';
 import { apiClient, normalizeList } from '../../services/apiClient';
