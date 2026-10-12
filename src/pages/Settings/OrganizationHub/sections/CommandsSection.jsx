@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Button, Card, Badge, Row, Col } from 'react-bootstrap';
 import { Terminal, Plus, Cpu, CheckCircle2, Activity, Sparkles, Eye, Zap, FileText } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const CommandsSection = ({
   setShowSendCommandModal = () => {},
@@ -12,6 +13,7 @@ const CommandsSection = ({
   handleOpenCommandDetails = () => {},
   setSendCommandFormData = () => {}
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeDevices = Array.isArray(activeDevices) ? activeDevices : [];
   const safeCommands = Array.isArray(commandsList) ? commandsList : [];
 
@@ -36,9 +38,11 @@ const CommandsSection = ({
             </div>
           </div>
           <div className="d-flex flex-wrap align-items-center gap-2">
-            <Button variant="info" size="md" onClick={() => setShowSendCommandModal(true)} className="fw-bold text-dark rounded-3 d-flex align-items-center gap-2 shadow-lg px-4 py-2" style={{ background: 'linear-gradient(135deg, #38bdf8, #0284c7)', border: 'none', boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)' }}>
-              <Plus size={18} /> Dispatch Hardware Command <Badge bg="dark" className="text-info fs-11 ms-1 font-monospace">POST /commands</Badge>
-            </Button>
+            {isSuperAdmin && (
+              <Button variant="info" size="md" onClick={() => setShowSendCommandModal(true)} className="fw-bold text-dark rounded-3 d-flex align-items-center gap-2 shadow-lg px-4 py-2" style={{ background: 'linear-gradient(135deg, #38bdf8, #0284c7)', border: 'none', boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)' }}>
+                <Plus size={18} /> Dispatch Hardware Command <Badge bg="dark" className="text-info fs-11 ms-1 font-monospace">POST /commands</Badge>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -102,13 +106,13 @@ const CommandsSection = ({
               <th className="py-3 px-3">PAYLOAD VALUE</th>
               <th className="py-3 px-3">EXECUTION STATUS</th>
               <th className="py-3 px-3">TIMESTAMP</th>
-              <th className="py-3 px-3 text-end">ACTIONS</th>
+              {isSuperAdmin && <th className="py-3 px-3 text-end">ACTIONS</th>}
             </tr>
           </thead>
           <tbody>
             {safeCommands.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-5 text-slate-400">
+                <td colSpan={isSuperAdmin ? 5 : 4} className="text-center py-5 text-slate-400">
                   <Terminal size={32} className="mb-2 text-info opacity-50" />
                   <div>No hardware command dispatch history for this device</div>
                 </td>
@@ -130,17 +134,19 @@ const CommandsSection = ({
                 <td className="py-3 px-3 text-slate-400 fs-12 font-monospace">
                   {cmd.sentAt ? new Date(cmd.sentAt).toLocaleTimeString() : 'Just Now'}
                 </td>
-                <td className="py-3 px-3 text-end">
-                  <Button
-                    size="sm"
-                    variant="outline-info"
-                    onClick={() => handleOpenCommandDetails(cmd)}
-                    title="Inspect Command Payload Specs"
-                    className="p-1 border-0 rounded-circle text-info"
-                  >
-                    <Eye size={15} />
-                  </Button>
-                </td>
+                {isSuperAdmin && (
+                  <td className="py-3 px-3 text-end">
+                    <Button
+                      size="sm"
+                      variant="outline-info"
+                      onClick={() => handleOpenCommandDetails(cmd)}
+                      title="Inspect Command Payload Specs"
+                      className="p-1 border-0 rounded-circle text-info"
+                    >
+                      <Eye size={15} />
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

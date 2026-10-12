@@ -12,6 +12,7 @@ import {
 import { getAuthToken } from '../../utils/cookieUtils';
 import { getApiUrl } from '../../utils/apiConfig';
 import { useSiteStore } from '../../hooks/useSiteStore';
+import { useAuth } from '../../hooks/useAuth';
 import RegisterSiteModal from './modals/RegisterSiteModal';
 import SiteInspectorDrawer from './modals/SiteInspectorDrawer';
 
@@ -44,6 +45,9 @@ const normalizeList = (raw, key) => {
 
 const SiteManagement = ({ embedded = false }) => {
   const navigate = useNavigate();
+  const { isSuperAdmin, hasPermission } = useAuth();
+  const canManageSite = isSuperAdmin;
+
   const {
     sites,
     setSites,
@@ -1184,16 +1188,18 @@ const SiteManagement = ({ embedded = false }) => {
               </button>
             </OverlayTrigger>
 
-            <button
-              type="button"
-              className="btn-create-site-primary"
-              onClick={() => {
-                setCreateModalError(null);
-                setShowCreateModal(true);
-              }}
-            >
-              <Plus size={18} /> Create Site
-            </button>
+            {canManageSite && (
+              <button
+                type="button"
+                className="btn-create-site-primary"
+                onClick={() => {
+                  setCreateModalError(null);
+                  setShowCreateModal(true);
+                }}
+              >
+                <Plus size={18} /> Create Site
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1403,7 +1409,7 @@ const SiteManagement = ({ embedded = false }) => {
                 <List size={16} />
               </button>
 
-              {embedded && (
+              {embedded && canManageSite && (
                 <button
                   type="button"
                   className="btn-create-site-primary ms-1"
@@ -1565,20 +1571,30 @@ const SiteManagement = ({ embedded = false }) => {
                       </div>
 
                       {/* Operational Status Badge with Visual Dot */}
-                      <OverlayTrigger
-                        placement="top"
-                        overlay={<Tooltip>{isEnabled ? 'Operational. Click to Disable.' : 'Disabled. Click to Enable.'}</Tooltip>}
-                      >
-                        <button
-                          type="button"
+                      {canManageSite ? (
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={<Tooltip>{isEnabled ? 'Operational. Click to Disable.' : 'Disabled. Click to Enable.'}</Tooltip>}
+                        >
+                          <button
+                            type="button"
+                            className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'} flex-shrink-0`}
+                            onClick={(e) => handleToggleSiteStatus(site, e)}
+                            aria-label={isEnabled ? 'Site is active. Click to disable' : 'Site is disabled. Click to enable'}
+                          >
+                            <span className={`status-dot-indicator ${isEnabled ? 'online' : 'offline'}`} />
+                            {isEnabled ? 'ACTIVE' : 'INACTIVE'}
+                          </button>
+                        </OverlayTrigger>
+                      ) : (
+                        <div
                           className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'} flex-shrink-0`}
-                          onClick={(e) => handleToggleSiteStatus(site, e)}
-                          aria-label={isEnabled ? 'Site is active. Click to disable' : 'Site is disabled. Click to enable'}
+                          style={{ cursor: 'default' }}
                         >
                           <span className={`status-dot-indicator ${isEnabled ? 'online' : 'offline'}`} />
                           {isEnabled ? 'ACTIVE' : 'INACTIVE'}
-                        </button>
-                      </OverlayTrigger>
+                        </div>
+                      )}
                     </div>
 
                     {/* Telemetry Metric Pills with clear icon & text gaps */}
@@ -1637,19 +1653,21 @@ const SiteManagement = ({ embedded = false }) => {
                     </div>
 
                     <div className="d-flex align-items-center gap-3">
-                      <OverlayTrigger placement="top" overlay={<Tooltip>Edit Site Configuration</Tooltip>}>
-                        <button
-                          type="button"
-                          className="touch-action-btn"
-                          aria-label={`Edit ${site.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEditModal(site);
-                          }}
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                      </OverlayTrigger>
+                      {canManageSite && (
+                        <OverlayTrigger placement="top" overlay={<Tooltip>Edit Site Configuration</Tooltip>}>
+                          <button
+                            type="button"
+                            className="touch-action-btn"
+                            aria-label={`Edit ${site.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditModal(site);
+                            }}
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        </OverlayTrigger>
+                      )}
 
                       <button
                         type="button"
@@ -1691,7 +1709,7 @@ const SiteManagement = ({ embedded = false }) => {
                 <th onClick={() => handleSort('energy')} style={{ cursor: 'pointer' }}>
                   Energy (kWh) {sortColumn === 'energy' ? (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />) : <ArrowUpDown size={13} className="opacity-50" />}
                 </th>
-                <th className="text-end">Actions</th>
+                {canManageSite && <th className="text-end">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -1727,15 +1745,25 @@ const SiteManagement = ({ embedded = false }) => {
                       </div>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'}`}
-                        onClick={(e) => handleToggleSiteStatus(site, e)}
-                        style={{ minHeight: 28 }}
-                      >
-                        <span className={`status-dot-indicator ${isEnabled ? 'online' : 'offline'}`} />
-                        {isEnabled ? 'ACTIVE' : 'INACTIVE'}
-                      </button>
+                      {canManageSite ? (
+                        <button
+                          type="button"
+                          className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'}`}
+                          onClick={(e) => handleToggleSiteStatus(site, e)}
+                          style={{ minHeight: 28 }}
+                        >
+                          <span className={`status-dot-indicator ${isEnabled ? 'online' : 'offline'}`} />
+                          {isEnabled ? 'ACTIVE' : 'INACTIVE'}
+                        </button>
+                      ) : (
+                        <div
+                          className={`site-status-pill ${isEnabled ? 'is-active' : 'is-inactive'}`}
+                          style={{ minHeight: 28, cursor: 'default' }}
+                        >
+                          <span className={`status-dot-indicator ${isEnabled ? 'online' : 'offline'}`} />
+                          {isEnabled ? 'ACTIVE' : 'INACTIVE'}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <span
@@ -1770,28 +1798,30 @@ const SiteManagement = ({ embedded = false }) => {
                         {(Number(site.energyKwh) || 0).toLocaleString()}
                       </span>
                     </td>
-                    <td className="text-end" onClick={e => e.stopPropagation()}>
-                      <div className="d-flex align-items-center justify-content-end gap-1.5">
-                        <button
-                          type="button"
-                          className="touch-action-btn"
-                          aria-label={`Inspect ${site.name}`}
-                          title="Inspect Details"
-                          onClick={() => handleViewSite(site)}
-                        >
-                          <Eye size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="touch-action-btn"
-                          aria-label={`Edit ${site.name}`}
-                          title="Edit Configuration"
-                          onClick={() => handleOpenEditModal(site)}
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                      </div>
-                    </td>
+                    {canManageSite && (
+                      <td className="text-end" onClick={e => e.stopPropagation()}>
+                        <div className="d-flex align-items-center justify-content-end gap-1.5">
+                          <button
+                            type="button"
+                            className="touch-action-btn"
+                            aria-label={`Inspect ${site.name}`}
+                            title="Inspect Details"
+                            onClick={() => handleViewSite(site)}
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="touch-action-btn"
+                            aria-label={`Edit ${site.name}`}
+                            title="Edit Configuration"
+                            onClick={() => handleOpenEditModal(site)}
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

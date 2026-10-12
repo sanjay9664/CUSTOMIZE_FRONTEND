@@ -25,6 +25,27 @@ const getSafeSession = () => {
   }
 };
 
+import { bmsService } from '../services/bmsService.js';
+
+export const fetchCurrentUser = createAsyncThunk('auth/fetchCurrentUser', async (_, { rejectWithValue }) => {
+  try {
+    const res = await bmsService.getCurrentUser();
+    const profile = res?.data?.data || res?.data || res;
+    if (!profile) return rejectWithValue('No user profile received');
+    const cleanUser = sanitizeUserData(profile);
+    const userRole = cleanUser.role || 'USER';
+    setAuthSession({
+      token: getAuthToken() || '',
+      refreshToken: getRefreshToken() || '',
+      userRole,
+      userData: cleanUser
+    });
+    return { user: cleanUser, userRole };
+  } catch (err) {
+    return rejectWithValue(err?.message || 'Failed to fetch current user profile');
+  }
+});
+
 export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
   const token = getAuthToken();
   const refreshToken = getRefreshToken();
@@ -33,9 +54,31 @@ export const bootstrapAuth = createAsyncThunk('auth/bootstrap', async () => {
       await performTokenRefresh();
     }
   }
-  const session = getSafeSession();
+  let session = getSafeSession();
   if (session.isAuthenticated) {
     startAutoTokenRefresh();
+    try {
+      // Fetch fresh profile and dynamic permissions directly from /api/v1/auth/me
+      const profileRes = await bmsService.getCurrentUser();
+      const profile = profileRes?.data?.data || profileRes?.data || profileRes;
+      if (profile && (profile.id || profile.email || profile.name)) {
+        const cleanUser = sanitizeUserData(profile);
+        const userRole = cleanUser.role || session.userRole || 'USER';
+        setAuthSession({
+          token: getAuthToken() || '',
+          refreshToken: getRefreshToken() || '',
+          userRole,
+          userData: cleanUser
+        });
+        session = {
+          isAuthenticated: true,
+          user: cleanUser,
+          userRole
+        };
+      }
+    } catch (e) {
+      console.warn('[authSlice] bootstrap /auth/me notice (using cached session):', e?.message);
+    }
   }
   return session;
 });
@@ -87,18 +130,37 @@ export const login = createAsyncThunk('auth/login', async ({ identifier, passwor
     }
 
     const data = result?.data?.data || result?.data || result;
-    const user = sanitizeUserData(data?.user) || {};
-    const userRole = user.role || 'ADMIN';
+    const initialUser = sanitizeUserData(data?.user) || {};
+    let finalUser = initialUser;
+    let finalRole = initialUser.role || 'ADMIN';
 
     // Persist securely to cookie, localStorage, & memory token session
     setAuthSession({
       token: data?.accessToken || data?.token || '',
       refreshToken: data?.refreshToken || '',
-      userRole,
-      userData: user
+      userRole: finalRole,
+      userData: initialUser
     });
 
-    return { user, userRole, data };
+    // Enrich immediately from /api/v1/auth/me to fetch resolvedPermissions, accessibleSites, scope & features
+    try {
+      const profileRes = await bmsService.getCurrentUser();
+      const profile = profileRes?.data?.data || profileRes?.data || profileRes;
+      if (profile && (profile.id || profile.email || profile.name)) {
+        finalUser = sanitizeUserData({ ...initialUser, ...profile });
+        finalRole = finalUser.role || finalRole;
+        setAuthSession({
+          token: data?.accessToken || data?.token || getAuthToken() || '',
+          refreshToken: data?.refreshToken || getRefreshToken() || '',
+          userRole: finalRole,
+          userData: finalUser
+        });
+      }
+    } catch (profileErr) {
+      console.warn('[authSlice] login /auth/me enrichment deferred:', profileErr?.message);
+    }
+
+    return { user: finalUser, userRole: finalRole, data };
   } catch (err) {
     return rejectWithValue('Technical issue. Please contact the team.');
   }
@@ -193,10 +255,19 @@ const slice = createSlice({
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.error = typeof action.payload === 'string' ? action.payload : (action.payload?.message || 'Login failed');
+      })
+      .addCase(fetchCurrentUser.fulfilled, (state, action) => {
+        state.user = action.payload?.user || state.user;
+        state.userRole = action.payload?.userRole || state.userRole;
       });
   }
 });
 
 export const { syncAuth, setSession, logout, setSochiotAccessToken } = slice.actions;
 export const selectSochiotAccessToken = (state) => state.auth?.['Sochiot-accesstoken'] || (typeof localStorage !== 'undefined' ? localStorage.getItem('Sochiot-accesstoken') : null);
+export const selectCurrentUser = (state) => state.auth?.user;
+export const selectUserPermissions = (state) => state.auth?.user?.permissions || state.auth?.user?.resolvedPermissions || state.auth?.user?.authorities || [];
+export const selectUserFeatures = (state) => state.auth?.user?.features || {};
+export const selectAccessibleSites = (state) => state.auth?.user?.accessibleSites || [];
+export const selectUserScope = (state) => state.auth?.user?.scope || null;
 export default slice.reducer;

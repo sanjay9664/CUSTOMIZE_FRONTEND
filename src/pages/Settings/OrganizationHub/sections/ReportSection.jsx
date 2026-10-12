@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Badge } from 'react-bootstrap';
 import { Radio, FileText, BellRing } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 import PdfButton from '../../../../components/PdfButton';
 import { generateUserCustomPdfReport } from '../../../../utils/pdfReportGenerator';
 import LocationDeviceFilter from '../../../../components/common/LocationDeviceFilter';
@@ -21,6 +22,7 @@ const ReportSection = ({
   setShowAlarmModal = () => {},
   alarmsList = []
 }) => {
+  const { isSuperAdmin } = useAuth();
   const [selectedLocationFilter, setSelectedLocationFilter] = useState(null);
   const [selectedDeviceFilter, setSelectedDeviceFilter] = useState(null);
 
@@ -45,9 +47,11 @@ const ReportSection = ({
             <h5 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
               <Radio className="text-success" /> Live &amp; Historical Sensor Telemetry Resync
             </h5>
-            <Button variant="success" size="sm" onClick={() => setShowResyncModal(true)} className="fw-semibold text-white px-3">
-              <Radio size={15} /> Resync Telemetry Data
-            </Button>
+            {isSuperAdmin && (
+              <Button variant="success" size="sm" onClick={() => setShowResyncModal(true)} className="fw-semibold text-white px-3">
+                <Radio size={15} /> Resync Telemetry Data
+              </Button>
+            )}
           </div>
           <div className="table-responsive">
             <table className="table table-custom mb-0">
@@ -117,9 +121,11 @@ const ReportSection = ({
                 title="Download Executive Report"
                 buttonText="Export PDF Report"
               />
-              <Button variant="info" size="sm" onClick={() => setShowReportModal(true)} className="fw-semibold text-dark px-3">
-                <FileText size={15} /> Generate Async Report
-              </Button>
+              {isSuperAdmin && (
+                <Button variant="info" size="sm" onClick={() => setShowReportModal(true)} className="fw-semibold text-dark px-3">
+                  <FileText size={15} /> Generate Async Report
+                </Button>
+              )}
             </div>
           </div>
           <div className="table-responsive">
@@ -166,9 +172,11 @@ const ReportSection = ({
             <h5 className="fw-bold text-white mb-0 d-flex align-items-center gap-2">
               <BellRing className="text-warning" /> SCADA Alarm Events &amp; Threshold Excursions
             </h5>
-            <Button variant="warning" size="sm" onClick={() => setShowAlarmModal(true)} className="fw-semibold text-dark px-3">
-              <BellRing size={15} /> Trigger Alarm Event
-            </Button>
+            {isSuperAdmin && (
+              <Button variant="warning" size="sm" onClick={() => setShowAlarmModal(true)} className="fw-semibold text-dark px-3">
+                <BellRing size={15} /> Trigger Alarm Event
+              </Button>
+            )}
           </div>
           <div className="table-responsive">
             <table className="table table-custom mb-0">

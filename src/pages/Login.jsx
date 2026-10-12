@@ -12,6 +12,7 @@ import { setAuthCookies, setAuthSession } from '../utils/cookieUtils';
 import { startAutoTokenRefresh } from '../services/authRefreshService';
 import { AUTH_ENDPOINTS } from '../utils/apiConfig';
 import { useAuth } from '../hooks/useAuth';
+import { getDefaultLandingRoute } from '../utils/rbac';
 import logo from "../assets/logo.png";
 import heroImg from "./scada_hero.png";
 
@@ -260,7 +261,8 @@ const Login = () => {
     window.dispatchEvent(new Event('storage-update'));
     setLoading(false);
 
-    navigate('/dashboard', { replace: true });
+    const targetRoute = getDefaultLandingRoute(userData);
+    navigate(targetRoute, { replace: true });
   };
 
   // ── HANDLE LOGIN (Username or Email) ──────────────────────────────────────

@@ -4,6 +4,7 @@ import {
   Building, Building2, Layers, Edit3, Trash2, Mail, Phone,
   MapPin, Activity, Calendar, Settings, ShieldCheck, Zap
 } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const OrganizationSection = ({
   activeTab,
@@ -20,13 +21,16 @@ const OrganizationSection = ({
   handleReactivateTenant = () => {},
   handleDeleteTenant = () => {}
 }) => {
+  const { isSuperAdmin } = useAuth();
+  const canManageTenant = isSuperAdmin;
+
   const safeCompanies = Array.isArray(filteredCompanies) ? filteredCompanies : [];
   const safeTenants = Array.isArray(filteredTenants) ? filteredTenants : [];
 
   return (
     <div className="p-3 p-md-4">
       {/* TAB 1: COMPANY MANAGEMENT */}
-      {activeTab === 'company' && (
+      {activeTab === 'company' && isSuperAdmin && (
         <div className="table-responsive rounded-3">
           <table className="table table-custom mb-0 align-middle">
             <thead>
@@ -223,20 +227,22 @@ const OrganizationSection = ({
                     <span>SERVER HOST URL</span>
                   </div>
                 </th>
-                <th className="py-3 px-3 text-end">
-                  <div className="d-flex align-items-center justify-content-end gap-2">
-                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
-                      <Settings size={16} />
+                {canManageTenant && (
+                  <th className="py-3 px-3 text-end">
+                    <div className="d-flex align-items-center justify-content-end gap-2">
+                      <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                        <Settings size={16} />
+                      </div>
+                      <span>ACTIONS</span>
                     </div>
-                    <span>ACTIONS</span>
-                  </div>
-                </th>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {safeTenants.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-5 empty-text fw-semibold">No organizations found</td>
+                  <td colSpan={canManageTenant ? 6 : 5} className="text-center py-5 empty-text fw-semibold">No organizations found</td>
                 </tr>
               ) : safeTenants.map(tn => {
                 const parentCompany = (companies || []).find(c => c.id === tn.companyId);
@@ -277,41 +283,43 @@ const OrganizationSection = ({
                     <td className="py-3 px-3">
                       <span className="fs-13 text-body-secondary font-monospace">{tn.serverUrl || 'Default Gateway'}</span>
                     </td>
-                    <td className="py-3 px-3 text-end">
-                      <div className="d-flex align-items-center justify-content-end gap-2">
-                        <button
-                          onClick={() => handleOpenFeaturesModal(tn)}
-                          title="Configure Features & Modules"
-                          className="btn-action-round btn-action-view d-flex align-items-center justify-content-center border-0"
-                        >
-                          <Zap size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleOpenEditTenant(tn)}
-                          title="Edit Organization Details"
-                          className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        {isInactive ? (
+                    {canManageTenant && (
+                      <td className="py-3 px-3 text-end">
+                        <div className="d-flex align-items-center justify-content-end gap-2">
                           <button
-                            onClick={() => handleReactivateTenant(tn.id, tn.name)}
-                            title="Reactivate Organization"
-                            className="btn-action-round btn-action-view d-flex align-items-center justify-content-center border-0 text-success"
+                            onClick={() => handleOpenFeaturesModal(tn)}
+                            title="Configure Features & Modules"
+                            className="btn-action-round btn-action-view d-flex align-items-center justify-content-center border-0"
                           >
-                            <ShieldCheck size={15} />
+                            <Zap size={15} />
                           </button>
-                        ) : (
                           <button
-                            onClick={() => handleDeleteTenant(tn.id, tn.name)}
-                            title="Delete Organization"
-                            className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
+                            onClick={() => handleOpenEditTenant(tn)}
+                            title="Edit Organization Details"
+                            className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
                           >
-                            <Trash2 size={15} />
+                            <Edit3 size={15} />
                           </button>
-                        )}
-                      </div>
-                    </td>
+                          {isInactive ? (
+                            <button
+                              onClick={() => handleReactivateTenant(tn.id, tn.name)}
+                              title="Reactivate Organization"
+                              className="btn-action-round btn-action-view d-flex align-items-center justify-content-center border-0 text-success"
+                            >
+                              <ShieldCheck size={15} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteTenant(tn.id, tn.name)}
+                              title="Delete Organization"
+                              className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

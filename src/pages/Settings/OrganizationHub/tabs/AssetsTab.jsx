@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Badge } from 'react-bootstrap';
 import { Activity, Plus, Edit3, Trash2 } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const AssetsTab = ({
   assets = [],
@@ -10,6 +11,7 @@ const AssetsTab = ({
   onDelete,
   isAdmin
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeSearch = String(searchTerm || '').toLowerCase();
   const safeAssets = Array.isArray(assets) ? assets : [];
 
@@ -29,13 +31,13 @@ const AssetsTab = ({
             <th>Type</th>
             <th>Description</th>
             <th>Status</th>
-            <th className="text-end">Actions</th>
+            {isSuperAdmin && <th className="text-end">Actions</th>}
           </tr>
         </thead>
         <tbody>
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={5} className="text-center py-5 text-muted">
+              <td colSpan={isSuperAdmin ? 5 : 4} className="text-center py-5 text-muted">
                 <Activity size={36} className="mb-2 text-slate-500 opacity-50" />
                 <div>No assets found.</div>
               </td>
@@ -71,18 +73,20 @@ const AssetsTab = ({
                       {isInactive ? 'INACTIVE' : 'ACTIVE'}
                     </Badge>
                   </td>
-                  <td className="text-end">
-                    <div className="d-flex justify-content-end gap-1.5">
-                      <Button variant="outline-light" size="sm" title="Edit Asset" onClick={() => onOpenEdit(a)} className="py-1">
-                        <Edit3 size={13} />
-                      </Button>
-                      {isAdmin && (
-                        <Button variant="outline-danger" size="sm" title="Delete Asset" onClick={() => onDelete(a.id)} className="py-1">
-                          <Trash2 size={13} />
+                  {isSuperAdmin && (
+                    <td className="text-end">
+                      <div className="d-flex justify-content-end gap-1.5">
+                        <Button variant="outline-light" size="sm" title="Edit Asset" onClick={() => onOpenEdit(a)} className="py-1">
+                          <Edit3 size={13} />
                         </Button>
-                      )}
-                    </div>
-                  </td>
+                        {isAdmin && (
+                          <Button variant="outline-danger" size="sm" title="Delete Asset" onClick={() => onDelete(a.id)} className="py-1">
+                            <Trash2 size={13} />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })

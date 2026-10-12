@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dropdown } from 'react-bootstrap';
 import { Search, ChevronDown, Check, User, Shield, Calendar, Download, Plus, Building2, RefreshCw } from 'lucide-react';
+import { useAuth } from '../../../hooks/useAuth';
 
 /**
  * UserToolbar Component
@@ -42,6 +43,9 @@ export const UserToolbar = ({
   onManageOrg,
   onRefresh
 }) => {
+  const { hasPermission } = useAuth();
+  const canAddUser = hasPermission('user:write');
+  const canManageRoles = hasPermission('role:read');
   const currentEntityName = selectedEntity === 'ALL'
     ? 'Date'
     : (entities.find(e => String(e.id) === String(selectedEntity))?.name || 'Date');
@@ -190,7 +194,7 @@ export const UserToolbar = ({
         </button>
 
         {/* Our Additional Action: Manage Roles */}
-        {onManageRoles && (
+        {onManageRoles && canManageRoles && (
           <button
             type="button"
             onClick={onManageRoles}
@@ -202,21 +206,8 @@ export const UserToolbar = ({
           </button>
         )}
 
-        {/* Our Additional Action: Manage Organisation */}
-        {/* {onManageOrg && (
-          <button
-            type="button"
-            onClick={onManageOrg}
-            className="btn d-inline-flex align-items-center gap-1.5 px-3 py-1.5 fs-13 fw-medium user-toolbar-pill-btn"
-            title="Manage Organisation and Clients"
-          >
-            <Building2 size={14} className="text-primary" />
-            <span>Manage Org</span>
-          </button>
-        )} */}
-
-        {/* Primary Action Button: + Add User (matching Figma + manage button) */}
-        {onAddUser && (
+        {/* Primary Action Button: + Add User */}
+        {onAddUser && canAddUser && (
           <button
             type="button"
             onClick={onAddUser}
