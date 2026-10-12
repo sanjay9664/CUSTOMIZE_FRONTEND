@@ -115,13 +115,16 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const menuItems = useMemo(() => [
     { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", permission: "dashboard:read", disabled: modulesConfig ? modulesConfig["Dashboard"] === false : false },
     // Energy Metering
-    {
-      title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? modulesConfig["Energy Metering"] === false : false,
-      subItems: [{ title: "Overview", path: "/energy-metering/overview" }, { title: "Main Meter", path: "/energy-metering/main" }, { title: "Sub Meters", path: "/energy-metering/sub" }, { title: "Graphs", path: "/energy-metering/graphs" }, { title: "PDF Report", path: "/energy-metering/report" }].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true)
-    },
+    { title: "Energy Metering", icon: <Zap size={20} />, permission: "energy:read", disabled: modulesConfig ? modulesConfig["Energy Metering"] === false : false,
+      subItems: [
+        { title: "Overview", path: "/energy-metering/overview", permission: "energy:read" },
+        { title: "Main Meter", path: "/energy-metering/main", permission: "energy:read" },
+        { title: "Sub Meters", path: "/energy-metering/sub", permission: "energy:read" },
+        { title: "Graphs", path: "/energy-metering/graphs", permission: "energy:read" },
+        { title: "PDF Report", path: "/energy-metering/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showEnergyMetering?.[s.title] ?? true) },
     // DG Set
-    {
-      title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? modulesConfig["DG Set"] === false : false,
+    { title: "DG Set", icon: <Database size={20} />, permission: "dg:read", disabled: modulesConfig ? modulesConfig["DG Set"] === false : false,
       subItems: [
         { title: "Overview", path: "/dg-set/overview", permission: "dg:read" },
         ...dgDevices.map((dev, idx) => ({
@@ -129,101 +132,107 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           path: `/dg-set/device/${dev.id}`,
           permission: "dg:read"
         })),
-        { title: "Report", path: "/dg-set/report" }
-      ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true)
-    },
+        { title: "Report", path: "/dg-set/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true) },
     // LT Panel
-    {
-      title: "LT Panel", icon: <LayoutDashboard size={20} />, disabled: modulesConfig ? modulesConfig["LT Panel"] === false : false,
-      subItems: [{ title: "Overview", path: "/lt-panel/overview" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true)
-    },
+    { title: "LT Panel", icon: <LayoutDashboard size={20} />, permission: "ltpanel:read", disabled: modulesConfig ? modulesConfig["LT Panel"] === false : false,
+      subItems: [{ title: "Overview", path: "/lt-panel/overview", permission: "ltpanel:read" }].filter(s => submodulesConfig.showLTPanel?.[s.title] ?? true) },
     // Transformer
-    {
-      title: "Transformer", icon: <Zap size={20} />, disabled: modulesConfig ? modulesConfig["Transformer"] === false : false,
-      subItems: [{ title: "Overview", path: "/transformer/overview" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true)
-    },
+    { title: "Transformer", icon: <Zap size={20} />, permission: "transformer:read", disabled: modulesConfig ? modulesConfig["Transformer"] === false : false,
+      subItems: [{ title: "Overview", path: "/transformer/overview", permission: "transformer:read" }].filter(s => submodulesConfig.showTransformers?.[s.title] ?? true) },
     // HVAC & Environmental Systems
-    {
-      title: "HVAC", icon: <Thermometer size={20} />, disabled: modulesConfig ? modulesConfig["HVAC"] === false : false,
-      subItems: [{ title: "Chiller", path: "/hvac/chiller" }, { title: "AHU", path: "/hvac/ahu" }, { title: "Cooling Tower", path: "/hvac/cooling-tower" }, { title: "PDF Report", path: "/hvac/report" }].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true)
-    },
-    {
-      title: "VRV", icon: <Wind size={20} />, disabled: modulesConfig ? modulesConfig["VRV"] === false : false,
-      subItems: [{ title: "Overview", path: "/VRV/overview" }, { title: "Control Panel", path: "/VRV/control" }, { title: "Schedule", path: "/VRV/schedule" }, { title: "Human Sensor", path: "/VRV/human-sensor" }].filter(s => submodulesConfig.showVRV?.[s.title] ?? true)
-    },
-    {
-      title: "AC", icon: <Wind size={20} />, disabled: modulesConfig ? modulesConfig["AC"] === false : false,
-      subItems: [{ title: "Overview", path: "/ac/overview" }, { title: "PDF Report", path: "/ac/report" }].filter(s => submodulesConfig.showAC?.[s.title] ?? true)
-    },
-    {
-      title: "AQI Sensor", icon: <Leaf size={20} />, disabled: modulesConfig ? modulesConfig["AQI Sensor"] === false : false,
+    { title: "HVAC", icon: <Thermometer size={20} />, permission: "hvac:read", disabled: modulesConfig ? modulesConfig["HVAC"] === false : false,
       subItems: [
-        { title: "Overview", path: "/aqi-sensor/overview" },
-        { title: "Graphs", path: "/aqi-sensor/graphs" },
-        { title: "Reports", path: "/aqi-sensor/reports" }
-      ].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? (s.title === 'Reports' ? (submodulesConfig.showAQISensor?.['PDF Report'] ?? true) : true))
-    },
+        { title: "Chiller", path: "/hvac/chiller", permission: "hvac:read" },
+        { title: "AHU", path: "/hvac/ahu", permission: "hvac:read" },
+        { title: "Cooling Tower", path: "/hvac/cooling-tower", permission: "hvac:read" },
+        { title: "PDF Report", path: "/hvac/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showHVAC?.[s.title] ?? true) },
+    { title: "VRV", icon: <Wind size={20} />, permission: "hvac:read", disabled: modulesConfig ? modulesConfig["VRV"] === false : false,
+      subItems: [
+        { title: "Overview", path: "/VRV/overview", permission: "hvac:read" },
+        { title: "Control Panel", path: "/VRV/control", permission: "hvac:write" },
+        { title: "Schedule", path: "/VRV/schedule", permission: "hvac:read" },
+        { title: "Human Sensor", path: "/VRV/human-sensor", permission: "hvac:read" }
+      ].filter(s => submodulesConfig.showVRV?.[s.title] ?? true) },
+    { title: "AC", icon: <Wind size={20} />, permission: "hvac:read", disabled: modulesConfig ? modulesConfig["AC"] === false : false,
+      subItems: [
+        { title: "Overview", path: "/ac/overview", permission: "hvac:read" },
+        { title: "PDF Report", path: "/ac/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showAC?.[s.title] ?? true) },
+    { title: "AQI Sensor", icon: <Leaf size={20} />, permission: "aqi:read", disabled: modulesConfig ? modulesConfig["AQI Sensor"] === false : false,
+      subItems: [
+        { title: "Overview", path: "/aqi-sensor/overview", permission: "aqi:read" },
+        { title: "Graphs", path: "/aqi-sensor/graphs", permission: "aqi:read" },
+        { title: "Reports", path: "/aqi-sensor/reports", permission: "report:read" }
+      ].filter(s => submodulesConfig.showAQISensor?.[s.title] ?? (s.title === 'Reports' ? (submodulesConfig.showAQISensor?.['PDF Report'] ?? true) : true)) },
     // Water & Utilities
-    {
-      title: "Water Management", icon: <Droplets size={20} />, disabled: modulesConfig ? modulesConfig["Water Management"] === false : false,
+    { title: "Water Management", icon: <Droplets size={20} />, permission: "water:read", disabled: modulesConfig ? modulesConfig["Water Management"] === false : false,
       subItems: [
-        { title: "Overview", path: "/water-management/overview" },
-        { title: "AG TANK", path: "/water-management/ag-pump" },
-        { title: "UG TANK", path: "/water-management/ug-pump" },
-        { title: "Report", path: "/water-management/report" }
-      ].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true)
-    },
-    {
-      title: "Motors", icon: <Activity size={20} />, disabled: modulesConfig ? modulesConfig["Motors"] === false : false,
+        { title: "Overview", path: "/water-management/overview", permission: "water:read" },
+        { title: "AG TANK", path: "/water-management/ag-pump", permission: "water:read" },
+        { title: "UG TANK", path: "/water-management/ug-pump", permission: "water:read" },
+        { title: "Report", path: "/water-management/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showWaterManagement?.[s.title] ?? true) },
+    { title: "Motors", icon: <Activity size={20} />, permission: "motor:read", disabled: modulesConfig ? modulesConfig["Motors"] === false : false,
       subItems: [
-        { title: "Overview", path: "/motors/overview" },
-        { title: "Report", path: "/motors/report" }
-      ].filter(s => submodulesConfig.showMotors?.[s.title] ?? true)
-    },
+        { title: "Overview", path: "/motors/overview", permission: "motor:read" },
+        { title: "Report", path: "/motors/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showMotors?.[s.title] ?? true) },
     // Safety & Life Safety Systems (ACMS)
-    {
-      title: "ACMS", icon: <ShieldAlert size={20} />, disabled: modulesConfig ? (modulesConfig["ACMS"] === false && modulesConfig["Fire"] === false) : false,
+    { title: "ACMS", icon: <ShieldAlert size={20} />, permission: "fire:read", disabled: modulesConfig ? (modulesConfig["ACMS"] === false && modulesConfig["Fire"] === false) : false,
       subItems: [
-        { title: "Overview", path: "/fire-pumps/overview" },
-        { title: "Pump Status", path: "/fire-pumps/status" },
-        { title: "Header Pressure", path: "/fire-pumps/pressure" },
-        { title: "Jockey / Main", path: "/fire-pumps/jockey" },
-        { title: "PDF Report", path: "/fire-pumps/report" }
-      ].filter(s => (submodulesConfig.showACMS?.[s.title] ?? submodulesConfig.showFirePumps?.[s.title] ?? true))
-    },
-    {
-      title: "Alarm System", icon: <Bell size={20} />, disabled: modulesConfig ? modulesConfig["Alarm System"] === false : false,
-      subItems: [{ title: "Overview", path: "/alarm-system/overview" }, { title: "Alarm Config", path: "/alarm-system/config" }, { title: "Message Template Setting", path: "/alarm-system/message-templates" }, { title: "Active Alarms", path: "/alarm-system/active" }, { title: "Inactive Alarms", path: "/alarm-system/inactive" }, { title: "ACK (Acknowledge)", path: "/alarm-system/ack" }, { title: "Alarm History", path: "/alarm-system/history" }, { title: "PDF Report", path: "/alarm-system/report" }].filter(s => (submodulesConfig.showAlarms?.[s.title] ?? true) && !s.hidden)
-    },
+        { title: "Overview", path: "/fire-pumps/overview", permission: "fire:read" },
+        { title: "Pump Status", path: "/fire-pumps/status", permission: "fire:read" },
+        { title: "Header Pressure", path: "/fire-pumps/pressure", permission: "fire:read" },
+        { title: "Jockey / Main", path: "/fire-pumps/jockey", permission: "fire:read" },
+        { title: "PDF Report", path: "/fire-pumps/report", permission: "report:read" }
+      ].filter(s => (submodulesConfig.showACMS?.[s.title] ?? submodulesConfig.showFirePumps?.[s.title] ?? true)) },
+    { title: "Alarm System", icon: <Bell size={20} />, permission: "alarm:read", feature: "alarm", disabled: modulesConfig ? modulesConfig["Alarm System"] === false : false,
+      subItems: [
+        { title: "Overview", path: "/alarm-system/overview", permission: "alarm:read" },
+        { title: "Alarm Config", path: "/alarm-system/config", permission: "alarm:write" },
+        { title: "Message Template Setting", path: "/alarm-system/message-templates", permission: "alarm:write" },
+        { title: "Active Alarms", path: "/alarm-system/active", permission: "alarm:read" },
+        { title: "Inactive Alarms", path: "/alarm-system/inactive", permission: "alarm:read" },
+        { title: "ACK (Acknowledge)", path: "/alarm-system/ack", permission: "alarm:ack" },
+        { title: "Alarm History", path: "/alarm-system/history", permission: "alarm:read" },
+        { title: "PDF Report", path: "/alarm-system/report", permission: "report:read" }
+      ].filter(s => (submodulesConfig.showAlarms?.[s.title] ?? true) && !s.hidden) },
     // Operations & Maintenance
-    { title: "Ticketing", icon: <ClipboardList size={20} />, path: "/ticketing", disabled: modulesConfig ? modulesConfig["Ticketing"] === false : false },
-    {
-      title: "Maintenance", icon: <PenTool size={20} />, disabled: modulesConfig ? modulesConfig["Maintenance"] === false : false,
-      subItems: [{ title: "Scheduled", path: "/maintenance/scheduled" }, { title: "Pending Tasks", path: "/maintenance/pending" }, { title: "PDF Report", path: "/maintenance/report" }].filter(s => submodulesConfig.showMaintenance?.[s.title] ?? true)
-    },
-    {
-      title: "Service History", icon: <History size={20} />, disabled: modulesConfig ? modulesConfig["Service History"] === false : false,
-      subItems: [{ title: "Equipment-wise", path: "/service/equipment" }, { title: "Service Records", path: "/service/records" }, { title: "PDF Report", path: "/service/report" }].filter(s => submodulesConfig.showServiceHistory?.[s.title] ?? true)
-    },
-    {
-      title: "Daily DPR", icon: <Gauge size={20} />, disabled: modulesConfig ? modulesConfig["Daily DPR"] === false : false,
-      subItems: [{ title: "Data Aggregation", path: "/dpr/aggregation" }, { title: "Daily Logs", path: "/dpr/logs" }, { title: "PDF Report", path: "/dpr/report" }].filter(s => submodulesConfig.showDailyDPR?.[s.title] ?? true)
-    },
-    // Audit Log
-    {
-      title: "Audit Log", icon: <FileText size={20} />, disabled: modulesConfig ? modulesConfig["Audit Log"] === false : false,
+    { title: "Ticketing", icon: <ClipboardList size={20} />, path: "/ticketing", permission: "ticket:read", feature: "ticketing", disabled: modulesConfig ? modulesConfig["Ticketing"] === false : false },
+    { title: "Maintenance", icon: <PenTool size={20} />, permission: "maintenance:read", disabled: modulesConfig ? modulesConfig["Maintenance"] === false : false,
       subItems: [
-        { title: "Overview", path: "/audit-logs" },
-        { title: "System Logs", path: "/audit-logs/system" },
-        { title: "Security Events", path: "/audit-logs/security" },
-        { title: "PDF Report", path: "/audit-logs/report" }
-      ].filter(s => (submodulesConfig.showAuditLog?.[s.title] ?? true))
-    },
-    // Help & Support
-    {
-      title: "Help", icon: <HelpCircle size={20} />, disabled: modulesConfig ? modulesConfig["Help"] === false : false,
-      subItems: [{ title: "Feedback", path: "/help/feedback" }, { title: "Policy & Condition", path: "/help/policy" }]
-    }
+        { title: "Scheduled", path: "/maintenance/scheduled", permission: "maintenance:read" },
+        { title: "Pending Tasks", path: "/maintenance/pending", permission: "maintenance:read" },
+        { title: "PDF Report", path: "/maintenance/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showMaintenance?.[s.title] ?? true) },
+    { title: "Service History", icon: <History size={20} />, permission: "service:read", disabled: modulesConfig ? modulesConfig["Service History"] === false : false,
+      subItems: [
+        { title: "Equipment-wise", path: "/service/equipment", permission: "service:read" },
+        { title: "Service Records", path: "/service/records", permission: "service:read" },
+        { title: "PDF Report", path: "/service/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showServiceHistory?.[s.title] ?? true) },
+    { title: "Daily DPR", icon: <Gauge size={20} />, permission: "dpr:read", feature: "dpr", disabled: modulesConfig ? modulesConfig["Daily DPR"] === false : false,
+      subItems: [
+        { title: "Data Aggregation", path: "/dpr/aggregation", permission: "dpr:read" },
+        { title: "Daily Logs", path: "/dpr/logs", permission: "dpr:read" },
+        { title: "PDF Report", path: "/dpr/report", permission: "report:read" }
+      ].filter(s => submodulesConfig.showDailyDPR?.[s.title] ?? true) },
+    // Audit Log
+    { title: "Audit Log", icon: <FileText size={20} />, permission: "audit:read", disabled: modulesConfig ? modulesConfig["Audit Log"] === false : false,
+      subItems: [
+        { title: "Overview", path: "/audit-logs", permission: "audit:read" },
+        { title: "System Logs", path: "/audit-logs/system", permission: "audit:read" },
+        { title: "Security Events", path: "/audit-logs/security", permission: "audit:read" },
+        { title: "PDF Report", path: "/audit-logs/report", permission: "report:read" }
+      ].filter(s => (submodulesConfig.showAuditLog?.[s.title] ?? true)) },
+    // Help & Support (Permitted to all - no permission required)
+    { title: "Help", icon: <HelpCircle size={20} />, disabled: modulesConfig ? modulesConfig["Help"] === false : false,
+      subItems: [
+        { title: "Feedback", path: "/help/feedback" },
+        { title: "Policy & Condition", path: "/help/policy" }
+      ] }
   ], [modulesConfig, submodulesConfig, dgDevices]);
 
   const filteredItems = useMemo(() => {
