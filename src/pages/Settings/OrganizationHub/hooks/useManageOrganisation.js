@@ -9,6 +9,7 @@ import { isCategoryMatch } from '../../../../constants/deviceTemplates';
 import useOrgHierarchy, { normalizeList } from './useOrgHierarchy';
 import useOrgDevices from './useOrgDevices';
 import useOrgTelemetryAndControls from './useOrgTelemetryAndControls';
+import { useAuth } from '../../../../hooks/useAuth';
 
 export { normalizeList };
 export const API_BASE_URL = getApiUrl();
@@ -32,10 +33,23 @@ export const useManageOrganisation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { sites: storeSites, fetchSites: fetchStoreSites } = useSiteStore();
+  const { isSuperAdmin, hasPermission } = useAuth();
 
   // Role-Based Access Control (RBAC) Security Check
   const userRole = (localStorage.getItem('userRole') || getCookie('userRole') || 'USER').toUpperCase();
   const isAdmin = ['SUPERADMIN', 'ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(userRole);
+
+  // Compute primary permitted default tab
+  const defaultTab = useMemo(() => {
+    if (isSuperAdmin) return 'company';
+    if (hasPermission(['organization:read', 'organization:write'])) return 'tenant';
+    if (hasPermission(['zone:manage', 'site:read', 'location:read'])) return 'zone';
+    if (hasPermission(['area:manage', 'site:read', 'location:read'])) return 'area';
+    if (hasPermission(['site:manage', 'site:read', 'location:read'])) return 'site';
+    if (hasPermission(['asset:read', 'asset:write'])) return 'asset';
+    if (hasPermission(['device:read', 'device:write'])) return 'device';
+    return 'site';
+  }, [isSuperAdmin, hasPermission]);
 
   // Global State
   const [loading, setLoading] = useState(false);
@@ -46,9 +60,21 @@ export const useManageOrganisation = () => {
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (['company', 'tenant', 'zone', 'area', 'site', 'building', 'asset', 'device', 'widgets', 'rules', 'commands', 'telemetry', 'report', 'alarm'].includes(tabParam)) return tabParam;
-    return 'company';
+    if (tabParam === 'company') {
+      return isSuperAdmin ? 'company' : defaultTab;
+    }
+    if (['tenant', 'zone', 'area', 'site', 'building', 'asset', 'device', 'widgets', 'rules', 'commands', 'telemetry', 'report', 'alarm'].includes(tabParam)) {
+      return tabParam;
+    }
+    return defaultTab;
   });
+
+  // Guard activeTab if permissions change or url enters company without superadmin
+  useEffect(() => {
+    if (activeTab === 'company' && !isSuperAdmin) {
+      setActiveTab(defaultTab);
+    }
+  }, [activeTab, isSuperAdmin, defaultTab]);
 
   const showToast = useCallback((type, text) => {
     let msgText = 'Operation completed';
@@ -120,41 +146,72 @@ export const useManageOrganisation = () => {
       setLoading(false);
     }, 4000);
 
+    const fetches = [];
+    if (isSuperAdmin) {
+      fetches.push(hierarchy.fetchCompanies());
+    }
+    if (isSuperAdmin || hasPermission(['organization:read', 'organization:write'])) {
+      fetches.push(hierarchy.fetchTenants());
+    }
+    if (isSuperAdmin || hasPermission(['zone:manage', 'site:read', 'location:read'])) {
+      fetches.push(hierarchy.fetchZones());
+    }
+    if (isSuperAdmin || hasPermission(['area:manage', 'site:read', 'location:read'])) {
+      fetches.push(hierarchy.fetchAreas());
+    }
+    if (isSuperAdmin || hasPermission(['site:manage', 'site:read', 'location:read'])) {
+      fetches.push(hierarchy.fetchSites());
+    }
+    if (isSuperAdmin || hasPermission(['asset:read', 'asset:write'])) {
+      fetches.push(hierarchy.fetchAssets());
+    }
+    if (isSuperAdmin || hasPermission(['device:read', 'device:write'])) {
+      fetches.push(devicesSub.fetchDevices());
+    }
+
     try {
-      await Promise.allSettled([
-        hierarchy.fetchCompanies(),
-        hierarchy.fetchTenants(),
-        hierarchy.fetchZones(),
-        hierarchy.fetchAreas(),
-        hierarchy.fetchSites(),
-        hierarchy.fetchAssets(),
-        devicesSub.fetchDevices()
-      ]);
+      await Promise.allSettled(fetches);
     } catch (err) {
       console.warn('Initial data fetch error:', err);
     } finally {
       clearTimeout(safetyTimeout);
       setLoading(false);
     }
-  }, [hierarchy, devicesSub]);
+  }, [hierarchy, devicesSub, isSuperAdmin, hasPermission]);
 
   // Fetch API data dynamically on tab entrance (lazy load)
   useEffect(() => {
     if (activeTab === 'company') {
-      hierarchy.fetchCompanies();
+      if (isSuperAdmin) {
+        hierarchy.fetchCompanies();
+      }
     } else if (activeTab === 'tenant') {
-      hierarchy.fetchTenants();
+      if (isSuperAdmin || hasPermission(['organization:read', 'organization:write'])) {
+        hierarchy.fetchTenants();
+      }
     } else if (activeTab === 'zone') {
-      hierarchy.fetchZones();
+      if (isSuperAdmin || hasPermission(['zone:manage', 'site:read', 'location:read'])) {
+        hierarchy.fetchZones();
+      }
     } else if (activeTab === 'area') {
-      hierarchy.fetchAreas();
+      if (isSuperAdmin || hasPermission(['area:manage', 'site:read', 'location:read'])) {
+        hierarchy.fetchAreas();
+      }
     } else if (activeTab === 'site') {
-      hierarchy.fetchSites();
+      if (isSuperAdmin || hasPermission(['site:manage', 'site:read', 'location:read'])) {
+        hierarchy.fetchSites();
+      }
     } else if (activeTab === 'asset') {
-      hierarchy.fetchAssets();
+      if (isSuperAdmin || hasPermission(['asset:read', 'asset:write'])) {
+        hierarchy.fetchAssets();
+      }
     } else if (activeTab === 'device') {
-      hierarchy.fetchAssets();
-      devicesSub.fetchDevices();
+      if (isSuperAdmin || hasPermission(['asset:read', 'asset:write'])) {
+        hierarchy.fetchAssets();
+      }
+      if (isSuperAdmin || hasPermission(['device:read', 'device:write'])) {
+        devicesSub.fetchDevices();
+      }
     } else if (activeTab === 'widgets' && typeof controls.handleFetchWidgets === 'function') {
       controls.handleFetchWidgets(controls.selectedDeviceForWidgets);
     } else if (activeTab === 'rules' && typeof controls.handleFetchRulesTab === 'function') {
@@ -173,7 +230,9 @@ export const useManageOrganisation = () => {
     devicesSub.fetchDevices,
     controls.selectedDeviceForWidgets,
     controls.selectedDeviceForRulesTab,
-    controls.selectedDeviceForCommandsTab
+    controls.selectedDeviceForCommandsTab,
+    isSuperAdmin,
+    hasPermission
   ]);
 
   // Filters & Search Computation

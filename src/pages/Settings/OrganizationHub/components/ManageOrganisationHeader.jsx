@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Card, Button, Form, InputGroup, Nav } from 'react-bootstrap';
 import {
   Building2, Building, MapPin, Globe, Shield, Plus, Search,
   RefreshCw, Layers, Settings, ArrowLeft, Cpu,
   Radio, FileText, BellRing, Sparkles, Users, Grid, Sliders, Zap, ChevronRight
 } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const ManageOrganisationHeader = ({ org = {} }) => {
+  const { isSuperAdmin, hasPermission } = useAuth();
   const HeaderIcon = org.PageIcon || Building2;
   const safeCompanies = Array.isArray(org.activeCompanies) ? org.activeCompanies : [];
   const safeTenants = Array.isArray(org.activeTenants) ? org.activeTenants : [];
@@ -16,6 +18,23 @@ const ManageOrganisationHeader = ({ org = {} }) => {
   const safeSites = Array.isArray(org.activeSites) ? org.activeSites : [];
   const safeAssets = Array.isArray(org.activeAssets) ? org.activeAssets : [];
   const safeBuildings = Array.isArray(org.activeBuildings) ? org.activeBuildings : [];
+
+  const hierarchyNavItems = useMemo(() => {
+    const items = [
+      { key: 'company', label: 'Company', icon: Building, tab: 'company', superAdminOnly: true },
+      { key: 'tenant', label: 'Organization', icon: Building2, tab: 'tenant', viewPerm: ['organization:read', 'organization:write'] },
+      { key: 'zone', label: 'Zone', icon: Globe, tab: 'zone', viewPerm: ['zone:manage', 'site:read', 'location:read'] },
+      { key: 'area', label: 'Area', icon: Layers, tab: 'area', viewPerm: ['area:manage', 'site:read', 'location:read'] },
+      { key: 'site', label: 'Site', icon: MapPin, tab: 'site', viewPerm: ['site:manage', 'site:read', 'location:read'] },
+      { key: 'asset', label: 'Asset', icon: Sliders, tab: 'asset', viewPerm: ['asset:read', 'asset:write'] },
+      { key: 'device', label: 'Device', icon: Cpu, tab: 'device', viewPerm: ['device:read', 'device:write'] },
+    ];
+    return items.filter(item => {
+      if (item.superAdminOnly) return isSuperAdmin;
+      if (item.viewPerm) return isSuperAdmin || hasPermission(item.viewPerm);
+      return true;
+    });
+  }, [isSuperAdmin, hasPermission]);
 
   const isExtraTabActive = ['widgets', 'rules', 'commands', 'telemetry', 'report', 'alarm', 'building'].includes(org.activeTab);
   const [showExtraTabs, setShowExtraTabs] = useState(() => {
@@ -47,89 +66,35 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                 <Sparkles size={15} className={org.activeTab === 'hub' ? 'text-dark' : 'text-info'} /> Settings
               </Nav.Link>
             </Nav.Item>
-            <Nav.Item>
-              <Nav.Link onClick={() => org.navigate && org.navigate('/settings?tab=global')} className={`sub-nav-pill-btn ${org.activeTab === 'global' ? 'active-pill' : 'inactive-pill'}`}>
-                <Settings size={15} className={org.activeTab === 'global' ? 'text-dark' : 'text-slate-400'} /> Global
-              </Nav.Link>
-            </Nav.Item>
+            {(isSuperAdmin || hasPermission('settings:read')) && (
+              <Nav.Item>
+                <Nav.Link onClick={() => org.navigate && org.navigate('/settings?tab=global')} className={`sub-nav-pill-btn ${org.activeTab === 'global' ? 'active-pill' : 'inactive-pill'}`}>
+                  <Settings size={15} className={org.activeTab === 'global' ? 'text-dark' : 'text-slate-400'} /> Global
+                </Nav.Link>
+              </Nav.Item>
+            )}
 
-            <div className="vr bg-secondary opacity-30 mx-1 flex-shrink-0" style={{ height: '24px' }} />
+            {hierarchyNavItems.length > 0 && (
+              <div className="vr bg-secondary opacity-30 mx-1 flex-shrink-0" style={{ height: '24px' }} />
+            )}
 
-            {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('company')}
-                className={`sub-nav-pill-btn ${org.activeTab === 'company' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Building size={15} /> Company
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('tenant')}
-                className={`sub-nav-pill-btn ${org.activeTab === 'tenant' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Building2 size={15} /> Organization
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('zone')}
-                className={`sub-nav-pill-btn ${org.activeTab === 'zone' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Globe size={15} /> Zone
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('area')}
-                className={`sub-nav-pill-btn ${org.activeTab === 'area' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Layers size={15} /> Area
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('site')}
-                className={`sub-nav-pill-btn ${org.activeTab === 'site' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <MapPin size={15} /> Site
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('asset')}
-                className={`sub-nav-pill-btn ${org.activeTab === 'asset' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Sliders size={15} /> Asset
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => org.handleTabSelect && org.handleTabSelect('device')}
-                className={`sub-nav-pill-btn ${org.activeTab === 'device' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Cpu size={15} /> Device
-              </Nav.Link>
-            </Nav.Item>
+            {/* Hierarchy Sequence: Dynamically rendered based on permissions */}
+            {hierarchyNavItems.map((item, index) => {
+              const IconComp = item.icon;
+              return (
+                <React.Fragment key={item.key}>
+                  {index > 0 && <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />}
+                  <Nav.Item>
+                    <Nav.Link
+                      onClick={() => org.handleTabSelect && org.handleTabSelect(item.tab)}
+                      className={`sub-nav-pill-btn ${org.activeTab === item.tab ? 'active-pill' : 'inactive-pill'}`}
+                    >
+                      <IconComp size={15} /> {item.label}
+                    </Nav.Link>
+                  </Nav.Item>
+                </React.Fragment>
+              );
+            })}
           </Nav>
 
           {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
@@ -197,22 +162,22 @@ const ManageOrganisationHeader = ({ org = {} }) => {
               <RefreshCw size={15} className={org.loading ? 'spin-icon' : ''} /> Refresh
             </Button>
 
-            {org.activeTab === 'company' && (
+            {org.activeTab === 'company' && isSuperAdmin && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateCompany} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Company
               </Button>
             )}
-            {org.activeTab === 'tenant' && (
+            {org.activeTab === 'tenant' && (isSuperAdmin || hasPermission('organization:write')) && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateTenant} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Organization
               </Button>
             )}
-            {org.activeTab === 'zone' && (
+            {org.activeTab === 'zone' && (isSuperAdmin || hasPermission(['zone:manage', 'site:manage', 'location:manage'])) && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateZone} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Geographic Zone
               </Button>
             )}
-            {org.activeTab === 'area' && (
+            {org.activeTab === 'area' && (isSuperAdmin || hasPermission(['area:manage', 'site:manage', 'location:manage'])) && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateArea} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Tenant Area
               </Button>
@@ -222,22 +187,22 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                 <Plus size={16} /> Add Building
               </Button>
             )} */}
-            {org.activeTab === 'asset' && (
+            {org.activeTab === 'asset' && (isSuperAdmin || hasPermission('asset:write')) && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateAsset} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Asset
               </Button>
             )}
-            {org.activeTab === 'telemetry' && (
+            {org.activeTab === 'telemetry' && (isSuperAdmin || hasPermission('device:write')) && (
               <Button variant="success" size="sm" onClick={() => org.setShowResyncModal && org.setShowResyncModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-white px-3 rounded-3">
                 <Radio size={16} /> Resync Telemetry Data
               </Button>
             )}
-            {org.activeTab === 'report' && (
+            {org.activeTab === 'report' && (isSuperAdmin || hasPermission(['report:generate', 'report:manage'])) && (
               <Button variant="info" size="sm" onClick={() => org.setShowReportModal && org.setShowReportModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <FileText size={16} /> Generate Async Report
               </Button>
             )}
-            {org.activeTab === 'alarm' && (
+            {org.activeTab === 'alarm' && (isSuperAdmin || hasPermission('alarm:write')) && (
               <Button variant="warning" size="sm" onClick={() => org.setShowAlarmModal && org.setShowAlarmModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <BellRing size={16} /> Trigger Alarm Event
               </Button>
@@ -251,14 +216,22 @@ const ManageOrganisationHeader = ({ org = {} }) => {
         <Nav variant="pills" activeKey={org.activeTab} onSelect={org.handleTabSelect} className="org-nav-tabs mb-4 bg-dark-card p-2 gap-1 flex-wrap">
           {org.isOrgGroup && (
             <>
-              <Nav.Item><Nav.Link eventKey="company"><Building size={18} /> Companies ({safeCompanies.length})</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="tenant"><Building2 size={18} /> Organizations ({safeTenants.length})</Nav.Link></Nav.Item>
+              {isSuperAdmin && (
+                <Nav.Item><Nav.Link eventKey="company"><Building size={18} /> Companies ({safeCompanies.length})</Nav.Link></Nav.Item>
+              )}
+              {(isSuperAdmin || hasPermission(['organization:read', 'organization:write'])) && (
+                <Nav.Item><Nav.Link eventKey="tenant"><Building2 size={18} /> Organizations ({safeTenants.length})</Nav.Link></Nav.Item>
+              )}
             </>
           )}
           {org.isLocationGroup && (
             <>
-              <Nav.Item><Nav.Link eventKey="zone"><Globe size={18} /> Zones ({safeZones.length})</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="area"><Layers size={18} /> Areas ({safeAreas.length})</Nav.Link></Nav.Item>
+              {(isSuperAdmin || hasPermission(['zone:manage', 'site:read', 'location:read'])) && (
+                <Nav.Item><Nav.Link eventKey="zone"><Globe size={18} /> Zones ({safeZones.length})</Nav.Link></Nav.Item>
+              )}
+              {(isSuperAdmin || hasPermission(['area:manage', 'site:read', 'location:read'])) && (
+                <Nav.Item><Nav.Link eventKey="area"><Layers size={18} /> Areas ({safeAreas.length})</Nav.Link></Nav.Item>
+              )}
             </>
           )}
           {org.isDeviceGroup && <Nav.Item><Nav.Link eventKey="device"><Cpu size={18} /> Devices ({safeDevices.length})</Nav.Link></Nav.Item>}

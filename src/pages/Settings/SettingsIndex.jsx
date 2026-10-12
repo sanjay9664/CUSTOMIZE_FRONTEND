@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Nav, Row, Col, Button, Spinner, Form } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Settings, Users, Building2, ChevronRight, Shield, MapPin, Sparkles, Cpu,
   Building, Grid, Terminal, Zap, Sliders, FileText, Plus, ArrowRight,
-  Globe, Layers, BarChart3, BellRing, Radio, RefreshCw
+  Globe, Layers, BarChart3, BellRing, Radio, RefreshCw, Eye
 } from 'lucide-react';
 import GlobalSettings from './GlobalSettings';
 import UserManagement from '../Admin/UserManagement';
@@ -12,83 +12,137 @@ import SiteManagement from './SiteManagement';
 import AssetManagement from './AssetManagement';
 import DeviceManagement from './DeviceManagement';
 import organizationService from '../../services/organizationService';
+import { useAuth } from '../../hooks/useAuth';
 
 // ── HIERARCHY STEPS (Exact Tree Explorer Order) ──────────────────────────────
 const HIERARCHY_STEPS = [
   {
     key: 'company', step: 1, label: 'Company', subtitle: 'Global Organization',
-    icon: Building2, color: '#10b981', gradient: 'linear-gradient(135deg, #10b981, #059669)',
-    tab: 'company', description: 'Root Company level (e.g. sochiot-comp)',
-    apiKey: 'companies'
+    navLabel: 'Company',
+    icon: Building, color: '#10b981', gradient: 'linear-gradient(135deg, #10b981, #059669)',
+    tab: 'company', matchTabs: ['company', 'org'], description: 'Root Company level (e.g. sochiot-comp)',
+    apiKey: 'companies',
+    superAdminOnly: true,
+    managePerm: 'saas:manage'
   },
   {
     key: 'tenant', step: 2, label: 'Tenant / Client', subtitle: 'Consumer Org Unit',
-    icon: Users, color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-    tab: 'tenant', description: 'Consumer Organization Unit (e.g. Acme Corp)',
-    apiKey: 'tenants'
+    navLabel: 'Organization',
+    icon: Building2, color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    tab: 'tenant', matchTabs: ['tenant'], description: 'Consumer Organization Unit (e.g. Acme Corp)',
+    apiKey: 'tenants',
+    viewPerm: ['organization:read', 'organization:write'],
+    managePerm: 'organization:write'
   },
   {
     key: 'zone', step: 3, label: 'Zone', subtitle: 'Geographic Region',
+    navLabel: 'Zone',
     icon: Globe, color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    tab: 'zone', description: 'Geographic Zone (e.g. Noida Region)',
-    apiKey: 'zones'
+    tab: 'zone', matchTabs: ['zone', 'location'], description: 'Geographic Zone (e.g. Noida Region)',
+    apiKey: 'zones',
+    viewPerm: ['zone:manage', 'site:read', 'location:read'],
+    managePerm: ['zone:manage', 'site:manage', 'location:manage']
   },
   {
     key: 'area', step: 4, label: 'Sub-Zone / Area', subtitle: 'City / District',
+    navLabel: 'Area',
     icon: Layers, color: '#a855f7', gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
-    tab: 'area', description: 'Sub-Zone Area (e.g. Central Noida)',
-    apiKey: 'areas'
+    tab: 'area', matchTabs: ['area'], description: 'Sub-Zone Area (e.g. Central Noida)',
+    apiKey: 'areas',
+    viewPerm: ['area:manage', 'site:read', 'location:read'],
+    managePerm: ['area:manage', 'site:manage', 'location:manage']
   },
   {
     key: 'site', step: 5, label: 'Site / Location', subtitle: 'Sector / Campus',
+    navLabel: 'Site',
     icon: MapPin, color: '#3b82f6', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-    tab: 'site', description: 'Physical Site (e.g. Sector 75)',
-    apiKey: 'sites'
+    tab: 'site', matchTabs: ['site', 'sites'], description: 'Physical Site (e.g. Sector 75)',
+    apiKey: 'sites',
+    viewPerm: ['site:manage', 'site:read', 'location:read'],
+    managePerm: ['site:manage', 'location:manage']
   },
-  /*
-  {
-    key: 'building', step: 6, label: 'Building', subtitle: 'Property / Structure',
-    icon: Building, color: '#06b6d4', gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-    tab: 'building', description: 'Building (e.g. Maxblis Whitehouse)',
-    apiKey: 'buildings'
-  },
-  */
   {
     key: 'asset', step: 6, label: 'Asset', subtitle: 'Machinery / HVAC',
+    navLabel: 'Asset',
     icon: Sliders, color: '#ec4899', gradient: 'linear-gradient(135deg, #ec4899, #db2777)',
-    tab: 'asset', description: 'Equipment & Machinery Inventory',
-    apiKey: 'assets'
+    tab: 'asset', matchTabs: ['asset', 'assets'], description: 'Equipment & Machinery Inventory',
+    apiKey: 'assets',
+    viewPerm: ['asset:read', 'asset:write'],
+    managePerm: 'asset:write'
   },
   {
     key: 'device', step: 7, label: 'Device / Sensor', subtitle: 'IoT Hardware',
+    navLabel: 'Device',
     icon: Cpu, color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)',
-    tab: 'device', description: 'Modbus/BACnet IoT Controllers & Meters',
-    apiKey: 'devices'
+    tab: 'device', matchTabs: ['device'], description: 'Modbus/BACnet IoT Controllers & Meters',
+    apiKey: 'devices',
+    viewPerm: ['device:read', 'device:write'],
+    managePerm: 'device:write'
   }
 ];
 
 // ── QUICK ACTIONS (Hierarchy Order) ──────────────────────────────────────
 const QUICK_ACTIONS = [
-  { key: 'add_company', label: '1. Add Company', icon: Building2, color: '#10b981', tab: 'company', description: 'Global organization level' },
-  { key: 'add_tenant', label: '2. Add Tenant / Client', icon: Users, color: '#8b5cf6', tab: 'tenant', description: 'Consumer organization unit' },
-  { key: 'add_zone', label: '3. Add Zone', icon: Globe, color: '#f59e0b', tab: 'zone', description: 'Geographic region (e.g. Noida)' },
-  { key: 'add_area', label: '4. Add Sub-Zone / Area', icon: Layers, color: '#a855f7', tab: 'area', description: 'Sub-Zone Area (e.g. Central Noida)' },
-  { key: 'add_site', label: '5. Add Site / Location', icon: MapPin, color: '#3b82f6', tab: 'site', description: 'Physical location (e.g. Sector 75)' },
-  // { key: 'add_building', label: '6. Add Building', icon: Building, color: '#06b6d4', tab: 'building', description: 'Building (e.g. Maxblis Whitehouse)' },
-  { key: 'add_asset', label: '6. Add Asset', icon: Sliders, color: '#ec4899', tab: 'asset', description: 'HVAC & equipment inventory' },
-  { key: 'add_device', label: '7. Provision Device', icon: Cpu, color: '#ef4444', tab: 'device', description: 'Modbus/BACnet IoT hardware' },
+  { key: 'add_company', label: 'Add Company', icon: Building, color: '#10b981', tab: 'company', description: 'Global organization level', superAdminOnly: true },
+  { key: 'add_tenant', label: 'Add Tenant / Client', icon: Building2, color: '#8b5cf6', tab: 'tenant', description: 'Consumer organization unit', managePerm: 'organization:write' },
+  { key: 'add_zone', label: 'Add Zone', icon: Globe, color: '#f59e0b', tab: 'zone', description: 'Geographic region (e.g. Noida)', managePerm: ['zone:manage', 'site:manage', 'location:manage'] },
+  { key: 'add_area', label: 'Add Sub-Zone / Area', icon: Layers, color: '#a855f7', tab: 'area', description: 'Sub-Zone Area (e.g. Central Noida)', managePerm: ['area:manage', 'site:manage', 'location:manage'] },
+  { key: 'add_site', label: 'Add Site / Location', icon: MapPin, color: '#3b82f6', tab: 'site', description: 'Physical location (e.g. Sector 75)', managePerm: ['site:manage', 'location:manage'] },
+  { key: 'add_asset', label: 'Add Asset', icon: Sliders, color: '#ec4899', tab: 'asset', description: 'HVAC & equipment inventory', managePerm: 'asset:write' },
+  { key: 'add_device', label: 'Provision Device', icon: Cpu, color: '#ef4444', tab: 'device', description: 'Modbus/BACnet IoT hardware', managePerm: 'device:write' },
 ];
 
 // ── SYSTEM CONFIG CARDS ──────────────────────────────────────────────────
 const SYSTEM_CARDS = [
-  { key: 'global', title: 'Global Settings', description: 'Module visibility, feature toggles & system preferences', icon: Settings, color: '#f59e0b', path: '/settings?tab=global', isGlobal: true },
-  { key: 'users', title: 'User Administration', description: 'Manage users, invitations, roles & permissions', icon: Users, color: '#06b6d4', path: '/settings?tab=users', isUsers: true },
-  { key: 'commands', title: 'Device Commands', description: 'Remote Modbus/BACnet commands & execution', icon: Terminal, color: '#64748b', tab: 'commands' },
+  { key: 'global', title: 'Global Settings', description: 'Module visibility, feature toggles & system preferences', icon: Settings, color: '#f59e0b', path: '/settings?tab=global', perm: 'settings:read', isGlobal: true },
+  { key: 'users', title: 'User Administration', description: 'Manage users, invitations, roles & permissions', icon: Users, color: '#06b6d4', path: '/settings?tab=users', perm: 'user:read', isUsers: true },
+  { key: 'commands', title: 'Device Commands', description: 'Remote Modbus/BACnet commands & execution', icon: Terminal, color: '#64748b', tab: 'commands', perm: 'device:control' },
 ];
 
 const SettingsIndex = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isSuperAdmin, hasPermission } = useAuth();
+
+  // Filter hierarchy steps by user permissions
+  const visibleHierarchySteps = useMemo(() => {
+    return HIERARCHY_STEPS.filter(step => {
+      if (step.superAdminOnly) return isSuperAdmin;
+      if (step.viewPerm) return isSuperAdmin || hasPermission(step.viewPerm);
+      return true;
+    }).map((step, idx) => ({
+      ...step,
+      displayStep: idx + 1
+    }));
+  }, [isSuperAdmin, hasPermission]);
+
+  // Check if current user has permission to manage (create/update) a hierarchy step
+  const canManageStep = useCallback((step) => {
+    if (step.superAdminOnly) return isSuperAdmin;
+    if (!step.managePerm) return true;
+    return isSuperAdmin || hasPermission(step.managePerm);
+  }, [isSuperAdmin, hasPermission]);
+
+  // Filter quick actions by user permissions
+  const visibleQuickActions = useMemo(() => {
+    return QUICK_ACTIONS.filter(action => {
+      if (action.superAdminOnly) return isSuperAdmin;
+      if (action.managePerm) return isSuperAdmin || hasPermission(action.managePerm);
+      return true;
+    }).map((action, idx) => ({
+      ...action,
+      displayLabel: `${idx + 1}. ${action.label}`
+    }));
+  }, [isSuperAdmin, hasPermission]);
+
+  // Filter system cards by user permissions
+  const visibleSystemCards = useMemo(() => {
+    return SYSTEM_CARDS.filter(card => {
+      if (card.superAdminOnly) return isSuperAdmin;
+      if (card.perm) return isSuperAdmin || hasPermission(card.perm);
+      return true;
+    });
+  }, [isSuperAdmin, hasPermission]);
 
   // ── Entity Counts State ────────────────────────────────────────────────
   const [entityCounts, setEntityCounts] = useState({});
@@ -155,20 +209,36 @@ const SettingsIndex = () => {
   const fetchEntityCounts = useCallback(async () => {
     setCountsLoading(true);
     setCountsError('');
-    // Leave failed values undefined. A visible em dash is more honest than
-    // displaying a false zero when the user is not authorized or the API is down.
     const counts = {};
 
-    const requests = [
-      ['companies', organizationService.getCompanies()],
-      ['tenants', organizationService.getTenants()],
-      ['zones', organizationService.getZones()],
-      ['areas', organizationService.getAreas()],
-      ['sites', organizationService.getSites()],
-      // ['buildings', organizationService.getBuildings()], // Commented out: building moved to asset-based model
-      ['assets', organizationService.getAssets()],
-      ['devices', organizationService.getDevices()]
-    ];
+    const requests = [];
+    if (isSuperAdmin) {
+      requests.push(['companies', organizationService.getCompanies()]);
+    }
+    if (isSuperAdmin || hasPermission(['organization:read', 'organization:write'])) {
+      requests.push(['tenants', organizationService.getTenants()]);
+    }
+    if (isSuperAdmin || hasPermission(['zone:manage', 'site:read', 'location:read'])) {
+      requests.push(['zones', organizationService.getZones()]);
+    }
+    if (isSuperAdmin || hasPermission(['area:manage', 'site:read', 'location:read'])) {
+      requests.push(['areas', organizationService.getAreas()]);
+    }
+    if (isSuperAdmin || hasPermission(['site:manage', 'site:read', 'location:read'])) {
+      requests.push(['sites', organizationService.getSites()]);
+    }
+    if (isSuperAdmin || hasPermission(['asset:read', 'asset:write'])) {
+      requests.push(['assets', organizationService.getAssets()]);
+    }
+    if (isSuperAdmin || hasPermission(['device:read', 'device:write'])) {
+      requests.push(['devices', organizationService.getDevices()]);
+    }
+
+    if (requests.length === 0) {
+      setCountsLoading(false);
+      return;
+    }
+
     const results = await Promise.allSettled(requests.map(([, request]) => request));
     const failedRequests = [];
 
@@ -177,8 +247,11 @@ const SettingsIndex = () => {
       if (result.status === 'fulfilled') {
         counts[key] = Array.isArray(result.value) ? result.value.length : 0;
       } else {
-        failedRequests.push({ key, error: result.reason });
-        console.warn(`Unable to load ${key} count:`, result.reason);
+        const status = result.reason?.response?.status || result.reason?.status;
+        if (status !== 401 && status !== 403) {
+          failedRequests.push({ key, error: result.reason });
+          console.warn(`Unable to load ${key} count:`, result.reason);
+        }
       }
     });
 
@@ -186,11 +259,11 @@ const SettingsIndex = () => {
     if (failedRequests.length) {
       setCountsError(
         `Some counts could not be loaded (${failedRequests.map(({ key }) => key).join(', ')}). ` +
-        'Please check your API access and try again.'
+        'Please check your network and try again.'
       );
     }
     setCountsLoading(false);
-  }, []);
+  }, [isSuperAdmin, hasPermission]);
 
   useEffect(() => {
     if (activeTab === 'hub') {
@@ -461,83 +534,28 @@ const SettingsIndex = () => {
               </Nav.Link>
             </Nav.Item>
 
-            <div className="vr bg-secondary opacity-30 mx-1 flex-shrink-0" style={{ height: '24px' }} />
+            {visibleHierarchySteps.length > 0 && (
+              <div className="vr bg-secondary opacity-30 mx-1 flex-shrink-0" style={{ height: '24px' }} />
+            )}
 
-            {/* Hierarchy Sequence: Company => Organization => Zone => Area => Site => Asset => Device */}
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => navigate('/manage-organisation?tab=company')}
-                className={`sub-nav-pill-btn ${activeTab === 'company' || activeTab === 'org' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Building size={15} /> Company
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => navigate('/manage-organisation?tab=tenant')}
-                className={`sub-nav-pill-btn ${activeTab === 'tenant' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Building2 size={15} /> Organization
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => navigate('/manage-organisation?tab=zone')}
-                className={`sub-nav-pill-btn ${activeTab === 'zone' || activeTab === 'location' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Globe size={15} /> Zone
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => navigate('/manage-organisation?tab=area')}
-                className={`sub-nav-pill-btn ${activeTab === 'area' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Layers size={15} /> Area
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => navigate('/manage-organisation?tab=site')}
-                className={`sub-nav-pill-btn ${activeTab === 'site' || activeTab === 'sites' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <MapPin size={15} /> Site
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => navigate('/manage-organisation?tab=asset')}
-                className={`sub-nav-pill-btn ${activeTab === 'asset' || activeTab === 'assets' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Sliders size={15} /> Asset
-              </Nav.Link>
-            </Nav.Item>
-
-            <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />
-
-            <Nav.Item>
-              <Nav.Link
-                onClick={() => navigate('/manage-organisation?tab=device')}
-                className={`sub-nav-pill-btn ${activeTab === 'device' ? 'active-pill' : 'inactive-pill'}`}
-              >
-                <Cpu size={15} /> Device
-              </Nav.Link>
-            </Nav.Item>
+            {/* Hierarchy Sequence: Dynamically rendered based on permissions */}
+            {visibleHierarchySteps.map((step, index) => {
+              const IconComp = step.icon;
+              const isPillActive = activeTab === step.tab || (step.matchTabs && step.matchTabs.includes(activeTab));
+              return (
+                <React.Fragment key={step.key}>
+                  {index > 0 && <ChevronRight size={13} className="text-info opacity-40 mx-0.5 flex-shrink-0" />}
+                  <Nav.Item>
+                    <Nav.Link
+                      onClick={() => navigate(`/manage-organisation?tab=${step.tab}`)}
+                      className={`sub-nav-pill-btn ${isPillActive ? 'active-pill' : 'inactive-pill'}`}
+                    >
+                      <IconComp size={15} /> {step.navLabel || step.label}
+                    </Nav.Link>
+                  </Nav.Item>
+                </React.Fragment>
+              );
+            })}
           </Nav>
 
           {/* Right Side Toggle Controls & Extra Tabs (Widgets, Rules, Commands, Report, Building) */}
@@ -638,9 +656,10 @@ const SettingsIndex = () => {
 
             {/* Grid Hierarchy Flow (No Horizontal Scroll) */}
             <div className="hierarchy-grid">
-              {HIERARCHY_STEPS.map((step) => {
+              {visibleHierarchySteps.map((step) => {
                 const IconComp = step.icon;
                 const count = entityCounts[step.apiKey];
+                const canManage = canManageStep(step);
                 return (
                   <div
                     key={step.key}
@@ -650,7 +669,7 @@ const SettingsIndex = () => {
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: step.gradient }} />
                     <div className="d-flex align-items-center justify-content-between w-100 mb-1">
                       <div className="step-number" style={{ background: `${step.color}20`, color: step.color }}>
-                        STEP {step.step}
+                        STEP {step.displayStep || step.step}
                       </div>
                       <ArrowRight size={12} style={{ color: step.color, opacity: 0.6 }} />
                     </div>
@@ -675,7 +694,15 @@ const SettingsIndex = () => {
                       style={{ fontSize: '0.7rem', color: step.color, textDecoration: 'none' }}
                       onClick={(e) => { e.stopPropagation(); navigate(`/manage-organisation?tab=${step.tab}`); }}
                     >
-                      <Plus size={11} /> Add / Manage
+                      {canManage ? (
+                        <>
+                          <Plus size={11} /> Add / Manage
+                        </>
+                      ) : (
+                        <>
+                          <Eye size={11} /> View
+                        </>
+                      )}
                     </Button>
                   </div>
                 );
@@ -698,7 +725,7 @@ const SettingsIndex = () => {
             </div>
 
             <Row className="g-3">
-              {QUICK_ACTIONS.map((action) => {
+              {visibleQuickActions.map((action) => {
                 const IconComp = action.icon;
                 return (
                   <Col xs={12} md={6} lg={3} key={action.key}>
@@ -710,7 +737,7 @@ const SettingsIndex = () => {
                         <IconComp size={20} />
                       </div>
                       <div className="flex-grow-1">
-                        <div className="fw-bold hub-card-title" style={{ color: '#f1f5f9', fontSize: '0.88rem' }}>{action.label}</div>
+                        <div className="fw-bold hub-card-title" style={{ color: '#f1f5f9', fontSize: '0.88rem' }}>{action.displayLabel || action.label}</div>
                         <div className="hub-sub-text" style={{ color: '#64748b', fontSize: '0.75rem' }}>{action.description}</div>
                       </div>
                       <ChevronRight size={18} className="qa-arrow" style={{ color: action.color }} />
@@ -736,7 +763,7 @@ const SettingsIndex = () => {
             </div>
 
             <Row className="g-3">
-              {SYSTEM_CARDS.map((card) => {
+              {visibleSystemCards.map((card) => {
                 const IconComp = card.icon;
                 return (
                   <Col xs={12} md={4} key={card.key}>

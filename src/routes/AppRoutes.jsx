@@ -101,176 +101,196 @@ const PlaceholderPage = ({ title }) => (
 
 
 import { useAuth } from '../hooks/useAuth';
+import { getDefaultLandingRoute } from '../utils/rbac';
 
 // Protected Route Guard for Role-based Access Control & Permission Guarding
-const ProtectedRoute = ({ allowedRoles, requiredPermission, children }) => {
-  const { hasRole, hasPermission, isAuthenticated } = useAuth();
+const ProtectedRoute = ({ allowedRoles, requiredPermission, requiredFeature, children }) => {
+  const { hasRole, hasPermission, hasFeature, isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !hasRole(allowedRoles)) {
-    return <Navigate to="/dashboard" replace />;
+  // If no permission, role, or feature constraint is set, PERMIT TO ALL
+  if (!allowedRoles && !requiredPermission && !requiredFeature) {
+    return children;
   }
 
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <Navigate to="/dashboard" replace />;
+  const fallback = getDefaultLandingRoute(user);
+
+  if (allowedRoles && !hasRole(allowedRoles)) {
+    return <Navigate to={fallback} replace />;
+  }
+
+  if (requiredPermission && !hasPermission(requiredPermission, requiredFeature)) {
+    return <Navigate to={fallback} replace />;
+  }
+
+  if (requiredFeature && !hasFeature(requiredFeature)) {
+    return <Navigate to={fallback} replace />;
   }
 
   return children;
+};
+
+// Automatic landing redirect based on user's assigned permissions
+const DefaultLandingRedirect = () => {
+  const { user } = useAuth();
+  const target = getDefaultLandingRoute(user);
+  return <Navigate to={target} replace />;
 };
 
 const AppRoutes = () => {
   return (
     <Suspense fallback={<div className="d-flex justify-content-center align-items-center py-5"><div className="spinner-border text-info" role="status" /></div>}>
       <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/" element={<DefaultLandingRedirect />} />
+      <Route path="/dashboard" element={<ProtectedRoute requiredPermission="dashboard:read"><Dashboard /></ProtectedRoute>} />
 
       {/* Water Management */}
-      <Route path="/water-management/overview" element={<WaterOverview />} />
-      <Route path="/water-management/ag-pump" element={<AgTank />} />
-      <Route path="/water-management/ag-tank" element={<AgTank />} />
-      <Route path="/water-management/ug-pump" element={<UgTank />} />
-      <Route path="/water-management/domestic" element={<PlaceholderPage title="Domestic / Flushing" />} />
-      <Route path="/water-management/level" element={<PlaceholderPage title="OHT / UG Level Monitoring" />} />
-      <Route path="/water-management/report" element={<WaterReport />} />
+      <Route path="/water-management/overview" element={<ProtectedRoute requiredPermission="water:read"><WaterOverview /></ProtectedRoute>} />
+      <Route path="/water-management/ag-pump" element={<ProtectedRoute requiredPermission="water:read"><AgTank /></ProtectedRoute>} />
+      <Route path="/water-management/ag-tank" element={<ProtectedRoute requiredPermission="water:read"><AgTank /></ProtectedRoute>} />
+      <Route path="/water-management/ug-pump" element={<ProtectedRoute requiredPermission="water:read"><UgTank /></ProtectedRoute>} />
+      <Route path="/water-management/domestic" element={<ProtectedRoute requiredPermission="water:read"><PlaceholderPage title="Domestic / Flushing" /></ProtectedRoute>} />
+      <Route path="/water-management/level" element={<ProtectedRoute requiredPermission="water:read"><PlaceholderPage title="OHT / UG Level Monitoring" /></ProtectedRoute>} />
+      <Route path="/water-management/report" element={<ProtectedRoute requiredPermission={['water:read', 'report:read']}><WaterReport /></ProtectedRoute>} />
 
       {/* Motors */}
-      <Route path="/motors/overview" element={<MotorsOverview />} />
-      <Route path="/motors/room1" element={<PlaceholderPage title="Pump Room 1" />} />
-      <Route path="/motors/room2" element={<PlaceholderPage title="Pump Room 2" />} />
-      <Route path="/motors/status" element={<PlaceholderPage title="VFD / DOL Status" />} />
-      <Route path="/motors/report" element={<MotorReport />} />
+      <Route path="/motors/overview" element={<ProtectedRoute requiredPermission="motor:read"><MotorsOverview /></ProtectedRoute>} />
+      <Route path="/motors/room1" element={<ProtectedRoute requiredPermission="motor:read"><PlaceholderPage title="Pump Room 1" /></ProtectedRoute>} />
+      <Route path="/motors/room2" element={<ProtectedRoute requiredPermission="motor:read"><PlaceholderPage title="Pump Room 2" /></ProtectedRoute>} />
+      <Route path="/motors/status" element={<ProtectedRoute requiredPermission="motor:read"><PlaceholderPage title="VFD / DOL Status" /></ProtectedRoute>} />
+      <Route path="/motors/report" element={<ProtectedRoute requiredPermission={['motor:read', 'report:read']}><MotorReport /></ProtectedRoute>} />
 
       {/* DG Set */}
-      <Route path="/dg-set/overview" element={<DGSetOverview />} />
-      <Route path="/dg-set/device/:deviceId" element={<DGSetOverview />} />
+      <Route path="/dg-set/overview" element={<ProtectedRoute requiredPermission="dg:read"><DGSetOverview /></ProtectedRoute>} />
+      <Route path="/dg-set/device/:deviceId" element={<ProtectedRoute requiredPermission="dg:read"><DGSetOverview /></ProtectedRoute>} />
       {/* Legacy routes for backward compatibility */}
-      <Route path="/dg-set/dg1" element={<DGSetOverview />} />
-      <Route path="/dg-set/dg2" element={<DGSetOverview />} />
-      <Route path="/dg-set/dg3" element={<DGSetOverview />} />
-      <Route path="/dg-set/fuel" element={<PlaceholderPage title="Fuel Level Monitoring" />} />
-      <Route path="/dg-set/runtime" element={<PlaceholderPage title="Runtime / Diesel Consumption" />} />
-      <Route path="/dg-set/report" element={<DGReport />} />
+      <Route path="/dg-set/dg1" element={<ProtectedRoute requiredPermission="dg:read"><DGSetOverview /></ProtectedRoute>} />
+      <Route path="/dg-set/dg2" element={<ProtectedRoute requiredPermission="dg:read"><DGSetOverview /></ProtectedRoute>} />
+      <Route path="/dg-set/dg3" element={<ProtectedRoute requiredPermission="dg:read"><DGSetOverview /></ProtectedRoute>} />
+      <Route path="/dg-set/fuel" element={<ProtectedRoute requiredPermission="dg:read"><PlaceholderPage title="Fuel Level Monitoring" /></ProtectedRoute>} />
+      <Route path="/dg-set/runtime" element={<ProtectedRoute requiredPermission="dg:read"><PlaceholderPage title="Runtime / Diesel Consumption" /></ProtectedRoute>} />
+      <Route path="/dg-set/report" element={<ProtectedRoute requiredPermission={['dg:read', 'report:read']}><DGReport /></ProtectedRoute>} />
 
       {/* Configuration Templates */}
-      <Route path="/config/templates" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/config/templates" element={<DefaultLandingRedirect />} />
 
       {/* Alarm System */}
-      <Route path="/alarm-system/overview" element={<AlarmOverview />} />
-      <Route path="/alarm-system/active" element={<ActiveAlarms />} />
-      <Route path="/alarm-system/config" element={<AlarmConfig />} />
-      <Route path="/alarm-system/message-templates" element={<MessageTemplateSetting />} />
-      <Route path="/alarm-system/inactive" element={<PlaceholderPage title="Inactive Alarms" />} />
-      <Route path="/alarm-system/ack" element={<PlaceholderPage title="ACK (Acknowledge)" />} />
-      <Route path="/alarm-system/history" element={<PlaceholderPage title="Alarm History" />} />
-      <Route path="/alarm-system/report" element={<PlaceholderPage title="Alarm PDF Reports" />} />
+      <Route path="/alarm-system/overview" element={<ProtectedRoute requiredPermission="alarm:read"><AlarmOverview /></ProtectedRoute>} />
+      <Route path="/alarm-system/active" element={<ProtectedRoute requiredPermission="alarm:read"><ActiveAlarms /></ProtectedRoute>} />
+      <Route path="/alarm-system/config" element={<ProtectedRoute requiredPermission="alarm:write"><AlarmConfig /></ProtectedRoute>} />
+      <Route path="/alarm-system/message-templates" element={<ProtectedRoute requiredPermission="alarm:write"><MessageTemplateSetting /></ProtectedRoute>} />
+      <Route path="/alarm-system/inactive" element={<ProtectedRoute requiredPermission="alarm:read"><PlaceholderPage title="Inactive Alarms" /></ProtectedRoute>} />
+      <Route path="/alarm-system/ack" element={<ProtectedRoute requiredPermission="alarm:ack"><PlaceholderPage title="ACK (Acknowledge)" /></ProtectedRoute>} />
+      <Route path="/alarm-system/history" element={<ProtectedRoute requiredPermission="alarm:read"><PlaceholderPage title="Alarm History" /></ProtectedRoute>} />
+      <Route path="/alarm-system/report" element={<ProtectedRoute requiredPermission={['alarm:read', 'report:read']}><PlaceholderPage title="Alarm PDF Reports" /></ProtectedRoute>} />
 
       {/* LT Panel */}
-      <Route path="/lt-panel/overview" element={<LTOverview />} />
-      <Route path="/lt-panel/room1" element={<LTRoom1 />} />
-      <Route path="/lt-panel/room2" element={<LTRoom2 />} />
-      <Route path="/lt-panel/room3" element={<LTRoom3 />} />
-      <Route path="/lt-panel/io" element={<IncomingOutgoing />} />
-      <Route path="/lt-panel/breaker" element={<BreakerStatus />} />
-      <Route path="/lt-panel/report" element={<PlaceholderPage title="LT Panel PDF Reports" />} />
+      <Route path="/lt-panel/overview" element={<ProtectedRoute requiredPermission="ltpanel:read"><LTOverview /></ProtectedRoute>} />
+      <Route path="/lt-panel/room1" element={<ProtectedRoute requiredPermission="ltpanel:read"><LTRoom1 /></ProtectedRoute>} />
+      <Route path="/lt-panel/room2" element={<ProtectedRoute requiredPermission="ltpanel:read"><LTRoom2 /></ProtectedRoute>} />
+      <Route path="/lt-panel/room3" element={<ProtectedRoute requiredPermission="ltpanel:read"><LTRoom3 /></ProtectedRoute>} />
+      <Route path="/lt-panel/io" element={<ProtectedRoute requiredPermission="ltpanel:read"><IncomingOutgoing /></ProtectedRoute>} />
+      <Route path="/lt-panel/breaker" element={<ProtectedRoute requiredPermission="ltpanel:read"><BreakerStatus /></ProtectedRoute>} />
+      <Route path="/lt-panel/report" element={<ProtectedRoute requiredPermission={['ltpanel:read', 'report:read']}><PlaceholderPage title="LT Panel PDF Reports" /></ProtectedRoute>} />
 
       {/* Transformer */}
-      <Route path="/transformer/overview" element={<TransformerOverview />} />
-      <Route path="/transformer/t1" element={<PlaceholderPage title="Transformer-1" />} />
-      <Route path="/transformer/t2" element={<PlaceholderPage title="Transformer-2" />} />
-      <Route path="/transformer/load" element={<PlaceholderPage title="Load / Temperature Monitoring" />} />
-      <Route path="/transformer/report" element={<PlaceholderPage title="Transformer PDF Reports" />} />
+      <Route path="/transformer/overview" element={<ProtectedRoute requiredPermission="transformer:read"><TransformerOverview /></ProtectedRoute>} />
+      <Route path="/transformer/t1" element={<ProtectedRoute requiredPermission="transformer:read"><PlaceholderPage title="Transformer-1" /></ProtectedRoute>} />
+      <Route path="/transformer/t2" element={<ProtectedRoute requiredPermission="transformer:read"><PlaceholderPage title="Transformer-2" /></ProtectedRoute>} />
+      <Route path="/transformer/load" element={<ProtectedRoute requiredPermission="transformer:read"><PlaceholderPage title="Load / Temperature Monitoring" /></ProtectedRoute>} />
+      <Route path="/transformer/report" element={<ProtectedRoute requiredPermission={['transformer:read', 'report:read']}><PlaceholderPage title="Transformer PDF Reports" /></ProtectedRoute>} />
 
       {/* Settings & User Administration */}
-      <Route path="/global-settings" element={<SettingsIndex />} />
-      <Route path="/settings" element={<SettingsIndex />} />
-      <Route path="/settings/users" element={<Navigate to="/settings?tab=users" replace />} />
-      <Route path="/settings/sites" element={<SettingsIndex />} />
-      <Route path="/settings/assets" element={<AssetManagement />} />
-      <Route path="/asset-management" element={<AssetManagement />} />
-      <Route path="/settings/devices" element={<DeviceManagement />} />
-      <Route path="/device-management" element={<DeviceManagement />} />
-      <Route path="/manage-organisation" element={<ManageOrganisation />} />
-      <Route path="/settings/manage-organisation" element={<ManageOrganisation />} />
+      <Route path="/global-settings" element={<ProtectedRoute requiredPermission={['settings:read', 'site:read', 'device:read', 'role:manage', 'asset:read']}><SettingsIndex /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute requiredPermission={['settings:read', 'site:read', 'device:read', 'role:manage', 'asset:read']}><SettingsIndex /></ProtectedRoute>} />
+      <Route path="/settings/users" element={<ProtectedRoute requiredPermission="user:read"><Navigate to="/settings?tab=users" replace /></ProtectedRoute>} />
+      <Route path="/settings/sites" element={<ProtectedRoute requiredPermission={['settings:read', 'site:read']}><SettingsIndex /></ProtectedRoute>} />
+      <Route path="/settings/assets" element={<ProtectedRoute requiredPermission={['asset:read', 'site:read', 'location:read']}><AssetManagement /></ProtectedRoute>} />
+      <Route path="/asset-management" element={<ProtectedRoute requiredPermission={['asset:read', 'site:read', 'location:read']}><AssetManagement /></ProtectedRoute>} />
+      <Route path="/settings/devices" element={<ProtectedRoute requiredPermission="device:read"><DeviceManagement /></ProtectedRoute>} />
+      <Route path="/device-management" element={<ProtectedRoute requiredPermission="device:read"><DeviceManagement /></ProtectedRoute>} />
+      <Route path="/manage-organisation" element={<ProtectedRoute requiredPermission={['organization:read', 'site:read']}><ManageOrganisation /></ProtectedRoute>} />
+      <Route path="/settings/manage-organisation" element={<ProtectedRoute requiredPermission={['organization:read', 'site:read']}><ManageOrganisation /></ProtectedRoute>} />
 
       {/* Super Admin Routes */}
-      <Route path="/super-admin" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/super-admin" element={<DefaultLandingRedirect />} />
 
-      {/* User Settings — accessible to all logged-in users */}
-      <Route path="/admin/manage-users" element={<UserManagement />} />
-      <Route path="/admin/audit-logs" element={<AuditLogViewer />} />
-      <Route path="/audit-logs" element={<AuditLogViewer />} />
-      <Route path="/audit-logs/*" element={<AuditLogViewer />} />
+      {/* User Settings & Audit Logs */}
+      <Route path="/admin/manage-users" element={<ProtectedRoute requiredPermission="user:read"><UserManagement /></ProtectedRoute>} />
+      <Route path="/admin/audit-logs" element={<ProtectedRoute requiredPermission="audit:read"><AuditLogViewer /></ProtectedRoute>} />
+      <Route path="/audit-logs" element={<ProtectedRoute requiredPermission="audit:read"><AuditLogViewer /></ProtectedRoute>} />
+      <Route path="/audit-logs/*" element={<ProtectedRoute requiredPermission="audit:read"><AuditLogViewer /></ProtectedRoute>} />
 
       {/* Maintenance & Service History */}
-      <Route path="/maintenance" element={<MaintenancePage />} />
-      <Route path="/maintenance/scheduled" element={<MaintenancePage />} />
-      <Route path="/maintenance/pending" element={<MaintenancePage />} />
-      <Route path="/maintenance/report" element={<MaintenancePage />} />
-      <Route path="/service" element={<MaintenancePage />} />
-      <Route path="/service/equipment" element={<MaintenancePage />} />
-      <Route path="/service/records" element={<MaintenancePage />} />
-      <Route path="/service/report" element={<MaintenancePage />} />
+      <Route path="/maintenance" element={<ProtectedRoute requiredPermission="maintenance:read"><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/maintenance/scheduled" element={<ProtectedRoute requiredPermission="maintenance:read"><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/maintenance/pending" element={<ProtectedRoute requiredPermission="maintenance:read"><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/maintenance/report" element={<ProtectedRoute requiredPermission={['maintenance:read', 'report:read']}><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/service" element={<ProtectedRoute requiredPermission="service:read"><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/service/equipment" element={<ProtectedRoute requiredPermission="service:read"><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/service/records" element={<ProtectedRoute requiredPermission="service:read"><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/service/report" element={<ProtectedRoute requiredPermission={['service:read', 'report:read']}><MaintenancePage /></ProtectedRoute>} />
 
       {/* Ticketing */}
-      <Route path="/ticketing" element={<TicketingSystem />} />
+      <Route path="/ticketing" element={<ProtectedRoute requiredPermission="ticket:read"><TicketingSystem /></ProtectedRoute>} />
 
       {/* Energy Metering & Battery Backup (UPS) */}
-      <Route path="/energy-metering/overview" element={<EnergyOverview />} />
-      <Route path="/energy-metering/main" element={<EnergyMainMeter />} />
-      <Route path="/energy-metering/sub" element={<EnergySubMeters />} />
-      <Route path="/energy-metering/graphs" element={<EnergyGraphs />} />
-      <Route path="/energy-metering/report" element={<EnergyPDFReport />} />
+      <Route path="/energy-metering/overview" element={<ProtectedRoute requiredPermission="energy:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/energy-metering/main" element={<ProtectedRoute requiredPermission="energy:read"><EnergyMainMeter /></ProtectedRoute>} />
+      <Route path="/energy-metering/sub" element={<ProtectedRoute requiredPermission="energy:read"><EnergySubMeters /></ProtectedRoute>} />
+      <Route path="/energy-metering/graphs" element={<ProtectedRoute requiredPermission="energy:read"><EnergyGraphs /></ProtectedRoute>} />
+      <Route path="/energy-metering/report" element={<ProtectedRoute requiredPermission={['energy:read', 'report:read']}><EnergyPDFReport /></ProtectedRoute>} />
+
       {/* Daily DPR */}
-      <Route path="/daily-dpr" element={<Navigate to="/daily-dpr/overview" replace />} />
-      <Route path="/daily-dpr/overview" element={<EnergyOverview />} />
-      <Route path="/daily-dpr/aggregation" element={<EnergyOverview />} />
-      <Route path="/daily-dpr/logs" element={<EnergyOverview />} />
-      <Route path="/daily-dpr/report" element={<EnergyOverview />} />
-      <Route path="/dpr" element={<Navigate to="/daily-dpr/overview" replace />} />
-      <Route path="/dpr/aggregation" element={<EnergyOverview />} />
-      <Route path="/dpr/logs" element={<EnergyOverview />} />
-      <Route path="/dpr/report" element={<EnergyOverview />} />
+      <Route path="/daily-dpr" element={<ProtectedRoute requiredPermission="dpr:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/daily-dpr/overview" element={<ProtectedRoute requiredPermission="dpr:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/daily-dpr/aggregation" element={<ProtectedRoute requiredPermission="dpr:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/daily-dpr/logs" element={<ProtectedRoute requiredPermission="dpr:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/daily-dpr/report" element={<ProtectedRoute requiredPermission={['dpr:read', 'report:read']}><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/dpr" element={<ProtectedRoute requiredPermission="dpr:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/dpr/aggregation" element={<ProtectedRoute requiredPermission="dpr:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/dpr/logs" element={<ProtectedRoute requiredPermission="dpr:read"><EnergyOverview /></ProtectedRoute>} />
+      <Route path="/dpr/report" element={<ProtectedRoute requiredPermission={['dpr:read', 'report:read']}><EnergyOverview /></ProtectedRoute>} />
 
       {/* VRV*/}
-      <Route path="/VRV/overview" element={<VRVOverview />} />
-      <Route path="/VRV/control" element={<VRVControlPanel />} />
-      <Route path="/VRV/schedule" element={<VRVSchedule />} />
-      <Route path="/VRV/human-sensor" element={<VRVHumanSensor />} />
+      <Route path="/VRV/overview" element={<ProtectedRoute requiredPermission="hvac:read"><VRVOverview /></ProtectedRoute>} />
+      <Route path="/VRV/control" element={<ProtectedRoute requiredPermission="hvac:write"><VRVControlPanel /></ProtectedRoute>} />
+      <Route path="/VRV/schedule" element={<ProtectedRoute requiredPermission="hvac:read"><VRVSchedule /></ProtectedRoute>} />
+      <Route path="/VRV/human-sensor" element={<ProtectedRoute requiredPermission="hvac:read"><VRVHumanSensor /></ProtectedRoute>} />
       
       {/* AQI Sensor */}
-      <Route path="/aqi-sensor/overview" element={<AQIOverview />} />
-      <Route path="/aqi-sensor/graphs" element={<AQIGraphs />} />
-      <Route path="/aqi-sensor/reports" element={<AQIReports />} />
+      <Route path="/aqi-sensor/overview" element={<ProtectedRoute requiredPermission="aqi:read"><AQIOverview /></ProtectedRoute>} />
+      <Route path="/aqi-sensor/graphs" element={<ProtectedRoute requiredPermission="aqi:read"><AQIGraphs /></ProtectedRoute>} />
+      <Route path="/aqi-sensor/reports" element={<ProtectedRoute requiredPermission={['aqi:read', 'report:read']}><AQIReports /></ProtectedRoute>} />
       <Route path="/aqi-sensor/temp-humidity" element={<QueryPreservingRedirect to="/aqi-sensor/graphs" />} />
       <Route path="/aqi-sensor/report" element={<QueryPreservingRedirect to="/aqi-sensor/reports" />} />
 
       {/* HVAC */}
-      <Route path="/hvac/chiller" element={<Chiller />} />
-      <Route path="/hvac/ahu" element={<AHU />} />
-      <Route path="/ahu" element={<AHU />} />
-      <Route path="/hvac/cooling-tower" element={<CoolingTower />} />
-      <Route path="/cooling-tower" element={<CoolingTower />} />
-      <Route path="/hvac/report" element={<PlaceholderPage title="HVAC PDF Reports" />} />
+      <Route path="/hvac/chiller" element={<ProtectedRoute requiredPermission="hvac:read"><Chiller /></ProtectedRoute>} />
+      <Route path="/hvac/ahu" element={<ProtectedRoute requiredPermission="hvac:read"><AHU /></ProtectedRoute>} />
+      <Route path="/ahu" element={<ProtectedRoute requiredPermission="hvac:read"><AHU /></ProtectedRoute>} />
+      <Route path="/hvac/cooling-tower" element={<ProtectedRoute requiredPermission="hvac:read"><CoolingTower /></ProtectedRoute>} />
+      <Route path="/cooling-tower" element={<ProtectedRoute requiredPermission="hvac:read"><CoolingTower /></ProtectedRoute>} />
+      <Route path="/hvac/report" element={<ProtectedRoute requiredPermission={['hvac:read', 'report:read']}><PlaceholderPage title="HVAC PDF Reports" /></ProtectedRoute>} />
 
       {/* AC */}
-      <Route path="/ac/overview" element={<ACOverview />} />
-      <Route path="/ac/schedule" element={<ACScheduler />} />
-      <Route path="/ac/report" element={<PlaceholderPage title="AC PDF Reports" />} />
+      <Route path="/ac/overview" element={<ProtectedRoute requiredPermission="hvac:read"><ACOverview /></ProtectedRoute>} />
+      <Route path="/ac/schedule" element={<ProtectedRoute requiredPermission="hvac:read"><ACScheduler /></ProtectedRoute>} />
+      <Route path="/ac/report" element={<ProtectedRoute requiredPermission={['hvac:read', 'report:read']}><PlaceholderPage title="AC PDF Reports" /></ProtectedRoute>} />
 
       {/* ACMS / Fire & Life Safety Systems */}
       <Route path="/acms" element={<Navigate to="/fire-pumps/overview" replace />} />
-      <Route path="/acms/overview" element={<FireOverview />} />
-      <Route path="/fire-pumps/overview" element={<FireOverview />} />
-      <Route path="/fire-pumps/status" element={<PumpStatus />} />
-      <Route path="/fire-pumps/pressure" element={<HeaderPressure />} />
-      <Route path="/fire-pumps/jockey" element={<JockeyMain />} />
-      <Route path="/fire-pumps/report" element={<PlaceholderPage title="ACMS / Fire Pumps PDF Reports" />} />
+      <Route path="/acms/overview" element={<ProtectedRoute requiredPermission="fire:read"><FireOverview /></ProtectedRoute>} />
+      <Route path="/fire-pumps/overview" element={<ProtectedRoute requiredPermission="fire:read"><FireOverview /></ProtectedRoute>} />
+      <Route path="/fire-pumps/status" element={<ProtectedRoute requiredPermission="fire:read"><PumpStatus /></ProtectedRoute>} />
+      <Route path="/fire-pumps/pressure" element={<ProtectedRoute requiredPermission="fire:read"><HeaderPressure /></ProtectedRoute>} />
+      <Route path="/fire-pumps/jockey" element={<ProtectedRoute requiredPermission="fire:read"><JockeyMain /></ProtectedRoute>} />
+      <Route path="/fire-pumps/report" element={<ProtectedRoute requiredPermission={['fire:read', 'report:read']}><PlaceholderPage title="ACMS / Fire Pumps PDF Reports" /></ProtectedRoute>} />
 
-      {/* Help & Support */}
+      {/* Help & Support (Permitted to all - no permission required) */}
       <Route path="/help" element={<Navigate to="/help/feedback" replace />} />
       <Route path="/help/feedback" element={<HelpFeedback />} />
       <Route path="/help/policy" element={<PolicyCondition />} />
