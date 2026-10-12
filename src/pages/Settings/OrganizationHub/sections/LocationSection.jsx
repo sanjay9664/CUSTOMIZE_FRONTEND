@@ -16,9 +16,9 @@ const LocationSection = ({
   handleOpenEditArea = () => {},
   handleDeleteArea = () => {}
 }) => {
-  const { isSuperAdmin, hasPermission } = useAuth();
-  const canManageZone = isSuperAdmin || hasPermission(['zone:manage', 'site:manage', 'location:manage']);
-  const canManageArea = isSuperAdmin || hasPermission(['area:manage', 'site:manage', 'location:manage']);
+  const { isSuperAdmin } = useAuth();
+  const canManageZone = isSuperAdmin;
+  const canManageArea = isSuperAdmin;
 
   const safeZones = Array.isArray(filteredZones) ? filteredZones : [];
   const safeAreas = Array.isArray(filteredAreas) ? filteredAreas : [];

@@ -46,7 +46,7 @@ const normalizeList = (raw, key) => {
 const SiteManagement = ({ embedded = false }) => {
   const navigate = useNavigate();
   const { isSuperAdmin, hasPermission } = useAuth();
-  const canManageSite = isSuperAdmin || hasPermission(['site:manage', 'location:manage']);
+  const canManageSite = isSuperAdmin;
 
   const {
     sites,
@@ -1409,7 +1409,7 @@ const SiteManagement = ({ embedded = false }) => {
                 <List size={16} />
               </button>
 
-              {embedded && (
+              {embedded && canManageSite && (
                 <button
                   type="button"
                   className="btn-create-site-primary ms-1"
@@ -1709,7 +1709,7 @@ const SiteManagement = ({ embedded = false }) => {
                 <th onClick={() => handleSort('energy')} style={{ cursor: 'pointer' }}>
                   Energy (kWh) {sortColumn === 'energy' ? (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />) : <ArrowUpDown size={13} className="opacity-50" />}
                 </th>
-                <th className="text-end">Actions</th>
+                {canManageSite && <th className="text-end">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -1798,18 +1798,18 @@ const SiteManagement = ({ embedded = false }) => {
                         {(Number(site.energyKwh) || 0).toLocaleString()}
                       </span>
                     </td>
-                    <td className="text-end" onClick={e => e.stopPropagation()}>
-                      <div className="d-flex align-items-center justify-content-end gap-1.5">
-                        <button
-                          type="button"
-                          className="touch-action-btn"
-                          aria-label={`Inspect ${site.name}`}
-                          title="Inspect Details"
-                          onClick={() => handleViewSite(site)}
-                        >
-                          <Eye size={15} />
-                        </button>
-                        {canManageSite && (
+                    {canManageSite && (
+                      <td className="text-end" onClick={e => e.stopPropagation()}>
+                        <div className="d-flex align-items-center justify-content-end gap-1.5">
+                          <button
+                            type="button"
+                            className="touch-action-btn"
+                            aria-label={`Inspect ${site.name}`}
+                            title="Inspect Details"
+                            onClick={() => handleViewSite(site)}
+                          >
+                            <Eye size={15} />
+                          </button>
                           <button
                             type="button"
                             className="touch-action-btn"
@@ -1819,9 +1819,9 @@ const SiteManagement = ({ embedded = false }) => {
                           >
                             <Edit3 size={15} />
                           </button>
-                        )}
-                      </div>
-                    </td>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

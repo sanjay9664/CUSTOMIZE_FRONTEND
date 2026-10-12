@@ -167,42 +167,37 @@ const ManageOrganisationHeader = ({ org = {} }) => {
                 <Plus size={16} /> Add Company
               </Button>
             )}
-            {org.activeTab === 'tenant' && (isSuperAdmin || hasPermission('organization:write')) && (
+            {org.activeTab === 'tenant' && isSuperAdmin && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateTenant} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Organization
               </Button>
             )}
-            {org.activeTab === 'zone' && (isSuperAdmin || hasPermission(['zone:manage', 'site:manage', 'location:manage'])) && (
+            {org.activeTab === 'zone' && isSuperAdmin && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateZone} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Geographic Zone
               </Button>
             )}
-            {org.activeTab === 'area' && (isSuperAdmin || hasPermission(['area:manage', 'site:manage', 'location:manage'])) && (
+            {org.activeTab === 'area' && isSuperAdmin && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateArea} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Tenant Area
               </Button>
             )}
-            {/* {org.activeTab === 'building' && (
-              <Button variant="info" size="sm" onClick={org.handleOpenCreateBuilding} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
-                <Plus size={16} /> Add Building
-              </Button>
-            )} */}
-            {org.activeTab === 'asset' && (isSuperAdmin || hasPermission('asset:write')) && (
+            {org.activeTab === 'asset' && isSuperAdmin && (
               <Button variant="info" size="sm" onClick={org.handleOpenCreateAsset} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <Plus size={16} /> Add Asset
               </Button>
             )}
-            {org.activeTab === 'telemetry' && (isSuperAdmin || hasPermission('device:write')) && (
+            {org.activeTab === 'telemetry' && isSuperAdmin && (
               <Button variant="success" size="sm" onClick={() => org.setShowResyncModal && org.setShowResyncModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-white px-3 rounded-3">
                 <Radio size={16} /> Resync Telemetry Data
               </Button>
             )}
-            {org.activeTab === 'report' && (isSuperAdmin || hasPermission(['report:generate', 'report:manage'])) && (
+            {org.activeTab === 'report' && isSuperAdmin && (
               <Button variant="info" size="sm" onClick={() => org.setShowReportModal && org.setShowReportModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <FileText size={16} /> Generate Async Report
               </Button>
             )}
-            {org.activeTab === 'alarm' && (isSuperAdmin || hasPermission('alarm:write')) && (
+            {org.activeTab === 'alarm' && isSuperAdmin && (
               <Button variant="warning" size="sm" onClick={() => org.setShowAlarmModal && org.setShowAlarmModal(true)} className="fw-semibold d-flex align-items-center gap-2 text-dark px-3 rounded-3">
                 <BellRing size={16} /> Trigger Alarm Event
               </Button>

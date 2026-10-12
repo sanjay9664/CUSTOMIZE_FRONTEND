@@ -116,15 +116,14 @@ const SettingsIndex = () => {
     }));
   }, [isSuperAdmin, hasPermission]);
 
-  // Check if current user has permission to manage (create/update) a hierarchy step
+  // Check if current user has permission to manage (create/update) a hierarchy step (superadmin only)
   const canManageStep = useCallback((step) => {
-    if (step.superAdminOnly) return isSuperAdmin;
-    if (!step.managePerm) return true;
-    return isSuperAdmin || hasPermission(step.managePerm);
-  }, [isSuperAdmin, hasPermission]);
+    return isSuperAdmin;
+  }, [isSuperAdmin]);
 
-  // Filter quick actions by user permissions
+  // Filter quick actions by user permissions (superadmin only)
   const visibleQuickActions = useMemo(() => {
+    if (!isSuperAdmin) return [];
     return QUICK_ACTIONS.filter(action => {
       if (action.superAdminOnly) return isSuperAdmin;
       if (action.managePerm) return isSuperAdmin || hasPermission(action.managePerm);
@@ -713,42 +712,45 @@ const SettingsIndex = () => {
           <div className="section-divider" />
 
           {/* ═══════════════════ SECTION 2: QUICK ACTIONS ═══════════════ */}
-          <div className="hub-animated" style={{ animationDelay: '0.3s' }}>
-            <div className="section-header">
-              <div className="section-header-icon" style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}>
-                <Zap size={18} />
-              </div>
-              <div>
-                <h5 className="fw-bold mb-0 hub-card-title" style={{ color: '#f1f5f9', fontSize: '1.05rem' }}>Quick Actions</h5>
-                <p className="mb-0 hub-sub-text" style={{ color: '#64748b', fontSize: '0.78rem' }}>Common creation & configuration tasks — ordered by hierarchy flow</p>
-              </div>
-            </div>
+          {isSuperAdmin && visibleQuickActions.length > 0 && (
+            <>
+              <div className="hub-animated" style={{ animationDelay: '0.3s' }}>
+                <div className="section-header">
+                  <div className="section-header-icon" style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}>
+                    <Zap size={18} />
+                  </div>
+                  <div>
+                    <h5 className="fw-bold mb-0 hub-card-title" style={{ color: '#f1f5f9', fontSize: '1.05rem' }}>Quick Actions</h5>
+                    <p className="mb-0 hub-sub-text" style={{ color: '#64748b', fontSize: '0.78rem' }}>Common creation & configuration tasks — ordered by hierarchy flow</p>
+                  </div>
+                </div>
 
-            <Row className="g-3">
-              {visibleQuickActions.map((action) => {
-                const IconComp = action.icon;
-                return (
-                  <Col xs={12} md={6} lg={3} key={action.key}>
-                    <div
-                      className="quick-action-card"
-                      onClick={() => navigate(`/manage-organisation?tab=${action.tab}`)}
-                    >
-                      <div className="qa-icon-wrap" style={{ background: `${action.color}15`, border: `1px solid ${action.color}25`, color: action.color }}>
-                        <IconComp size={20} />
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="fw-bold hub-card-title" style={{ color: '#f1f5f9', fontSize: '0.88rem' }}>{action.displayLabel || action.label}</div>
-                        <div className="hub-sub-text" style={{ color: '#64748b', fontSize: '0.75rem' }}>{action.description}</div>
-                      </div>
-                      <ChevronRight size={18} className="qa-arrow" style={{ color: action.color }} />
-                    </div>
-                  </Col>
-                );
-              })}
-            </Row>
-          </div>
-
-          <div className="section-divider" />
+                <Row className="g-3">
+                  {visibleQuickActions.map((action) => {
+                    const IconComp = action.icon;
+                    return (
+                      <Col xs={12} md={6} lg={3} key={action.key}>
+                        <div
+                          className="quick-action-card"
+                          onClick={() => navigate(`/manage-organisation?tab=${action.tab}`)}
+                        >
+                          <div className="qa-icon-wrap" style={{ background: `${action.color}15`, border: `1px solid ${action.color}25`, color: action.color }}>
+                            <IconComp size={20} />
+                          </div>
+                          <div className="flex-grow-1">
+                            <div className="fw-bold hub-card-title" style={{ color: '#f1f5f9', fontSize: '0.88rem' }}>{action.displayLabel || action.label}</div>
+                            <div className="hub-sub-text" style={{ color: '#64748b', fontSize: '0.75rem' }}>{action.description}</div>
+                          </div>
+                          <ChevronRight size={18} className="qa-arrow" style={{ color: action.color }} />
+                        </div>
+                      </Col>
+                    );
+                  })}
+                </Row>
+              </div>
+              <div className="section-divider" />
+            </>
+          )}
 
           {/* ═══════════════════ SECTION 3: SYSTEM CONFIGURATION ════════ */}
           <div className="hub-animated" style={{ animationDelay: '0.45s' }}>

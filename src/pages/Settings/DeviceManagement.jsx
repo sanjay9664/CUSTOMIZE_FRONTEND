@@ -8,6 +8,7 @@ import {
   Snowflake, ShieldAlert, Sliders, Radio, ArrowUpRight
 } from 'lucide-react';
 import { useSiteStore } from '../../hooks/useSiteStore';
+import { useAuth } from '../../hooks/useAuth';
 import bmsService, { fetchAndStoreSochiotAccessToken } from '../../services/bmsService';
 import { normalizePaginatedResponse, normalizeList } from '../../services/apiClient';
 import DeviceModal, { DEVICE_CATEGORIES } from './modals/DeviceModal';
@@ -48,6 +49,7 @@ const getCategoryBadgeClass = (category) => {
 };
 
 const DeviceManagement = ({ embedded = false }) => {
+  const { isSuperAdmin } = useAuth();
   const { sites, fetchSites, selectedSite } = useSiteStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -877,16 +879,18 @@ const DeviceManagement = ({ embedded = false }) => {
               <Badge className="device-total-badge px-2.5 py-1 fs-11 rounded-pill">
                 {totalRecords} Devices
               </Badge>
-              <Button
-                variant="primary"
-                size="sm"
-                className="d-flex align-items-center gap-1.5 px-3 py-1.5 fs-12 fw-semibold rounded-2 shadow-sm"
-                onClick={handleOpenCreate}
-                style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
-              >
-                <Plus size={15} />
-                <span>+ Add Device</span>
-              </Button>
+              {isSuperAdmin && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="d-flex align-items-center gap-1.5 px-3 py-1.5 fs-12 fw-semibold rounded-2 shadow-sm"
+                  onClick={handleOpenCreate}
+                  style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
+                >
+                  <Plus size={15} />
+                  <span>+ Add Device</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1042,7 +1046,7 @@ const DeviceManagement = ({ embedded = false }) => {
                     <th style={{ minWidth: 130 }}>Site</th>
                     <th style={{ minWidth: 110 }}>Status</th>
                     <th style={{ minWidth: 130 }}>Installed / Last Seen</th>
-                    <th className="text-end" style={{ minWidth: 150 }}>Actions</th>
+                    {isSuperAdmin && <th className="text-end" style={{ minWidth: 150 }}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1140,42 +1144,44 @@ const DeviceManagement = ({ embedded = false }) => {
                         </td>
 
                         {/* Actions */}
-                        <td className="text-end">
-                          <div className="d-flex align-items-center justify-content-end gap-1.5">
-                            <button
-                              type="button"
-                              className="btn-scada-inspect"
-                              onClick={() => handleInspect(dev)}
-                            >
-                              <Eye size={12} />
-                              <span>Inspect</span>
-                            </button>
+                        {isSuperAdmin && (
+                          <td className="text-end">
+                            <div className="d-flex align-items-center justify-content-end gap-1.5">
+                              <button
+                                type="button"
+                                className="btn-scada-inspect"
+                                onClick={() => handleInspect(dev)}
+                              >
+                                <Eye size={12} />
+                                <span>Inspect</span>
+                              </button>
 
-                            <button
-                              type="button"
-                              className="btn-scada-edit"
-                              onClick={() => handleOpenEdit(dev)}
-                            >
-                              <Edit3 size={12} />
-                              <span>Edit</span>
-                            </button>
+                              <button
+                                type="button"
+                                className="btn-scada-edit"
+                                onClick={() => handleOpenEdit(dev)}
+                              >
+                                <Edit3 size={12} />
+                                <span>Edit</span>
+                              </button>
 
-                            <Dropdown align="end">
-                              <Dropdown.Toggle as="button" className="btn-scada-more" aria-label="More actions">
-                                <MoreVertical size={14} />
-                              </Dropdown.Toggle>
-                              <Dropdown.Menu className="dropdown-menu-dark shadow-lg">
-                                <Dropdown.Item
-                                  onClick={() => handleOpenDelete(dev)}
-                                  className="fs-12 text-danger d-flex align-items-center gap-2"
-                                >
-                                  <Trash2 size={14} />
-                                  <span>Decommission</span>
-                                </Dropdown.Item>
-                              </Dropdown.Menu>
-                            </Dropdown>
-                          </div>
-                        </td>
+                              <Dropdown align="end">
+                                <Dropdown.Toggle as="button" className="btn-scada-more" aria-label="More actions">
+                                  <MoreVertical size={14} />
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu className="dropdown-menu-dark shadow-lg">
+                                  <Dropdown.Item
+                                    onClick={() => handleOpenDelete(dev)}
+                                    className="fs-12 text-danger d-flex align-items-center gap-2"
+                                  >
+                                    <Trash2 size={14} />
+                                    <span>Decommission</span>
+                                  </Dropdown.Item>
+                                </Dropdown.Menu>
+                              </Dropdown>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

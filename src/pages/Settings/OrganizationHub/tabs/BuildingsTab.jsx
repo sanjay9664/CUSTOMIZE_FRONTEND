@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Button, Badge, Card, Row, Col } from 'react-bootstrap';
 import { Building, MapPin, Layers, Plus, Edit3, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const BuildingsTab = ({
   buildings,
@@ -13,6 +14,7 @@ const BuildingsTab = ({
   onDelete,
   isAdmin
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeSearch = String(searchTerm || '').toLowerCase();
   const safeBuildings = Array.isArray(buildings) ? buildings : [];
   const safeSites = Array.isArray(sites) ? sites : [];
@@ -81,13 +83,13 @@ const BuildingsTab = ({
               <th>Code</th>
               <th>Floors</th>
               <th>Status</th>
-              <th className="text-end">Actions</th>
+              {isSuperAdmin && <th className="text-end">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-5 text-muted">
+                <td colSpan={isSuperAdmin ? 6 : 5} className="text-center py-5 text-muted">
                   <Building size={36} className="mb-2 text-slate-500 opacity-50" />
                   <div>No buildings found for selected site context.</div>
                 </td>
@@ -127,30 +129,32 @@ const BuildingsTab = ({
                         {isInactive ? 'INACTIVE' : 'OPERATIONAL'}
                       </Badge>
                     </td>
-                    <td className="text-end">
-                      <div className="d-flex justify-content-end gap-1.5">
-                        <Button
-                          variant="outline-light"
-                          size="sm"
-                          title="Edit Building"
-                          onClick={() => onOpenEdit(b)}
-                          className="py-1"
-                        >
-                          <Edit3 size={13} />
-                        </Button>
-                        {isAdmin && (
+                    {isSuperAdmin && (
+                      <td className="text-end">
+                        <div className="d-flex justify-content-end gap-1.5">
                           <Button
-                            variant="outline-danger"
+                            variant="outline-light"
                             size="sm"
-                            title="Delete Building"
-                            onClick={() => onDelete(b.siteId, b.id)}
+                            title="Edit Building"
+                            onClick={() => onOpenEdit(b)}
                             className="py-1"
                           >
-                            <Trash2 size={13} />
+                            <Edit3 size={13} />
                           </Button>
-                        )}
-                      </div>
-                    </td>
+                          {isAdmin && (
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              title="Delete Building"
+                              onClick={() => onDelete(b.siteId, b.id)}
+                              className="py-1"
+                            >
+                              <Trash2 size={13} />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })

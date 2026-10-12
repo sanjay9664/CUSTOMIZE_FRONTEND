@@ -21,8 +21,8 @@ const OrganizationSection = ({
   handleReactivateTenant = () => {},
   handleDeleteTenant = () => {}
 }) => {
-  const { isSuperAdmin, hasPermission } = useAuth();
-  const canManageTenant = isSuperAdmin || hasPermission('organization:write');
+  const { isSuperAdmin } = useAuth();
+  const canManageTenant = isSuperAdmin;
 
   const safeCompanies = Array.isArray(filteredCompanies) ? filteredCompanies : [];
   const safeTenants = Array.isArray(filteredTenants) ? filteredTenants : [];

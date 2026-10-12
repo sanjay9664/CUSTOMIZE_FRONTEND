@@ -212,8 +212,8 @@ const AppRoutes = () => {
       <Route path="/asset-management" element={<ProtectedRoute requiredPermission={['asset:read', 'site:read', 'location:read']}><AssetManagement /></ProtectedRoute>} />
       <Route path="/settings/devices" element={<ProtectedRoute requiredPermission="device:read"><DeviceManagement /></ProtectedRoute>} />
       <Route path="/device-management" element={<ProtectedRoute requiredPermission="device:read"><DeviceManagement /></ProtectedRoute>} />
-      <Route path="/manage-organisation" element={<ProtectedRoute requiredPermission={['organization:read', 'site:read']}><ManageOrganisation /></ProtectedRoute>} />
-      <Route path="/settings/manage-organisation" element={<ProtectedRoute requiredPermission={['organization:read', 'site:read']}><ManageOrganisation /></ProtectedRoute>} />
+      <Route path="/manage-organisation" element={<ProtectedRoute requiredPermission={['organization:read', 'site:read', 'device:read', 'asset:read', 'location:read', 'settings:read']}><ManageOrganisation /></ProtectedRoute>} />
+      <Route path="/settings/manage-organisation" element={<ProtectedRoute requiredPermission={['organization:read', 'site:read', 'device:read', 'asset:read', 'location:read', 'settings:read']}><ManageOrganisation /></ProtectedRoute>} />
 
       {/* Super Admin Routes */}
       <Route path="/super-admin" element={<DefaultLandingRedirect />} />

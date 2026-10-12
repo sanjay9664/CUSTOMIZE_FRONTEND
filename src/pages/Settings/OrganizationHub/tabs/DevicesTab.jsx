@@ -5,6 +5,7 @@ import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
 import CommonFilterPopover from '../../../../components/common/CommonFilterPopover';
 import { DEVICE_CATEGORIES, formatCategoryLabel } from '../../../../constants/deviceTemplates';
 import { useSiteStore } from '../../../../hooks/useSiteStore';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const DevicesTab = ({
   searchTerm = '',
@@ -51,8 +52,8 @@ const DevicesTab = ({
   fetchDevices = () => {},
   showToast = () => {},
   getAuthHeaders = () => {},
-  API_BASE_URL = '/api'
 }) => {
+  const { isSuperAdmin } = useAuth();
   const { activeSites: storeActiveSites, sites: storeSites } = useSiteStore();
   const safeSites = Array.isArray(activeSites) && activeSites.length > 0
     ? activeSites
@@ -345,76 +346,80 @@ const DevicesTab = ({
             <Activity size={14} /> Recent Events
           </Button>
 
-          <div className="position-relative d-inline-block">
-            <Button
-              variant="outline-info"
-              size="sm"
-              onClick={handleGlobalResyncEventStats}
-              className="fw-semibold d-flex align-items-center gap-1.5 fs-12 btn-config-devices"
-            >
-              <Sliders size={14} /> Config Devices
-            </Button>
+          {isSuperAdmin && (
+            <>
+              <div className="position-relative d-inline-block">
+                <Button
+                  variant="outline-info"
+                  size="sm"
+                  onClick={handleGlobalResyncEventStats}
+                  className="fw-semibold d-flex align-items-center gap-1.5 fs-12 btn-config-devices"
+                >
+                  <Sliders size={14} /> Config Devices
+                </Button>
 
-            <ConfigDevicesPopover
-              show={showConfigDevicesModal}
-              onClose={() => setShowConfigDevicesModal(false)}
-              onSelectTemplates={() => {
-                setShowConfigDevicesModal(false);
-                if (typeof handleTabSelect === 'function') {
-                  handleTabSelect('templates');
-                }
-              }}
-              onSelectEntities={() => {
-                setShowConfigDevicesModal(false);
-                if (typeof showToast === 'function') {
-                  showToast('info', 'Opening Digital Twin Entities configuration...');
-                }
-              }}
-              onSelectLaunchpad={() => {
-                setShowConfigDevicesModal(false);
-                if (typeof showToast === 'function') {
-                  showToast('info', 'Opening Sochiot Cloud Launchpad...');
-                }
-              }}
-            />
-          </div>
+                <ConfigDevicesPopover
+                  show={showConfigDevicesModal}
+                  onClose={() => setShowConfigDevicesModal(false)}
+                  onSelectTemplates={() => {
+                    setShowConfigDevicesModal(false);
+                    if (typeof handleTabSelect === 'function') {
+                      handleTabSelect('templates');
+                    }
+                  }}
+                  onSelectEntities={() => {
+                    setShowConfigDevicesModal(false);
+                    if (typeof showToast === 'function') {
+                      showToast('info', 'Opening Digital Twin Entities configuration...');
+                    }
+                  }}
+                  onSelectLaunchpad={() => {
+                    setShowConfigDevicesModal(false);
+                    if (typeof showToast === 'function') {
+                      showToast('info', 'Opening Sochiot Cloud Launchpad...');
+                    }
+                  }}
+                />
+              </div>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              if (typeof handleOpenRegisterDevice === 'function') {
-                handleOpenRegisterDevice();
-              } else {
-                if (typeof setEditingDeviceItem === 'function') {
-                  setEditingDeviceItem(null);
-                }
-                setRegisterStep(1);
-                setRegisterForm({
-                  id: '',
-                  siteId: '',
-                  name: '',
-                  sochiotDeviceIds: '',
-                  category: '',
-                  areaId: '',
-                  buildingId: '',
-                  floorNo: '',
-                  roomNo: '',
-                  energyGroupId: '',
-                  description: '',
-                  serialNumber: '',
-                  profileId: ''
-                });
-                if (typeof setDynamicTemplateFields === 'function') {
-                  setDynamicTemplateFields([]);
-                }
-                setShowRegisterDeviceModal(true);
-              }
-            }}
-            className="fw-bold fs-12 text-white px-3 border-0 btn-register-device-primary d-flex align-items-center gap-1.5"
-          >
-            + Register Device
-          </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  if (typeof handleOpenRegisterDevice === 'function') {
+                    handleOpenRegisterDevice();
+                  } else {
+                    if (typeof setEditingDeviceItem === 'function') {
+                      setEditingDeviceItem(null);
+                    }
+                    setRegisterStep(1);
+                    setRegisterForm({
+                      id: '',
+                      siteId: '',
+                      name: '',
+                      sochiotDeviceIds: '',
+                      category: '',
+                      areaId: '',
+                      buildingId: '',
+                      floorNo: '',
+                      roomNo: '',
+                      energyGroupId: '',
+                      description: '',
+                      serialNumber: '',
+                      profileId: ''
+                    });
+                    if (typeof setDynamicTemplateFields === 'function') {
+                      setDynamicTemplateFields([]);
+                    }
+                    setShowRegisterDeviceModal(true);
+                  }
+                }}
+                className="fw-bold fs-12 text-white px-3 border-0 btn-register-device-primary d-flex align-items-center gap-1.5"
+              >
+                + Register Device
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -471,20 +476,22 @@ const DevicesTab = ({
                   <span>STATUS</span>
                 </div>
               </th>
-              <th className="py-3 px-3 text-end">
-                <div className="d-flex align-items-center justify-content-end gap-2">
-                  <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
-                    <Sliders size={16} />
+              {isSuperAdmin && (
+                <th className="py-3 px-3 text-end">
+                  <div className="d-flex align-items-center justify-content-end gap-2">
+                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                      <Sliders size={16} />
+                    </div>
+                    <span>ACTIONS</span>
                   </div>
-                  <span>ACTIONS</span>
-                </div>
-              </th>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {safeDevices.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-5 device-sub-text">
+                <td colSpan={isSuperAdmin ? 7 : 6} className="text-center py-5 device-sub-text">
                   <Cpu size={32} className="mb-2 text-info opacity-50" />
                   <div>No devices matching filter criteria</div>
                 </td>
@@ -593,30 +600,32 @@ const DevicesTab = ({
                       {!isDevActive ? 'INACTIVE' : 'ACTIVE'}
                     </div>
                   </td>
-                  <td className="py-3 px-3 text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-1">
-                      {[
-                        { icon: <Zap size={14} />,       color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Live Telemetry',    onClick: () => typeof handleOpenLiveModal === 'function' && handleOpenLiveModal(d) },
-                        { icon: <Sliders size={14} />,   color: '#f59e0b', hoverBg: 'rgba(245,158,11,0.12)',  label: 'Threshold Limits',  onClick: () => typeof handleOpenThresholdsModal === 'function' && handleOpenThresholdsModal(d) },
-                        { icon: <RefreshCw size={14} />, color: '#94a3b8', hoverBg: 'rgba(148,163,184,0.12)', label: 'Modbus Settings',   onClick: () => typeof handleOpenSettingsModal === 'function' && handleOpenSettingsModal(d) },
-                        { icon: <Shield size={14} />,    color: '#818cf8', hoverBg: 'rgba(129,140,248,0.12)', label: 'Automation Rules',  onClick: () => typeof handleOpenRulesModal === 'function' && handleOpenRulesModal(d) },
-                        { icon: <Zap size={14} />,       color: '#34d399', hoverBg: 'rgba(52,211,153,0.12)',  label: 'Send Command',      onClick: () => { if (typeof setSelectedDeviceForCommandsTab === 'function') setSelectedDeviceForCommandsTab(d.id); if (typeof setShowSendCommandModal === 'function') setShowSendCommandModal(true); } },
-                        { icon: <FileText size={14} />,  color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Audit Logs',        onClick: () => { if (typeof setSelectedDeviceForAudit === 'function') setSelectedDeviceForAudit(d); if (typeof handleOpenAuditLog === 'function') handleOpenAuditLog(d); } },
-                        { icon: <Edit3 size={14} />,     color: '#22d3ee', hoverBg: 'rgba(34,211,238,0.12)',  label: 'Edit Device',       onClick: () => typeof handleOpenEditDevice === 'function' && handleOpenEditDevice(d) },
-                      ].map((action, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={action.onClick}
-                          title={action.label}
-                          className="device-action-btn"
-                          style={{ '--_icon-color': action.color, '--_hover-bg': action.hoverBg }}
-                        >
-                          {action.icon}
-                        </button>
-                      ))}
-                    </div>
-                  </td>
+                  {isSuperAdmin && (
+                    <td className="py-3 px-3 text-end">
+                      <div className="d-flex align-items-center justify-content-end gap-1">
+                        {[
+                          { icon: <Zap size={14} />,       color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Live Telemetry',    onClick: () => typeof handleOpenLiveModal === 'function' && handleOpenLiveModal(d) },
+                          { icon: <Sliders size={14} />,   color: '#f59e0b', hoverBg: 'rgba(245,158,11,0.12)',  label: 'Threshold Limits',  onClick: () => typeof handleOpenThresholdsModal === 'function' && handleOpenThresholdsModal(d) },
+                          { icon: <RefreshCw size={14} />, color: '#94a3b8', hoverBg: 'rgba(148,163,184,0.12)', label: 'Modbus Settings',   onClick: () => typeof handleOpenSettingsModal === 'function' && handleOpenSettingsModal(d) },
+                          { icon: <Shield size={14} />,    color: '#818cf8', hoverBg: 'rgba(129,140,248,0.12)', label: 'Automation Rules',  onClick: () => typeof handleOpenRulesModal === 'function' && handleOpenRulesModal(d) },
+                          { icon: <Zap size={14} />,       color: '#34d399', hoverBg: 'rgba(52,211,153,0.12)',  label: 'Send Command',      onClick: () => { if (typeof setSelectedDeviceForCommandsTab === 'function') setSelectedDeviceForCommandsTab(d.id); if (typeof setShowSendCommandModal === 'function') setShowSendCommandModal(true); } },
+                          { icon: <FileText size={14} />,  color: '#38bdf8', hoverBg: 'rgba(56,189,248,0.12)',  label: 'Audit Logs',        onClick: () => { if (typeof setSelectedDeviceForAudit === 'function') setSelectedDeviceForAudit(d); if (typeof handleOpenAuditLog === 'function') handleOpenAuditLog(d); } },
+                          { icon: <Edit3 size={14} />,     color: '#22d3ee', hoverBg: 'rgba(34,211,238,0.12)',  label: 'Edit Device',       onClick: () => typeof handleOpenEditDevice === 'function' && handleOpenEditDevice(d) },
+                        ].map((action, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={action.onClick}
+                            title={action.label}
+                            className="device-action-btn"
+                            style={{ '--_icon-color': action.color, '--_hover-bg': action.hoverBg }}
+                          >
+                            {action.icon}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
