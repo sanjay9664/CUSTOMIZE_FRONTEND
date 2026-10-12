@@ -458,8 +458,8 @@ const STYLES = `
 }
 
 body.light-mode .sb {
-  background: linear-gradient(175deg, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%) !important;
-  border-right-color: #e2e8f0 !important;
+  background: var(--surface) !important;
+  border-right: 1px solid var(--border) !important;
 }
 
 /* Width States */
@@ -470,7 +470,7 @@ body.light-mode .sb {
   box-shadow: 6px 0 30px rgba(0,0,0,0.38);
 }
 
-body.light-mode .sb--hover-open { box-shadow: 6px 0 30px rgba(0,0,0,0.1); }
+body.light-mode .sb--hover-open { box-shadow: 6px 0 30px rgba(16, 63, 115, 0.1); }
 
 /* Brand Logo Smooth Cross-Fade */
 .sb-brand {
@@ -480,7 +480,7 @@ body.light-mode .sb--hover-open { box-shadow: 6px 0 30px rgba(0,0,0,0.1); }
   border-bottom: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
 }
-body.light-mode .sb-brand { border-bottom-color: #e2e8f0; }
+body.light-mode .sb-brand { border-bottom-color: var(--divider); }
 
 .sb-logo {
   width: 140px; height: 38px; object-fit: contain;
@@ -665,8 +665,8 @@ body.light-mode .sb-sep { background: linear-gradient(90deg, transparent, rgba(0
 }
 
 .sb-mod-head:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
-body.light-mode .sb-mod-head { color: #475569; }
-body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04); }
+body.light-mode .sb-mod-head { color: var(--text-secondary, #526779); }
+body.light-mode .sb-mod-head:hover { color: var(--heading, #103F73); background: rgba(6, 159, 240, 0.08); }
 
 .sb-mod-active { color: var(--mc) !important; background: var(--mbg) !important; }
 .sb-mod-opened { color: var(--mc) !important; }
@@ -741,9 +741,9 @@ body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04
 .sb-sub:hover { color: #e2e8f0; }
 .sb-sub:hover .sb-dot { background: var(--mc); box-shadow: 0 0 6px var(--mc); }
 
-body.light-mode .sb-sub { color: #64748b; }
-body.light-mode .sb-sub:hover { color: #0f172a; }
-body.light-mode .sb-dot { background: #cbd5e1; }
+body.light-mode .sb-sub { color: var(--text-secondary, #526779); }
+body.light-mode .sb-sub:hover { color: var(--heading, #103F73); }
+body.light-mode .sb-dot { background: var(--border, #D5DEE5); }
 
 .sb-sub-on {
   color: var(--mc) !important;

@@ -5,6 +5,7 @@ import {
   Droplets, Waves, Gauge, ArrowRight, Activity, ShieldCheck, Zap,
   AlertTriangle, RefreshCw, Layers, Play, Pause, ExternalLink,
   Cpu, CheckCircle2, Radio, ToggleRight, ArrowUpRight, Maximize2, Minimize2,
+  Columns
 } from 'lucide-react';
 import { useSiteStore } from '../../hooks/useSiteStore';
 import bmsService from '../../services/bmsService';

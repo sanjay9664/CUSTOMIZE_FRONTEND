@@ -2163,42 +2163,43 @@ const SiemensStyleDG = () => {
         .bg-pill-status { background: rgba(3, 7, 18, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); }
         .dg-opt { background: #0f172a; color: #f8fafc; }
 
-        /* LIGHT MODE EYE-COMFORT & HIGH-CONTRAST SYSTEM */
+        /* LIGHT MODE EYE-COMFORT SYSTEM */
         body.light-mode .dg-premium-page,
         [data-theme="light"] .dg-premium-page {
-          background: #f0f3f8 !important;
+          background: var(--background, #EDF2F7) !important;
           background-image: none !important;
-          color: #0f172a !important;
+          color: var(--text-primary, #1E293B) !important;
         }
 
         body.light-mode .dg-glass-card,
         [data-theme="light"] .dg-glass-card {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
-          box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05) !important;
+          background: var(--surface, #FFFFFF) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
         }
         body.light-mode .dg-glass-card:hover,
         [data-theme="light"] .dg-glass-card:hover {
-          border-color: #94a3b8 !important;
+          border-color: var(--primary, #0284C7) !important;
+          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12) !important;
         }
 
         body.light-mode .text-main,
-        [data-theme="light"] .text-main { color: #0f172a !important; }
+        [data-theme="light"] .text-main { color: var(--text-primary, #1E293B) !important; }
 
         body.light-mode .text-dim,
-        [data-theme="light"] .text-dim { color: #475569 !important; font-weight: 600; }
+        [data-theme="light"] .text-dim { color: var(--text-secondary, #475569) !important; font-weight: 600; }
 
         body.light-mode .text-cyan-glow,
-        [data-theme="light"] .text-cyan-glow { color: #0284c7 !important; }
+        [data-theme="light"] .text-cyan-glow { color: var(--primary, #0284C7) !important; }
 
         body.light-mode .bg-pill-status,
         [data-theme="light"] .bg-pill-status {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
+          background: var(--surface, #FFFFFF) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
         }
 
         body.light-mode .dg-opt,
-        [data-theme="light"] .dg-opt { background: #ffffff !important; color: #0f172a !important; }
+        [data-theme="light"] .dg-opt { background: var(--surface, #FFFFFF) !important; color: var(--text-primary, #1E293B) !important; }
 
         /* REALISTIC FLUID DIESEL FUEL TANK WITH WAVE & BUBBLE ANIMATIONS */
         .dg-realistic-fuel-tank {
@@ -2387,16 +2388,16 @@ const SiemensStyleDG = () => {
         .dg-fuel-tile-val.info { color: #38bdf8; }
 
         body.light-mode .dg-fuel-tile, [data-theme="light"] .dg-fuel-tile {
-          background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+          background: var(--surface, #FFFFFF) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
         }
         body.light-mode .dg-fuel-tile-lbl, [data-theme="light"] .dg-fuel-tile-lbl {
-          color: #475569 !important;
+          color: var(--text-secondary, #475569) !important;
         }
         body.light-mode .dg-realistic-fuel-tank, [data-theme="light"] .dg-realistic-fuel-tank {
-          background: #f8fafc !important;
-          border-color: #f59e0b !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border-color: var(--warning, #F59E0B) !important;
         }
 
         /* COMPACT PARAM TILES WITH UNMAPPED GRAYOUT */
@@ -2411,11 +2412,11 @@ const SiemensStyleDG = () => {
           border: 1px solid rgba(255, 255, 255, 0.08);
           transition: all 0.2s ease;
         }
-        .dg-param-tile-v2.success { border-left: 3px solid #10b981; }
-        .dg-param-tile-v2.warning { border-left: 3px solid #f59e0b; }
-        .dg-param-tile-v2.info { border-left: 3px solid #0284c7; }
-        .dg-param-tile-v2.cyan { border-left: 3px solid #06b6d4; }
-        .dg-param-tile-v2.danger { border-left: 3px solid #ef4444; }
+        .dg-param-tile-v2.success { border-left: 3px solid var(--success, #10B981); }
+        .dg-param-tile-v2.warning { border-left: 3px solid var(--warning, #F59E0B); }
+        .dg-param-tile-v2.info { border-left: 3px solid var(--primary, #0284C7); }
+        .dg-param-tile-v2.cyan { border-left: 3px solid var(--accent-cyan, #06B6D4); }
+        .dg-param-tile-v2.danger { border-left: 3px solid var(--danger, #EF4444); }
 
         .dg-param-tile-v2.unmapped {
           opacity: 0.38 !important;
@@ -2425,18 +2426,18 @@ const SiemensStyleDG = () => {
           border-left: 1px dashed rgba(255, 255, 255, 0.1) !important;
         }
         .dg-param-tile-v2.unmapped .dg-param-name {
-          color: #64748b !important;
+          color: var(--text-muted, #64748B) !important;
         }
         .dg-param-tile-v2.unmapped .dg-param-val {
-          color: #475569 !important;
+          color: var(--text-secondary, #475569) !important;
           font-weight: 500 !important;
         }
 
         body.light-mode .dg-param-tile-v2.unmapped,
         [data-theme="light"] .dg-param-tile-v2.unmapped {
-          background: #e2e8f0 !important;
-          border: 1px dashed #cbd5e1 !important;
-          opacity: 0.45 !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border: 1px dashed var(--border, #CBD5E1) !important;
+          opacity: 0.55 !important;
         }
 
         .dg-param-num {
@@ -2642,26 +2643,26 @@ const SiemensStyleDG = () => {
         }
         body.light-mode .dg-btn-outline-glass,
         [data-theme="light"] .dg-btn-outline-glass {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
-          color: #0284c7 !important;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+          background: #FFFFFF !important;
+          border: 1px solid #D5DEE5 !important;
+          color: #069FF0 !important;
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.04) !important;
         }
         body.light-mode .dg-btn-outline-glass:hover,
         [data-theme="light"] .dg-btn-outline-glass:hover {
-          background: #f1f5f9 !important;
-          border-color: #0284c7 !important;
+          background: #F7FAFD !important;
+          border-color: #069FF0 !important;
         }
 
         .dg-btn-cyan {
-          background: linear-gradient(135deg, #0ea5e9, #0284c7);
+          background: linear-gradient(135deg, #069FF0, #168CE0);
           color: #fff;
           border: none;
           font-size: 0.78rem;
           font-weight: 600;
           border-radius: 8px;
           padding: 6px 14px;
-          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+          box-shadow: 0 4px 12px rgba(6, 159, 240, 0.25);
           transition: 0.25s;
         }
 
@@ -2683,14 +2684,14 @@ const SiemensStyleDG = () => {
         }
         body.light-mode .dg-selector-box,
         [data-theme="light"] .dg-selector-box { 
-          background: linear-gradient(135deg, #ffffff, #f8fafc) !important; 
-          border-color: #cbd5e1 !important; 
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+          background: #FFFFFF !important; 
+          border: 1px solid #D5DEE5 !important; 
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.04) !important;
         }
         body.light-mode .dg-selector-box:hover,
         [data-theme="light"] .dg-selector-box:hover {
-          border-color: #0284c7 !important;
-          box-shadow: 0 4px 15px rgba(2, 132, 199, 0.15) !important;
+          border-color: #069FF0 !important;
+          box-shadow: 0 4px 15px rgba(6, 159, 240, 0.15) !important;
         }
 
         .dg-selector-box.warning { border-color: rgba(245, 158, 11, 0.3); }
@@ -2712,15 +2713,15 @@ const SiemensStyleDG = () => {
           box-shadow: none !important;
         }
         body.light-mode .dg-custom-select,
-        [data-theme="light"] .dg-custom-select { color: #0f172a !important; }
+        [data-theme="light"] .dg-custom-select { color: #102A43 !important; }
 
         .dg-custom-select.warning { color: #fbbf24 !important; }
         body.light-mode .dg-custom-select.warning,
-        [data-theme="light"] .dg-custom-select.warning { color: #d97706 !important; }
+        [data-theme="light"] .dg-custom-select.warning { color: #F59E0B !important; }
 
         .dg-custom-select.success { color: #34d399 !important; }
         body.light-mode .dg-custom-select.success,
-        [data-theme="light"] .dg-custom-select.success { color: #059669 !important; }
+        [data-theme="light"] .dg-custom-select.success { color: #16B978 !important; }
 
         .text-cyan-glow { color: #0284c7; }
         .text-warning-glow { color: #d97706; }
@@ -2739,8 +2740,8 @@ const SiemensStyleDG = () => {
         }
         body.light-mode .dg-metric-row,
         [data-theme="light"] .dg-metric-row {
-          background: #f8fafc !important;
-          border-color: #cbd5e1 !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border-color: var(--border, #CBD5E1) !important;
         }
 
         /* SEARCH GROUP */
@@ -2751,7 +2752,7 @@ const SiemensStyleDG = () => {
           overflow: hidden;
         }
         body.light-mode .dg-search-group,
-        [data-theme="light"] .dg-search-group { background: #ffffff !important; border-color: #cbd5e1 !important; }
+        [data-theme="light"] .dg-search-group { background: var(--surface, #FFFFFF) !important; border-color: var(--border, #CBD5E1) !important; }
 
         /* ULTRA-SLEEK SEGMENTED CATEGORY NAV BAR */
         .dg-category-nav-bar {
@@ -2892,27 +2893,27 @@ const SiemensStyleDG = () => {
         /* Light mode support */
         body.light-mode .dg-category-nav-bar,
         [data-theme="light"] .dg-category-nav-bar {
-          background: #f1f5f9 !important;
-          border-color: #cbd5e1 !important;
+          background: #F7FAFD !important;
+          border-color: #D5DEE5 !important;
         }
         body.light-mode .dg-cat-nav-btn,
         [data-theme="light"] .dg-cat-nav-btn {
-          color: #64748b !important;
+          color: #526779 !important;
         }
         body.light-mode .dg-cat-nav-btn:hover,
         [data-theme="light"] .dg-cat-nav-btn:hover {
-          background: #e2e8f0 !important;
-          color: #0f172a !important;
+          background: #E8EEF2 !important;
+          color: #102A43 !important;
         }
         body.light-mode .dg-cat-badge,
         [data-theme="light"] .dg-cat-badge {
-          background: #e2e8f0 !important;
-          color: #475569 !important;
+          background: #E8EEF2 !important;
+          color: #526779 !important;
         }
         body.light-mode .dg-cat-code,
         [data-theme="light"] .dg-cat-code {
-          background: #e2e8f0 !important;
-          color: #475569 !important;
+          background: #E8EEF2 !important;
+          color: #526779 !important;
         }
 
         .dg-code-pill {
@@ -2922,11 +2923,11 @@ const SiemensStyleDG = () => {
           font-weight: 700;
           font-family: monospace;
         }
-        .dg-code-pill.success { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .dg-code-pill.warning { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); }
-        .dg-code-pill.info { background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3); }
-        .dg-code-pill.cyan { background: rgba(6, 182, 212, 0.15); color: #0891b2; border: 1px solid rgba(6, 182, 212, 0.3); }
-        .dg-code-pill.danger { background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .dg-code-pill.success { background: rgba(22, 185, 120, 0.15); color: #16B978; border: 1px solid rgba(22, 185, 120, 0.3); }
+        .dg-code-pill.warning { background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .dg-code-pill.info { background: rgba(6, 159, 240, 0.15); color: #069FF0; border: 1px solid rgba(6, 159, 240, 0.3); }
+        .dg-code-pill.cyan { background: rgba(6, 199, 245, 0.15); color: #06C7F5; border: 1px solid rgba(6, 199, 245, 0.3); }
+        .dg-code-pill.danger { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
 
         /* POWER CARDS V2 MATCHING SCREENSHOT */
         .dg-power-card-v2 {
@@ -2943,9 +2944,9 @@ const SiemensStyleDG = () => {
 
         body.light-mode .dg-power-card-v2,
         [data-theme="light"] .dg-power-card-v2 {
-          background: #ffffff !important;
-          border-color: #cbd5e1 !important;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.04) !important;
+          background: #FFFFFF !important;
+          border-color: #D5DEE5 !important;
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.05) !important;
         }
 
         .dg-power-icon-box {
@@ -2965,11 +2966,11 @@ const SiemensStyleDG = () => {
         .dg-power-title.warning { color: #fff; }
         .dg-power-title.success { color: #fff; }
         body.light-mode .dg-power-title,
-        [data-theme="light"] .dg-power-title { color: #0f172a !important; }
+        [data-theme="light"] .dg-power-title { color: #103F73 !important; }
 
         .dg-power-sub { font-size: 0.52rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.4px; }
         body.light-mode .dg-power-sub,
-        [data-theme="light"] .dg-power-sub { color: #64748b !important; }
+        [data-theme="light"] .dg-power-sub { color: #526779 !important; }
 
         .dg-sparkline-wrap { height: 26px; margin: 2px 0; }
 
@@ -2977,17 +2978,17 @@ const SiemensStyleDG = () => {
         .dg-power-val.cyan { color: #38bdf8; }
         .dg-power-val.warning { color: #fbbf24; }
         .dg-power-val.success { color: #34d399; }
-        body.light-mode .dg-power-val.cyan, [data-theme="light"] .dg-power-val.cyan { color: #0284c7 !important; }
-        body.light-mode .dg-power-val.warning, [data-theme="light"] .dg-power-val.warning { color: #d97706 !important; }
-        body.light-mode .dg-power-val.success, [data-theme="light"] .dg-power-val.success { color: #059669 !important; }
+        body.light-mode .dg-power-val.cyan, [data-theme="light"] .dg-power-val.cyan { color: #069FF0 !important; }
+        body.light-mode .dg-power-val.warning, [data-theme="light"] .dg-power-val.warning { color: #F59E0B !important; }
+        body.light-mode .dg-power-val.success, [data-theme="light"] .dg-power-val.success { color: #16B978 !important; }
 
         .dg-power-unit { font-size: 0.78rem; font-weight: 800; font-family: monospace; }
         .dg-power-unit.cyan { color: #38bdf8; }
         .dg-power-unit.warning { color: #fbbf24; }
         .dg-power-unit.success { color: #34d399; }
-        body.light-mode .dg-power-unit.cyan, [data-theme="light"] .dg-power-unit.cyan { color: #0284c7 !important; }
-        body.light-mode .dg-power-unit.warning, [data-theme="light"] .dg-power-unit.warning { color: #d97706 !important; }
-        body.light-mode .dg-power-unit.success, [data-theme="light"] .dg-power-unit.success { color: #059669 !important; }
+        body.light-mode .dg-power-unit.cyan, [data-theme="light"] .dg-power-unit.cyan { color: #069FF0 !important; }
+        body.light-mode .dg-power-unit.warning, [data-theme="light"] .dg-power-unit.warning { color: #F59E0B !important; }
+        body.light-mode .dg-power-unit.success, [data-theme="light"] .dg-power-unit.success { color: #16B978 !important; }
 
         /* TARGET BADGE & INTERACTIVE TARGET SELECTOR */
         .dg-target-badge,

@@ -262,20 +262,21 @@ const SolarDashboard = ({
       progressGrad: 'linear-gradient(90deg, #a855f7, #d946ef)'
     }
     : {
-      bg: '#f1f5f9',
-      panelBg: '#ffffff',
-      cardBg: '#ffffff',
-      border: '#e2e8f0',
-      text: '#1e293b',
-      muted: '#64748b',
-      accent: '#ea580c',
-      green: '#059669',
-      blue: '#0284c7',
-      red: '#dc2626',
-      purple: '#9333ea',
-      yellow: '#d97706',
-      shadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
-      progressGrad: 'linear-gradient(90deg, #9333ea, #c026d3)'
+      bg: '#E8EDF3',
+      panelBg: '#FFFFFF',
+      cardBg: '#FFFFFF',
+      border: '#C8D3DE',
+      text: '#1E293B',
+      heading: '#0F3A66',
+      muted: '#475569',
+      accent: '#0284C7',
+      green: '#10B981',
+      blue: '#0284C7',
+      red: '#DC2626',
+      purple: '#6D5CE7',
+      yellow: '#D97706',
+      shadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+      progressGrad: 'linear-gradient(90deg, #0284C7, #0891B2)'
     };
 
   const [scale, setScale] = useState(1);
@@ -289,7 +290,7 @@ const SolarDashboard = ({
         if (width > 0) {
           const widthScale = width / 1150;
           const availableHeight = window.innerHeight - 150;
-          const heightScale = Math.max(0.65, availableHeight / 720);
+          const heightScale = Math.max(0.65, availableHeight / 780);
           setScale(Math.min(widthScale, heightScale));
         }
       }
@@ -452,7 +453,7 @@ const SolarDashboard = ({
                 borderRadius: '16px',
                 border: `1px solid ${currentTheme.border}`,
                 boxShadow: currentTheme.shadow,
-                minHeight: '740px',
+                minHeight: '780px',
                 overflow: 'hidden'
               }}
             >
@@ -460,7 +461,7 @@ const SolarDashboard = ({
                 ref={containerRef}
                 style={{
                   width: '100%',
-                  height: `${740 * scale}px`,
+                  height: `${780 * scale}px`,
                   position: 'relative',
                   display: 'flex',
                   justifyContent: 'center',
@@ -472,7 +473,7 @@ const SolarDashboard = ({
                     position: 'absolute',
                     top: 0,
                     width: '1150px',
-                    height: '740px',
+                    height: '780px',
                     transform: `scale(${scale})`,
                     transformOrigin: 'top center'
                   }}
@@ -696,13 +697,13 @@ const SolarDashboard = ({
                     style={{
                       position: 'absolute',
                       left: '20px',
-                      top: '520px',
+                      top: '510px',
                       background: currentTheme.cardBg,
                       border: `1px solid ${currentTheme.border}`,
                       borderRadius: '12px',
-                      padding: '12px 16px',
+                      padding: '10px 14px 12px 14px',
                       width: '280px',
-                      minHeight: activeDgList.length > 1 ? '195px' : '170px',
+                      minHeight: activeDgList.length > 1 ? '222px' : '170px',
                       zIndex: 10,
                       display: 'flex',
                       flexDirection: 'column',
@@ -762,12 +763,12 @@ const SolarDashboard = ({
                         </div>
 
                         {/* Large Power Reading */}
-                        <div style={{ color: dgW > 50 ? currentTheme.green : currentTheme.red, fontSize: '28px', fontWeight: 'bold', lineHeight: '1.15' }}>
+                        <div style={{ color: dgW > 50 ? currentTheme.green : currentTheme.red, fontSize: '25px', fontWeight: 'bold', lineHeight: '1.1' }}>
                           {dgW} W
                         </div>
 
                         {/* Voltage & Current */}
-                        <div className={`mt-1 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '11.5px', fontWeight: 600 }}>
+                        <div className={`mt-0.5 text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '11px', fontWeight: 600 }}>
                           {dgV} V <span className="text-muted mx-0.5">|</span> {dgA} A
                         </div>
                       </div>
@@ -776,7 +777,7 @@ const SolarDashboard = ({
                     {/* Multi-DG Segmented Selector Bar (Spans full width for clean symmetry) */}
                     {activeDgList.length > 1 && (
                       <div
-                        className="d-flex align-items-center justify-content-between p-0.5 rounded-pill mt-2 mb-1 w-100"
+                        className="d-flex align-items-center justify-content-between p-0.5 rounded-pill mt-1 mb-1 w-100"
                         style={{
                           background: isDark ? 'rgba(15, 23, 42, 0.65)' : 'rgba(226, 232, 240, 0.75)',
                           border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
@@ -838,7 +839,7 @@ const SolarDashboard = ({
 
                     {/* Telemetry Micro Chips (Fuel, Bat, Temp) */}
                     {(dgFuel || dgBattery || dgCoolant) && (
-                      <div className="d-flex align-items-center gap-1.5 my-1 overflow-hidden" style={{ fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+                      <div className="d-flex align-items-center gap-1.5 my-0.5 overflow-hidden" style={{ fontSize: '9.5px', whiteSpace: 'nowrap' }}>
                         {dgFuel && (
                           <span
                             className="badge rounded-pill fw-semibold px-2 py-0.5"
@@ -884,10 +885,10 @@ const SolarDashboard = ({
                     <MiniWave color={dgW > 50 ? currentTheme.green : currentTheme.red} />
 
                     {/* Bottom Footer: Today's Energy & Engine State */}
-                    <div className="d-flex justify-content-between align-items-end mt-1 pt-0.5">
+                    <div className="d-flex justify-content-between align-items-end mt-1 pt-0">
                       <div className="d-flex flex-column">
-                        <span className="text-muted" style={{ fontSize: '10.5px' }}>Today's Energy</span>
-                        <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '13px' }}>
+                        <span className="text-muted" style={{ fontSize: '10px' }}>Today's Energy</span>
+                        <span className={`fw-bold text-${isDark ? 'white' : 'dark'}`} style={{ fontSize: '12.5px' }}>
                           {dgKwh} kWh
                         </span>
                       </div>
