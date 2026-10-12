@@ -482,6 +482,7 @@ const ACOverview = () => {
     return INITIAL_ACS;
   });
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [cardSuccessMessage, setCardSuccessMessage] = useState({});
 
   // --- INLINE EDITING STATE FOR AC NAMES ---
   const [editingUnitId, setEditingUnitId] = useState(null);
@@ -1303,11 +1304,8 @@ const ACOverview = () => {
       {displayedUnits.length === 0 ? (
         /* ── Empty State: No AC units mapped to this site ── */
         <div
-          className="w-100 mt-3 p-5 rounded-4 text-center"
+          className="w-100 mt-3 p-5 rounded-4 text-center ac-empty-state-card"
           style={{
-            background: 'linear-gradient(135deg, rgba(14,22,42,0.85) 0%, rgba(10,18,35,0.92) 100%)',
-            border: '1.5px dashed rgba(56,189,248,0.28)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
             minHeight: '420px',
             display: 'flex',
             flexDirection: 'column',
@@ -1316,7 +1314,7 @@ const ACOverview = () => {
           }}
         >
           <div
-            className="d-inline-flex p-4 rounded-circle mb-4"
+            className="d-inline-flex p-4 rounded-circle mb-4 ac-empty-icon-wrap"
             style={{
               background: 'rgba(14,165,233,0.10)',
               border: '1.5px solid rgba(14,165,233,0.25)',
@@ -1325,10 +1323,10 @@ const ACOverview = () => {
           >
             <Wind size={44} strokeWidth={1.6} />
           </div>
-          <h5 className="text-white fw-bold mb-2" style={{ fontSize: '1.25rem', letterSpacing: '-0.2px' }}>
+          <h5 className="fw-bold mb-2 ac-empty-title" style={{ fontSize: '1.25rem', letterSpacing: '-0.2px' }}>
             No AC Units Mapped
           </h5>
-          <p className="text-secondary mb-4 mx-auto" style={{ maxWidth: '400px', fontSize: '14px', lineHeight: 1.65 }}>
+          <p className="mb-4 mx-auto ac-empty-desc" style={{ maxWidth: '400px', fontSize: '14px', lineHeight: 1.65 }}>
             No AC devices are registered for{' '}
             <strong className="text-info">
               {selectedSite?.name || selectedSite?.siteName || 'this site'}

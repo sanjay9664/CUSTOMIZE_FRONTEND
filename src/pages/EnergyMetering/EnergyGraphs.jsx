@@ -21,7 +21,9 @@ import {
   RefreshCw,
   Sliders,
   Cpu,
-  AlertTriangle
+  AlertTriangle,
+  Search,
+  Calendar
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';

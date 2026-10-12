@@ -23,6 +23,27 @@
   --acms-text-dim: #64748B;
 }
 
+body.light-mode,
+[data-theme="light"] {
+  --acms-bg-base: #eaedf2;
+  --acms-bg-surface: #ffffff;
+  --acms-bg-card: #ffffff;
+  --acms-bg-card-hover: #f8fafc;
+  --acms-border: #cbd5e1;
+  --acms-border-focus: rgba(239, 51, 64, 0.5);
+  --acms-red: #dc2626;
+  --acms-red-bright: #ef4444;
+  --acms-red-glow: rgba(220, 38, 38, 0.15);
+  --acms-cyan: #0284c7;
+  --acms-blue: #0284c7;
+  --acms-green: #15803d;
+  --acms-amber: #b45309;
+  --acms-purple: #6d5ce7;
+  --acms-text-main: #0f172a;
+  --acms-text-muted: #334155;
+  --acms-text-dim: #475569;
+}
+
 .acms-main {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--acms-bg-base);
@@ -1345,6 +1366,179 @@
 
 .scada-mcp-alarm-strobe {
   animation: scadaMcpStrobe 0.6s infinite ease-in-out;
+}
+
+/* =========================================================
+   LIGHT MODE OVERRIDES FOR ACMS (ENTERPRISE SCADA FINISH)
+   ========================================================= */
+
+body.light-mode .acms-main,
+[data-theme="light"] .acms-main {
+  background: var(--acms-bg-base) !important;
+  color: var(--acms-text-main) !important;
+}
+
+body.light-mode .acms-nav-container,
+[data-theme="light"] .acms-nav-container {
+  background: #eaedf2 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .acms-tabs-bar,
+[data-theme="light"] .acms-tabs-bar {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-mode .acms-tab-btn,
+[data-theme="light"] .acms-tab-btn {
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .acms-tab-btn:hover,
+[data-theme="light"] .acms-tab-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.light-mode .acms-tab-btn.active,
+[data-theme="light"] .acms-tab-btn.active {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2) !important;
+}
+
+body.light-mode .acms-tab-btn.active.blue,
+[data-theme="light"] .acms-tab-btn.active.blue {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2) !important;
+}
+
+body.light-mode .acms-tab-btn.active.cyan,
+[data-theme="light"] .acms-tab-btn.active.cyan {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2) !important;
+}
+
+body.light-mode .acms-tab-btn.active.purple,
+[data-theme="light"] .acms-tab-btn.active.purple {
+  background: #ede9fe !important;
+  color: #6d28d9 !important;
+  border-color: #7c3aed !important;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2) !important;
+}
+
+body.light-mode .acms-kpi-chip,
+[data-theme="light"] .acms-kpi-chip {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+  backdrop-filter: none !important;
+}
+
+body.light-mode .acms-kpi-chip strong,
+[data-theme="light"] .acms-kpi-chip strong {
+  color: #0f172a !important;
+}
+
+body.light-mode .acms-clause-banner,
+[data-theme="light"] .acms-clause-banner {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-mode .acms-clause-banner h5,
+body.light-mode .acms-clause-banner h6,
+[data-theme="light"] .acms-clause-banner h5,
+[data-theme="light"] .acms-clause-banner h6 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .acms-clause-banner p,
+[data-theme="light"] .acms-clause-banner p {
+  color: #334155 !important;
+}
+
+body.light-mode .acms-scada-card,
+[data-theme="light"] .acms-scada-card {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+  backdrop-filter: none !important;
+}
+
+body.light-mode .acms-scada-card:hover,
+[data-theme="light"] .acms-scada-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.09) !important;
+  border-color: #94a3b8 !important;
+}
+
+body.light-mode .acms-card-top-row h6,
+[data-theme="light"] .acms-card-top-row h6 {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .acms-clause-badge,
+[data-theme="light"] .acms-clause-badge {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .acms-clause-badge.red,
+[data-theme="light"] .acms-clause-badge.red {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+}
+
+body.light-mode .acms-equip-icon-box,
+[data-theme="light"] .acms-equip-icon-box {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode .acms-water-backdrop,
+[data-theme="light"] .acms-water-backdrop {
+  opacity: 0.1 !important;
+}
+
+body.light-mode .acms-supervision-pill,
+[data-theme="light"] .acms-supervision-pill {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .acms-telemetry-row,
+[data-theme="light"] .acms-telemetry-row {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-mode .acms-telemetry-label,
+[data-theme="light"] .acms-telemetry-label {
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+body.light-mode .acms-telemetry-value,
+[data-theme="light"] .acms-telemetry-value {
+  color: #0f172a !important;
+  font-weight: 800 !important;
 }
 
 

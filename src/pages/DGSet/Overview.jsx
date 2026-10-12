@@ -3752,8 +3752,9 @@ const SiemensStyleDG = () => {
         body.light-mode .dg-vital-card,
         [data-theme="light"] .dg-vital-card {
           background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
-          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 12px !important;
+          box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04) !important;
         }
         body.light-mode .dg-vital-card.cyan { border-left: 4px solid #0284c7 !important; }
         body.light-mode .dg-vital-card.warning { border-left: 4px solid #d97706 !important; }
@@ -3928,20 +3929,23 @@ const SiemensStyleDG = () => {
         /* SUBTILES, PHASE TILES & SYSINFO */
         body.light-mode .dg-subtile,
         [data-theme="light"] .dg-subtile {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 10px !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
         }
         body.light-mode .dg-phase-volt-tile,
         [data-theme="light"] .dg-phase-volt-tile {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+          background: #f8fafc !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 10px !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
         }
         body.light-mode .dg-phase-current-row,
         [data-theme="light"] .dg-phase-current-row {
           background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 8px !important;
         }
         body.light-mode .dg-phase-progress,
         [data-theme="light"] .dg-phase-progress {
@@ -3951,7 +3955,8 @@ const SiemensStyleDG = () => {
         body.light-mode .dg-sysinfo-row,
         [data-theme="light"] .dg-sysinfo-row {
           background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 8px !important;
         }
         body.light-mode .dg-sysinfo-row .text-main,
         [data-theme="light"] .dg-sysinfo-row .text-main {

@@ -206,3 +206,105 @@
 .scada-tb-layout-btn.active { border-color: #06b6d4; color: #22d3ee; background: rgba(6,182,212,0.12); }
 
 .scada-tb-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+/* ── COMPLETE LIGHT MODE OVERRIDES FOR SCADA TOOLBAR ── */
+body.light-mode .scada-toolbar,
+[data-theme="light"] .scada-toolbar {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.light-mode .scada-tb-pill,
+[data-theme="light"] .scada-tb-pill {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  font-weight: 700 !important;
+}
+body.light-mode .scada-tb-pill:hover,
+[data-theme="light"] .scada-tb-pill:hover {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+  color: #0284c7 !important;
+}
+body.light-mode .scada-tb-pill.active,
+[data-theme="light"] .scada-tb-pill.active {
+  background: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15) !important;
+}
+
+body.light-mode .scada-tb-menu,
+[data-theme="light"] .scada-tb-menu {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+}
+body.light-mode .scada-tb-menu-item,
+[data-theme="light"] .scada-tb-menu-item {
+  color: #334155 !important;
+  font-weight: 600 !important;
+}
+body.light-mode .scada-tb-menu-item:hover,
+[data-theme="light"] .scada-tb-menu-item:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+body.light-mode .scada-tb-menu-item.selected,
+[data-theme="light"] .scada-tb-menu-item.selected {
+  color: #0284c7 !important;
+  background: #e0f2fe !important;
+}
+
+body.light-mode .scada-tb-search-wrap,
+[data-theme="light"] .scada-tb-search-wrap {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+}
+body.light-mode .scada-tb-search-wrap:focus-within,
+[data-theme="light"] .scada-tb-search-wrap:focus-within {
+  border-color: #0284c7 !important;
+  background: #ffffff !important;
+}
+body.light-mode .scada-tb-search-input,
+[data-theme="light"] .scada-tb-search-input {
+  color: #0f172a !important;
+}
+body.light-mode .scada-tb-search-input::placeholder,
+[data-theme="light"] .scada-tb-search-input::placeholder {
+  color: #64748b !important;
+}
+
+body.light-mode .scada-tb-layout-btn,
+[data-theme="light"] .scada-tb-layout-btn {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
+body.light-mode .scada-tb-layout-btn:hover,
+[data-theme="light"] .scada-tb-layout-btn:hover {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+  color: #0284c7 !important;
+}
+body.light-mode .scada-tb-layout-btn.active,
+[data-theme="light"] .scada-tb-layout-btn.active {
+  background: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+}
+
+body.light-mode .scada-tb-date-input,
+[data-theme="light"] .scada-tb-date-input {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+body.light-mode .scada-tb-sep,
+[data-theme="light"] .scada-tb-sep {
+  background: #cbd5e1 !important;
+}

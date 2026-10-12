@@ -1098,8 +1098,7 @@ const WaterOverview = () => {
 
                 {/* Box 1 Primary Telemetry Ribbon */}
                 <div
-                  className="px-2 py-1 rounded-2 mb-1.5"
-                  style={{ background: 'rgba(11, 19, 36, 0.85)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  className="px-2 py-1 rounded-2 mb-1.5 wm-telemetry-ribbon"
                 >
                   <Row className="g-1 text-center align-items-center">
                     <Col xs={3}>
@@ -1346,8 +1345,7 @@ const WaterOverview = () => {
 
                 {/* Box 2 Primary Telemetry Ribbon */}
                 <div
-                  className="px-2 py-1.5 rounded-2 mb-2"
-                  style={{ background: 'rgba(11, 19, 36, 0.85)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  className="px-2 py-1.5 rounded-2 mb-2 wm-telemetry-ribbon"
                 >
                   <Row className="g-1 text-center align-items-center">
                     <Col xs={3}>
@@ -1815,9 +1813,8 @@ const WaterOverview = () => {
                         <Row className="g-2 text-center align-items-center mt-2">
                           <Col xs={3}>
                             <div
-                              className="rounded-2 d-flex align-items-center gap-2"
+                              className="rounded-2 d-flex align-items-center gap-2 wm-stat-tile"
                               style={{
-                                background: 'rgba(11, 19, 36, 0.95)',
                                 border: '1px solid rgba(56, 189, 248, 0.2)',
                                 padding: '6px 10px',
                                 minHeight: '48px'
@@ -1833,7 +1830,7 @@ const WaterOverview = () => {
                                 <span style={{ color: '#94a3b8', fontSize: '8px', fontWeight: 800, display: 'block', letterSpacing: '0.4px', lineHeight: 1.2, marginBottom: '2px' }}>
                                   LINE VOLTAGE
                                 </span>
-                                <strong style={{ color: '#ffffff', fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
+                                <strong className="wm-stat-val" style={{ fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
                                   {avgVoltage > 0 ? `${avgVoltage.toFixed(1)} V` : (mappedUgPumps.length > 0 ? '415.2 V' : '--')}
                                 </strong>
                               </div>
@@ -1841,9 +1838,8 @@ const WaterOverview = () => {
                           </Col>
                           <Col xs={3}>
                             <div
-                              className="rounded-2 d-flex align-items-center gap-2"
+                              className="rounded-2 d-flex align-items-center gap-2 wm-stat-tile"
                               style={{
-                                background: 'rgba(11, 19, 36, 0.95)',
                                 border: '1px solid rgba(250, 204, 21, 0.2)',
                                 padding: '6px 10px',
                                 minHeight: '48px'
@@ -1859,7 +1855,7 @@ const WaterOverview = () => {
                                 <span style={{ color: '#94a3b8', fontSize: '8px', fontWeight: 800, display: 'block', letterSpacing: '0.4px', lineHeight: 1.2, marginBottom: '2px' }}>
                                   CURRENT / PHASE
                                 </span>
-                                <strong style={{ color: '#facc15', fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
+                                <strong className="wm-stat-val" style={{ color: '#facc15', fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
                                   {activePumpsCount > 0 ? '13.5 A' : (mappedUgPumps.length > 0 ? '0.0 A' : '--')}
                                 </strong>
                               </div>
@@ -1867,9 +1863,8 @@ const WaterOverview = () => {
                           </Col>
                           <Col xs={3}>
                             <div
-                              className="rounded-2 d-flex align-items-center gap-2"
+                              className="rounded-2 d-flex align-items-center gap-2 wm-stat-tile"
                               style={{
-                                background: 'rgba(11, 19, 36, 0.95)',
                                 border: '1px solid rgba(56, 189, 248, 0.2)',
                                 padding: '6px 10px',
                                 minHeight: '48px'
@@ -1885,7 +1880,7 @@ const WaterOverview = () => {
                                 <span style={{ color: '#94a3b8', fontSize: '8px', fontWeight: 800, display: 'block', letterSpacing: '0.4px', lineHeight: 1.2, marginBottom: '2px' }}>
                                   POWER FACTOR
                                 </span>
-                                <strong style={{ color: '#38bdf8', fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
+                                <strong className="wm-stat-val" style={{ color: '#38bdf8', fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
                                   {powerFactor > 0 ? `${powerFactor}` : (mappedUgPumps.length > 0 ? (activePumpsCount > 0 ? '0.98' : '1.00') : '--')}
                                 </strong>
                               </div>
@@ -1893,9 +1888,8 @@ const WaterOverview = () => {
                           </Col>
                           <Col xs={3}>
                             <div
-                              className="rounded-2 d-flex align-items-center gap-2"
+                              className="rounded-2 d-flex align-items-center gap-2 wm-stat-tile"
                               style={{
-                                background: 'rgba(11, 19, 36, 0.95)',
                                 border: '1px solid rgba(34, 197, 94, 0.2)',
                                 padding: '6px 10px',
                                 minHeight: '48px'
@@ -1911,7 +1905,7 @@ const WaterOverview = () => {
                                 <span style={{ color: '#94a3b8', fontSize: '8px', fontWeight: 800, display: 'block', letterSpacing: '0.4px', lineHeight: 1.2, marginBottom: '2px' }}>
                                   FREQUENCY
                                 </span>
-                                <strong style={{ color: '#4ade80', fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
+                                <strong className="wm-stat-val" style={{ color: '#4ade80', fontSize: '12.5px', fontWeight: 900, lineHeight: 1 }}>
                                   {frequency > 0 ? `${frequency} Hz` : (mappedUgPumps.length > 0 ? '49.98 Hz' : '--')}
                                 </strong>
                               </div>
