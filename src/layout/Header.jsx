@@ -20,7 +20,7 @@ import GlobalSiteAssetDropdown from '../components/GlobalSiteAssetDropdown';
 const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonating = false, moduleHeader, moduleIcon: ModuleIcon, activeSites = [], selectedSite, setSelectedSite }) => {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
-  const { userRole, logout, user } = useAuth();
+  const { userRole, logout, user, hasPermission } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
 
   return (
@@ -121,24 +121,28 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
 
             {/* User Account Navigation Items */}
             <div className="p-2 d-flex flex-column gap-1">
-              <button 
-                type="button" 
-                onClick={() => navigate('/admin/manage-users')}
-                className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
-              >
-                <User size={15} className="text-info" />
-                <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Profile</span>
-                <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
-              </button>
-              <button 
-                type="button" 
-                onClick={() => navigate('/audit-logs')}
-                className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
-              >
-                <FileText size={15} className="text-primary" />
-                <span className="flex-grow-1" style={{ fontSize: '13px' }}>Activity & Audit Logs</span>
-                <span className="text-muted" style={{ fontSize: '11px' }}>View</span>
-              </button>
+              {hasPermission('user:read') && (
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/admin/manage-users')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <User size={15} className="text-info" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Profile</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
+                </button>
+              )}
+              {hasPermission('audit:read') && (
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/audit-logs')}
+                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                >
+                  <FileText size={15} className="text-primary" />
+                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Activity & Audit Logs</span>
+                  <span className="text-muted" style={{ fontSize: '11px' }}>View</span>
+                </button>
+              )}
             </div>
 
             {/* Dropdown Footer: Sign Out */}
@@ -228,33 +232,39 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
 
               {/* System Navigation Links */}
               <div className="settings-nav-links d-flex flex-column gap-1 pt-1 border-top" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/settings?tab=global')}
-                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
-                >
-                  <Settings size={15} className="text-warning" />
-                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Global Settings</span>
-                  <span className="text-muted" style={{ fontSize: '11px' }}>Configure</span>
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/manage-organisation')}
-                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
-                >
-                  <Building2 size={15} className="text-primary" />
-                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>Manage Organisation</span>
-                  <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/admin/manage-users')}
-                  className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
-                >
-                  <Users size={15} className="text-info" />
-                  <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Management</span>
-                  <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
-                </button>
+                {hasPermission('settings:read') && (
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/settings?tab=global')}
+                    className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                  >
+                    <Settings size={15} className="text-warning" />
+                    <span className="flex-grow-1" style={{ fontSize: '13px' }}>Global Settings</span>
+                    <span className="text-muted" style={{ fontSize: '11px' }}>Configure</span>
+                  </button>
+                )}
+                {hasPermission('organization:read') && (
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/manage-organisation')}
+                    className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                  >
+                    <Building2 size={15} className="text-primary" />
+                    <span className="flex-grow-1" style={{ fontSize: '13px' }}>Manage Organisation</span>
+                    <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
+                  </button>
+                )}
+                {hasPermission('user:read') && (
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/admin/manage-users')}
+                    className="settings-menu-link d-flex align-items-center gap-2.5 px-2.5 py-2 rounded-2 border-0 bg-transparent text-start w-100"
+                  >
+                    <Users size={15} className="text-info" />
+                    <span className="flex-grow-1" style={{ fontSize: '13px' }}>User Management</span>
+                    <span className="text-muted" style={{ fontSize: '11px' }}>Manage</span>
+                  </button>
+                )}
               </div>
             </div>
           </Dropdown.Menu>

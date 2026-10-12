@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Badge } from 'react-bootstrap';
 import { Globe, Layers, Edit3, Trash2, Building2, MapPin, Activity, FileText, Settings } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const LocationSection = ({
   activeTab,
@@ -15,6 +16,10 @@ const LocationSection = ({
   handleOpenEditArea = () => {},
   handleDeleteArea = () => {}
 }) => {
+  const { isSuperAdmin } = useAuth();
+  const canManageZone = isSuperAdmin;
+  const canManageArea = isSuperAdmin;
+
   const safeZones = Array.isArray(filteredZones) ? filteredZones : [];
   const safeAreas = Array.isArray(filteredAreas) ? filteredAreas : [];
   const safeTenants = Array.isArray(tenants) ? tenants : [];
@@ -61,20 +66,22 @@ const LocationSection = ({
                     <span>STATUS</span>
                   </div>
                 </th>
-                <th className="py-3 px-3 text-end">
-                  <div className="d-flex align-items-center justify-content-end gap-2">
-                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
-                      <Settings size={16} />
+                {canManageZone && (
+                  <th className="py-3 px-3 text-end">
+                    <div className="d-flex align-items-center justify-content-end gap-2">
+                      <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                        <Settings size={16} />
+                      </div>
+                      <span>ACTIONS</span>
                     </div>
-                    <span>ACTIONS</span>
-                  </div>
-                </th>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {safeZones.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-5 empty-text fw-semibold">No zones found</td>
+                  <td colSpan={canManageZone ? 5 : 4} className="text-center py-5 empty-text fw-semibold">No zones found</td>
                 </tr>
               ) : safeZones.map(z => {
                 const assignedTenant = safeTenants.find(t => String(t.id) === String(z.tenantId));
@@ -115,24 +122,26 @@ const LocationSection = ({
                         {isInactive ? 'INACTIVE' : 'ACTIVE'}
                       </div>
                     </td>
-                    <td className="py-3 px-3 text-end">
-                      <div className="d-flex align-items-center justify-content-end gap-2">
-                        <button
-                          onClick={() => handleOpenEditZone(z)}
-                          title="Edit Zone Details"
-                          className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteZone(z.id, z.name)}
-                          title="Delete Zone"
-                          className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+                    {canManageZone && (
+                      <td className="py-3 px-3 text-end">
+                        <div className="d-flex align-items-center justify-content-end gap-2">
+                          <button
+                            onClick={() => handleOpenEditZone(z)}
+                            title="Edit Zone Details"
+                            className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteZone(z.id, z.name)}
+                            title="Delete Zone"
+                            className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -179,20 +188,22 @@ const LocationSection = ({
                     <span>DESCRIPTION</span>
                   </div>
                 </th>
-                <th className="py-3 px-3 text-end">
-                  <div className="d-flex align-items-center justify-content-end gap-2">
-                    <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
-                      <Settings size={16} />
+                {canManageArea && (
+                  <th className="py-3 px-3 text-end">
+                    <div className="d-flex align-items-center justify-content-end gap-2">
+                      <div className="header-icon-box bg-primary-subtle text-primary rounded-2 p-1.5 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28 }}>
+                        <Settings size={16} />
+                      </div>
+                      <span>ACTIONS</span>
                     </div>
-                    <span>ACTIONS</span>
-                  </div>
-                </th>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {safeAreas.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-5 empty-text fw-semibold">No operational areas found</td>
+                  <td colSpan={canManageArea ? 5 : 4} className="text-center py-5 empty-text fw-semibold">No operational areas found</td>
                 </tr>
               ) : safeAreas.map(a => {
                 const parentZone = safeAllZones.find(z => String(z.id) === String(a.zoneId));
@@ -227,24 +238,26 @@ const LocationSection = ({
                     <td className="py-3 px-3">
                       <span className="fs-13 text-body-secondary text-truncate" style={{ maxWidth: 260 }}>{a.description || 'N/A'}</span>
                     </td>
-                    <td className="py-3 px-3 text-end">
-                      <div className="d-flex align-items-center justify-content-end gap-2">
-                        <button
-                          onClick={() => handleOpenEditArea(a)}
-                          title="Edit Area Details"
-                          className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteArea(a.id, a.name)}
-                          title="Delete Area"
-                          className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+                    {canManageArea && (
+                      <td className="py-3 px-3 text-end">
+                        <div className="d-flex align-items-center justify-content-end gap-2">
+                          <button
+                            onClick={() => handleOpenEditArea(a)}
+                            title="Edit Area Details"
+                            className="btn-action-round btn-action-edit d-flex align-items-center justify-content-center border-0"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteArea(a.id, a.name)}
+                            title="Delete Area"
+                            className="btn-action-round btn-action-delete d-flex align-items-center justify-content-center border-0"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

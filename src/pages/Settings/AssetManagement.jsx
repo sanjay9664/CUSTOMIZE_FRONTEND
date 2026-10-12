@@ -9,6 +9,7 @@ import {
   MapPin, MoreVertical, Box, Wrench, Calendar
 } from 'lucide-react';
 import { useSiteStore } from '../../hooks/useSiteStore';
+import { useAuth } from '../../hooks/useAuth';
 import bmsService from '../../services/bmsService';
 import { normalizePaginatedResponse, normalizeList } from '../../services/apiClient';
 import AssetInspectorDrawer from './modals/AssetInspectorDrawer';
@@ -45,6 +46,7 @@ const findAssetInTree = (nodes, id) => {
 };
 
 const AssetManagement = ({ embedded = false }) => {
+  const { isSuperAdmin } = useAuth();
   const { sites, fetchSites, selectedSite } = useSiteStore();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -680,30 +682,34 @@ const AssetManagement = ({ embedded = false }) => {
               <span>Inspect</span>
             </button>
 
-            <button type="button" className="btn-scada-edit" onClick={() => handleOpenEdit(node)}>
-              <Edit3 size={12} style={{ marginRight: 4 }} />
-              <span>Edit</span>
-            </button>
+            {isSuperAdmin && (
+              <>
+                <button type="button" className="btn-scada-edit" onClick={() => handleOpenEdit(node)}>
+                  <Edit3 size={12} style={{ marginRight: 4 }} />
+                  <span>Edit</span>
+                </button>
 
-            <Dropdown align="end" drop="down">
-              <Dropdown.Toggle as="button" className="btn-scada-more" aria-label="More actions">
-                <MoreVertical size={14} />
-              </Dropdown.Toggle>
-              <Dropdown.Menu
-                className="dropdown-menu-dark shadow-lg"
-                style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', minWidth: 180, padding: '6px 0', backdropFilter: 'blur(12px)', background: 'rgba(15,23,42,0.96)' }}
-              >
-                <Dropdown.Item onClick={() => handleOpenCreate(node)} className="fs-12 d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
-                  <Plus size={14} className="text-info me-2" style={{ marginRight: 8 }} />
-                  <span>Add Child Asset</span>
-                </Dropdown.Item>
-                <Dropdown.Divider className="border-secondary border-opacity-30" style={{ margin: '4px 0' }} />
-                <Dropdown.Item onClick={() => handleOpenDelete(node)} className="fs-12 text-danger d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
-                  <Trash2 size={14} className="me-2" style={{ marginRight: 8 }} />
-                  <span>Delete Asset</span>
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
+                <Dropdown align="end" drop="down">
+                  <Dropdown.Toggle as="button" className="btn-scada-more" aria-label="More actions">
+                    <MoreVertical size={14} />
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu
+                    className="dropdown-menu-dark shadow-lg"
+                    style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', minWidth: 180, padding: '6px 0', backdropFilter: 'blur(12px)', background: 'rgba(15,23,42,0.96)' }}
+                  >
+                    <Dropdown.Item onClick={() => handleOpenCreate(node)} className="fs-12 d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
+                      <Plus size={14} className="text-info me-2" style={{ marginRight: 8 }} />
+                      <span>Add Child Asset</span>
+                    </Dropdown.Item>
+                    <Dropdown.Divider className="border-secondary border-opacity-30" style={{ margin: '4px 0' }} />
+                    <Dropdown.Item onClick={() => handleOpenDelete(node)} className="fs-12 text-danger d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
+                      <Trash2 size={14} className="me-2" style={{ marginRight: 8 }} />
+                      <span>Delete Asset</span>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              </>
+            )}
           </div>
         </div>
 
@@ -1730,16 +1736,18 @@ const AssetManagement = ({ embedded = false }) => {
             <span className="d-none d-sm-inline">Refresh</span>
           </button>
 
-          <Button
-            variant="primary"
-            size="sm"
-            className="d-flex align-items-center gap-1.5 px-3 py-1 fs-12 fw-semibold rounded"
-            style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
-            onClick={() => handleOpenCreate(null)}
-          >
-            <Plus size={15} />
-            <span>Add Asset</span>
-          </Button>
+          {isSuperAdmin && (
+            <Button
+              variant="primary"
+              size="sm"
+              className="d-flex align-items-center gap-1.5 px-3 py-1 fs-12 fw-semibold rounded"
+              style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
+              onClick={() => handleOpenCreate(null)}
+            >
+              <Plus size={15} />
+              <span>Add Asset</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1953,14 +1961,16 @@ const AssetManagement = ({ embedded = false }) => {
                   <>
                     <h6 className="asset-header-title fw-bold">No assets registered yet</h6>
                     <p className="fs-12 asset-header-subtitle mb-3">Begin by registering your first physical building or facility asset.</p>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => handleOpenCreate(null)}
-                      style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
-                    >
-                      + Add Asset
-                    </Button>
+                    {isSuperAdmin && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleOpenCreate(null)}
+                        style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
+                      >
+                        + Add Asset
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -1975,7 +1985,7 @@ const AssetManagement = ({ embedded = false }) => {
                       <th style={{ minWidth: 130 }}>Site</th>
                       <th style={{ minWidth: 100 }}>Status</th>
                       <th style={{ minWidth: 100 }}>Updated</th>
-                      <th className="text-end" style={{ minWidth: 160 }}>Actions</th>
+                      {isSuperAdmin && <th className="text-end" style={{ minWidth: 160 }}>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1988,7 +1998,7 @@ const AssetManagement = ({ embedded = false }) => {
                       const parentLabel = parentObj ? (parentObj.name || parentObj.serialNumber) : parentId;
 
                       return (
-                        <tr key={a.id} className="row-hover-effect">
+                        <tr key={a.id} className="row-hover-effect" style={{ cursor: 'pointer' }} onClick={() => handleInspect(a)}>
                           {/* Asset Name Primary dominant, Asset ID secondary subdued */}
                           <td>
                             <div className="d-flex align-items-center">
@@ -2053,50 +2063,52 @@ const AssetManagement = ({ embedded = false }) => {
                           </td>
 
                           {/* Actions: [Inspect] [Edit] [...] */}
-                          <td className="text-end">
-                            <div className="d-flex align-items-center justify-content-end gap-1.5">
-                              <button
-                                type="button"
-                                className="btn-scada-inspect"
-                                onClick={() => handleInspect(a)}
-                                title="Inspect asset details"
-                              >
-                                <Eye size={12} />
-                                <span>Inspect</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                className="btn-scada-edit"
-                                onClick={() => handleOpenEdit(a)}
-                                title="Edit asset"
-                              >
-                                <Edit3 size={12} />
-                                <span>Edit</span>
-                              </button>
-
-                              <Dropdown align="end" drop="down">
-                                <Dropdown.Toggle
-                                  as="button"
-                                  className="btn-scada-more"
-                                  aria-label="More actions"
+                          {isSuperAdmin && (
+                            <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                              <div className="d-flex align-items-center justify-content-end gap-1.5">
+                                <button
+                                  type="button"
+                                  className="btn-scada-inspect"
+                                  onClick={() => handleInspect(a)}
+                                  title="Inspect asset details"
                                 >
-                                  <MoreVertical size={14} />
-                                </Dropdown.Toggle>
-                                <Dropdown.Menu className="dropdown-menu-dark shadow-lg" style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', minWidth: 180, padding: '6px 0', backdropFilter: 'blur(12px)', background: 'rgba(15,23,42,0.96)' }}>
-                                  <Dropdown.Item onClick={() => handleOpenCreate(a)} className="fs-12 d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
-                                    <Plus size={14} className="text-info" />
-                                    <span>Add Child Asset</span>
-                                  </Dropdown.Item>
-                                  <Dropdown.Divider className="border-secondary border-opacity-30" style={{ margin: '4px 0' }} />
-                                  <Dropdown.Item onClick={() => handleOpenDelete(a)} className="fs-12 text-danger d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
-                                    <Trash2 size={14} />
-                                    <span>Delete Asset</span>
-                                  </Dropdown.Item>
-                                </Dropdown.Menu>
-                              </Dropdown>
-                            </div>
-                          </td>
+                                  <Eye size={12} />
+                                  <span>Inspect</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="btn-scada-edit"
+                                  onClick={() => handleOpenEdit(a)}
+                                  title="Edit asset"
+                                >
+                                  <Edit3 size={12} />
+                                  <span>Edit</span>
+                                </button>
+
+                                <Dropdown align="end" drop="down">
+                                  <Dropdown.Toggle
+                                    as="button"
+                                    className="btn-scada-more"
+                                    aria-label="More actions"
+                                  >
+                                    <MoreVertical size={14} />
+                                  </Dropdown.Toggle>
+                                  <Dropdown.Menu className="dropdown-menu-dark shadow-lg" style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', minWidth: 180, padding: '6px 0', backdropFilter: 'blur(12px)', background: 'rgba(15,23,42,0.96)' }}>
+                                    <Dropdown.Item onClick={() => handleOpenCreate(a)} className="fs-12 d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
+                                      <Plus size={14} className="text-info" />
+                                      <span>Add Child Asset</span>
+                                    </Dropdown.Item>
+                                    <Dropdown.Divider className="border-secondary border-opacity-30" style={{ margin: '4px 0' }} />
+                                    <Dropdown.Item onClick={() => handleOpenDelete(a)} className="fs-12 text-danger d-flex align-items-center gap-2" style={{ padding: '8px 14px' }}>
+                                      <Trash2 size={14} />
+                                      <span>Delete Asset</span>
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}

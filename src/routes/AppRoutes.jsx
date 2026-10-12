@@ -101,24 +101,43 @@ const PlaceholderPage = ({ title }) => (
 
 
 import { useAuth } from '../hooks/useAuth';
+import { getDefaultLandingRoute } from '../utils/rbac';
 
 // Protected Route Guard for Role-based Access Control & Permission Guarding
-const ProtectedRoute = ({ allowedRoles, requiredPermission, children }) => {
-  const { hasRole, hasPermission, isAuthenticated } = useAuth();
+const ProtectedRoute = ({ allowedRoles, requiredPermission, requiredFeature, children }) => {
+  const { hasRole, hasPermission, hasFeature, isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !hasRole(allowedRoles)) {
-    return <Navigate to="/dashboard" replace />;
+  // If no permission, role, or feature constraint is set, PERMIT TO ALL
+  if (!allowedRoles && !requiredPermission && !requiredFeature) {
+    return children;
   }
 
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <Navigate to="/dashboard" replace />;
+  const fallback = getDefaultLandingRoute(user);
+
+  if (allowedRoles && !hasRole(allowedRoles)) {
+    return <Navigate to={fallback} replace />;
+  }
+
+  if (requiredPermission && !hasPermission(requiredPermission, requiredFeature)) {
+    return <Navigate to={fallback} replace />;
+  }
+
+  if (requiredFeature && !hasFeature(requiredFeature)) {
+    return <Navigate to={fallback} replace />;
   }
 
   return children;
+};
+
+// Automatic landing redirect based on user's assigned permissions
+const DefaultLandingRedirect = () => {
+  const { user } = useAuth();
+  const target = getDefaultLandingRoute(user);
+  return <Navigate to={target} replace />;
 };
 
 const AppRoutes = () => {

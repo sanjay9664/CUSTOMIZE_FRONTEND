@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Badge } from 'react-bootstrap';
 import { Building2, Sliders, Award, Edit3, Trash2, Zap } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const OrganizationsTab = ({
   tenants = [],
@@ -14,6 +15,7 @@ const OrganizationsTab = ({
   onOpenSub,
   isAdmin
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeSearch = String(searchTerm || '').toLowerCase();
   const safeTenants = Array.isArray(tenants) ? tenants : [];
   const safeCompanies = Array.isArray(companies) ? companies : [];
@@ -36,13 +38,13 @@ const OrganizationsTab = ({
             <th>Subscription</th>
             <th>Status</th>
             <th>Features</th>
-            <th className="text-end">Actions</th>
+            {isSuperAdmin && <th className="text-end">Actions</th>}
           </tr>
         </thead>
         <tbody>
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center py-5 text-muted">
+              <td colSpan={isSuperAdmin ? 7 : 6} className="text-center py-5 text-muted">
                 <Building2 size={36} className="mb-2 text-slate-500 opacity-50" />
                 <div>No organizations found matching search criteria.</div>
               </td>
@@ -90,27 +92,29 @@ const OrganizationsTab = ({
                       <Sliders size={12} /> Features
                     </Button>
                   </td>
-                  <td className="text-end">
-                    <div className="d-flex justify-content-end gap-1.5">
-                      <Button variant="outline-warning" size="sm" title="Subscription Plan" onClick={() => onOpenSub(tn)}>
-                        <Award size={14} />
-                      </Button>
-                      <Button variant="outline-light" size="sm" title="Edit Organization" onClick={() => onOpenEdit(tn)}>
-                        <Edit3 size={14} />
-                      </Button>
-                      {isAdmin && (
-                        isInactive ? (
-                          <Button variant="outline-success" size="sm" title="Reactivate" onClick={() => onReactivate(tn.id)}>
-                            <Zap size={14} />
-                          </Button>
-                        ) : (
-                          <Button variant="outline-danger" size="sm" title="Delete Organization" onClick={() => onDelete(tn.id)}>
-                            <Trash2 size={14} />
-                          </Button>
-                        )
-                      )}
-                    </div>
-                  </td>
+                  {isSuperAdmin && (
+                    <td className="text-end">
+                      <div className="d-flex justify-content-end gap-1.5">
+                        <Button variant="outline-warning" size="sm" title="Subscription Plan" onClick={() => onOpenSub(tn)}>
+                          <Award size={14} />
+                        </Button>
+                        <Button variant="outline-light" size="sm" title="Edit Organization" onClick={() => onOpenEdit(tn)}>
+                          <Edit3 size={14} />
+                        </Button>
+                        {isAdmin && (
+                          isInactive ? (
+                            <Button variant="outline-success" size="sm" title="Reactivate" onClick={() => onReactivate(tn.id)}>
+                              <Zap size={14} />
+                            </Button>
+                          ) : (
+                            <Button variant="outline-danger" size="sm" title="Delete Organization" onClick={() => onDelete(tn.id)}>
+                              <Trash2 size={14} />
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })

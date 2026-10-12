@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Badge, Form } from 'react-bootstrap';
 import { Layers, Edit3, Trash2, Zap, Building2 } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const ZonesTab = ({
   zones,
@@ -14,6 +15,7 @@ const ZonesTab = ({
   onReactivate,
   isAdmin
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeSearch = String(searchTerm || '').toLowerCase();
   const safeZones = Array.isArray(zones) ? zones : [];
   const safeTenants = Array.isArray(tenants) ? tenants : [];
@@ -54,13 +56,13 @@ const ZonesTab = ({
               <th>Organization</th>
               <th>Region</th>
               <th>Status</th>
-              <th className="text-end">Actions</th>
+              {isSuperAdmin && <th className="text-end">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-5 text-muted">
+                <td colSpan={isSuperAdmin ? 5 : 4} className="text-center py-5 text-muted">
                   <Layers size={36} className="mb-2 text-slate-500 opacity-50" />
                   <div>No zones found matching criteria.</div>
                 </td>
@@ -94,24 +96,26 @@ const ZonesTab = ({
                         {isInactive ? 'INACTIVE' : 'ACTIVE'}
                       </Badge>
                     </td>
-                    <td className="text-end">
-                      <div className="d-flex justify-content-end gap-1.5">
-                        <Button variant="outline-light" size="sm" title="Edit Zone" onClick={() => onOpenEdit(z)} className="py-1">
-                          <Edit3 size={13} />
-                        </Button>
-                        {isAdmin && (
-                          isInactive ? (
-                            <Button variant="outline-success" size="sm" title="Reactivate" onClick={() => onReactivate(z.id)} className="py-1">
-                              <Zap size={13} />
-                            </Button>
-                          ) : (
-                            <Button variant="outline-danger" size="sm" title="Delete Zone" onClick={() => onDelete(z.id)} className="py-1">
-                              <Trash2 size={13} />
-                            </Button>
-                          )
-                        )}
-                      </div>
-                    </td>
+                    {isSuperAdmin && (
+                      <td className="text-end">
+                        <div className="d-flex justify-content-end gap-1.5">
+                          <Button variant="outline-light" size="sm" title="Edit Zone" onClick={() => onOpenEdit(z)} className="py-1">
+                            <Edit3 size={13} />
+                          </Button>
+                          {isAdmin && (
+                            isInactive ? (
+                              <Button variant="outline-success" size="sm" title="Reactivate" onClick={() => onReactivate(z.id)} className="py-1">
+                                <Zap size={13} />
+                              </Button>
+                            ) : (
+                              <Button variant="outline-danger" size="sm" title="Delete Zone" onClick={() => onDelete(z.id)} className="py-1">
+                                <Trash2 size={13} />
+                              </Button>
+                            )
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })

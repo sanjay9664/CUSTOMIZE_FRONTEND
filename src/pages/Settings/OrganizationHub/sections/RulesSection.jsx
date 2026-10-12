@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Button, Card, Badge, Row, Col, Dropdown } from 'react-bootstrap';
 import { Shield, RefreshCw, Cpu, Zap, Sparkles, Eye, Edit3, Sliders, Trash2, FileText } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const RulesSection = ({
   handleSyncAllRulesFromSochiot = () => {},
@@ -16,6 +17,7 @@ const RulesSection = ({
   handleSyncSpecificRuleByFields = () => {},
   handleDeleteRuleItem = () => {}
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeDevices = Array.isArray(activeDevices) ? activeDevices : [];
   const safeRules = Array.isArray(rulesList) ? rulesList : [];
 
@@ -32,9 +34,11 @@ const RulesSection = ({
           </p>
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
-          <Button variant="outline-success" size="sm" onClick={handleSyncAllRulesFromSochiot} className="fw-semibold rounded-3 d-flex align-items-center gap-1 shadow-sm px-3 py-1-5">
-            <RefreshCw size={15} /> Sync All Engine Rules <Badge bg="success" className="text-dark fs-10 ms-1">POST /sync</Badge>
-          </Button>
+          {isSuperAdmin && (
+            <Button variant="outline-success" size="sm" onClick={handleSyncAllRulesFromSochiot} className="fw-semibold rounded-3 d-flex align-items-center gap-1 shadow-sm px-3 py-1-5">
+              <RefreshCw size={15} /> Sync All Engine Rules <Badge bg="success" className="text-dark fs-10 ms-1">POST /sync</Badge>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -98,13 +102,13 @@ const RulesSection = ({
               <th className="py-3 px-3">THRESHOLD</th>
               <th className="py-3 px-3">CONSEQUENCE ACTION</th>
               <th className="py-3 px-3">STATUS</th>
-              <th className="py-3 px-3 text-end">ACTIONS</th>
+              {isSuperAdmin && <th className="py-3 px-3 text-end">ACTIONS</th>}
             </tr>
           </thead>
           <tbody>
             {safeRules.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-5 text-slate-400">
+                <td colSpan={isSuperAdmin ? 6 : 5} className="text-center py-5 text-slate-400">
                   <Shield size={32} className="mb-2 text-info opacity-50" />
                   <div>No automation rules defined for this device</div>
                 </td>
@@ -133,46 +137,48 @@ const RulesSection = ({
                     {r.enabled !== false ? '● ACTIVE' : '○ DISABLED'}
                   </Badge>
                 </td>
-                <td className="py-3 px-3 text-end">
-                  <div className="d-flex align-items-center justify-content-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline-info"
-                      onClick={() => handleOpenRuleDetails(r)}
-                      title="Inspect Rule Specs"
-                      className="p-1 border-0 rounded-circle text-info"
-                    >
-                      <Eye size={15} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline-secondary"
-                      onClick={() => handleOpenEditRuleModal(r)}
-                      title="Edit Rule"
-                      className="p-1 border-0 rounded-circle text-slate-300"
-                    >
-                      <Edit3 size={15} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline-success"
-                      onClick={() => handleSyncSpecificRuleToSochiot(r)}
-                      title="Sync Rule to Sochiot"
-                      className="p-1 border-0 rounded-circle text-success"
-                    >
-                      <RefreshCw size={15} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline-danger"
-                      onClick={() => handleDeleteRuleItem(r.id, r.name)}
-                      title="Delete Rule"
-                      className="p-1 border-0 rounded-circle text-danger"
-                    >
-                      <Trash2 size={15} />
-                    </Button>
-                  </div>
-                </td>
+                {isSuperAdmin && (
+                  <td className="py-3 px-3 text-end">
+                    <div className="d-flex align-items-center justify-content-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline-info"
+                        onClick={() => handleOpenRuleDetails(r)}
+                        title="Inspect Rule Specs"
+                        className="p-1 border-0 rounded-circle text-info"
+                      >
+                        <Eye size={15} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => handleOpenEditRuleModal(r)}
+                        title="Edit Rule"
+                        className="p-1 border-0 rounded-circle text-slate-300"
+                      >
+                        <Edit3 size={15} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-success"
+                        onClick={() => handleSyncSpecificRuleToSochiot(r)}
+                        title="Sync Rule to Sochiot"
+                        className="p-1 border-0 rounded-circle text-success"
+                      >
+                        <RefreshCw size={15} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-danger"
+                        onClick={() => handleDeleteRuleItem(r.id, r.name)}
+                        title="Delete Rule"
+                        className="p-1 border-0 rounded-circle text-danger"
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

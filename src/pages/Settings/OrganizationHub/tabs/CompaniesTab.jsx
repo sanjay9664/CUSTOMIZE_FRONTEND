@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Button, Badge } from 'react-bootstrap';
 import { Building, Plus, Search, Edit3, Trash2, Layers } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const CompaniesTab = ({
   companies = [],
@@ -11,6 +12,7 @@ const CompaniesTab = ({
   onViewTenants,
   isAdmin
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeSearch = String(searchTerm || '').toLowerCase();
   const safeCompanies = Array.isArray(companies) ? companies : [];
 
@@ -31,13 +33,13 @@ const CompaniesTab = ({
             <th>Phone</th>
             <th>Corporate Address</th>
             <th>Status</th>
-            <th className="text-end">Actions</th>
+            {isSuperAdmin && <th className="text-end">Actions</th>}
           </tr>
         </thead>
         <tbody>
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={6} className="text-center py-5 text-muted">
+              <td colSpan={isSuperAdmin ? 6 : 5} className="text-center py-5 text-muted">
                 <Building size={36} className="mb-2 text-slate-500 opacity-50" />
                 <div>No companies found matching search criteria.</div>
               </td>
@@ -70,27 +72,27 @@ const CompaniesTab = ({
                       {isInactive ? 'INACTIVE' : 'ACTIVE'}
                     </Badge>
                   </td>
-                  <td className="text-end">
-                    <div className="d-flex justify-content-end gap-1.5">
-                      <Button
-                        variant="outline-info"
-                        size="sm"
-                        title="View Tenants"
-                        onClick={() => onViewTenants(cmp)}
-                        className="d-flex align-items-center gap-1 py-1"
-                      >
-                        <Layers size={13} /> Tenants
-                      </Button>
-                      <Button
-                        variant="outline-light"
-                        size="sm"
-                        title="Edit Company"
-                        onClick={() => onOpenEdit(cmp)}
-                        className="py-1"
-                      >
-                        <Edit3 size={13} />
-                      </Button>
-                      {isAdmin && (
+                  {isSuperAdmin && (
+                    <td className="text-end">
+                      <div className="d-flex justify-content-end gap-1.5">
+                        <Button
+                          variant="outline-info"
+                          size="sm"
+                          title="View Tenants"
+                          onClick={() => onViewTenants(cmp)}
+                          className="d-flex align-items-center gap-1 py-1"
+                        >
+                          <Layers size={13} /> Tenants
+                        </Button>
+                        <Button
+                          variant="outline-light"
+                          size="sm"
+                          title="Edit Company"
+                          onClick={() => onOpenEdit(cmp)}
+                          className="py-1"
+                        >
+                          <Edit3 size={13} />
+                        </Button>
                         <Button
                           variant="outline-danger"
                           size="sm"
@@ -100,9 +102,9 @@ const CompaniesTab = ({
                         >
                           <Trash2 size={13} />
                         </Button>
-                      )}
-                    </div>
-                  </td>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })

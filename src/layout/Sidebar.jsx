@@ -9,6 +9,7 @@ import {
 import logo from "../assets/logo.png";
 import { useTheme } from '../hooks/useTheme';
 import { useSiteStore } from '../hooks/useSiteStore';
+import { useAuth } from '../hooks/useAuth';
 import { bmsService } from '../services/bmsService';
 import { normalizeList } from '../services/apiClient';
 
@@ -42,6 +43,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const { hasPermission, isSuperAdmin, isAdmin } = useAuth();
   const [openSections, setOpenSections] = useState({});
   const [hoverExpanded, setHoverExpanded] = useState(false);
   const hoverTimer = useRef(null);
@@ -59,9 +61,6 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     return s ? JSON.parse(s) : {};
   });
 
-  const userRole = localStorage.getItem('userRole') || 'USER';
-  const isSuperAdmin = userRole === 'SUPER_ADMIN';
-  const isAdmin = userRole === 'ADMIN';
   const isImpersonating = !!localStorage.getItem('impersonator_backup_role');
 
   // Dynamic DG devices from backend
@@ -114,7 +113,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   const isExpanded = !collapsed || hoverExpanded;
 
   const menuItems = useMemo(() => [
-    { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", disabled: modulesConfig ? modulesConfig["Dashboard"] === false : false },
+    { title: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard", permission: "dashboard:read", disabled: modulesConfig ? modulesConfig["Dashboard"] === false : false },
     // Energy Metering
     {
       title: "Energy Metering", icon: <Zap size={20} />, disabled: modulesConfig ? modulesConfig["Energy Metering"] === false : false,
@@ -124,10 +123,11 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
     {
       title: "DG Set", icon: <Database size={20} />, disabled: modulesConfig ? modulesConfig["DG Set"] === false : false,
       subItems: [
-        { title: "Overview", path: "/dg-set/overview" },
+        { title: "Overview", path: "/dg-set/overview", permission: "dg:read" },
         ...dgDevices.map((dev, idx) => ({
           title: dev.name || `DG Set-${idx + 1}`,
-          path: `/dg-set/device/${dev.id}`
+          path: `/dg-set/device/${dev.id}`,
+          permission: "dg:read"
         })),
         { title: "Report", path: "/dg-set/report" }
       ].filter(s => submodulesConfig.showDGSet?.[s.title] ?? true)
@@ -227,12 +227,30 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
   ], [modulesConfig, submodulesConfig, dgDevices]);
 
   const filteredItems = useMemo(() => {
-    return menuItems.filter(item => {
-      const byRole = !item.adminOnly || isAdmin || isSuperAdmin;
-      const byCfg = !modulesConfig || modulesConfig[item.title] !== false;
-      return byRole && byCfg;
-    });
-  }, [menuItems, isAdmin, isSuperAdmin, modulesConfig]);
+    return menuItems
+      .filter(item => {
+        const byRole = !item.adminOnly || isAdmin || isSuperAdmin;
+        const byCfg = !modulesConfig || modulesConfig[item.title] !== false;
+        const byPerm = hasPermission(item.permission, item.feature);
+        return byRole && byCfg && byPerm;
+      })
+      .map(item => {
+        if (!item.subItems) return item;
+        const permittedSubs = item.subItems.filter(sub => {
+          return hasPermission(sub.permission, sub.feature);
+        });
+        return {
+          ...item,
+          subItems: permittedSubs
+        };
+      })
+      .filter(item => {
+        if (item.subItems && item.subItems.length === 0 && !item.path) {
+          return false;
+        }
+        return true;
+      });
+  }, [menuItems, isAdmin, isSuperAdmin, modulesConfig, hasPermission]);
 
   const lastPathnameRef = useRef(null);
 
@@ -354,20 +372,24 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           )}
 
           {/* Settings */}
-          <NavLink to="/settings" onClick={handleNavClick}
-            title="Settings"
-            className={({ isActive }) => `sb-link sb-settings ${isActive ? 'active' : ''}`}>
-            <span className="sb-link-icon"><Settings size={18} /></span>
-            <span className="sb-link-text">Settings</span>
-          </NavLink>
+          {hasPermission(['settings:read', 'site:read', 'device:read', 'role:manage', 'asset:read']) && (
+            <NavLink to="/settings" onClick={handleNavClick}
+              title="Settings"
+              className={({ isActive }) => `sb-link sb-settings ${isActive ? 'active' : ''}`}>
+              <span className="sb-link-icon"><Settings size={18} /></span>
+              <span className="sb-link-text">Settings</span>
+            </NavLink>
+          )}
 
-          {/* User Settings — always visible */}
-          <NavLink to="/admin/manage-users" onClick={handleNavClick}
-            title="User Settings"
-            className={({ isActive }) => `sb-link sb-admin ${isActive ? 'active' : ''}`}>
-            <span className="sb-link-icon"><User size={18} /></span>
-            <span className="sb-link-text">User Settings</span>
-          </NavLink>
+          {/* User Settings */}
+          {hasPermission('user:read') && (
+            <NavLink to="/admin/manage-users" onClick={handleNavClick}
+              title="User Settings"
+              className={({ isActive }) => `sb-link sb-admin ${isActive ? 'active' : ''}`}>
+              <span className="sb-link-icon"><User size={18} /></span>
+              <span className="sb-link-text">User Settings</span>
+            </NavLink>
+          )}
 
           <div className="sb-sep" />
 

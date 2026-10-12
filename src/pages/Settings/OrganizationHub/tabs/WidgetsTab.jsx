@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Button, Badge } from 'react-bootstrap';
 import { Grid, Plus, Edit3, Trash2, RefreshCw } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const WidgetsTab = ({
   handleSyncWidgetsFromSochiot = () => {},
@@ -16,6 +17,7 @@ const WidgetsTab = ({
   handleOpenEditWidgetModal = () => {},
   handleDeleteWidget = () => {}
 }) => {
+  const { isSuperAdmin } = useAuth();
   const safeDevices = Array.isArray(activeDevices) ? activeDevices : [];
   const safeWidgets = Array.isArray(widgetsList) ? widgetsList : [];
 
@@ -52,34 +54,36 @@ const WidgetsTab = ({
           />
         </div>
 
-        <div className="d-flex align-items-center gap-2">
-          <Button
-            variant="outline-info"
-            size="sm"
-            onClick={handleSyncWidgetsFromSochiot}
-            className="fw-semibold d-flex align-items-center gap-1.5 fs-12"
-          >
-            <RefreshCw size={14} /> Sync Widgets From Sochiot
-          </Button>
+        {isSuperAdmin && (
+          <div className="d-flex align-items-center gap-2">
+            <Button
+              variant="outline-info"
+              size="sm"
+              onClick={handleSyncWidgetsFromSochiot}
+              className="fw-semibold d-flex align-items-center gap-1.5 fs-12"
+            >
+              <RefreshCw size={14} /> Sync Widgets From Sochiot
+            </Button>
 
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={handleReorderWidgets}
-            className="fw-semibold d-flex align-items-center gap-1.5 fs-12 text-slate-300"
-          >
-            ⚡ Reorder Layout
-          </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={handleReorderWidgets}
+              className="fw-semibold d-flex align-items-center gap-1.5 fs-12 text-slate-300"
+            >
+              ⚡ Reorder Layout
+            </Button>
 
-          <Button
-            variant="outline-danger"
-            size="sm"
-            onClick={handleDeleteAllWidgets}
-            className="fw-semibold d-flex align-items-center gap-1.5 fs-12"
-          >
-            <Trash2 size={14} /> Purge All
-          </Button>
-        </div>
+            <Button
+              variant="outline-danger"
+              size="sm"
+              onClick={handleDeleteAllWidgets}
+              className="fw-semibold d-flex align-items-center gap-1.5 fs-12"
+            >
+              <Trash2 size={14} /> Purge All
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Widgets Grid Table */}
@@ -91,13 +95,13 @@ const WidgetsTab = ({
               <th className="py-3 px-3">WIDGET TYPE</th>
               <th className="py-3 px-3">DISPLAY ORDER</th>
               <th className="py-3 px-3">STATUS</th>
-              <th className="py-3 px-3 text-end">ACTIONS</th>
+              {isSuperAdmin && <th className="py-3 px-3 text-end">ACTIONS</th>}
             </tr>
           </thead>
           <tbody>
             {safeWidgets.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-5 text-slate-400">
+                <td colSpan={isSuperAdmin ? 5 : 4} className="text-center py-5 text-slate-400">
                   <Grid size={32} className="mb-2 text-info opacity-50" />
                   <div>No widgets configured for this device</div>
                 </td>
@@ -121,26 +125,28 @@ const WidgetsTab = ({
                     {w.isActive !== false ? '● ACTIVE' : '○ INACTIVE'}
                   </Badge>
                 </td>
-                <td className="py-3 px-3 text-end">
-                  <div className="d-flex align-items-center justify-content-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline-info"
-                      onClick={() => handleOpenEditWidgetModal(w)}
-                      className="p-1 border-0 rounded-circle text-info"
-                    >
-                      <Edit3 size={15} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline-danger"
-                      onClick={() => handleDeleteWidget(w.id, w.displayName || w.name)}
-                      className="p-1 border-0 rounded-circle text-danger"
-                    >
-                      <Trash2 size={15} />
-                    </Button>
-                  </div>
-                </td>
+                {isSuperAdmin && (
+                  <td className="py-3 px-3 text-end">
+                    <div className="d-flex align-items-center justify-content-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline-info"
+                        onClick={() => handleOpenEditWidgetModal(w)}
+                        className="p-1 border-0 rounded-circle text-info"
+                      >
+                        <Edit3 size={15} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-danger"
+                        onClick={() => handleDeleteWidget(w.id, w.displayName || w.name)}
+                        className="p-1 border-0 rounded-circle text-danger"
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

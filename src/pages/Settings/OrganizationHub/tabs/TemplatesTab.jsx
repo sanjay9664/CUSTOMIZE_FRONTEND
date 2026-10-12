@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Button, Table, Nav } from 'react-bootstrap';
 import { Sliders, Plus, Eye, Copy, Trash2, ArrowUpDown } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth';
 import ConfigDevicesPopover from '../components/ConfigDevicesPopover';
 
 const TemplatesTab = ({
@@ -10,6 +11,7 @@ const TemplatesTab = ({
   handleTabSelect = () => {},
   showToast = () => {}
 }) => {
+  const { isSuperAdmin } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('device');
 
   // Sample data matching user screenshot image
@@ -54,33 +56,35 @@ const TemplatesTab = ({
           <h3 className="fw-bold text-white mb-0 fs-20">Templates</h3>
         </div>
 
-        <div className="position-relative d-inline-block">
-          <Button
-            variant="outline-info"
-            size="sm"
-            onClick={handleGlobalResyncEventStats}
-            className="fw-semibold d-flex align-items-center gap-1.5 fs-12 px-3 py-1.5"
-          >
-            <Sliders size={14} /> Config Devices
-          </Button>
+        {isSuperAdmin && (
+          <div className="position-relative d-inline-block">
+            <Button
+              variant="outline-info"
+              size="sm"
+              onClick={handleGlobalResyncEventStats}
+              className="fw-semibold d-flex align-items-center gap-1.5 fs-12 px-3 py-1.5"
+            >
+              <Sliders size={14} /> Config Devices
+            </Button>
 
-          <ConfigDevicesPopover
-            show={showConfigDevicesModal}
-            onClose={() => setShowConfigDevicesModal(false)}
-            onSelectTemplates={() => {
-              setShowConfigDevicesModal(false);
-              handleTabSelect('templates');
-            }}
-            onSelectEntities={() => {
-              setShowConfigDevicesModal(false);
-              showToast('info', 'Opening Digital Twin Entities configuration...');
-            }}
-            onSelectLaunchpad={() => {
-              setShowConfigDevicesModal(false);
-              showToast('info', 'Opening Sochiot Cloud Launchpad...');
-            }}
-          />
-        </div>
+            <ConfigDevicesPopover
+              show={showConfigDevicesModal}
+              onClose={() => setShowConfigDevicesModal(false)}
+              onSelectTemplates={() => {
+                setShowConfigDevicesModal(false);
+                handleTabSelect('templates');
+              }}
+              onSelectEntities={() => {
+                setShowConfigDevicesModal(false);
+                showToast('info', 'Opening Digital Twin Entities configuration...');
+              }}
+              onSelectLaunchpad={() => {
+                setShowConfigDevicesModal(false);
+                showToast('info', 'Opening Sochiot Cloud Launchpad...');
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Main Templates Content Card */}
@@ -149,26 +153,28 @@ const TemplatesTab = ({
             </Nav.Item>
           </Nav>
 
-          <div className="d-flex align-items-center gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              className="fw-semibold fs-12 px-3 py-1.5 d-flex align-items-center gap-1.5 text-white"
-              style={{ backgroundColor: '#2563eb', border: 'none' }}
-              onClick={() => showToast('info', 'Add Device Template action triggered')}
-            >
-              <Plus size={15} /> Add Device Template
-            </Button>
+          {isSuperAdmin && (
+            <div className="d-flex align-items-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                className="fw-semibold fs-12 px-3 py-1.5 d-flex align-items-center gap-1.5 text-white"
+                style={{ backgroundColor: '#2563eb', border: 'none' }}
+                onClick={() => showToast('info', 'Add Device Template action triggered')}
+              >
+                <Plus size={15} /> Add Device Template
+              </Button>
 
-            <Button
-              variant="outline-info"
-              size="sm"
-              className="fw-semibold fs-12 px-3 py-1.5"
-              onClick={() => showToast('info', 'Import Template action triggered')}
-            >
-              Import Template
-            </Button>
-          </div>
+              <Button
+                variant="outline-info"
+                size="sm"
+                className="fw-semibold fs-12 px-3 py-1.5"
+                onClick={() => showToast('info', 'Import Template action triggered')}
+              >
+                Import Template
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Sub-heading */}
@@ -193,7 +199,7 @@ const TemplatesTab = ({
                 </th>
                 <th className="py-3 px-3 text-center">In Use Entities</th>
                 <th className="py-3 px-3">Last Updated</th>
-                <th className="py-3 px-3 text-end">Action</th>
+                {isSuperAdmin && <th className="py-3 px-3 text-end">Action</th>}
               </tr>
             </thead>
             <tbody>
@@ -209,34 +215,36 @@ const TemplatesTab = ({
                   <td className="py-3 px-3 fw-bold text-info">{item.name}</td>
                   <td className="py-3 px-3 text-center font-monospace">{item.inUseEntities}</td>
                   <td className="py-3 px-3 text-slate-300 fs-12">{item.lastUpdated}</td>
-                  <td className="py-3 px-3 text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                      <Button
-                        variant="link"
-                        className="p-0 text-slate-400 hover:text-info"
-                        title="View Details"
-                        onClick={() => showToast('info', `Inspecting template: ${item.name}`)}
-                      >
-                        <Eye size={15} />
-                      </Button>
-                      <Button
-                        variant="link"
-                        className="p-0 text-slate-400 hover:text-white"
-                        title="Duplicate"
-                        onClick={() => showToast('info', `Duplicating template: ${item.name}`)}
-                      >
-                        <Copy size={15} />
-                      </Button>
-                      <Button
-                        variant="link"
-                        className="p-0 text-slate-400 hover:text-danger"
-                        title="Delete"
-                        onClick={() => showToast('info', `Delete template: ${item.name}`)}
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </div>
-                  </td>
+                  {isSuperAdmin && (
+                    <td className="py-3 px-3 text-end">
+                      <div className="d-flex align-items-center justify-content-end gap-2">
+                        <Button
+                          variant="link"
+                          className="p-0 text-slate-400 hover:text-info"
+                          title="View Details"
+                          onClick={() => showToast('info', `Inspecting template: ${item.name}`)}
+                        >
+                          <Eye size={15} />
+                        </Button>
+                        <Button
+                          variant="link"
+                          className="p-0 text-slate-400 hover:text-white"
+                          title="Duplicate"
+                          onClick={() => showToast('info', `Duplicating template: ${item.name}`)}
+                        >
+                          <Copy size={15} />
+                        </Button>
+                        <Button
+                          variant="link"
+                          className="p-0 text-slate-400 hover:text-danger"
+                          title="Delete"
+                          onClick={() => showToast('info', `Delete template: ${item.name}`)}
+                        >
+                          <Trash2 size={15} />
+                        </Button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

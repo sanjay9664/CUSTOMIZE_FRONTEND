@@ -5157,15 +5157,130 @@ components:
           items:
             type: string
           example: ["device:read", "ticket:read", "report:read"]
-        resolvedPermissions:
+        accessibleSites:
           type: array
+          description: Resolved list of accessible sites with parent tenant, company, and zone names
           items:
-            type: string
-          example: ["device:read", "ticket:read", "report:read", "alarm:read"]
-        locationMappings:
-          type: array
-          items:
-            $ref: '#/components/schemas/LocationMapping'
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 4
+              name:
+                type: string
+                example: "Noida Plant"
+              city:
+                type: string
+                nullable: true
+                example: "Noida"
+              state:
+                type: string
+                nullable: true
+                example: "UP"
+              timezone:
+                type: string
+                example: "Asia/Kolkata"
+              companyId:
+                type: string
+                nullable: true
+              companyName:
+                type: string
+                nullable: true
+              tenantId:
+                type: string
+                nullable: true
+              tenantName:
+                type: string
+                nullable: true
+              zoneId:
+                type: string
+                nullable: true
+              zoneName:
+                type: string
+                nullable: true
+        userZoneLocationVO:
+          type: object
+          description: Hierarchical location tree (companyList -> consumers -> zoneVOS -> locations) matching Sochiot format
+          properties:
+            companyList:
+              type: array
+              items:
+                type: object
+            rootUser:
+              type: boolean
+        company:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            code:
+              type: string
+            status:
+              type: string
+        tenant:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+            companyId:
+              type: string
+            status:
+              type: string
+        isRootUser:
+          type: boolean
+          example: false
+        roleMetadata:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              nullable: true
+            name:
+              type: string
+            description:
+              type: string
+              nullable: true
+            isPredefined:
+              type: boolean
+            tenantId:
+              type: string
+              nullable: true
+        scope:
+          type: object
+          properties:
+            all:
+              type: boolean
+              example: false
+            operationalSiteIds:
+              type: array
+              nullable: true
+              items:
+                type: integer
+              example: [3, 4, 7]
+            navSiteIds:
+              type: array
+              items:
+                type: integer
+              example: [3, 4, 7]
+            assetIds:
+              type: array
+              nullable: true
+              items:
+                type: string
+            deviceIds:
+              type: array
+              nullable: true
+              items:
+                type: integer
         createdAt:
           type: string
           format: date-time
