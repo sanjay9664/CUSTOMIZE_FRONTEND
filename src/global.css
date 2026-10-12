@@ -34,34 +34,72 @@ body.dark-mode,
 }
 
 body.light-mode,
-[data-theme="light"] {
+[data-theme="light"],
+:root[data-theme="light"] {
   color-scheme: light;
-  --scada-bg: #f2f0ea;                 /* Eye-comfort warm ivory slate tone matching user color reference */
-  --scada-sidebar: #f8f7f2;            /* Warm off-white sidebar */
-  --scada-card: #fcfbfa;               /* Warm eye-comfort card surface (eliminates white glare) */
-  --scada-card-hover: #eae7df;         /* Soft warm hover highlight */
-  --scada-header: #f8f7f2;             /* Soft warm header */
-  --scada-border: #dcd8cd;             /* Soft subtle warm border */
-  --scada-border-strong: #a8a396;      /* Crisp warm border */
-  --scada-text: #1c1917;               /* Stone 900 - Ultra-crisp, high-contrast dark text */
-  --scada-text-muted: #44403c;         /* Stone 700 - Sharp, highly readable secondary text */
-  --scada-text-subtle: #292524;        /* Stone 800 - Crisp subtle text */
-  --scada-accent: #0284c7;
-  --scada-accent-bg: rgba(2, 132, 199, 0.1);
-  --scada-input-bg: #ffffff;
-  --scada-input-border: #dcd8cd;
-  --scada-table-head-bg: #edebe4;       /* Eye-comfort table header */
-  --scada-shadow: 0 3px 10px -2px rgba(28, 25, 23, 0.08), 0 1px 4px -1px rgba(28, 25, 23, 0.04);
-  --scada-glass-bg: rgba(248, 247, 242, 0.96);
 
-  --status-running: #15803d;
-  --status-running-bg: #dcfce7;
-  --status-fault: #b91c1c;
-  --status-fault-bg: #fee2e2;
-  --status-warning: #b45309;
-  --status-warning-bg: #fef3c7;
-  --status-stopped: #475569;
-  --status-stopped-bg: #edebe4;
+  /* ── Ultra Eye-Comfort Soft-Matte Light Mode Palette ── */
+  --background: #E8EDF3;
+  --surface: #FFFFFF;
+  --surface-secondary: #F0F4F8;
+
+  --primary: #0284C7;
+  --primary-hover: #0369A1;
+  --accent-cyan: #0891B2;
+  --heading: #0F3A66;
+
+  --text-primary: #1E293B;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+
+  --border: #C8D3DE;
+  --divider: #DFE5EB;
+
+  --success: #10B981;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --purple: #6D5CE7;
+
+  /* Pastel KPI Card Tokens - Soothing & Eye-Comfort */
+  --card-blue: #E2EFF9;
+  --card-green: #E0F5EB;
+  --card-purple: #EDE7FA;
+  --card-yellow: #FCF3DC;
+  --card-cyan: #DEF3F7;
+  --card-red: #FCE8E8;
+
+  /* Table Tokens */
+  --table-header: #0F3A66;
+  --table-header-text: #FFFFFF;
+  --table-row-hover: #E8EDF3;
+
+  /* ── Application SCADA Tokens Mapping ── */
+  --scada-bg: var(--background);
+  --scada-sidebar: var(--surface);
+  --scada-card: var(--surface);
+  --scada-card-hover: var(--table-row-hover);
+  --scada-header: var(--surface);
+  --scada-border: var(--border);
+  --scada-border-strong: #94A3B8;
+  --scada-text: var(--text-primary);
+  --scada-text-muted: var(--text-secondary);
+  --scada-text-subtle: var(--text-muted);
+  --scada-accent: var(--primary);
+  --scada-accent-bg: rgba(2, 132, 199, 0.08);
+  --scada-input-bg: var(--surface);
+  --scada-input-border: var(--border);
+  --scada-table-head-bg: var(--table-header);
+  --scada-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --scada-glass-bg: rgba(255, 255, 255, 0.96);
+
+  --status-running: var(--success);
+  --status-running-bg: var(--card-green);
+  --status-fault: var(--danger);
+  --status-fault-bg: var(--card-red);
+  --status-warning: var(--warning);
+  --status-warning-bg: var(--card-yellow);
+  --status-stopped: var(--text-muted);
+  --status-stopped-bg: var(--divider);
 }
 
 *, *::before, *::after,
@@ -178,9 +216,9 @@ p, label, th, td, legend, .form-label, .card-title {
 }
 
 body.light-mode .scada-header {
-  background: #f8f7f2 !important;
-  border-bottom: 1px solid #dcd8cd !important;
-  box-shadow: 0 4px 20px -2px rgba(28, 25, 23, 0.04) !important;
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: 0 2px 10px rgba(16, 42, 67, 0.05) !important;
 }
 
 @media (max-width: 992px) {
@@ -190,9 +228,9 @@ body.light-mode .scada-header {
 }
 
 body.light-mode .scada-sidebar {
-  background-color: var(--scada-sidebar) !important;
-  border-right: 1px solid var(--scada-border) !important;
-  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.02) !important;
+  background-color: var(--surface) !important;
+  border-right: 1px solid var(--border) !important;
+  box-shadow: 2px 0 10px rgba(16, 42, 67, 0.03) !important;
 }
 
 /* Theme Toggle Button - Premium Dual Mode */
@@ -261,30 +299,42 @@ body.light-mode option {
 
 /* Light Mode Table Overrides */
 body.light-mode .scada-table,
-body.light-mode .table {
-  color: var(--scada-text) !important;
-  border-color: var(--scada-border) !important;
+body.light-mode .table,
+body.light-mode table {
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
 }
 
 body.light-mode .scada-table thead th,
-body.light-mode .table thead th {
-  background-color: var(--scada-table-head-bg) !important;
-  color: #0f172a !important;
+body.light-mode .table thead th,
+body.light-mode table thead th {
+  background-color: var(--table-header) !important;
+  color: var(--table-header-text) !important;
   font-weight: 700 !important;
-  border-bottom: 2px solid var(--scada-border) !important;
+  border-bottom: 2px solid var(--border) !important;
+  letter-spacing: 0.02em;
+}
+
+body.light-mode .scada-table thead th *,
+body.light-mode .table thead th *,
+body.light-mode table thead th * {
+  color: var(--table-header-text) !important;
 }
 
 body.light-mode .scada-table tbody td,
-body.light-mode .table tbody td {
-  border-bottom: 1px solid var(--scada-border) !important;
-  color: #0f172a !important;
+body.light-mode .table tbody td,
+body.light-mode table tbody td {
+  border-bottom: 1px solid var(--divider) !important;
+  color: var(--text-primary) !important;
   font-weight: 500 !important;
+  background-color: var(--surface) !important;
 }
 
 body.light-mode .scada-table tbody tr:hover td,
-body.light-mode .table tbody tr:hover td {
-  background-color: rgba(0, 0, 0, 0.03) !important;
-  color: var(--scada-text) !important;
+body.light-mode .table tbody tr:hover td,
+body.light-mode table tbody tr:hover td {
+  background-color: var(--table-row-hover) !important;
+  color: var(--text-primary) !important;
 }
 
 /* Light Mode Recharts Overrides */
@@ -982,11 +1032,11 @@ body.light-mode .scada-glass-card,
 body.light-mode .card,
 body.light-mode .module-card-box,
 body.light-mode .global-settings-card {
-  background: #fcfbfa !important;
-  background-color: #fcfbfa !important;
-  border: 1px solid #dcd8cd !important;
-  color: #1c1917 !important;
-  box-shadow: 0 1px 4px 0 rgba(28, 25, 23, 0.05) !important;
+  background: var(--surface) !important;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1px 3px rgba(16, 63, 115, 0.06), 0 1px 2px rgba(16, 63, 115, 0.04) !important;
 }
 
 body.light-mode .bg-dark,
@@ -996,10 +1046,10 @@ body.light-mode [class*="bg-dark"],
 body.light-mode [class*="bg-black"],
 body.light-mode [class*="bg-slate-950"],
 body.light-mode [class*="bg-emerald-950"] {
-  background-color: #f8fafc !important;
-  background: #f8fafc !important;
-  color: #0f172a !important;
-  border-color: #e2e8f0 !important;
+  background-color: var(--surface-secondary) !important;
+  background: var(--surface-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
 }
 
 /* Dashboard Card Sub-menus and Stat Pills Override for Light Mode */
@@ -2853,12 +2903,12 @@ body.light-mode .touch-action-btn {
    GLOBAL LIGHT MODE UNIFIED DESIGN TOKENS & OVERRIDES
    ========================================================================== */
 body.light-mode {
-  --scada-bg: #f2f0ea !important;
-  --scada-card: #fcfbfa !important;
-  --scada-accent-bg: #f8f7f2 !important;
-  --scada-text: #1c1917 !important;
-  --scada-text-muted: #44403c !important;
-  --scada-border: #dcd8cd !important;
+  --scada-bg: var(--background) !important;
+  --scada-card: var(--surface) !important;
+  --scada-accent-bg: var(--surface-secondary) !important;
+  --scada-text: var(--text-primary) !important;
+  --scada-text-muted: var(--text-secondary) !important;
+  --scada-border: var(--border) !important;
 }
 
 body.light-mode .scada-glass-card,
@@ -2870,10 +2920,10 @@ body.light-mode .scada-card-surface,
 body.light-mode .bg-dark-card,
 body.light-mode .table-responsive,
 body.light-mode .card {
-  background-color: #fcfbfa !important;
-  border-color: #dcd8cd !important;
-  color: #1c1917 !important;
-  box-shadow: rgba(28, 25, 23, 0.05) 0px 8px 30px !important;
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1px 3px rgba(16, 63, 115, 0.06), 0 1px 2px rgba(16, 63, 115, 0.04) !important;
   border-radius: 16px !important;
 }
 
@@ -2894,38 +2944,39 @@ body.light-mode .scada-glass-card .text-white,
 body.light-mode .scada-card .text-white,
 body.light-mode .reference-scada-card .text-white,
 body.light-mode .quick-stat-card .text-white {
-  color: #1c1917 !important;
+  color: var(--text-primary) !important;
 }
 
 body.light-mode .hud-metric-horizontal {
-  background: #f4f2eb !important;
-  border: 1px solid #dcd8cd !important;
-  color: #1c1917 !important;
+  background: var(--surface-secondary) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-primary) !important;
 }
 
 body.light-mode .hud-metric-horizontal .hud-label {
-  color: #44403c !important;
+  color: var(--text-secondary) !important;
 }
 
 body.light-mode .scada-tabs-container {
-  background: #f1f5f9 !important;
-  border: 1px solid #e2e8f0 !important;
+  background: var(--surface-secondary) !important;
+  border: 1px solid var(--border) !important;
 }
 
 body.light-mode .scada-tab-btn:not(.active-tab) {
-  color: #64748b !important;
+  color: var(--text-secondary) !important;
 }
 
 body.light-mode .ahu-telemetry-label-card {
-  background-color: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
-  box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px !important;
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1px 3px rgba(16, 63, 115, 0.06) !important;
 }
 
 body.light-mode .offcanvas {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border-left: 1px solid var(--border) !important;
 }
 
 body.light-mode .offcanvas-header {
@@ -4016,31 +4067,114 @@ body.light-mode .scada-policy-footer span,
    Universal Light Mode Enhancements for Crisp Text & Icons
    ======================================================== */
 
-body.light-mode h1, body.light-mode h2, body.light-mode h3, 
-body.light-mode h4, body.light-mode h5, body.light-mode h6 {
-  color: #0f172a;
+body.light-mode h1, 
+body.light-mode h2, 
+body.light-mode h3, 
+body.light-mode h4, 
+body.light-mode h5, 
+body.light-mode h6,
+body.light-mode .card-title,
+body.light-mode .page-title,
+body.light-mode .modal-title,
+body.light-mode .heading-primary {
+  color: var(--heading) !important;
+}
+
+body.light-mode .text-muted,
+body.light-mode .text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+body.light-mode a {
+  color: var(--primary);
+}
+body.light-mode a:hover {
+  color: var(--primary-hover);
+}
+
+body.light-mode .btn-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #ffffff !important;
+}
+body.light-mode .btn-primary:hover,
+body.light-mode .btn-primary:focus,
+body.light-mode .btn-primary:active {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  color: #ffffff !important;
+}
+
+body.light-mode .form-control,
+body.light-mode .form-select {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+body.light-mode .form-control:focus,
+body.light-mode .form-select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(6, 159, 240, 0.15) !important;
 }
 
 body.light-mode .card:not([class*="bg-"]):not([style*="background-color"]) {
-  background-color: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1px 3px rgba(16, 63, 115, 0.05), 0 1px 2px rgba(16, 63, 115, 0.03) !important;
 }
 
 body.light-mode .modal-content {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
 }
 
 body.light-mode .modal-header,
 body.light-mode .modal-footer {
-  border-color: #e2e8f0 !important;
+  border-color: var(--divider) !important;
 }
 
-/* Override hardcoded text-white in light mode unless inside filled badges/buttons */
-body.light-mode :not(.btn):not(.badge):not([class*="bg-primary"]):not([class*="bg-danger"]):not([class*="bg-success"]):not([class*="bg-dark"]):not([class*="bg-secondary"]) > .text-white,
+/* Light Mode Pastel KPI Card Classes */
+body.light-mode .card-pastel-blue,
+body.light-mode .kpi-card-blue {
+  background-color: var(--card-blue) !important;
+  border-color: rgba(6, 159, 240, 0.25) !important;
+}
+body.light-mode .card-pastel-green,
+body.light-mode .kpi-card-green {
+  background-color: var(--card-green) !important;
+  border-color: rgba(22, 185, 120, 0.25) !important;
+}
+body.light-mode .card-pastel-purple,
+body.light-mode .kpi-card-purple {
+  background-color: var(--card-purple) !important;
+  border-color: rgba(109, 92, 231, 0.25) !important;
+}
+body.light-mode .card-pastel-yellow,
+body.light-mode .kpi-card-yellow {
+  background-color: var(--card-yellow) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+body.light-mode .card-pastel-cyan,
+body.light-mode .kpi-card-cyan {
+  background-color: var(--card-cyan) !important;
+  border-color: rgba(6, 199, 245, 0.25) !important;
+}
+body.light-mode .card-pastel-red,
+body.light-mode .kpi-card-red {
+  background-color: var(--card-red) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Ensure table headers maintain white text */
+body.light-mode thead th,
+body.light-mode thead th * {
+  color: var(--table-header-text) !important;
+}
+
+/* Override hardcoded text-white in light mode unless inside filled badges/buttons/table headers */
+body.light-mode :not(.btn):not(.badge):not(thead):not(th):not([class*="bg-primary"]):not([class*="bg-danger"]):not([class*="bg-success"]):not([class*="bg-dark"]):not([class*="bg-secondary"]) > .text-white,
 body.light-mode h1.text-white,
 body.light-mode h2.text-white,
 body.light-mode h3.text-white,
@@ -4049,6 +4183,7 @@ body.light-mode h5.text-white,
 body.light-mode h6.text-white,
 body.light-mode p.text-white,
 body.light-mode td .text-white {
-  color: #0f172a !important;
+  color: var(--text-primary) !important;
 }
+
 

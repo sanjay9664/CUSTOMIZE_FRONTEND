@@ -1083,22 +1083,6 @@ const SubMeters = () => {
                 <h5 className="mb-0 fw-black text-white d-flex align-items-center gap-2 uppercase tracking-wide fs-11">
                   <Activity className="text-info" size={18} /> Sub-Meters Performance Diagnostics
                 </h5>
-                <div className="d-flex align-items-center gap-2">
-                  {groupSaveStatus && <Badge bg="success" className="px-3 py-2">{groupSaveStatus}</Badge>}
-                  {lastBatchTime && (
-                    <span className="text-muted fs-11 font-monospace me-2">
-                      Synced {new Date(lastBatchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => setShowGroupingSettings(true)}
-                    className="btn btn-outline-info rounded-pill px-3 py-1.5 d-flex align-items-center gap-2 fs-12"
-                    style={{ borderColor: 'rgba(56,189,248,0.35)', color: '#7dd3fc', background: 'rgba(56,189,248,0.08)' }}
-                  >
-                    <Settings2 size={14} /> MFM Group Settings
-                  </button>
-                  <PdfButton />
-                </div>
               </div>
 
               <Tabs defaultActiveKey="all" className="scada-tabs border-bottom border-secondary border-opacity-15 mb-4">
@@ -1141,52 +1125,6 @@ const SubMeters = () => {
                               <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
                               <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
                               <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.current)} A` : '—'}</td>
-                              <td className="py-3 text-center text-secondary font-monospace">{formatLastUpdated(meter)}</td>
-                              <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? (meter.load > 0.05 ? 'Running' : 'Online') : 'Offline'} /> : '—'}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                  </div>
-                </Tab>
-                <Tab eventKey="critical" title="CRITICAL LOADS">
-                  <div className="table-responsive mt-3">
-                    <Table hover borderless className="align-middle scada-table text-white mb-0">
-                      <thead>
-                        <tr className="border-bottom border-secondary border-opacity-15 fs-13 text-secondary text-uppercase tracking-wider">
-                          <th className="py-3">Meter ID</th>
-                          <th className="py-3">Feed Description</th>
-                          <th className="py-3 text-center">Operational Load</th>
-                          <th className="py-3 text-center">Avg. Volts</th>
-                          <th className="py-3 text-center">Last Updated</th>
-                          <th className="py-3 text-end">Health Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {meters.filter(m => String(m.type).toLowerCase().includes('server') || String(m.type).toLowerCase().includes('utility') || String(m.label).toLowerCase().includes('server') || String(m.label).toLowerCase().includes('critical')).map((meter, idx) => {
-                          const isMapped = getMeterMappedStatus(meter);
-                          const isOnline = getMeterOnlineStatus(meter);
-                          const hasTelemetry = Object.keys(meter.telemetryValues || {}).length > 0;
-                          const showActive = isOnline || hasTelemetry;
-                          const fmtNum = (v, d = 1) => { const n = Number(v); return isNaN(n) ? '0.0' : n.toFixed(d); };
-                          const formatLastUpdated = (m) => {
-                            const ts = m?.lastTelemetryTimestamp || m?.lastSeenAt || m?.device?.lastSeenAt || m?.device?.updatedAt || m?.updatedAt;
-                            const d = ts ? new Date(ts) : new Date();
-                            const dateObj = isNaN(d.getTime()) ? new Date() : d;
-                            const day = String(dateObj.getDate()).padStart(2, '0');
-                            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                            const hours = String(dateObj.getHours()).padStart(2, '0');
-                            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                            const seconds = String(dateObj.getSeconds()).padStart(2, '0');
-                            return `${day}/${month} ${hours}:${minutes}:${seconds}`;
-                          };
-                          return (
-                            <tr key={meter.id || idx} className="border-bottom border-secondary border-opacity-5" onClick={() => setSelectedMeter(meter)}>
-                              <td className="py-3 font-monospace text-info fs-13">{meter.id}</td>
-                              <td className="py-3 text-white fw-bold">{meter.label}</td>
-                              <td className="py-3 text-center text-white fw-bold">{showActive ? `${fmtNum(meter.load)} kW` : '—'}</td>
-                              <td className="py-3 text-center text-secondary">{showActive ? `${fmtNum(meter.voltage)} V` : '—'}</td>
                               <td className="py-3 text-center text-secondary font-monospace">{formatLastUpdated(meter)}</td>
                               <td className="py-3 text-end">{isMapped ? <StatusBadge status={isOnline ? (meter.load > 0.05 ? 'Running' : 'Online') : 'Offline'} /> : '—'}</td>
                             </tr>

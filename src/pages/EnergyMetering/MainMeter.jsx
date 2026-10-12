@@ -2399,110 +2399,111 @@ const MainMeter = () => {
         /* Clean, executive Light Mode theme overrides */
         body.light-mode .main-meter-workspace,
         [data-theme="light"] .main-meter-workspace {
-          --meter-surface: #f8fafc;
-          --meter-panel: #ffffff;
-          --meter-line: #e2e8f0;
-          background: #f1f5f9;
+          --meter-surface: var(--background, #EDF2F7);
+          --meter-panel: var(--surface, #FFFFFF);
+          --meter-line: var(--border, #CBD5E1);
+          background: var(--background, #EDF2F7);
           padding: 8px;
           border-radius: 16px;
         }
 
         body.light-mode .main-meter-workspace .scada-glass-card,
         [data-theme="light"] .main-meter-workspace .scada-glass-card {
-          background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03) !important;
+          background: var(--surface, #FFFFFF) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-glass-card:hover,
         [data-theme="light"] .main-meter-workspace .scada-glass-card:hover {
-          border-color: #cbd5e1 !important;
-          box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+          border-color: var(--primary, #0284C7) !important;
+          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-section-box,
         [data-theme="light"] .main-meter-workspace .scada-section-box {
-          background: #f8fafc !important;
-          border: 1px solid #e2e8f0 !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-section-box .bg-dark,
         [data-theme="light"] .main-meter-workspace .scada-section-box .bg-dark {
-          background: #ffffff !important;
-          border-color: #e2e8f0 !important;
+          background: var(--surface, #FFFFFF) !important;
+          border-color: var(--border, #CBD5E1) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-section-box > h6,
         [data-theme="light"] .main-meter-workspace .scada-section-box > h6 {
-          color: #0284c7 !important;
+          color: var(--heading, #0F3A66) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-tabs-container,
         [data-theme="light"] .main-meter-workspace .scada-tabs-container {
-          background: #f1f5f9 !important;
-          border: 1px solid #e2e8f0 !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-tab-btn,
         [data-theme="light"] .main-meter-workspace .scada-tab-btn {
-          color: #64748b !important;
+          color: #526779 !important;
         }
 
         body.light-mode .main-meter-workspace .scada-tab-btn.active-tab,
         [data-theme="light"] .main-meter-workspace .scada-tab-btn.active-tab {
-          background: #ffffff !important;
-          color: #0891b2 !important;
-          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+          background: #FFFFFF !important;
+          color: #069FF0 !important;
+          box-shadow: 0 2px 6px rgba(16, 63, 115, 0.08) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-gauge-card,
         [data-theme="light"] .main-meter-workspace .scada-gauge-card {
-          background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+          background: #FFFFFF !important;
+          border: 1px solid #D5DEE5 !important;
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.05) !important;
         }
 
         body.light-mode .main-meter-workspace .scada-gauge-card:hover,
         [data-theme="light"] .main-meter-workspace .scada-gauge-card:hover {
           transform: translateY(-3px) !important;
-          box-shadow: 0 8px 20px -3px rgba(15, 23, 42, 0.1) !important;
-          border-color: #cbd5e1 !important;
+          box-shadow: 0 8px 20px -3px rgba(16, 63, 115, 0.1) !important;
+          border-color: #069FF0 !important;
         }
 
         body.light-mode .main-meter-workspace .parameter-glass-card,
         [data-theme="light"] .main-meter-workspace .parameter-glass-card {
-          background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+          background: #FFFFFF !important;
+          border: 1px solid #D5DEE5 !important;
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.04) !important;
         }
 
         body.light-mode .main-meter-workspace .parameter-glass-card:hover,
         [data-theme="light"] .main-meter-workspace .parameter-glass-card:hover {
-          background: #ffffff !important;
+          background: #FFFFFF !important;
           transform: translateY(-2px) !important;
-          box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.08) !important;
+          box-shadow: 0 6px 16px -2px rgba(16, 63, 115, 0.08) !important;
+          border-color: #069FF0 !important;
         }
 
         body.light-mode .main-meter-workspace .parameter-glass-card small,
         [data-theme="light"] .main-meter-workspace .parameter-glass-card small {
-          color: #64748b !important;
+          color: #526779 !important;
           font-weight: 700 !important;
         }
 
         body.light-mode .main-meter-workspace .parameter-glass-card h5.text-white,
         [data-theme="light"] .main-meter-workspace .parameter-glass-card h5.text-white {
-          color: #0f172a !important;
+          color: #102A43 !important;
         }
 
         body.light-mode .main-meter-workspace .hud-metric-horizontal,
         [data-theme="light"] .main-meter-workspace .hud-metric-horizontal {
-          background: #f8fafc !important;
-          border: 1px solid #e2e8f0 !important;
+          background: #F7FAFD !important;
+          border: 1px solid #D5DEE5 !important;
         }
 
         body.light-mode .main-meter-workspace .hud-metric-horizontal .hud-label,
         [data-theme="light"] .main-meter-workspace .hud-meter-workspace .hud-label {
-          color: #64748b !important;
+          color: #526779 !important;
         }
 
         body.light-mode .main-meter-workspace .telemetry-wave-visualizer,

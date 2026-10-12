@@ -149,7 +149,7 @@ const HierarchySelector = ({
       <div className="hs-panel" style={{ '--hs-accent': accentColor, '--hs-glow': rgba(0.3), '--hs-bg': rgba(0.06), '--hs-border': rgba(0.2) }}>
         {/* Animated top border */}
         <div className="hs-top-border" />
-        
+
         <div className="hs-content">
           {/* Module badge */}
           <div className="hs-badge" style={{ background: rgba(0.12), borderColor: rgba(0.3) }}>
@@ -180,7 +180,7 @@ const HierarchySelector = ({
                   <Layers size={11} />
                   <span>ASSET</span>
                 </div>
-                <select className="hs-select" value={selectedAssetId || ''} 
+                <select className="hs-select" value={selectedAssetId || ''}
                   onChange={(e) => setSelectedAssetId(e.target.value || null)}
                   disabled={!selectedSiteId}
                   style={{ '--hs-accent': accentColor, borderColor: rgba(0.2) }}>
@@ -217,7 +217,7 @@ const HierarchySelector = ({
                         color: isActive ? accentColor : '#8899b4'
                       }}
                       onClick={() => handleDeviceClick(dev)}>
-                      <div className="hs-dot" style={{ 
+                      <div className="hs-dot" style={{
                         background: isActive ? accentColor : '#3a4560',
                         boxShadow: isActive ? `0 0 8px ${rgba(0.6)}` : 'none'
                       }} />

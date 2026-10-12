@@ -1554,6 +1554,49 @@ UPS: {
   }
 };
 
+DEVICE_TEMPLATES.DG_SET = {
+  id: 'GENERATOR',
+  label: 'Generator (DG Set)',
+  parameters: [
+    { name: 'Battery Voltage', unit: 'V', required: true },
+    { name: 'Coolant Temperature', unit: '°C', required: true },
+    { name: 'Oil Pressure', unit: 'kPA', required: false },
+    { name: 'Engine Speed', unit: 'RPM', required: true },
+    { name: 'Frequency (R Phase)', unit: 'Hz', required: true },
+    { name: 'Generator L1-L2 voltage', unit: 'V', required: true },
+    { name: 'Generator L1 current', unit: 'A', required: true },
+    { name: 'Generator L2 current', unit: 'A', required: true },
+    { name: 'Generator L3 current', unit: 'A', required: true },
+    { name: 'Generator average power factor', unit: 'pf', required: false },
+    { name: 'Engine Run tim', unit: 'RPM/HRS', required: true },
+    { name: 'No of start', unit: 'Starts', required: false },
+    { name: 'Fuel Level', unit: '%', required: true },
+    { name: 'KW Hours', unit: 'KWH', required: true },
+    { name: 'KVA Hours', unit: 'KVAH', required: false },
+    { name: 'KVAR Hours', unit: 'kVARH', required: false },
+    { name: 'Generator Total Watts', unit: 'KW', required: true },
+    { name: 'Generator total VA', unit: 'KVA', required: false },
+    { name: 'Generator total Var', unit: 'KVAR', required: false },
+    { name: 'Generator L-N voltage average', unit: 'V', required: true },
+    { name: 'Generator low voltage', unit: 'Status', required: false },
+    { name: 'Generator high voltage', unit: 'Status', required: false },
+    { name: 'Generator low frequency', unit: 'Status', required: false },
+    { name: 'Generator high frequency', unit: 'Status', required: false },
+    { name: 'Generator high current', unit: 'Status', required: false },
+    { name: 'Low battery voltage', unit: 'Status', required: false },
+    { name: 'High battery voltage', unit: 'Status', required: false },
+    { name: 'Generator kW Overload', unit: 'Status', required: false },
+    { name: 'Emergency Stop', unit: 'Status', required: false },
+    { name: 'Low oil pressure', unit: 'Status', required: false },
+    { name: 'High coolant temperature', unit: 'Status', required: false },
+    { name: 'Under speed', unit: 'Status', required: false },
+    { name: 'Over speed', unit: 'Status', required: false },
+    { name: 'Fail to start', unit: 'Status', required: false },
+    { name: 'Fail to come to rest', unit: 'Status', required: false }
+  ]
+};
+DEVICE_TEMPLATES.GENERATOR = DEVICE_TEMPLATES.DG_SET;
+
 DEVICE_TEMPLATES.MAIN_METER = DEVICE_TEMPLATES.MAIN_ENERGY_METER;
 DEVICE_TEMPLATES.SUB_METER = DEVICE_TEMPLATES.SUB_ENERGY_METER;
 DEVICE_TEMPLATES.ENERGY_METERING = DEVICE_TEMPLATES.SUB_ENERGY_METER;
