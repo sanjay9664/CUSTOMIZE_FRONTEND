@@ -63,7 +63,7 @@ const getMetricTileStyle = (m, svcColor = '#38bdf8', isLightMode = false) => {
   if (!status) {
     const valStr = String(m?.val || '').trim();
     const labelStr = String(m?.label || '').toLowerCase();
-    
+
     if (labelStr.includes('critical') || labelStr.includes('fault') || valStr.toLowerCase().includes('fault') || valStr.toLowerCase().includes('trip') || valStr.toLowerCase().includes('danger')) {
       status = (valStr === '0' || valStr === '0/0') ? 'green' : 'red';
     } else if (labelStr.includes('warning') || labelStr.includes('temp') || (valStr.includes('%') && parseInt(valStr) > 75)) {
@@ -1706,9 +1706,9 @@ const Dashboard = () => {
 
                               <div className="mfm-lcd-grid d-flex flex-column gap-1 flex-grow-1 justify-content-center">
                                 {activeMfmPage.lines.map((l, i) => (
-                                  <div 
-                                    key={i} 
-                                    className={`mfm-lcd-row d-flex align-items-center justify-content-between px-1 font-monospace text-nowrap ${l.isKw ? 'text-amber-400 pt-1 border-top border-emerald-900/50' : ''}`} 
+                                  <div
+                                    key={i}
+                                    className={`mfm-lcd-row d-flex align-items-center justify-content-between px-1 font-monospace text-nowrap ${l.isKw ? 'text-amber-400 pt-1 border-top border-emerald-900/50' : ''}`}
                                     style={{ fontSize: '0.78rem', flexWrap: 'nowrap', lineHeight: '1.2' }}
                                   >
                                     <span className={`mfm-lcd-label me-2 text-nowrap ${l.isKw ? 'text-amber-400' : 'text-emerald-400'}`} style={{ whiteSpace: 'nowrap' }}>{l.label}</span>
@@ -1734,8 +1734,8 @@ const Dashboard = () => {
                           <div className="d-flex justify-content-between align-items-center mb-1.5">
                             <div className="mfm-leds-rack d-flex gap-2.5 align-items-center">
                               <div className="mfm-led-group">
-                                <div 
-                                  className={`mfm-led-bulb bulb-red ${calBlink ? 'glow-active' : ''}`} 
+                                <div
+                                  className={`mfm-led-bulb bulb-red ${calBlink ? 'glow-active' : ''}`}
                                   style={{ width: '9px', height: '9px', boxShadow: calBlink ? '0 0 8px #ef4444' : 'none' }}
                                 ></div>
                                 <span className="mfm-led-label font-monospace" style={{ fontSize: '0.6rem' }}>CAL</span>
@@ -1756,32 +1756,32 @@ const Dashboard = () => {
                           </div>
 
                           <div className="mfm-button-deck d-flex justify-content-between gap-1.5 mt-2">
-                            <button 
-                              className="mfm-tactile-btn prev-btn" 
+                            <button
+                              className="mfm-tactile-btn prev-btn"
                               style={{ height: '26px', fontSize: '0.8rem' }}
                               onClick={(e) => { e.stopPropagation(); setMeterPageIndex(prev => (prev === 0 ? 3 : prev - 1)); }}
                               title="Previous LCD Page (<)"
                             >
                               &lt;
                             </button>
-                            <button 
-                              className="mfm-tactile-btn next-btn" 
+                            <button
+                              className="mfm-tactile-btn next-btn"
                               style={{ height: '26px', fontSize: '0.8rem' }}
                               onClick={(e) => { e.stopPropagation(); setMeterPageIndex(prev => (prev + 1) % 4); }}
                               title="Next LCD Page (>)"
                             >
                               &gt;
                             </button>
-                            <button 
-                              className="mfm-tactile-btn menu-btn" 
+                            <button
+                              className="mfm-tactile-btn menu-btn"
                               style={{ height: '26px', fontSize: '0.8rem' }}
                               onClick={(e) => { e.stopPropagation(); setMeterPageIndex(0); }}
                               title="Voltage & Freq Page (⚙)"
                             >
                               ⚙
                             </button>
-                            <button 
-                              className="mfm-tactile-btn enter-btn" 
+                            <button
+                              className="mfm-tactile-btn enter-btn"
                               style={{ height: '26px', fontSize: '0.8rem' }}
                               onClick={(e) => { e.stopPropagation(); setMeterPageIndex(1); }}
                               title="Currents & Load Page (↵)"

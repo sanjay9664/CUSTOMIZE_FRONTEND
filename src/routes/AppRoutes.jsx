@@ -295,8 +295,8 @@ const AppRoutes = () => {
       <Route path="/help/feedback" element={<HelpFeedback />} />
       <Route path="/help/policy" element={<PolicyCondition />} />
 
-      {/* Catch-all */}
-      <Route path="*" element={<PlaceholderPage title="Module Under Calibration" />} />
+        {/* Catch-all */}
+        <Route path="*" element={<PlaceholderPage title="Module Under Calibration" />} />
       </Routes>
     </Suspense>
   );

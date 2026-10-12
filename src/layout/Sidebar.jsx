@@ -14,26 +14,26 @@ import { bmsService } from '../services/bmsService';
 import { normalizeList } from '../services/apiClient';
 
 const THEMES = {
-  "Dashboard":        { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "Energy Metering": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
-  "DG Set":           { c: "#c084fc", bg: "rgba(192,132,252,0.10)", b: "rgba(192,132,252,0.28)" },
-  "LT Panel":        { c: "#fbbf24", bg: "rgba(251,191,36,0.10)",  b: "rgba(251,191,36,0.28)" },
-  "Transformer":     { c: "#fb923c", bg: "rgba(251,146,60,0.10)",  b: "rgba(251,146,60,0.28)" },
-  "HVAC":            { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "VRV":             { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "AC":              { c: "#60a5fa", bg: "rgba(96,165,250,0.10)",  b: "rgba(96,165,250,0.28)" },
-  "AQI Sensor":      { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
-  "Water Management": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)",  b: "rgba(56,189,248,0.28)" },
-  "Motors":           { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)",  b: "rgba(45,212,191,0.28)" },
-  "Fire":            { c: "#ef4444", bg: "rgba(239,68,68,0.10)",   b: "rgba(239,68,68,0.28)" },
-  "ACMS":            { c: "#ef4444", bg: "rgba(239,68,68,0.10)",   b: "rgba(239,68,68,0.28)" },
-  "Alarm System":     { c: "#f87171", bg: "rgba(248,113,113,0.10)", b: "rgba(248,113,113,0.28)" },
-  "Ticketing":       { c: "#34d399", bg: "rgba(52,211,153,0.10)",  b: "rgba(52,211,153,0.28)" },
-  "Maintenance":     { c: "#818cf8", bg: "rgba(129,140,248,0.10)", b: "rgba(129,140,248,0.28)" },
+  "Dashboard": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "Energy Metering": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)", b: "rgba(96,165,250,0.28)" },
+  "DG Set": { c: "#c084fc", bg: "rgba(192,132,252,0.10)", b: "rgba(192,132,252,0.28)" },
+  "LT Panel": { c: "#fbbf24", bg: "rgba(251,191,36,0.10)", b: "rgba(251,191,36,0.28)" },
+  "Transformer": { c: "#fb923c", bg: "rgba(251,146,60,0.10)", b: "rgba(251,146,60,0.28)" },
+  "HVAC": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "VRV": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "AC": { c: "#60a5fa", bg: "rgba(96,165,250,0.10)", b: "rgba(96,165,250,0.28)" },
+  "AQI Sensor": { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)", b: "rgba(45,212,191,0.28)" },
+  "Water Management": { c: "#38bdf8", bg: "rgba(56,189,248,0.10)", b: "rgba(56,189,248,0.28)" },
+  "Motors": { c: "#2dd4bf", bg: "rgba(45,212,191,0.10)", b: "rgba(45,212,191,0.28)" },
+  "Fire": { c: "#ef4444", bg: "rgba(239,68,68,0.10)", b: "rgba(239,68,68,0.28)" },
+  "ACMS": { c: "#ef4444", bg: "rgba(239,68,68,0.10)", b: "rgba(239,68,68,0.28)" },
+  "Alarm System": { c: "#f87171", bg: "rgba(248,113,113,0.10)", b: "rgba(248,113,113,0.28)" },
+  "Ticketing": { c: "#34d399", bg: "rgba(52,211,153,0.10)", b: "rgba(52,211,153,0.28)" },
+  "Maintenance": { c: "#818cf8", bg: "rgba(129,140,248,0.10)", b: "rgba(129,140,248,0.28)" },
   "Service History": { c: "#a78bfa", bg: "rgba(167,139,250,0.10)", b: "rgba(167,139,250,0.28)" },
-  "Daily DPR":       { c: "#f472b6", bg: "rgba(244,114,182,0.10)", b: "rgba(244,114,182,0.28)" },
-  "Audit Log":       { c: "#06b6d4", bg: "rgba(6,182,212,0.10)",   b: "rgba(6,182,212,0.28)" },
-  "Help":            { c: "#a855f7", bg: "rgba(168,85,247,0.10)", b: "rgba(168,85,247,0.28)" },
+  "Daily DPR": { c: "#f472b6", bg: "rgba(244,114,182,0.10)", b: "rgba(244,114,182,0.28)" },
+  "Audit Log": { c: "#06b6d4", bg: "rgba(6,182,212,0.10)", b: "rgba(6,182,212,0.28)" },
+  "Help": { c: "#a855f7", bg: "rgba(168,85,247,0.10)", b: "rgba(168,85,247,0.28)" },
 };
 
 const SIDEBAR_W = 270;     // expanded width
@@ -82,21 +82,21 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
         try {
           const stored = JSON.parse(localStorage.getItem('scada_sites_db') || '[]');
           if (stored.length > 0) siteId = stored[0].id;
-        } catch (e) {}
+        } catch (e) { }
       }
       if (!siteId) { setDgDevices([]); return; }
 
       try {
         const res = await bmsService.getSiteDevices(siteId, { category: 'GENERATOR' });
         const devices = normalizeList(res, 'devices');
-        const generators = devices.filter(d => 
-          d.category === 'GENERATOR' && 
-          d.isActive !== false && 
+        const generators = devices.filter(d =>
+          d.category === 'GENERATOR' &&
+          d.isActive !== false &&
           (d.isMapped === true || d.mapped === true || d.is_mapped === true)
         );
         setDgDevices(generators);
         // Cache for Overview page
-        try { localStorage.setItem('dg_generator_devices', JSON.stringify(generators)); } catch (e) {}
+        try { localStorage.setItem('dg_generator_devices', JSON.stringify(generators)); } catch (e) { }
       } catch (err) {
         console.warn('[Sidebar] Failed to fetch DG devices:', err);
         // Fallback to cached
@@ -104,7 +104,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
           const cached = JSON.parse(localStorage.getItem('dg_generator_devices') || '[]');
           const mappedCached = cached.filter(d => d.isMapped === true || d.mapped === true || d.is_mapped === true);
           setDgDevices(mappedCached);
-        } catch (e) {}
+        } catch (e) { }
       }
     };
     fetchDgDevices();
@@ -322,7 +322,7 @@ const Sidebar = ({ collapsed, onClose, onOpen, onHoverChange }) => {
       try {
         if (a) setModulesConfig(JSON.parse(a));
         if (b) setSubmodulesConfig(JSON.parse(b));
-      } catch {}
+      } catch { }
     };
     window.addEventListener('storage-update', upd);
     return () => window.removeEventListener('storage-update', upd);
@@ -489,8 +489,8 @@ const STYLES = `
 }
 
 body.light-mode .sb {
-  background: linear-gradient(175deg, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%) !important;
-  border-right-color: #e2e8f0 !important;
+  background: var(--surface) !important;
+  border-right: 1px solid var(--border) !important;
 }
 
 /* Width States */
@@ -501,7 +501,7 @@ body.light-mode .sb {
   box-shadow: 6px 0 30px rgba(0,0,0,0.38);
 }
 
-body.light-mode .sb--hover-open { box-shadow: 6px 0 30px rgba(0,0,0,0.1); }
+body.light-mode .sb--hover-open { box-shadow: 6px 0 30px rgba(16, 63, 115, 0.1); }
 
 /* Brand Logo Smooth Cross-Fade */
 .sb-brand {
@@ -511,7 +511,7 @@ body.light-mode .sb--hover-open { box-shadow: 6px 0 30px rgba(0,0,0,0.1); }
   border-bottom: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
 }
-body.light-mode .sb-brand { border-bottom-color: #e2e8f0; }
+body.light-mode .sb-brand { border-bottom-color: var(--divider); }
 
 .sb-logo {
   width: 140px; height: 38px; object-fit: contain;
@@ -696,8 +696,8 @@ body.light-mode .sb-sep { background: linear-gradient(90deg, transparent, rgba(0
 }
 
 .sb-mod-head:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
-body.light-mode .sb-mod-head { color: #475569; }
-body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04); }
+body.light-mode .sb-mod-head { color: var(--text-secondary, #526779); }
+body.light-mode .sb-mod-head:hover { color: var(--heading, #103F73); background: rgba(6, 159, 240, 0.08); }
 
 .sb-mod-active { color: var(--mc) !important; background: var(--mbg) !important; }
 .sb-mod-opened { color: var(--mc) !important; }
@@ -772,9 +772,9 @@ body.light-mode .sb-mod-head:hover { color: #1e293b; background: rgba(0,0,0,0.04
 .sb-sub:hover { color: #e2e8f0; }
 .sb-sub:hover .sb-dot { background: var(--mc); box-shadow: 0 0 6px var(--mc); }
 
-body.light-mode .sb-sub { color: #64748b; }
-body.light-mode .sb-sub:hover { color: #0f172a; }
-body.light-mode .sb-dot { background: #cbd5e1; }
+body.light-mode .sb-sub { color: var(--text-secondary, #526779); }
+body.light-mode .sb-sub:hover { color: var(--heading, #103F73); }
+body.light-mode .sb-dot { background: var(--border, #D5DEE5); }
 
 .sb-sub-on {
   color: var(--mc) !important;

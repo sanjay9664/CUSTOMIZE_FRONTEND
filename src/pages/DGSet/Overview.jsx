@@ -534,8 +534,36 @@ const SiemensStyleDG = () => {
       const eventsMap = {};
 
       if (Array.isArray(eventsList) && eventsList.length > 0) {
+        // Collect configured device settings for accurate matching
+        const devSettings = Array.isArray(selectedDevObj?.settings) && selectedDevObj.settings.length > 0
+          ? selectedDevObj.settings
+          : (Array.isArray(selectedDevObj?.template_settings) && selectedDevObj.template_settings.length > 0
+              ? selectedDevObj.template_settings
+              : (Array.isArray(selectedDevObj?.deviceSettings) ? selectedDevObj.deviceSettings : []));
+
         eventsList.forEach(f => {
-          const rawDispName = String(f.eventFieldDisplayName || f.displayName || f.fieldName || f.name || '').trim();
+          let rawDispName = String(f.eventFieldDisplayName || f.displayName || f.fieldName || f.name || '').trim();
+          const fieldTag = String(f.fieldName || f.fieldKey || f.sochiotFieldName || '').trim();
+
+          // Match configured setting displayName if available
+          if (devSettings.length > 0) {
+            const matchedSetting = devSettings.find(s => {
+              if (!s) return false;
+              if (f.settingId && s.id && String(f.settingId) === String(s.id)) return true;
+              if (f.sochiotFieldId && s.sochiotFieldId && String(f.sochiotFieldId) === String(s.sochiotFieldId)) return true;
+              const sKey = String(s.sochiotFieldName || s.fieldKey || '').trim().toLowerCase();
+              const fKey = fieldTag.toLowerCase();
+              if (sKey && fKey && sKey === fKey) return true;
+              const sName = String(s.displayName || s.name || '').trim().toLowerCase();
+              const fName = rawDispName.toLowerCase();
+              if (sName && fName && sName === fName) return true;
+              return false;
+            });
+            if (matchedSetting && (matchedSetting.displayName || matchedSetting.name)) {
+              rawDispName = String(matchedSetting.displayName || matchedSetting.name).trim();
+            }
+          }
+
           const dispName = rawDispName.toLowerCase();
           const val = f.fieldCurrentValue ?? f.currentValue ?? f.value;
 
@@ -545,30 +573,91 @@ const SiemensStyleDG = () => {
             if (rawDispName) {
               eventsMap[rawDispName] = { val: num, unit: f.unit || '' };
             }
+            if (fieldTag) {
+              eventsMap[fieldTag] = { val: num, unit: f.unit || '' };
+            }
 
-            const fieldTag = String(f.fieldName || f.fieldKey || '').trim();
-            if (dispName.includes('speed') || dispName.includes('rpm') || fieldTag === '4,11') newData.engine.speed = num;
-            else if (dispName.includes('coolant') || fieldTag === '4,3') newData.engine.coolant = num;
-            else if (dispName.includes('oil pressure') || dispName.includes('oil') || fieldTag === '4,1') newData.engine.oilPressure = num;
-            else if (dispName.includes('frequency') || dispName.includes('freq') || fieldTag === '4,12') newData.engine.freq = num;
-            else if (dispName.includes('battery') || fieldTag === '4,6') newData.engine.battery = num;
-            else if (dispName.includes('run tim') || dispName.includes('runtime')) newData.engine.runtime = num;
-            else if (dispName.includes('starts') || dispName.includes('start')) newData.engine.starts = num;
-            else if (dispName.includes('total watts') || dispName.includes('active power') || dispName.includes('kw') || fieldTag === '4,31') newData.power.kw = num;
-            else if (dispName.includes('apparent power') || dispName.includes('kva')) newData.power.kva = num;
-            else if (dispName.includes('reactive power') || dispName.includes('kvar')) newData.power.kvar = num;
-            else if (dispName.includes('power factor') || dispName.includes('pf') || fieldTag === '4,39') newData.power.pf = num;
-            else if (dispName.includes('fuel level') || dispName.includes('fuel') || fieldTag === '4,4') {
+            // 1. Apparent Power / VA vs Energy KVAH
+            if (dispName.includes('kva hour') || dispName.includes('kvahour') || dispName === 'kvah' || dispName === 'kva hours') {
+              newData.generation.kvaHours = num;
+              eventsMap['KVA Hours'] = { val: num, unit: 'KVAH' };
+            } else if (dispName.includes('total va') || dispName.includes('apparent power') || (dispName.includes('kva') && !dispName.includes('hour') && !dispName.includes('kvah')) || dispName === 'va') {
+              newData.power.kva = num;
+              eventsMap['Generator total VA'] = { val: num, unit: 'KVA' };
+            }
+            // 2. Reactive Power / VAr vs Energy KVARH
+            else if (dispName.includes('kvar hour') || dispName.includes('kvarhour') || dispName === 'kvarh' || dispName === 'kvar hours') {
+              newData.generation.kvarHours = num;
+              eventsMap['KVAR Hours'] = { val: num, unit: 'kVARH' };
+            } else if (dispName.includes('total var') || dispName.includes('reactive power') || (dispName.includes('kvar') && !dispName.includes('hour') && !dispName.includes('kvarh')) || dispName === 'var') {
+              newData.power.kvar = num;
+              eventsMap['Generator total Var'] = { val: num, unit: 'KVAR' };
+            }
+            // 3. Active Power / Watts vs Energy KWH
+            else if (dispName.includes('kw hour') || dispName.includes('kwhour') || dispName === 'kwh' || dispName === 'kw hours' || dispName.includes('active energy')) {
+              newData.generation.today = num;
+              eventsMap['KW Hours'] = { val: num, unit: 'KWH' };
+            } else if (dispName.includes('total watts') || dispName.includes('active power') || (dispName.includes('kw') && !dispName.includes('hour') && !dispName.includes('kwh')) || dispName === 'watts') {
+              newData.power.kw = num;
+              eventsMap['Generator Total Watts'] = { val: num, unit: 'KW' };
+            }
+            // 4. Start Count & Running status (Strictly exclude fault alarms)
+            else if ((dispName.includes('no of start') || dispName.includes('no. of start') || dispName.includes('number of start') || dispName === 'starts' || (dispName.includes('start') && !dispName.includes('fail') && !dispName.includes('trip') && !dispName.includes('pressure')))) {
+              newData.engine.starts = num;
+              eventsMap['No of start'] = { val: num, unit: 'Starts' };
+            }
+            // 5. Engine Speed (Exclude alarms & runtime)
+            else if ((dispName.includes('speed') || (dispName.includes('rpm') && !dispName.includes('run') && !dispName.includes('time') && !dispName.includes('hour'))) && !dispName.includes('under') && !dispName.includes('over') && !dispName.includes('fail')) {
+              newData.engine.speed = num;
+              eventsMap['Engine Speed'] = { val: num, unit: 'RPM' };
+            }
+            // 6. Engine Runtime
+            else if (dispName.includes('run tim') || dispName.includes('runtime') || dispName.includes('engine run') || dispName.includes('running hours')) {
+              newData.engine.runtime = num;
+              eventsMap['Engine Run tim'] = { val: num, unit: 'RPM/HRS' };
+            }
+            // 7. Engine Vitals (Exclude fault alarms)
+            else if (dispName.includes('coolant') && !dispName.includes('high') && !dispName.includes('low') && !dispName.includes('alarm')) {
+              newData.engine.coolant = num;
+              eventsMap['Coolant Temperature'] = { val: num, unit: '°C' };
+            } else if ((dispName.includes('oil pressure') || (dispName.includes('oil') && !dispName.includes('low') && !dispName.includes('high') && !dispName.includes('temp') && !dispName.includes('alarm')))) {
+              newData.engine.oilPressure = num;
+              eventsMap['Oil Pressure'] = { val: num, unit: 'kPA' };
+            } else if ((dispName.includes('frequency') || dispName.includes('freq') || dispName.includes('hz')) && !dispName.includes('high') && !dispName.includes('low') && !dispName.includes('alarm')) {
+              newData.engine.freq = num;
+              eventsMap['Frequency (R Phase)'] = { val: num, unit: 'Hz' };
+            } else if (dispName.includes('battery') && !dispName.includes('low') && !dispName.includes('high') && !dispName.includes('alarm')) {
+              newData.engine.battery = num;
+              eventsMap['Battery Voltage'] = { val: num, unit: 'V' };
+            } else if (dispName.includes('power factor') || dispName.includes('pf')) {
+              newData.power.pf = num;
+              eventsMap['Generator average power factor'] = { val: num, unit: 'pf' };
+            } else if (dispName.includes('fuel level') || (dispName.includes('fuel') && !dispName.includes('temp') && !dispName.includes('leak') && !dispName.includes('burn'))) {
               newData.diesel.level = num;
               newData.diesel.remaining = (newData.diesel.capacity * num) / 100;
+              eventsMap['Fuel Level'] = { val: num, unit: '%' };
             }
-            else if (dispName.includes('l1-l2') || dispName.includes('l1 - l2') || dispName.includes('line-to-line voltage') || fieldTag === '4,18') newData.voltage.ry = num;
-            else if (dispName.includes('l2-l3') || dispName.includes('l2 - l3')) newData.voltage.yb = num;
-            else if (dispName.includes('l3-l1') || dispName.includes('l3 - l1')) newData.voltage.br = num;
-            else if (dispName.includes('l1 current') || dispName.includes('phase l1 current') || fieldTag === '4,21') newData.current.r = num;
-            else if (dispName.includes('l2 current') || dispName.includes('phase l2 current') || fieldTag === '4,22') newData.current.y = num;
-            else if (dispName.includes('l3 current') || dispName.includes('phase l3 current') || fieldTag === '4,23') newData.current.b = num;
-            else if (dispName.includes('line-to-neutral') || dispName.includes('l-n') || fieldTag === '4,15') newData.voltage.rn = num;
+            // 8. Voltages & Currents
+            else if (dispName.includes('l1-l2') || dispName.includes('l1 - l2') || dispName.includes('line-to-line') || dispName.includes('line voltage')) {
+              newData.voltage.ry = num;
+              eventsMap['Generator L1-L2 voltage'] = { val: num, unit: 'V' };
+            } else if (dispName.includes('l2-l3') || dispName.includes('l2 - l3')) {
+              newData.voltage.yb = num;
+            } else if (dispName.includes('l3-l1') || dispName.includes('l3 - l1')) {
+              newData.voltage.br = num;
+            } else if (dispName.includes('l1 current') || dispName.includes('phase l1 current')) {
+              newData.current.r = num;
+              eventsMap['Generator L1 current'] = { val: num, unit: 'A' };
+            } else if (dispName.includes('l2 current') || dispName.includes('phase l2 current')) {
+              newData.current.y = num;
+              eventsMap['Generator L2 current'] = { val: num, unit: 'A' };
+            } else if (dispName.includes('l3 current') || dispName.includes('phase l3 current')) {
+              newData.current.b = num;
+              eventsMap['Generator L3 current'] = { val: num, unit: 'A' };
+            } else if (dispName.includes('line-to-neutral') || dispName.includes('l-n') || dispName.includes('ln voltage') || dispName.includes('phase voltage')) {
+              newData.voltage.rn = num;
+              eventsMap['Generator L-N voltage average'] = { val: num, unit: 'V' };
+            }
           }
         });
       }
@@ -597,6 +686,38 @@ const SiemensStyleDG = () => {
     }, 30000);
     return () => clearInterval(interval);
   }, [selectedDeviceId, selectedSiteId, devices, fetchDeviceTelemetry]);
+
+  // Enrich selected device settings from API if not pre-populated in summary
+  useEffect(() => {
+    if (!selectedDeviceId) return;
+    const current = devices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId));
+    const hasSettings = Boolean(
+      (Array.isArray(current?.settings) && current.settings.length > 0) ||
+      (Array.isArray(current?.template_settings) && current.template_settings.length > 0) ||
+      (Array.isArray(current?.deviceSettings) && current.deviceSettings.length > 0)
+    );
+
+    if (!hasSettings) {
+      let isMounted = true;
+      const fetchFullSettings = async () => {
+        try {
+          const detailUrl = selectedSiteId
+            ? getApiUrl(`/sites/${selectedSiteId}/devices/${selectedDeviceId}`)
+            : getApiUrl(`/devices/${selectedDeviceId}`);
+          const res = await fetch(detailUrl, { headers: getAuthHeaders() }).catch(() => null);
+          if (res && res.ok) {
+            const json = await res.json();
+            const detail = json?.data || json;
+            if (isMounted && detail && (detail.settings || detail.template_settings || detail.deviceSettings)) {
+              setDevices(prev => prev.map(d => String(d.id || d.deviceId) === String(selectedDeviceId) ? { ...d, ...detail } : d));
+            }
+          }
+        } catch (e) {}
+      };
+      fetchFullSettings();
+      return () => { isMounted = false; };
+    }
+  }, [selectedDeviceId, selectedSiteId, devices]);
 
   // Site selector configuration for PageContextBanner
   const siteSelector = useMemo(() => {
@@ -791,8 +912,25 @@ const SiemensStyleDG = () => {
     });
 
     if (selectedDevObj) {
+      const devSettings = Array.isArray(selectedDevObj.settings) && selectedDevObj.settings.length > 0
+        ? selectedDevObj.settings
+        : (Array.isArray(selectedDevObj.template_settings) && selectedDevObj.template_settings.length > 0
+            ? selectedDevObj.template_settings
+            : (Array.isArray(selectedDevObj.deviceSettings) ? selectedDevObj.deviceSettings : []));
+
+      devSettings.forEach(s => {
+        if (!s) return;
+        const sName = String(s.displayName || s.name || '').trim();
+        const sField = String(s.sochiotFieldName || s.fieldKey || s.fieldName || '').trim();
+        if (sName) {
+          savedMappings[sName] = sField || 'Mapped';
+        }
+        if (sField) {
+          savedMappings[sField] = sName || 'Mapped';
+        }
+      });
+
       if (selectedDevObj.template?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.template.mapping };
-      if (selectedDevObj.settings?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.settings.mapping };
       if (selectedDevObj.profile?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.profile.mapping };
       if (selectedDevObj.raw?.mapping) savedMappings = { ...savedMappings, ...selectedDevObj.raw.mapping };
       if (selectedDevObj.mapping && typeof selectedDevObj.mapping === 'object') savedMappings = { ...savedMappings, ...selectedDevObj.mapping };
@@ -808,28 +946,90 @@ const SiemensStyleDG = () => {
       let isMapped = false;
       let mappedField = null;
 
+      const paramLower = param.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
       // 1. Check direct backend events match
       const backendEventKeys = Object.keys(backendEvents);
       if (backendEventKeys.length > 0) {
-        const paramLower = param.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         const matchedBackendKey = backendEventKeys.find(bk => {
           const bkLower = bk.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (bkLower === paramLower || bkLower.includes(paramLower) || paramLower.includes(bkLower)) return true;
-          if (paramLower.includes('battery') && bkLower.includes('battery')) return true;
-          if (paramLower.includes('coolant') && bkLower.includes('coolant')) return true;
-          if (paramLower.includes('oil') && bkLower.includes('oil')) return true;
-          if ((paramLower.includes('enginespeed') || paramLower.includes('speed')) && (bkLower.includes('speed') || bkLower.includes('rpm') || bkLower.includes('runningstatus'))) return true;
-          if (paramLower.includes('frequency') && (bkLower.includes('freq') || bkLower.includes('frequency') || bkLower.includes('hz'))) return true;
-          if ((paramLower.includes('engineruntim') || paramLower.includes('runtime')) && (bkLower.includes('runningstatus') || bkLower.includes('runtime') || bkLower.includes('hours'))) return true;
-          if ((paramLower.includes('totalwatts') || paramLower.includes('activepower')) && (bkLower.includes('activepower') || bkLower.includes('totalwatts') || bkLower.includes('kw'))) return true;
-          if ((paramLower.includes('totalva') || paramLower.includes('apparentpower')) && (bkLower.includes('apparentpower') || bkLower.includes('totalva') || bkLower.includes('kva'))) return true;
-          if ((paramLower.includes('totalvar') || paramLower.includes('reactivepower')) && (bkLower.includes('reactivepower') || bkLower.includes('totalvar') || bkLower.includes('kvar'))) return true;
-          if ((paramLower.includes('powerfactor') || paramLower.includes('pf')) && (bkLower.includes('powerfactor') || bkLower.includes('pf'))) return true;
-          if (paramLower.includes('fuellevel') && bkLower.includes('fuel')) return true;
-          if (paramLower.includes('l1current') || paramLower.includes('l2current') || paramLower.includes('l3current')) {
-            if (bkLower.includes('current')) return true;
+          if (bkLower === paramLower) return true;
+
+          // KW Hours (Cumulative Active Energy)
+          if (paramLower === 'kwhours') {
+            return (bkLower.includes('kwhour') || bkLower === 'kwh' || bkLower.includes('activeenergy') || bkLower === 'todaykwh' || bkLower === 'dailyenergy' || bkLower === 'totalenergy');
           }
-          return false;
+          // KVA Hours (Cumulative Apparent Energy)
+          if (paramLower === 'kvahours') {
+            return (bkLower.includes('kvahour') || bkLower === 'kvah' || bkLower.includes('apparentenergy'));
+          }
+          // KVAR Hours (Cumulative Reactive Energy)
+          if (paramLower === 'kvarhours') {
+            return (bkLower.includes('kvarhour') || bkLower === 'kvarh' || bkLower.includes('reactiveenergy'));
+          }
+          // No of start
+          if (paramLower === 'noofstart') {
+            return ((bkLower.includes('start') || bkLower.includes('starts')) && !bkLower.includes('fail') && !bkLower.includes('pressure'));
+          }
+          // Generator Total Watts (Active Power in kW - MUST NOT MATCH kwhours)
+          if (paramLower === 'generatortotalwatts') {
+            return ((bkLower.includes('totalwatts') || bkLower.includes('activepower') || (bkLower.includes('totalkw') || bkLower === 'kw')) && !bkLower.includes('hour') && !bkLower.includes('kwh'));
+          }
+          // Generator total VA (Apparent Power in kVA - MUST NOT MATCH kvahours)
+          if (paramLower === 'generatortotalva') {
+            return ((bkLower.includes('totalva') || bkLower.includes('apparentpower') || (bkLower.includes('totalkva') || bkLower === 'kva')) && !bkLower.includes('hour') && !bkLower.includes('kvah'));
+          }
+          // Generator total Var (Reactive Power in kVAR - MUST NOT MATCH kvarhours)
+          if (paramLower === 'generatortotalvar') {
+            return ((bkLower.includes('totalvar') || bkLower.includes('reactivepower') || (bkLower.includes('totalkvar') || bkLower === 'kvar')) && !bkLower.includes('hour') && !bkLower.includes('kvarh'));
+          }
+          // Engine Run tim (Runtime - MUST NOT MATCH kwhours)
+          if (paramLower === 'engineruntim' || paramLower === 'engineruntime') {
+            return ((bkLower.includes('runtime') || bkLower.includes('runtim') || bkLower.includes('enginerun') || bkLower.includes('runninghours')) && !bkLower.includes('kwh'));
+          }
+          // Battery Voltage
+          if (paramLower.includes('battery')) {
+            return bkLower.includes('battery') && !bkLower.includes('low') && !bkLower.includes('high') && !bkLower.includes('alarm');
+          }
+          // Coolant Temperature
+          if (paramLower.includes('coolant')) {
+            return bkLower.includes('coolant') && !bkLower.includes('high') && !bkLower.includes('low') && !bkLower.includes('alarm');
+          }
+          // Oil Pressure
+          if (paramLower.includes('oilpressure')) {
+            return bkLower.includes('oil') && !bkLower.includes('low') && !bkLower.includes('high') && !bkLower.includes('alarm');
+          }
+          // Engine Speed
+          if (paramLower.includes('enginespeed') || paramLower === 'speed') {
+            return (bkLower.includes('speed') || (bkLower.includes('rpm') && !bkLower.includes('run') && !bkLower.includes('time') && !bkLower.includes('hour'))) && !bkLower.includes('under') && !bkLower.includes('over') && !bkLower.includes('fail');
+          }
+          // Frequency
+          if (paramLower.includes('frequency')) {
+            return (bkLower.includes('freq') || bkLower.includes('frequency') || bkLower.includes('hz')) && !bkLower.includes('low') && !bkLower.includes('high');
+          }
+          // Fuel Level
+          if (paramLower.includes('fuellevel') || paramLower === 'fuel') {
+            return bkLower.includes('fuel') && !bkLower.includes('leak') && !bkLower.includes('temp');
+          }
+          // L1-L2 Voltage
+          if (paramLower.includes('l1l2')) {
+            return bkLower.includes('l1l2') || bkLower.includes('linevoltage') || bkLower.includes('voltage');
+          }
+          // Currents
+          if (paramLower.includes('l1current')) return bkLower.includes('l1') && bkLower.includes('current') && !bkLower.includes('high');
+          if (paramLower.includes('l2current')) return bkLower.includes('l2') && bkLower.includes('current') && !bkLower.includes('high');
+          if (paramLower.includes('l3current')) return bkLower.includes('l3') && bkLower.includes('current') && !bkLower.includes('high');
+          // L-N Voltage
+          if (paramLower.includes('lnvoltage')) return bkLower.includes('ln') || bkLower.includes('linetoneutral');
+          // Power Factor
+          if (paramLower.includes('powerfactor')) return bkLower.includes('powerfactor') || bkLower.includes('pf');
+
+          // Faults
+          if (param.category === 'FAULT') {
+            return bkLower === paramLower || bkLower.includes(paramLower) || paramLower.includes(bkLower);
+          }
+
+          return bkLower.includes(paramLower) || paramLower.includes(bkLower);
         });
 
         if (matchedBackendKey) {
@@ -854,117 +1054,103 @@ const SiemensStyleDG = () => {
       // 2. Fallback to state object if backend events matching did not populate
       if (!isMapped || liveVal === '--') {
         switch (param.name) {
-          case 'Battery Voltage':
-            if (data.engine.battery !== null) { liveVal = `${data.engine.battery.toFixed(2)} V`; isMapped = true; }
-            break;
-          case 'Coolant Temperature':
-            if (data.engine.coolant !== null) { liveVal = `${data.engine.coolant.toFixed(2)} °C`; isMapped = true; }
-            break;
-          case 'Oil Pressure':
-            if (data.engine.oilPressure !== null) { liveVal = `${data.engine.oilPressure.toFixed(2)} kPA`; isMapped = true; }
-            break;
-          case 'Engine Speed':
-            if (data.engine.speed !== null) { liveVal = `${data.engine.speed.toFixed(0)} RPM`; isMapped = true; }
-            break;
-          case 'Frequency (R Phase)':
-            if (data.engine.freq !== null) { liveVal = `${data.engine.freq.toFixed(2)} Hz`; isMapped = true; }
-            break;
-          case 'Generator L1-L2 voltage':
-            if (data.voltage.ry !== null) { liveVal = `${data.voltage.ry.toFixed(2)} V`; isMapped = true; }
-            break;
-          case 'Generator L1 current':
-            if (data.current.r !== null) { liveVal = `${data.current.r.toFixed(2)} A`; isMapped = true; }
-            break;
-          case 'Generator L2 current':
-            if (data.current.y !== null) { liveVal = `${data.current.y.toFixed(2)} A`; isMapped = true; }
-            break;
-          case 'Generator L3 current':
-            if (data.current.b !== null) { liveVal = `${data.current.b.toFixed(2)} A`; isMapped = true; }
-            break;
-          case 'Generator average power factor':
-            if (data.power.pf !== null) { liveVal = `${data.power.pf.toFixed(2)} pf`; isMapped = true; }
-            break;
-          case 'Engine Run tim':
-            if (data.engine.runtime !== null) { liveVal = `${typeof data.engine.runtime === 'number' ? data.engine.runtime.toFixed(2) : data.engine.runtime} RPM/HRS`; isMapped = true; }
-            break;
-          case 'No of start':
-            if (data.engine.starts !== null) { liveVal = `${data.engine.starts}`; isMapped = true; }
-            break;
-          case 'Fuel Level':
-            if (data.diesel.level !== null) { liveVal = `${data.diesel.level.toFixed(2)}%`; isMapped = true; }
-            break;
           case 'KW Hours':
-            if (data.generation.today !== null) { liveVal = `${typeof data.generation.today === 'number' ? data.generation.today.toFixed(2) : data.generation.today} KWH`; isMapped = true; }
+            if (data.generation.today !== null && data.generation.today !== undefined) { liveVal = `${Number(data.generation.today).toFixed(2)} KWH`; isMapped = true; }
             break;
           case 'KVA Hours':
-            if (data.generation.kvaHours !== null) { liveVal = `${typeof data.generation.kvaHours === 'number' ? data.generation.kvaHours.toFixed(2) : data.generation.kvaHours} KVAH`; isMapped = true; }
+            if (data.generation.kvaHours !== null && data.generation.kvaHours !== undefined) { liveVal = `${Number(data.generation.kvaHours).toFixed(2)} KVAH`; isMapped = true; }
             break;
           case 'KVAR Hours':
-            if (data.generation.kvarHours !== null) { liveVal = `${typeof data.generation.kvarHours === 'number' ? data.generation.kvarHours.toFixed(2) : data.generation.kvarHours} kVARH`; isMapped = true; }
+            if (data.generation.kvarHours !== null && data.generation.kvarHours !== undefined) { liveVal = `${Number(data.generation.kvarHours).toFixed(2)} kVARH`; isMapped = true; }
+            break;
+          case 'No of start':
+            if (data.engine.starts !== null && data.engine.starts !== undefined) { liveVal = `${Number(data.engine.starts).toFixed(0)} Starts`; isMapped = true; }
+            break;
+          case 'Battery Voltage':
+            if (data.engine.battery !== null && data.engine.battery !== undefined) { liveVal = `${Number(data.engine.battery).toFixed(2)} V`; isMapped = true; }
+            break;
+          case 'Coolant Temperature':
+            if (data.engine.coolant !== null && data.engine.coolant !== undefined) { liveVal = `${Number(data.engine.coolant).toFixed(2)} °C`; isMapped = true; }
+            break;
+          case 'Oil Pressure':
+            if (data.engine.oilPressure !== null && data.engine.oilPressure !== undefined) { liveVal = `${Number(data.engine.oilPressure).toFixed(2)} kPA`; isMapped = true; }
+            break;
+          case 'Engine Speed':
+            if (data.engine.speed !== null && data.engine.speed !== undefined) { liveVal = `${Number(data.engine.speed).toFixed(0)} RPM`; isMapped = true; }
+            break;
+          case 'Frequency (R Phase)':
+            if (data.engine.freq !== null && data.engine.freq !== undefined) { liveVal = `${Number(data.engine.freq).toFixed(2)} Hz`; isMapped = true; }
+            break;
+          case 'Generator L1-L2 voltage':
+            if (data.voltage.ry !== null && data.voltage.ry !== undefined) { liveVal = `${Number(data.voltage.ry).toFixed(2)} V`; isMapped = true; }
+            break;
+          case 'Generator L1 current':
+            if (data.current.r !== null && data.current.r !== undefined) { liveVal = `${Number(data.current.r).toFixed(2)} A`; isMapped = true; }
+            break;
+          case 'Generator L2 current':
+            if (data.current.y !== null && data.current.y !== undefined) { liveVal = `${Number(data.current.y).toFixed(2)} A`; isMapped = true; }
+            break;
+          case 'Generator L3 current':
+            if (data.current.b !== null && data.current.b !== undefined) { liveVal = `${Number(data.current.b).toFixed(2)} A`; isMapped = true; }
+            break;
+          case 'Generator average power factor':
+            if (data.power.pf !== null && data.power.pf !== undefined) { liveVal = `${Number(data.power.pf).toFixed(2)} pf`; isMapped = true; }
+            break;
+          case 'Engine Run tim':
+            if (data.engine.runtime !== null && data.engine.runtime !== undefined) { liveVal = `${typeof data.engine.runtime === 'number' ? data.engine.runtime.toFixed(2) : data.engine.runtime} RPM/HRS`; isMapped = true; }
+            break;
+          case 'Fuel Level':
+            if (data.diesel.level !== null && data.diesel.level !== undefined) { liveVal = `${Number(data.diesel.level).toFixed(2)}%`; isMapped = true; }
             break;
           case 'Generator Total Watts':
-            if (data.power.kw !== null) { liveVal = `${data.power.kw.toFixed(2)} KW`; isMapped = true; }
+            if (data.power.kw !== null && data.power.kw !== undefined) { liveVal = `${Number(data.power.kw).toFixed(2)} KW`; isMapped = true; }
             break;
           case 'Generator total VA':
-            if (data.power.kva !== null) { liveVal = `${data.power.kva.toFixed(2)} KVA`; isMapped = true; }
+            if (data.power.kva !== null && data.power.kva !== undefined) { liveVal = `${Number(data.power.kva).toFixed(2)} KVA`; isMapped = true; }
             break;
           case 'Generator total Var':
-            if (data.power.kvar !== null) { liveVal = `${data.power.kvar.toFixed(2)} KVAR`; isMapped = true; }
+            if (data.power.kvar !== null && data.power.kvar !== undefined) { liveVal = `${Number(data.power.kvar).toFixed(2)} KVAR`; isMapped = true; }
             break;
           case 'Generator L-N voltage average':
-            if (data.voltage.rn !== null) { liveVal = `${data.voltage.rn.toFixed(2)} V`; isMapped = true; }
+            if (data.voltage.rn !== null && data.voltage.rn !== undefined) { liveVal = `${Number(data.voltage.rn).toFixed(2)} V`; isMapped = true; }
             break;
           default:
             break;
         }
       }
 
-      // 3. Check savedMappings for template key match if still unmapped
-      if (!isMapped) {
+      // 3. Check savedMappings for template key match if still unmapped or empty
+      if (!isMapped || liveVal === '--') {
         const mappingKeys = Object.keys(savedMappings);
         if (mappingKeys.length > 0) {
-          const paramLower = param.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-
           const matchedKey = mappingKeys.find(k => {
             if (!k) return false;
             const val = savedMappings[k];
             if (!val || val === 'Unmapped' || val === 'NONE' || val === '') return false;
-
             const keyLower = k.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-            if (keyLower === paramLower || paramLower.includes(keyLower) || keyLower.includes(paramLower)) return true;
-            if (paramLower.includes('battery') && keyLower.includes('battery')) return true;
-            if (paramLower.includes('coolant') && keyLower.includes('coolant')) return true;
-            if (paramLower.includes('oil') && keyLower.includes('oil')) return true;
-            if (paramLower.includes('speed') && keyLower.includes('speed')) return true;
-            if (paramLower.includes('frequency') && (keyLower.includes('freq') || keyLower.includes('hz'))) return true;
+            if (keyLower === paramLower) return true;
+            if (paramLower === 'kwhours' && (keyLower.includes('kwhour') || keyLower === 'kwh' || keyLower.includes('activeenergy'))) return true;
+            if (paramLower === 'kvahours' && (keyLower.includes('kvahour') || keyLower === 'kvah' || keyLower.includes('apparentenergy'))) return true;
+            if (paramLower === 'kvarhours' && (keyLower.includes('kvarhour') || keyLower === 'kvarh' || keyLower.includes('reactiveenergy'))) return true;
+            if (paramLower === 'noofstart' && (keyLower.includes('start') && !keyLower.includes('fail') && !keyLower.includes('pressure'))) return true;
+            if (paramLower === 'generatortotalwatts' && ((keyLower.includes('totalwatts') || keyLower.includes('activepower') || keyLower.includes('totalkw') || keyLower === 'kw') && !keyLower.includes('hour') && !keyLower.includes('kwh'))) return true;
+            if (paramLower === 'generatortotalva' && ((keyLower.includes('totalva') || keyLower.includes('apparentpower') || keyLower.includes('totalkva') || keyLower === 'kva') && !keyLower.includes('hour') && !keyLower.includes('kvah'))) return true;
+            if (paramLower === 'generatortotalvar' && ((keyLower.includes('totalvar') || keyLower.includes('reactivepower') || keyLower.includes('totalkvar') || keyLower === 'kvar') && !keyLower.includes('hour') && !keyLower.includes('kvarh'))) return true;
+            if (paramLower === 'batteryvoltage') return keyLower.includes('battery') && !keyLower.includes('low') && !keyLower.includes('high') && !keyLower.includes('alarm');
+            if (paramLower === 'coolanttemperature') return keyLower.includes('coolant') && !keyLower.includes('high') && !keyLower.includes('low') && !keyLower.includes('alarm');
+            if (paramLower === 'oilpressure') return keyLower.includes('oil') && !keyLower.includes('low') && !keyLower.includes('high') && !keyLower.includes('alarm');
+            if (paramLower === 'enginespeed') return (keyLower.includes('speed') || (keyLower.includes('rpm') && !keyLower.includes('run') && !keyLower.includes('time') && !keyLower.includes('hour'))) && !keyLower.includes('under') && !keyLower.includes('over') && !keyLower.includes('fail');
+            if (paramLower === 'frequencyrphase') return (keyLower.includes('freq') || keyLower.includes('hz')) && !keyLower.includes('low') && !keyLower.includes('high');
             if (paramLower.includes('l1l2') && (keyLower.includes('l1l2') || keyLower.includes('linevoltage') || keyLower.includes('voltage'))) return true;
-            if (paramLower.includes('l1current') && keyLower.includes('l1')) return true;
-            if (paramLower.includes('l2current') && keyLower.includes('l2')) return true;
-            if (paramLower.includes('l3current') && keyLower.includes('l3')) return true;
+            if (paramLower.includes('l1current') && keyLower.includes('l1') && !keyLower.includes('high')) return true;
+            if (paramLower.includes('l2current') && keyLower.includes('l2') && !keyLower.includes('high')) return true;
+            if (paramLower.includes('l3current') && keyLower.includes('l3') && !keyLower.includes('high')) return true;
             if (paramLower.includes('powerfactor') && (keyLower.includes('powerfactor') || keyLower.includes('pf'))) return true;
-            if (paramLower.includes('runtime') || paramLower.includes('runtim') || paramLower.includes('hours')) {
-              if (keyLower.includes('runtime') || keyLower.includes('hours') || keyLower.includes('runtim')) return true;
-            }
-            if (paramLower.includes('start') && keyLower.includes('start')) return true;
+            if ((paramLower.includes('runtime') || paramLower.includes('runtim')) && (keyLower.includes('runtime') || keyLower.includes('runtim') || keyLower.includes('hours')) && !keyLower.includes('kwh')) return true;
             if (paramLower.includes('fuel') && keyLower.includes('fuel')) return true;
-            if (paramLower.includes('kwhours') || paramLower.includes('kwh')) {
-              if (keyLower.includes('kwh') || keyLower.includes('activeenergy')) return true;
-            }
-            if (paramLower.includes('kvahours') || paramLower.includes('kvah')) {
-              if (keyLower.includes('kvah') || keyLower.includes('apparentenergy')) return true;
-            }
-            if (paramLower.includes('kvarhours') || paramLower.includes('kvarh')) {
-              if (keyLower.includes('kvarh') || keyLower.includes('reactiveenergy')) return true;
-            }
-            if (paramLower.includes('totalwatts') || paramLower.includes('activepower')) {
-              if (keyLower.includes('watts') || keyLower.includes('activepower') || keyLower.includes('kw')) return true;
-            }
-            if (paramLower.includes('totalva') || paramLower.includes('apparentpower')) {
-              if (keyLower.includes('va') || keyLower.includes('apparentpower') || keyLower.includes('kva')) return true;
-            }
-            if (paramLower.includes('totalvar') || paramLower.includes('reactivepower')) {
-              if (keyLower.includes('var') || keyLower.includes('reactivepower') || keyLower.includes('kvar')) return true;
+            if (param.category === 'FAULT') {
+              return keyLower === paramLower || keyLower.includes(paramLower) || paramLower.includes(keyLower);
             }
             return false;
           });
@@ -974,10 +1160,19 @@ const SiemensStyleDG = () => {
             mappedField = savedMappings[matchedKey];
             if (liveVal === '--') {
               const rawVal = typeof mappedField === 'object' ? (mappedField.value || mappedField.currentValue || mappedField.register || mappedField.field || '--') : String(mappedField);
-              if (rawVal !== '--' && rawVal !== 'undefined') {
+              if (rawVal !== '--' && rawVal !== 'undefined' && rawVal !== 'Mapped' && !isNaN(Number(rawVal))) {
                 const num = Number(rawVal);
                 const formatted = !isNaN(num) ? num.toFixed(2) : rawVal;
                 liveVal = formatted.includes(param.unit || '') ? formatted : `${formatted} ${param.unit || ''}`.trim();
+              } else {
+                // Configured in device mapping table: display proper mapped default baseline
+                if (param.category === 'FAULT') {
+                  liveVal = 'Normal';
+                } else if (param.name === 'No of start') {
+                  liveVal = '0 Starts';
+                } else {
+                  liveVal = `0.00 ${param.unit || ''}`.trim();
+                }
               }
             }
           }
@@ -1662,7 +1857,9 @@ const SiemensStyleDG = () => {
                         ? 'NO MAPPED'
                         : (p.category === 'FAULT'
                             ? (isAlarmTripped ? 'TRIP' : 'Normal')
-                            : (typeof p.liveVal === 'string' && p.liveVal.includes(' Status') ? p.liveVal.replace(' Status', '') : p.liveVal));
+                            : (typeof p.liveVal === 'string' && p.liveVal.includes(' Status')
+                                ? (p.liveVal.replace(' Status', '').trim() || (p.name === 'No of start' ? '0 Starts' : '0.00'))
+                                : (p.liveVal && String(p.liveVal).trim() !== '' ? p.liveVal : (p.name === 'No of start' ? '0 Starts' : `0.00 ${p.unit || ''}`.trim()))));
 
                       return (
                         <Col key={p.id} md={6}>
@@ -1966,42 +2163,43 @@ const SiemensStyleDG = () => {
         .bg-pill-status { background: rgba(3, 7, 18, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); }
         .dg-opt { background: #0f172a; color: #f8fafc; }
 
-        /* LIGHT MODE EYE-COMFORT & HIGH-CONTRAST SYSTEM */
+        /* LIGHT MODE EYE-COMFORT SYSTEM */
         body.light-mode .dg-premium-page,
         [data-theme="light"] .dg-premium-page {
-          background: #f0f3f8 !important;
+          background: var(--background, #EDF2F7) !important;
           background-image: none !important;
-          color: #0f172a !important;
+          color: var(--text-primary, #1E293B) !important;
         }
 
         body.light-mode .dg-glass-card,
         [data-theme="light"] .dg-glass-card {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
-          box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05) !important;
+          background: var(--surface, #FFFFFF) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
         }
         body.light-mode .dg-glass-card:hover,
         [data-theme="light"] .dg-glass-card:hover {
-          border-color: #94a3b8 !important;
+          border-color: var(--primary, #0284C7) !important;
+          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12) !important;
         }
 
         body.light-mode .text-main,
-        [data-theme="light"] .text-main { color: #0f172a !important; }
+        [data-theme="light"] .text-main { color: var(--text-primary, #1E293B) !important; }
 
         body.light-mode .text-dim,
-        [data-theme="light"] .text-dim { color: #475569 !important; font-weight: 600; }
+        [data-theme="light"] .text-dim { color: var(--text-secondary, #475569) !important; font-weight: 600; }
 
         body.light-mode .text-cyan-glow,
-        [data-theme="light"] .text-cyan-glow { color: #0284c7 !important; }
+        [data-theme="light"] .text-cyan-glow { color: var(--primary, #0284C7) !important; }
 
         body.light-mode .bg-pill-status,
         [data-theme="light"] .bg-pill-status {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
+          background: var(--surface, #FFFFFF) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
         }
 
         body.light-mode .dg-opt,
-        [data-theme="light"] .dg-opt { background: #ffffff !important; color: #0f172a !important; }
+        [data-theme="light"] .dg-opt { background: var(--surface, #FFFFFF) !important; color: var(--text-primary, #1E293B) !important; }
 
         /* REALISTIC FLUID DIESEL FUEL TANK WITH WAVE & BUBBLE ANIMATIONS */
         .dg-realistic-fuel-tank {
@@ -2190,16 +2388,16 @@ const SiemensStyleDG = () => {
         .dg-fuel-tile-val.info { color: #38bdf8; }
 
         body.light-mode .dg-fuel-tile, [data-theme="light"] .dg-fuel-tile {
-          background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+          background: var(--surface, #FFFFFF) !important;
+          border: 1px solid var(--border, #CBD5E1) !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
         }
         body.light-mode .dg-fuel-tile-lbl, [data-theme="light"] .dg-fuel-tile-lbl {
-          color: #475569 !important;
+          color: var(--text-secondary, #475569) !important;
         }
         body.light-mode .dg-realistic-fuel-tank, [data-theme="light"] .dg-realistic-fuel-tank {
-          background: #f8fafc !important;
-          border-color: #f59e0b !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border-color: var(--warning, #F59E0B) !important;
         }
 
         /* COMPACT PARAM TILES WITH UNMAPPED GRAYOUT */
@@ -2214,11 +2412,11 @@ const SiemensStyleDG = () => {
           border: 1px solid rgba(255, 255, 255, 0.08);
           transition: all 0.2s ease;
         }
-        .dg-param-tile-v2.success { border-left: 3px solid #10b981; }
-        .dg-param-tile-v2.warning { border-left: 3px solid #f59e0b; }
-        .dg-param-tile-v2.info { border-left: 3px solid #0284c7; }
-        .dg-param-tile-v2.cyan { border-left: 3px solid #06b6d4; }
-        .dg-param-tile-v2.danger { border-left: 3px solid #ef4444; }
+        .dg-param-tile-v2.success { border-left: 3px solid var(--success, #10B981); }
+        .dg-param-tile-v2.warning { border-left: 3px solid var(--warning, #F59E0B); }
+        .dg-param-tile-v2.info { border-left: 3px solid var(--primary, #0284C7); }
+        .dg-param-tile-v2.cyan { border-left: 3px solid var(--accent-cyan, #06B6D4); }
+        .dg-param-tile-v2.danger { border-left: 3px solid var(--danger, #EF4444); }
 
         .dg-param-tile-v2.unmapped {
           opacity: 0.38 !important;
@@ -2228,18 +2426,18 @@ const SiemensStyleDG = () => {
           border-left: 1px dashed rgba(255, 255, 255, 0.1) !important;
         }
         .dg-param-tile-v2.unmapped .dg-param-name {
-          color: #64748b !important;
+          color: var(--text-muted, #64748B) !important;
         }
         .dg-param-tile-v2.unmapped .dg-param-val {
-          color: #475569 !important;
+          color: var(--text-secondary, #475569) !important;
           font-weight: 500 !important;
         }
 
         body.light-mode .dg-param-tile-v2.unmapped,
         [data-theme="light"] .dg-param-tile-v2.unmapped {
-          background: #e2e8f0 !important;
-          border: 1px dashed #cbd5e1 !important;
-          opacity: 0.45 !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border: 1px dashed var(--border, #CBD5E1) !important;
+          opacity: 0.55 !important;
         }
 
         .dg-param-num {
@@ -2445,26 +2643,26 @@ const SiemensStyleDG = () => {
         }
         body.light-mode .dg-btn-outline-glass,
         [data-theme="light"] .dg-btn-outline-glass {
-          background: #ffffff !important;
-          border: 1.5px solid #cbd5e1 !important;
-          color: #0284c7 !important;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+          background: #FFFFFF !important;
+          border: 1px solid #D5DEE5 !important;
+          color: #069FF0 !important;
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.04) !important;
         }
         body.light-mode .dg-btn-outline-glass:hover,
         [data-theme="light"] .dg-btn-outline-glass:hover {
-          background: #f1f5f9 !important;
-          border-color: #0284c7 !important;
+          background: #F7FAFD !important;
+          border-color: #069FF0 !important;
         }
 
         .dg-btn-cyan {
-          background: linear-gradient(135deg, #0ea5e9, #0284c7);
+          background: linear-gradient(135deg, #069FF0, #168CE0);
           color: #fff;
           border: none;
           font-size: 0.78rem;
           font-weight: 600;
           border-radius: 8px;
           padding: 6px 14px;
-          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+          box-shadow: 0 4px 12px rgba(6, 159, 240, 0.25);
           transition: 0.25s;
         }
 
@@ -2486,14 +2684,14 @@ const SiemensStyleDG = () => {
         }
         body.light-mode .dg-selector-box,
         [data-theme="light"] .dg-selector-box { 
-          background: linear-gradient(135deg, #ffffff, #f8fafc) !important; 
-          border-color: #cbd5e1 !important; 
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+          background: #FFFFFF !important; 
+          border: 1px solid #D5DEE5 !important; 
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.04) !important;
         }
         body.light-mode .dg-selector-box:hover,
         [data-theme="light"] .dg-selector-box:hover {
-          border-color: #0284c7 !important;
-          box-shadow: 0 4px 15px rgba(2, 132, 199, 0.15) !important;
+          border-color: #069FF0 !important;
+          box-shadow: 0 4px 15px rgba(6, 159, 240, 0.15) !important;
         }
 
         .dg-selector-box.warning { border-color: rgba(245, 158, 11, 0.3); }
@@ -2515,15 +2713,15 @@ const SiemensStyleDG = () => {
           box-shadow: none !important;
         }
         body.light-mode .dg-custom-select,
-        [data-theme="light"] .dg-custom-select { color: #0f172a !important; }
+        [data-theme="light"] .dg-custom-select { color: #102A43 !important; }
 
         .dg-custom-select.warning { color: #fbbf24 !important; }
         body.light-mode .dg-custom-select.warning,
-        [data-theme="light"] .dg-custom-select.warning { color: #d97706 !important; }
+        [data-theme="light"] .dg-custom-select.warning { color: #F59E0B !important; }
 
         .dg-custom-select.success { color: #34d399 !important; }
         body.light-mode .dg-custom-select.success,
-        [data-theme="light"] .dg-custom-select.success { color: #059669 !important; }
+        [data-theme="light"] .dg-custom-select.success { color: #16B978 !important; }
 
         .text-cyan-glow { color: #0284c7; }
         .text-warning-glow { color: #d97706; }
@@ -2542,8 +2740,8 @@ const SiemensStyleDG = () => {
         }
         body.light-mode .dg-metric-row,
         [data-theme="light"] .dg-metric-row {
-          background: #f8fafc !important;
-          border-color: #cbd5e1 !important;
+          background: var(--surface-secondary, #F1F5F9) !important;
+          border-color: var(--border, #CBD5E1) !important;
         }
 
         /* SEARCH GROUP */
@@ -2554,7 +2752,7 @@ const SiemensStyleDG = () => {
           overflow: hidden;
         }
         body.light-mode .dg-search-group,
-        [data-theme="light"] .dg-search-group { background: #ffffff !important; border-color: #cbd5e1 !important; }
+        [data-theme="light"] .dg-search-group { background: var(--surface, #FFFFFF) !important; border-color: var(--border, #CBD5E1) !important; }
 
         /* ULTRA-SLEEK SEGMENTED CATEGORY NAV BAR */
         .dg-category-nav-bar {
@@ -2695,27 +2893,27 @@ const SiemensStyleDG = () => {
         /* Light mode support */
         body.light-mode .dg-category-nav-bar,
         [data-theme="light"] .dg-category-nav-bar {
-          background: #f1f5f9 !important;
-          border-color: #cbd5e1 !important;
+          background: #F7FAFD !important;
+          border-color: #D5DEE5 !important;
         }
         body.light-mode .dg-cat-nav-btn,
         [data-theme="light"] .dg-cat-nav-btn {
-          color: #64748b !important;
+          color: #526779 !important;
         }
         body.light-mode .dg-cat-nav-btn:hover,
         [data-theme="light"] .dg-cat-nav-btn:hover {
-          background: #e2e8f0 !important;
-          color: #0f172a !important;
+          background: #E8EEF2 !important;
+          color: #102A43 !important;
         }
         body.light-mode .dg-cat-badge,
         [data-theme="light"] .dg-cat-badge {
-          background: #e2e8f0 !important;
-          color: #475569 !important;
+          background: #E8EEF2 !important;
+          color: #526779 !important;
         }
         body.light-mode .dg-cat-code,
         [data-theme="light"] .dg-cat-code {
-          background: #e2e8f0 !important;
-          color: #475569 !important;
+          background: #E8EEF2 !important;
+          color: #526779 !important;
         }
 
         .dg-code-pill {
@@ -2725,11 +2923,11 @@ const SiemensStyleDG = () => {
           font-weight: 700;
           font-family: monospace;
         }
-        .dg-code-pill.success { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .dg-code-pill.warning { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); }
-        .dg-code-pill.info { background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3); }
-        .dg-code-pill.cyan { background: rgba(6, 182, 212, 0.15); color: #0891b2; border: 1px solid rgba(6, 182, 212, 0.3); }
-        .dg-code-pill.danger { background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .dg-code-pill.success { background: rgba(22, 185, 120, 0.15); color: #16B978; border: 1px solid rgba(22, 185, 120, 0.3); }
+        .dg-code-pill.warning { background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .dg-code-pill.info { background: rgba(6, 159, 240, 0.15); color: #069FF0; border: 1px solid rgba(6, 159, 240, 0.3); }
+        .dg-code-pill.cyan { background: rgba(6, 199, 245, 0.15); color: #06C7F5; border: 1px solid rgba(6, 199, 245, 0.3); }
+        .dg-code-pill.danger { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
 
         /* POWER CARDS V2 MATCHING SCREENSHOT */
         .dg-power-card-v2 {
@@ -2746,9 +2944,9 @@ const SiemensStyleDG = () => {
 
         body.light-mode .dg-power-card-v2,
         [data-theme="light"] .dg-power-card-v2 {
-          background: #ffffff !important;
-          border-color: #cbd5e1 !important;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.04) !important;
+          background: #FFFFFF !important;
+          border-color: #D5DEE5 !important;
+          box-shadow: 0 1px 3px rgba(16, 63, 115, 0.05) !important;
         }
 
         .dg-power-icon-box {
@@ -2768,11 +2966,11 @@ const SiemensStyleDG = () => {
         .dg-power-title.warning { color: #fff; }
         .dg-power-title.success { color: #fff; }
         body.light-mode .dg-power-title,
-        [data-theme="light"] .dg-power-title { color: #0f172a !important; }
+        [data-theme="light"] .dg-power-title { color: #103F73 !important; }
 
         .dg-power-sub { font-size: 0.52rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.4px; }
         body.light-mode .dg-power-sub,
-        [data-theme="light"] .dg-power-sub { color: #64748b !important; }
+        [data-theme="light"] .dg-power-sub { color: #526779 !important; }
 
         .dg-sparkline-wrap { height: 26px; margin: 2px 0; }
 
@@ -2780,17 +2978,17 @@ const SiemensStyleDG = () => {
         .dg-power-val.cyan { color: #38bdf8; }
         .dg-power-val.warning { color: #fbbf24; }
         .dg-power-val.success { color: #34d399; }
-        body.light-mode .dg-power-val.cyan, [data-theme="light"] .dg-power-val.cyan { color: #0284c7 !important; }
-        body.light-mode .dg-power-val.warning, [data-theme="light"] .dg-power-val.warning { color: #d97706 !important; }
-        body.light-mode .dg-power-val.success, [data-theme="light"] .dg-power-val.success { color: #059669 !important; }
+        body.light-mode .dg-power-val.cyan, [data-theme="light"] .dg-power-val.cyan { color: #069FF0 !important; }
+        body.light-mode .dg-power-val.warning, [data-theme="light"] .dg-power-val.warning { color: #F59E0B !important; }
+        body.light-mode .dg-power-val.success, [data-theme="light"] .dg-power-val.success { color: #16B978 !important; }
 
         .dg-power-unit { font-size: 0.78rem; font-weight: 800; font-family: monospace; }
         .dg-power-unit.cyan { color: #38bdf8; }
         .dg-power-unit.warning { color: #fbbf24; }
         .dg-power-unit.success { color: #34d399; }
-        body.light-mode .dg-power-unit.cyan, [data-theme="light"] .dg-power-unit.cyan { color: #0284c7 !important; }
-        body.light-mode .dg-power-unit.warning, [data-theme="light"] .dg-power-unit.warning { color: #d97706 !important; }
-        body.light-mode .dg-power-unit.success, [data-theme="light"] .dg-power-unit.success { color: #059669 !important; }
+        body.light-mode .dg-power-unit.cyan, [data-theme="light"] .dg-power-unit.cyan { color: #069FF0 !important; }
+        body.light-mode .dg-power-unit.warning, [data-theme="light"] .dg-power-unit.warning { color: #F59E0B !important; }
+        body.light-mode .dg-power-unit.success, [data-theme="light"] .dg-power-unit.success { color: #16B978 !important; }
 
         /* TARGET BADGE & INTERACTIVE TARGET SELECTOR */
         .dg-target-badge,
