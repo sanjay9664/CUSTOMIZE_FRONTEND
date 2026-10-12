@@ -20,12 +20,67 @@ const CommonFilterPopover = ({
   onApply,
   onReset,
   extraHeader,
-  align = 'left',
+  align = 'auto',
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [draftValues, setDraftValues] = useState(values);
   const popoverRef = useRef(null);
+  const [panelStyle, setPanelStyle] = useState(() => ({
+    width: '440px',
+    maxWidth: 'calc(100vw - 24px)',
+    ...(align === 'right' ? { right: 0, left: 'auto' } : { left: 0, right: 'auto' })
+  }));
+
+  const updatePosition = () => {
+    if (!popoverRef.current) return;
+    const rect = popoverRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const panelWidth = Math.min(440, viewportWidth - 24);
+
+    const style = {
+      width: `${panelWidth}px`,
+      maxWidth: 'calc(100vw - 24px)'
+    };
+
+    const shouldAlignRight = align === 'right' || (align !== 'left' && rect.left + panelWidth > viewportWidth - 20);
+
+    if (shouldAlignRight) {
+      const panelLeftEdge = rect.right - panelWidth;
+      if (panelLeftEdge < 12) {
+        const offset = 12 - panelLeftEdge;
+        style.right = `-${offset}px`;
+        style.left = 'auto';
+      } else {
+        style.right = '0px';
+        style.left = 'auto';
+      }
+    } else {
+      const panelRightEdge = rect.left + panelWidth;
+      if (panelRightEdge > viewportWidth - 12) {
+        const offset = panelRightEdge - (viewportWidth - 12);
+        style.left = `-${offset}px`;
+        style.right = 'auto';
+      } else {
+        style.left = '0px';
+        style.right = 'auto';
+      }
+    }
+
+    setPanelStyle(style);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+    }
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen, align]);
 
   // Sync draft values whenever values prop changes or popover opens
   useEffect(() => {
@@ -50,6 +105,9 @@ const CommonFilterPopover = ({
   }, [isOpen]);
 
   const handleToggle = () => {
+    if (!isOpen) {
+      updatePosition();
+    }
     setIsOpen(prev => !prev);
   };
 
@@ -155,10 +213,8 @@ const CommonFilterPopover = ({
         .cfp-panel {
           position: absolute;
           top: calc(100% + 8px);
-          ${align === 'right' ? 'right: 0;' : 'left: 0;'}
           z-index: 1060;
-          width: 440px;
-          max-width: calc(100vw - 32px);
+          box-sizing: border-box;
           background: linear-gradient(170deg, #0d1527 0%, #090e1a 100%);
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 14px;
@@ -401,6 +457,7 @@ const CommonFilterPopover = ({
           display: flex;
           align-items: center;
           gap: 10px;
+          flex-shrink: 0;
         }
 
         .cfp-btn-cancel {
@@ -413,6 +470,8 @@ const CommonFilterPopover = ({
           padding: 7px 16px;
           border-radius: 8px;
           transition: all 0.15s ease;
+          white-space: nowrap;
+          flex-shrink: 0;
         }
         .cfp-btn-cancel:hover {
           background: rgba(255, 255, 255, 0.08);
@@ -438,6 +497,8 @@ const CommonFilterPopover = ({
           cursor: pointer;
           box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          white-space: nowrap;
+          flex-shrink: 0;
         }
         .cfp-btn-update:hover {
           background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
@@ -465,7 +526,7 @@ const CommonFilterPopover = ({
 
       {/* Filter Popover Panel */}
       {isOpen && (
-        <div className="cfp-panel">
+        <div className="cfp-panel" style={panelStyle}>
           {/* Title Bar */}
           <div className="cfp-title-bar">
             <span className="cfp-title-text">

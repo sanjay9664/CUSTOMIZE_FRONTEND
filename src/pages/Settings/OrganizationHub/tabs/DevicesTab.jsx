@@ -323,6 +323,7 @@ const DevicesTab = ({
             values={tabFilterValues}
             onApply={handleApplyTabFilters}
             onReset={handleResetTabFilters}
+            align="right"
           />
           {hasActiveTabFilters && (
             <button

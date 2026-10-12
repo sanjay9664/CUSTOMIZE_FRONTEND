@@ -970,6 +970,7 @@ const DeviceManagement = ({ embedded = false }) => {
                 values={activeFilterValues}
                 onApply={handleApplyFilters}
                 onReset={handleClearAllFilters}
+                align="right"
                 extraHeader={
                   <Form.Check
                     type="switch"
