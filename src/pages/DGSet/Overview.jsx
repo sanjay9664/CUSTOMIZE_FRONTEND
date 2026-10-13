@@ -3751,10 +3751,10 @@ const SiemensStyleDG = () => {
         /* PRIMARY VITALS */
         body.light-mode .dg-vital-card,
         [data-theme="light"] .dg-vital-card {
-          background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
+          background: #ececec !important;
+          border: 1px solid #bebebe !important;
           border-radius: 12px !important;
-          box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
         }
         body.light-mode .dg-vital-card.cyan { border-left: 4px solid #0284c7 !important; }
         body.light-mode .dg-vital-card.warning { border-left: 4px solid #d97706 !important; }
@@ -3763,17 +3763,17 @@ const SiemensStyleDG = () => {
 
         body.light-mode .dg-vital-name,
         [data-theme="light"] .dg-vital-name {
-          color: #334155 !important;
+          color: #374151 !important;
           font-weight: 800 !important;
         }
         body.light-mode .dg-vital-val,
         [data-theme="light"] .dg-vital-val {
-          color: #0f172a !important;
+          color: #111827 !important;
           font-weight: 900 !important;
         }
         body.light-mode .dg-vital-badge.cyan,
         [data-theme="light"] .dg-vital-badge.cyan {
-          background: #e0f2fe !important;
+          background: #dbeafe !important;
           color: #0369a1 !important;
           border: 1.5px solid #bae6fd !important;
         }
@@ -3804,9 +3804,9 @@ const SiemensStyleDG = () => {
         /* SAFETY BANNER & SENSORS */
         body.light-mode .dg-safety-banner.healthy,
         [data-theme="light"] .dg-safety-banner.healthy {
-          background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%) !important;
+          background: #ececec !important;
           border: 1.5px solid #86efac !important;
-          box-shadow: 0 4px 15px rgba(22, 101, 52, 0.06) !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
         }
         body.light-mode .dg-safety-shield-icon.healthy,
         [data-theme="light"] .dg-safety-shield-icon.healthy {
@@ -3816,16 +3816,16 @@ const SiemensStyleDG = () => {
         }
         body.light-mode .dg-interlock-chip,
         [data-theme="light"] .dg-interlock-chip {
-          background: #ffffff !important;
-          border: 1px solid #cbd5e1 !important;
-          color: #1f2937 !important;
+          background: #e2e2e2 !important;
+          border: 1px solid #bebebe !important;
+          color: #111827 !important;
           font-weight: 700 !important;
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
         }
         body.light-mode .dg-sensor-item,
         [data-theme="light"] .dg-sensor-item {
-          background: #ffffff !important;
-          border: 1px solid #cbd5e1 !important;
+          background: #ececec !important;
+          border: 1px solid #bebebe !important;
         }
         body.light-mode .dg-sensor-item.normal,
         [data-theme="light"] .dg-sensor-item.normal {
@@ -3835,14 +3835,14 @@ const SiemensStyleDG = () => {
         /* PARAMETER TILES V3 & CLEAR VISIBILITY FOR UNMAPPED */
         body.light-mode .dg-param-tile-v3,
         [data-theme="light"] .dg-param-tile-v3 {
-          background: #ffffff !important;
-          border: 1.5px solid #e2e8f0 !important;
+          background: #ececec !important;
+          border: 1.5px solid #bebebe !important;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
         }
         body.light-mode .dg-param-tile-v3:hover,
         [data-theme="light"] .dg-param-tile-v3:hover {
-          background: #f8fafc !important;
-          border-color: #cbd5e1 !important;
+          background: #f0f0f0 !important;
+          border-color: #888888 !important;
         }
         body.light-mode .dg-param-tile-v3.success { border-left: 3px solid #16a34a !important; }
         body.light-mode .dg-param-tile-v3.warning { border-left: 3px solid #d97706 !important; }

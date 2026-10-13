@@ -25,8 +25,10 @@ import PumpStationSchematic from './components/PumpStationSchematic';
 import AssetInspectionModal from './components/AssetInspectionModal';
 import HydraulicBarChart from './components/HydraulicBarChart';
 import UgStationTrendChart from './components/UgStationTrendChart';
+import { useTheme } from '../../hooks/useTheme';
 
 const WaterOverview = () => {
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const activeRequestIdRef = useRef(0);
 
@@ -423,10 +425,11 @@ const WaterOverview = () => {
     return (
       <div
         key={tank.id || idx}
-        className="ag-tank-horizontal-card rounded-3 border border-secondary border-opacity-20 d-flex flex-column justify-content-between h-100"
+        className="ag-tank-horizontal-card rounded-3 d-flex flex-column justify-content-between h-100"
         style={{
-          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.95) 0%, rgba(20, 30, 48, 0.85) 100%)',
-          boxShadow: isSingleTank ? '0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(56, 189, 248, 0.15)' : '0 4px 16px rgba(0, 0, 0, 0.4)',
+          background: isDark ? 'linear-gradient(145deg, rgba(15, 23, 42, 0.95) 0%, rgba(20, 30, 48, 0.85) 100%)' : '#e6e6e6',
+          border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #bebebe',
+          boxShadow: isDark ? (isSingleTank ? '0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(56, 189, 248, 0.15)' : '0 4px 16px rgba(0, 0, 0, 0.4)') : '0 2px 8px rgba(0, 0, 0, 0.04)',
           cursor: 'pointer',
           minHeight: isSingleTank ? '340px' : (isDualTank ? '230px' : '190px'),
           padding: isSingleTank ? '14px 16px' : (isDualTank ? '10px 14px' : '8px 10px'),
@@ -451,7 +454,7 @@ const WaterOverview = () => {
               }}
             />
             <strong
-              className="text-white text-truncate"
+              className={`${isDark ? 'text-white' : 'text-dark'} text-truncate`}
               style={{ fontSize: isSingleTank ? '14px' : (isMultiColumn ? '11.5px' : '12.5px'), letterSpacing: '0.2px' }}
             >
               {cleanName}
@@ -567,12 +570,12 @@ const WaterOverview = () => {
                 className="position-relative w-100 flex-shrink-0"
                 style={{
                   height: isSingleTank ? '14px' : (isDualTank ? '8px' : '6px'),
-                  background: 'linear-gradient(180deg, #64748b 0%, #334155 60%, #1e293b 100%)',
+                  background: isDark ? 'linear-gradient(180deg, #64748b 0%, #334155 60%, #1e293b 100%)' : 'linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%)',
                   borderRadius: '10px 10px 0 0',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.35)',
-                  borderLeft: '2px solid rgba(56, 189, 248, 0.55)',
-                  borderRight: '2px solid rgba(56, 189, 248, 0.55)',
-                  borderBottom: '1px solid rgba(56, 189, 248, 0.3)'
+                  borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.35)' : '1px solid rgba(0, 0, 0, 0.15)',
+                  borderLeft: isDark ? '2px solid rgba(56, 189, 248, 0.55)' : '2px solid rgba(2, 132, 199, 0.55)',
+                  borderRight: isDark ? '2px solid rgba(56, 189, 248, 0.55)' : '2px solid rgba(2, 132, 199, 0.55)',
+                  borderBottom: isDark ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(2, 132, 199, 0.3)'
                 }}
               >
                 {/* Top Sensor Beacon (Render for both single and dual view) */}
@@ -601,8 +604,8 @@ const WaterOverview = () => {
                     width: isSingleTank ? '32px' : '22px',
                     height: isSingleTank ? '4px' : '3px',
                     borderRadius: '2px',
-                    background: '#475569',
-                    border: '1px solid rgba(255, 255, 255, 0.25)'
+                    background: isDark ? '#475569' : '#94a3b8',
+                    border: isDark ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid rgba(0, 0, 0, 0.15)'
                   }}
                 />
               </div>
@@ -611,10 +614,10 @@ const WaterOverview = () => {
               <div
                 className="position-relative flex-grow-1 overflow-hidden"
                 style={{
-                  background: 'linear-gradient(180deg, #091325 0%, #040914 100%)',
-                  borderLeft: '2px solid rgba(56, 189, 248, 0.55)',
-                  borderRight: '2px solid rgba(56, 189, 248, 0.55)',
-                  boxShadow: 'inset 0 0 25px rgba(0, 0, 0, 0.95), inset 0 0 8px rgba(56, 189, 248, 0.25)'
+                  background: isDark ? 'linear-gradient(180deg, #091325 0%, #040914 100%)' : 'linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)',
+                  borderLeft: isDark ? '2px solid rgba(56, 189, 248, 0.55)' : '2px solid rgba(2, 132, 199, 0.55)',
+                  borderRight: isDark ? '2px solid rgba(56, 189, 248, 0.55)' : '2px solid rgba(2, 132, 199, 0.55)',
+                  boxShadow: isDark ? 'inset 0 0 25px rgba(0, 0, 0, 0.95), inset 0 0 8px rgba(56, 189, 248, 0.25)' : 'inset 0 0 15px rgba(148, 163, 184, 0.25)'
                 }}
               >
                 {/* High Alarm Line (HH 90%) */}
@@ -694,28 +697,29 @@ const WaterOverview = () => {
                     <>
                       {/* Water Present: show % readout */}
                       <div
-                        className="fw-black text-white"
+                        className={`fw-black ${isDark ? 'text-white' : 'text-dark'}`}
                         style={{
                           fontSize: isSingleTank ? '38px' : (isDualTank ? '26px' : '17px'),
                           lineHeight: 1,
                           letterSpacing: '-1px',
-                          textShadow: '0 3px 12px rgba(0,0,0,0.95), 0 0 20px rgba(56, 189, 248, 0.75)'
+                          color: isDark ? '#ffffff' : '#0369a1',
+                          textShadow: isDark ? '0 3px 12px rgba(0,0,0,0.95), 0 0 20px rgba(56, 189, 248, 0.75)' : 'none'
                         }}
                       >
                         {levelVal}%
                       </div>
                       <div
                         style={{
-                          background: 'rgba(5, 12, 24, 0.85)',
-                          border: '1px solid rgba(56, 189, 248, 0.4)',
+                          background: isDark ? 'rgba(5, 12, 24, 0.85)' : '#ffffff',
+                          border: isDark ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(2, 132, 199, 0.35)',
                           borderRadius: '10px',
                           padding: isSingleTank ? '3px 12px' : (isDualTank ? '2px 8px' : '1px 5px'),
                           marginTop: isSingleTank ? '6px' : (isDualTank ? '3px' : '2px'),
                           display: 'inline-block',
-                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.7)'
+                          boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.7)' : '0 1px 4px rgba(0, 0, 0, 0.08)'
                         }}
                       >
-                        <span style={{ color: '#e0f2fe', fontSize: isSingleTank ? '13px' : (isDualTank ? '10.5px' : '8.5px'), fontWeight: 900 }}>
+                        <span style={{ color: isDark ? '#e0f2fe' : '#0284c7', fontSize: isSingleTank ? '13px' : (isDualTank ? '10.5px' : '8.5px'), fontWeight: 900 }}>
                           {currentVolume.toLocaleString()} L
                         </span>
                       </div>
@@ -725,12 +729,12 @@ const WaterOverview = () => {
                             style={{
                               fontSize: isSingleTank ? '8.5px' : '7px',
                               fontWeight: 800,
-                              color: levelVal >= 85 ? '#f87171' : levelVal <= 20 ? '#fbbf24' : '#38bdf8',
-                              background: 'rgba(0, 0, 0, 0.55)',
+                              color: levelVal >= 85 ? '#f87171' : levelVal <= 20 ? '#d97706' : (isDark ? '#38bdf8' : '#0284c7'),
+                              background: isDark ? 'rgba(0, 0, 0, 0.55)' : '#ffffff',
                               padding: '1px 6px',
                               borderRadius: '5px',
                               letterSpacing: '0.3px',
-                              border: `1px solid ${levelVal >= 85 ? 'rgba(239, 68, 68, 0.4)' : levelVal <= 20 ? 'rgba(245, 158, 11, 0.4)' : 'rgba(56, 189, 248, 0.4)'}`
+                              border: `1px solid ${levelVal >= 85 ? 'rgba(239, 68, 68, 0.4)' : levelVal <= 20 ? 'rgba(245, 158, 11, 0.4)' : (isDark ? 'rgba(56, 189, 248, 0.4)' : 'rgba(2, 132, 199, 0.35)')}`
                             }}
                           >
                             ● {levelVal >= 85 ? 'HIGH LEVEL' : levelVal <= 20 ? 'LOW RESERVE' : 'OPTIMAL FILL'}
@@ -756,7 +760,7 @@ const WaterOverview = () => {
                       {(isSingleTank || isDualTank) && (
                         <div
                           style={{
-                            background: 'rgba(71, 85, 105, 0.15)',
+                            background: isDark ? 'rgba(71, 85, 105, 0.15)' : 'rgba(255, 255, 255, 0.8)',
                             border: '1px dashed rgba(71, 85, 105, 0.4)',
                             borderRadius: '10px',
                             padding: '2px 10px',
@@ -779,12 +783,12 @@ const WaterOverview = () => {
                 className="flex-shrink-0"
                 style={{
                   height: isSingleTank ? '10px' : (isDualTank ? '6px' : '5px'),
-                  background: 'linear-gradient(180deg, #334155 0%, #0f172a 100%)',
+                  background: isDark ? 'linear-gradient(180deg, #334155 0%, #0f172a 100%)' : 'linear-gradient(180deg, #94a3b8 0%, #64748b 100%)',
                   borderRadius: '0 0 10px 10px',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderLeft: '2px solid rgba(56, 189, 248, 0.55)',
-                  borderRight: '2px solid rgba(56, 189, 248, 0.55)',
-                  borderBottom: '2px solid rgba(56, 189, 248, 0.55)'
+                  borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+                  borderLeft: isDark ? '2px solid rgba(56, 189, 248, 0.55)' : '2px solid rgba(2, 132, 199, 0.55)',
+                  borderRight: isDark ? '2px solid rgba(56, 189, 248, 0.55)' : '2px solid rgba(2, 132, 199, 0.55)',
+                  borderBottom: isDark ? '2px solid rgba(56, 189, 248, 0.55)' : '2px solid rgba(2, 132, 199, 0.55)'
                 }}
               />
             </div>
@@ -1412,10 +1416,11 @@ const WaterOverview = () => {
                     <>
                       {ugViewMode === 'schematic' && (
                         <div
-                          className="scada-schematic-embed-wrapper rounded-3 overflow-hidden border border-secondary border-opacity-15 flex-grow-1 d-flex align-items-center justify-content-center"
+                          className="scada-schematic-embed-wrapper rounded-3 overflow-hidden flex-grow-1 d-flex align-items-center justify-content-center"
                           style={{
-                            background: '#070d18',
-                            boxShadow: 'inset 0 0 30px rgba(0, 0, 0, 0.7)',
+                            background: isDark ? '#070d18' : '#ececec',
+                            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #bebebe',
+                            boxShadow: isDark ? 'inset 0 0 30px rgba(0, 0, 0, 0.7)' : 'none',
                             minHeight: 0
                           }}
                         >
@@ -2070,6 +2075,78 @@ const WaterOverview = () => {
         .ag-tank-horizontal-card:hover {
           border-color: rgba(56, 189, 248, 0.4) !important;
           box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(56, 189, 248, 0.18) !important;
+        }
+
+        /* LIGHT MODE OVERRIDES FOR OVERVIEW */
+        body.light-mode .master-split-hydraulic-container,
+        [data-theme="light"] .master-split-hydraulic-container {
+          background: #dbdbdb !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+          backdrop-filter: none !important;
+        }
+        body.light-mode .scada-dual-box,
+        [data-theme="light"] .scada-dual-box {
+          background: #ececec !important;
+          backdrop-filter: none !important;
+          border-color: #bebebe !important;
+        }
+        body.light-mode .scada-dual-box h6,
+        [data-theme="light"] .scada-dual-box h6 {
+          color: #111827 !important;
+        }
+        body.light-mode .scada-dual-box .text-white,
+        [data-theme="light"] .scada-dual-box .text-white {
+          color: #111827 !important;
+        }
+        body.light-mode .scada-dual-box .text-secondary,
+        [data-theme="light"] .scada-dual-box .text-secondary {
+          color: #4b5563 !important;
+        }
+        body.light-mode .ag-box-card,
+        [data-theme="light"] .ag-box-card {
+          background: #ececec !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.light-mode .ug-box-card,
+        [data-theme="light"] .ug-box-card {
+          background: #ececec !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.light-mode .scada-command-bar,
+        [data-theme="light"] .scada-command-bar {
+          background: #ececec !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .scada-command-bar h5,
+        [data-theme="light"] .scada-command-bar h5 {
+          color: #111827 !important;
+        }
+        body.light-mode .wm-telemetry-ribbon,
+        [data-theme="light"] .wm-telemetry-ribbon {
+          background: #dedede !important;
+          border: 1px solid #bebebe !important;
+        }
+        body.light-mode .scada-metric-tile,
+        [data-theme="light"] .scada-metric-tile {
+          background: #dedede !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: none !important;
+        }
+        body.light-mode .ag-tank-horizontal-card,
+        [data-theme="light"] .ag-tank-horizontal-card {
+          background: #dedede !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .scada-schematic-embed-wrapper,
+        [data-theme="light"] .scada-schematic-embed-wrapper {
+          background: #ececec !important;
+          border-color: #bebebe !important;
+          box-shadow: none !important;
         }
       `}} />
     </div>

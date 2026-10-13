@@ -282,24 +282,24 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           color: white;
         }
         body.light-mode .scada-header .header-left .btn-link {
-          color: #0f172a !important;
+          color: #111827 !important;
         }
         body.light-mode .scada-header .input-group-text {
-          background-color: #e2e8f0 !important;
-          border-color: #cbd5e1 !important;
-          color: #475569 !important;
+          background-color: #dedede !important;
+          border-color: #bebebe !important;
+          color: #111827 !important;
         }
         body.light-mode .scada-header .form-control {
-          background-color: #ffffff !important;
-          border-color: #cbd5e1 !important;
-          color: #0f172a !important;
+          background-color: #ececec !important;
+          border-color: #bebebe !important;
+          color: #111827 !important;
         }
         body.light-mode .global-module-context {
-          background: #f1f5f9 !important;
-          border-color: #cbd5e1 !important;
+          background: #ececec !important;
+          border-color: #bebebe !important;
         }
         body.light-mode .global-module-title {
-          color: #0f172a !important;
+          color: #111827 !important;
         }
         .global-module-title {
           color: #f8fafc;
@@ -851,9 +851,9 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
         }
 
         body.light-mode .settings-dropdown-menu {
-          background: #ffffff !important;
-          border: 1px solid #e2e8f0 !important;
-          box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12) !important;
+          background: #ececec !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
         }
 
         .settings-user-header {
@@ -862,8 +862,8 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
         }
 
         body.light-mode .settings-user-header {
-          background: #f8fafc;
-          border-color: #e2e8f0 !important;
+          background: #e2e2e2;
+          border-color: #bebebe !important;
         }
 
         .settings-avatar-box {

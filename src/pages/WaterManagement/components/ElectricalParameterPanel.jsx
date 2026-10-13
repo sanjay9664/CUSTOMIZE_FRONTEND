@@ -319,6 +319,90 @@ const ElectricalParameterPanel = ({
           border-top: 1px solid rgba(255, 255, 255, 0.05);
           font-size: 0.68rem;
         }
+
+        /* LIGHT MODE THEME ADAPTATION */
+        body.light-mode .scada-elec-panel,
+        [data-theme="light"] .scada-elec-panel {
+          background: #ececec !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+        }
+        body.light-mode .scada-elec-header,
+        [data-theme="light"] .scada-elec-header {
+          background: #e2e2e2 !important;
+          border-bottom: 1px solid #bebebe !important;
+        }
+        body.light-mode .scada-elec-title,
+        [data-theme="light"] .scada-elec-title {
+          color: #111827 !important;
+        }
+        body.light-mode .scada-elec-time,
+        [data-theme="light"] .scada-elec-time {
+          color: #4b5563 !important;
+        }
+        body.light-mode .scada-telemetry-card,
+        [data-theme="light"] .scada-telemetry-card {
+          background: #dedede !important;
+          border: 1px solid #bebebe !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+        body.light-mode .scada-telemetry-card:hover,
+        [data-theme="light"] .scada-telemetry-card:hover {
+          background: #d6d6d6 !important;
+          border-color: #a8a8a8 !important;
+        }
+        body.light-mode .scada-card-title,
+        [data-theme="light"] .scada-card-title {
+          color: #4b5563 !important;
+        }
+        body.light-mode .scada-card-tag,
+        [data-theme="light"] .scada-card-tag {
+          color: #374151 !important;
+          background: rgba(0, 0, 0, 0.06) !important;
+        }
+        body.light-mode .scada-phase-val,
+        [data-theme="light"] .scada-phase-val {
+          color: #111827 !important;
+        }
+        body.light-mode .scada-mini-tile,
+        [data-theme="light"] .scada-mini-tile {
+          background: #dedede !important;
+          border: 1px solid #bebebe !important;
+        }
+        body.light-mode .scada-hero-demand,
+        [data-theme="light"] .scada-hero-demand {
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, #dedede 100%) !important;
+          border: 1px solid rgba(217, 119, 6, 0.35) !important;
+        }
+        body.light-mode .scada-hero-val,
+        [data-theme="light"] .scada-hero-val {
+          color: #b45309 !important;
+        }
+        body.light-mode .scada-energy-box,
+        [data-theme="light"] .scada-energy-box {
+          background: #dedede !important;
+          border: 1px solid #bebebe !important;
+        }
+        body.light-mode .scada-footer,
+        [data-theme="light"] .scada-footer {
+          background: #e2e2e2 !important;
+          border-top: 1px solid #bebebe !important;
+          color: #4b5563 !important;
+        }
+        body.light-mode .scada-elec-panel .text-white,
+        [data-theme="light"] .scada-elec-panel .text-white {
+          color: #111827 !important;
+        }
+        body.light-mode .scada-elec-panel .text-secondary,
+        [data-theme="light"] .scada-elec-panel .text-secondary {
+          color: #4b5563 !important;
+        }
+        body.light-mode .scada-elec-panel .text-muted,
+        [data-theme="light"] .scada-elec-panel .text-muted {
+          color: #6b7280 !important;
+        }
       `}</style>
 
       {/* ── HEADER ── */}
