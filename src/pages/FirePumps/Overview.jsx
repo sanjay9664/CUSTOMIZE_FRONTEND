@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Row, Col, Modal, ProgressBar } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
@@ -387,51 +387,169 @@ const BannerBackdropIllustration = ({ color = '#EF3340' }) => (
   </svg>
 );
 
-// 3D Isometric / Cylindrical Water Tank Visualization for Tank Cards
-const TankCylinderVisual = ({ capacity = 300, current = '265.5 kL', percentage = 88.5, maxVal = 300, color = '#06C7F5' }) => (
-  <div className="acms-tank-preview-box">
-    <svg width="125" height="96" viewBox="0 0 125 96" fill="none">
-      <defs>
-        <linearGradient id={`tankGrad-${color.replace('#','')}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#0B1220" />
-          <stop offset="30%" stopColor={color} stopOpacity="0.45" />
-          <stop offset="70%" stopColor={color} stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#0284C7" />
-        </linearGradient>
-        <linearGradient id="tankRimGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#64748B" />
-          <stop offset="100%" stopColor="#1E293B" />
-        </linearGradient>
-      </defs>
-      {/* Tank Body Shell */}
-      <rect x="26" y="20" width="72" height="62" rx="4" fill="#0B1220" stroke="#334155" strokeWidth="1.5" />
-      {/* Water Fill */}
-      {(() => {
-        const fillHeight = Math.min(58, (percentage / 100) * 58);
-        const fillY = 20 + (62 - fillHeight);
-        return (
-          <g>
-            <rect x="27" y={fillY} width="70" height={fillHeight} fill={`url(#tankGrad-${color.replace('#','')})`} />
-            <ellipse cx="62" cy={fillY} rx="35" ry="6.5" fill={color} fillOpacity="0.85" />
-          </g>
-        );
-      })()}
-      {/* Volume Graduations */}
-      <line x1="18" y1="22" x2="25" y2="22" stroke="#64748B" strokeWidth="1.5" />
-      <text x="14" y="25" fill="#94A3B8" fontSize="7.5" fontWeight="bold" textAnchor="end">{maxVal}</text>
-      <line x1="20" y1="51" x2="25" y2="51" stroke="#64748B" strokeWidth="1" />
-      <text x="14" y="54" fill="#94A3B8" fontSize="7.5" fontWeight="bold" textAnchor="end">{Math.round(maxVal / 2)}</text>
-      <line x1="18" y1="80" x2="25" y2="80" stroke="#64748B" strokeWidth="1.5" />
-      <text x="14" y="83" fill="#94A3B8" fontSize="7.5" fontWeight="bold" textAnchor="end">0</text>
-      {/* Rims */}
-      <ellipse cx="62" cy="20" rx="36" ry="7.5" fill="url(#tankRimGrad)" stroke="#475569" strokeWidth="1.5" />
-      <ellipse cx="62" cy="82" rx="36" ry="7.5" fill="none" stroke="#334155" strokeWidth="1.5" />
-      {/* Percentage Tag */}
-      <rect x="44" y="3" width="38" height="15" rx="3" fill="#070D18" stroke={color} strokeWidth="1" />
-      <text x="63" y="14" fill="#FFFFFF" fontSize="8.5" fontWeight="bold" textAnchor="middle">{percentage}%</text>
-    </svg>
-  </div>
-);
+// 3D Isometric / Cylindrical Water Tank Visualization - Realistic Tall Animated Fluid Flow
+const TankCylinderVisual = ({ capacity = 300, current = '265.5 kL', percentage = 88.5, maxVal = 300, color = '#00D4FF', isWarning = false }) => {
+  const pct = Math.min(100, Math.max(0, percentage));
+  const activeColor = isWarning || pct < 40 ? '#EF4444' : color;
+  const isDanger = isWarning || pct < 40;
+  
+  // Tall cylinder height (from y=26 to y=182) = 156px
+  const tankTopY = 26;
+  const tankBottomY = 182;
+  const totalHeight = tankBottomY - tankTopY; // 156px
+  const waterHeight = Math.max(10, (pct / 100) * totalHeight);
+  const waterTopY = tankBottomY - waterHeight;
+  const uniqueId = `tank-flow-${Math.round(maxVal)}-${isDanger ? 'alert' : 'ok'}`;
+
+  return (
+    <div className="acms-tank-preview-box position-relative d-flex justify-content-center align-items-center py-1" style={{ minHeight: '220px' }}>
+      <svg width="155" height="218" viewBox="0 0 155 218" fill="none" style={{ overflow: 'visible' }}>
+        <defs>
+          {/* Glass Wall Gradient */}
+          <linearGradient id={`${uniqueId}-glass`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#0B132B" stopOpacity="0.95" />
+            <stop offset="15%" stopColor="#1C2D4F" stopOpacity="0.75" />
+            <stop offset="50%" stopColor="#0D1B2A" stopOpacity="0.4" />
+            <stop offset="85%" stopColor="#1C2D4F" stopOpacity="0.75" />
+            <stop offset="100%" stopColor="#0B132B" stopOpacity="0.95" />
+          </linearGradient>
+
+          {/* Deep Realistic Water Fluid Gradient */}
+          <linearGradient id={`${uniqueId}-water`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={isDanger ? '#F87171' : '#38BDF8'} stopOpacity="0.95" />
+            <stop offset="35%" stopColor={isDanger ? '#EF4444' : activeColor} stopOpacity="0.9" />
+            <stop offset="75%" stopColor={isDanger ? '#DC2626' : '#0284C7'} stopOpacity="0.93" />
+            <stop offset="100%" stopColor={isDanger ? '#991B1B' : '#075985'} stopOpacity="0.98" />
+          </linearGradient>
+
+          {/* Surface Wave Highlight Gradient */}
+          <linearGradient id={`${uniqueId}-surface`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.3" />
+            <stop offset="50%" stopColor={isDanger ? '#FCA5A5' : '#E0F2FE'} stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.3" />
+          </linearGradient>
+
+          {/* Metallic Cylinder Rims */}
+          <linearGradient id={`${uniqueId}-rim`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#94A3B8" />
+            <stop offset="50%" stopColor="#475569" />
+            <stop offset="100%" stopColor="#1E293B" />
+          </linearGradient>
+
+          {/* Glass Reflection Highlight */}
+          <linearGradient id={`${uniqueId}-reflect`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.02" />
+            <stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.2" />
+            <stop offset="60%" stopColor="#FFFFFF" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+          </linearGradient>
+
+          {/* Clip path for water inside cylinder */}
+          <clipPath id={`${uniqueId}-clip`}>
+            <rect x="36" y={tankTopY} width="80" height={totalHeight} rx="2" />
+          </clipPath>
+        </defs>
+
+        {/* Structural Shadows & Support Pedestals */}
+        <rect x="46" y="186" width="12" height="18" rx="2" fill="#0F172A" stroke="#334155" strokeWidth="1" />
+        <rect x="94" y="186" width="12" height="18" rx="2" fill="#0F172A" stroke="#334155" strokeWidth="1" />
+        <ellipse cx="76" cy="204" rx="48" ry="6" fill="#000000" fillOpacity="0.5" />
+
+        {/* Outer Cylinder Glass Shell Backing */}
+        <rect x="36" y={tankTopY} width="80" height={totalHeight} rx="2" fill={`url(#${uniqueId}-glass)`} stroke="#334155" strokeWidth="1.5" />
+
+        {/* Flowing Water Section (Inside ClipPath) */}
+        <g clipPath={`url(#${uniqueId}-clip)`}>
+          {/* Main Water Body Fill */}
+          <rect x="36" y={waterTopY} width="80" height={waterHeight + 10} fill={`url(#${uniqueId}-water)`} />
+
+          {/* Animated Flowing Primary Wave */}
+          <path fill={`url(#${uniqueId}-water)`}>
+            <animate 
+              attributeName="d" 
+              dur="2.8s" 
+              repeatCount="indefinite" 
+              values={`M 36 ${waterTopY} Q 56 ${waterTopY - 4.5} 76 ${waterTopY} T 116 ${waterTopY} L 116 ${waterTopY + 25} L 36 ${waterTopY + 25} Z; M 36 ${waterTopY} Q 56 ${waterTopY + 4} 76 ${waterTopY} T 116 ${waterTopY} L 116 ${waterTopY + 25} L 36 ${waterTopY + 25} Z; M 36 ${waterTopY} Q 56 ${waterTopY - 4.5} 76 ${waterTopY} T 116 ${waterTopY} L 116 ${waterTopY + 25} L 36 ${waterTopY + 25} Z`}
+            />
+          </path>
+
+          {/* Animated Flowing Secondary Translucent Fluid Ripple */}
+          <path fill={isDanger ? '#F87171' : '#7DD3FC'} fillOpacity="0.45">
+            <animate 
+              attributeName="d" 
+              dur="2.1s" 
+              repeatCount="indefinite" 
+              values={`M 36 ${waterTopY} Q 56 ${waterTopY + 3.5} 76 ${waterTopY - 2.5} T 116 ${waterTopY + 2} L 116 ${waterTopY + 12} L 36 ${waterTopY + 12} Z; M 36 ${waterTopY} Q 56 ${waterTopY - 3.5} 76 ${waterTopY + 2.5} T 116 ${waterTopY - 1.5} L 116 ${waterTopY + 12} L 36 ${waterTopY + 12} Z; M 36 ${waterTopY} Q 56 ${waterTopY + 3.5} 76 ${waterTopY - 2.5} T 116 ${waterTopY + 2} L 116 ${waterTopY + 12} L 36 ${waterTopY + 12} Z`}
+            />
+          </path>
+
+          {/* Animated Rising Air Bubbles for Realistic Fluid Effect */}
+          <circle cx="52" cy="160" r="2.2" fill="#FFFFFF" fillOpacity="0.65">
+            <animate attributeName="cy" values={`170; ${waterTopY + 5}`} dur="2.4s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.1; 0.85; 0" dur="2.4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="74" cy="165" r="1.6" fill="#FFFFFF" fillOpacity="0.75">
+            <animate attributeName="cy" values={`176; ${waterTopY + 6}`} dur="1.8s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.15; 0.9; 0" dur="1.8s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="94" cy="155" r="2.5" fill="#FFFFFF" fillOpacity="0.6">
+            <animate attributeName="cy" values={`168; ${waterTopY + 4}`} dur="2.9s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.2; 0.8; 0" dur="2.9s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="64" cy="140" r="1.4" fill="#FFFFFF" fillOpacity="0.7">
+            <animate attributeName="cy" values={`155; ${waterTopY + 7}`} dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.2; 0.75; 0" dur="2.1s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="104" cy="145" r="1.8" fill="#FFFFFF" fillOpacity="0.65">
+            <animate attributeName="cy" values={`162; ${waterTopY + 6}`} dur="2.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.1; 0.8; 0" dur="2.6s" repeatCount="indefinite" />
+          </circle>
+
+          {/* Surface Wave Meniscus Ellipse */}
+          <ellipse cx="76" cy={waterTopY} rx="40" ry="6.5" fill={`url(#${uniqueId}-surface)`} fillOpacity="0.9" />
+          <ellipse cx="76" cy={waterTopY} rx="40" ry="6.5" fill="none" stroke="#FFFFFF" strokeOpacity="0.5" strokeWidth="1" />
+
+          {/* Vertical Curved Glass Reflection */}
+          <rect x="42" y={tankTopY} width="16" height={totalHeight} fill={`url(#${uniqueId}-reflect)`} />
+        </g>
+
+        {/* Cylinder Frame & Top/Bottom Rims */}
+        {/* Top Rim */}
+        <ellipse cx="76" cy={tankTopY} rx="40" ry="7.5" fill={`url(#${uniqueId}-rim)`} stroke="#64748B" strokeWidth="1.5" />
+        <ellipse cx="76" cy={tankTopY} rx="35" ry="5.5" fill="#0B132B" stroke="#334155" strokeWidth="1" />
+        <ellipse cx="76" cy={tankTopY} rx="12" ry="3.5" fill="#334155" stroke="#94A3B8" strokeWidth="1" />
+
+        {/* Bottom Rim */}
+        <ellipse cx="76" cy={tankBottomY} rx="40" ry="7.5" fill="none" stroke="#475569" strokeWidth="1.5" />
+
+        {/* Volume Graduations & Depth Markers on Left */}
+        <line x1="26" y1={tankTopY} x2="35" y2={tankTopY} stroke="#38BDF8" strokeWidth="1.8" />
+        <text x="23" y={tankTopY + 3} fill="#94A3B8" fontSize="8" fontWeight="bold" textAnchor="end" fontFamily="monospace">{maxVal}</text>
+
+        <line x1="29" y1={tankTopY + totalHeight * 0.25} x2="35" y2={tankTopY + totalHeight * 0.25} stroke="#64748B" strokeWidth="1.2" />
+        <text x="26" y={tankTopY + totalHeight * 0.25 + 3} fill="#64748B" fontSize="7.5" textAnchor="end" fontFamily="monospace">{Math.round(maxVal * 0.75)}</text>
+
+        <line x1="27" y1={tankTopY + totalHeight * 0.5} x2="35" y2={tankTopY + totalHeight * 0.5} stroke="#38BDF8" strokeWidth="1.5" />
+        <text x="24" y={tankTopY + totalHeight * 0.5 + 3} fill="#94A3B8" fontSize="8" fontWeight="bold" textAnchor="end" fontFamily="monospace">{Math.round(maxVal * 0.5)}</text>
+
+        <line x1="29" y1={tankTopY + totalHeight * 0.75} x2="35" y2={tankTopY + totalHeight * 0.75} stroke="#64748B" strokeWidth="1.2" />
+        <text x="26" y={tankTopY + totalHeight * 0.75 + 3} fill="#64748B" fontSize="7.5" textAnchor="end" fontFamily="monospace">{Math.round(maxVal * 0.25)}</text>
+
+        <line x1="26" y1={tankBottomY} x2="35" y2={tankBottomY} stroke="#38BDF8" strokeWidth="1.8" />
+        <text x="23" y={tankBottomY + 3} fill="#94A3B8" fontSize="8" fontWeight="bold" textAnchor="end" fontFamily="monospace">0</text>
+
+        {/* Level Indicator Pointer & Live Floating % Badge on Right */}
+        <polygon 
+          points={`117,${waterTopY} 123,${waterTopY - 4} 123,${waterTopY + 4}`} 
+          fill={activeColor} 
+        />
+        <line x1="116" y1={waterTopY} x2="136" y2={waterTopY} stroke={activeColor} strokeWidth="1.5" strokeDasharray="2 1" />
+        <rect x="127" y={waterTopY - 8} width="24" height="16" rx="3" fill="#0B132B" stroke={activeColor} strokeWidth="1.2" />
+        <text x="139" y={waterTopY + 3.5} fill="#FFFFFF" fontSize="8.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">{pct}%</text>
+      </svg>
+    </div>
+  );
+};
 
 // 3D Motor Control Center / Electrical Panel Visual
 const PowerPanelLargeVisual = ({ isPowered = true }) => (
@@ -1017,13 +1135,13 @@ const FireOverview = () => {
   // Navigation tabs matching the exact clause structure of the paper
   const navigationTabs = [
     { key: 'overview', label: 'System Overview', count: null, icon: Layers, theme: 'default' },
-    { key: 'hydrant', label: '(b) Hydrant System', count: '9 Items', icon: Flame, theme: 'red' },
-    { key: 'tanks', label: '(c) Fire Water Tanks', count: '2 Items', icon: Droplets, theme: 'blue' },
-    { key: 'sprinkler', label: '(d) Sprinkler', count: '3 Items', icon: Gauge, theme: 'cyan' },
-    { key: 'detection', label: '(e) Detection System', count: '3 Items', icon: ShieldAlert, theme: 'red' },
-    { key: 'mcp', label: '(f) Manual Call Points (MCP)', count: null, icon: Radio, theme: 'red' },
-    { key: 'pa', label: '(g) Public Address System (PA)', count: null, icon: Volume2, theme: 'purple' },
-    { key: 'pressurization', label: '(h) Air Pressurization', count: null, icon: Wind, theme: 'cyan' }
+    { key: 'hydrant', label: ' Hydrant System', count: '9 Items', icon: Flame, theme: 'red' },
+    { key: 'tanks', label: 'Fire Water Tanks', count: '2 Items', icon: Droplets, theme: 'blue' },
+    { key: 'sprinkler', label: ' Sprinkler', count: '3 Items', icon: Gauge, theme: 'cyan' },
+    { key: 'detection', label: ' Detection System', count: '3 Items', icon: ShieldAlert, theme: 'red' },
+    { key: 'mcp', label: ' Manual Call Points (MCP)', count: null, icon: Radio, theme: 'red' },
+    { key: 'pa', label: ' Public Address System (PA)', count: null, icon: Volume2, theme: 'purple' },
+    { key: 'pressurization', label: ' Air Pressurization', count: null, icon: Wind, theme: 'cyan' }
   ];
 
   return (
@@ -1577,7 +1695,7 @@ const FireOverview = () => {
                     <div className="acms-ov-cockpit-card-title">
                       <Wind size={18} style={{ color: '#06C7F5' }} />
                       <h6>Air Pressurization Fans</h6>
-                      <span className="acms-ov-cockpit-clause">Clause 3.h</span>
+                      <span className="acms-ov-cockpit-clause"></span>
                     </div>
                     <span className="acms-ov-cockpit-badge cyan">All 5 Armed</span>
                   </div>
@@ -1670,7 +1788,6 @@ const FireOverview = () => {
                     <div>
                       <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
                         <span className="acms-hydrant-item-num" style={{ background: '#8A2BE2', color: '#fff' }}>5</span>
-                        <span className="acms-clause-badge purple">{hydrantItems.riserPressure?.clause || 'Clause (v)'}</span>
                         <span className={`acms-status-chip ${(hydrantItems.riserPressure?.currentPressureNum ?? 7.52) >= 6 ? 'green' : 'red'}`}>
                           <CheckCircle2 size={11} /> {(hydrantItems.riserPressure?.currentPressureNum ?? 7.52) >= 6 ? 'NORMAL (Supervised)' : 'LOW PRESSURE ALERT'}
                         </span>
@@ -1678,9 +1795,6 @@ const FireOverview = () => {
                       <h6 className="fw-bold text-white mb-0" style={{ fontSize: '13.5px' }}>
                         {hydrantItems.riserPressure?.title || 'Hydrant riser low pressure monitoring'}
                       </h6>
-                      <span className="text-muted small" style={{ fontSize: '11px' }}>
-                        Ring main riser supervised 4-20mA pressure transmitter • IS 3844 Clause (v)
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -1736,27 +1850,6 @@ const FireOverview = () => {
                       <span className="font-monospace text-info fw-bold">{hydrantItems.riserPressure?.cutOutLimit || '8.5 kg/cm²'}</span>
                     </div>
                   </div>
-                  <div className="d-flex align-items-center gap-2">
-                    <button
-                      type="button"
-                      className={`acms-station-btn ${(hydrantItems.riserPressure?.currentPressureNum ?? 7.52) < 6 ? 'active-running' : ''}`}
-                      onClick={() => setHydrantItems(prev => {
-                        const isCurrentlyNormal = (prev.riserPressure?.currentPressureNum ?? 7.52) >= 6;
-                        return {
-                          ...prev,
-                          riserPressure: {
-                            ...prev.riserPressure,
-                            currentPressureNum: isCurrentlyNormal ? 5.2 : 7.52,
-                            currentPressure: isCurrentlyNormal ? '5.20 kg/cm²' : '7.52 kg/cm²'
-                          }
-                        };
-                      })}
-                      title="Test automatic pressure drop trigger"
-                    >
-                      <RefreshCw size={11} />
-                      {(hydrantItems.riserPressure?.currentPressureNum ?? 7.52) >= 6 ? 'Simulate Pressure Drop' : 'Restore Normal Pressure'}
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1779,9 +1872,6 @@ const FireOverview = () => {
                           <div className="text-muted" style={{ fontSize: '10.5px' }}>Primary Fire Pump Room • Basement Level -1</div>
                         </div>
                       </div>
-                      <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style={{ fontSize: '10px' }}>
-                        Clause (i) &amp; (ii)
-                      </span>
                     </div>
 
                     {/* Sub-Item 1: Main Hydrant Pump (Clause i) */}
@@ -1792,12 +1882,10 @@ const FireOverview = () => {
                           <RedPumpIcon isRunning={hydrantItems.mainPump?.runStatus === 'RUNNING'} />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge red">{hydrantItems.mainPump?.clause || 'Clause (i)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {hydrantItems.mainPump?.title || 'Main Hydrant Pump run status'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">FP-HYD-01 • 55 kW Heavy Duty Motor Driven</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${hydrantItems.mainPump?.runStatus === 'RUNNING' ? 'green' : 'amber'}`}>
@@ -1840,71 +1928,64 @@ const FireOverview = () => {
                       </div>
                     </div>
 
-                    {/* Sub-Item 2: Standby Diesel/Elec (Clause ii) */}
+                    {/* Sub-Item 2: Power to Main Hydrant Pump */}
                     <div className="acms-station-subitem">
                       <div className="acms-subitem-top">
                         <div className="acms-subitem-title-group">
                           <span className="acms-hydrant-item-num" style={{ background: '#FF0055', color: '#fff' }}>2</span>
-                          <DieselEngineIcon isRunning={hydrantItems.standbyPump?.runStatus === 'RUNNING'} />
+                          <PowerPanelIcon />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge red">{hydrantItems.standbyPump?.clause || 'Clause (ii)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
-                                {hydrantItems.standbyPump?.title || 'Standby Diesel/Electrical Pump run status'}
+                                {hydrantItems.powerMainPump?.title || 'Power to Main Hydrant Pump (On / Off)'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">FP-HYD-02 • Standby CI Engine Driven</span>
                           </div>
                         </div>
-                        <span className={`acms-status-chip ${hydrantItems.standbyPump?.runStatus === 'RUNNING' ? 'green' : 'amber'}`}>
-                          <Activity size={12} className={hydrantItems.standbyPump?.runStatus === 'RUNNING' ? 'acms-spin-slow' : ''} />
-                          {hydrantItems.standbyPump?.runStatus || 'STANDBY AUTO'}
+                        <span className={`acms-status-chip ${hydrantItems.powerMainPump?.powerStatus === 'POWER ON' ? 'green' : 'red'}`}>
+                          <Zap size={12} /> {hydrantItems.powerMainPump?.powerStatus || 'POWER ON'}
                         </span>
                       </div>
 
                       {/* Telemetry 2x2 Grid */}
                       <div className="acms-telemetry-pill-grid">
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Battery size={12} /> Cranking Battery:</span>
-                          <span className="acms-param-value font-monospace highlight-green">{hydrantItems.standbyPump?.crankingBattery || '24.8 V DC (Dual Bank)'}</span>
+                          <span className="acms-param-label"><Zap size={12} /> Grid Feed:</span>
+                          <span className="acms-param-value highlight-cyan">{hydrantItems.powerMainPump?.gridFeed || 'Primary Grid Feeder #1'}</span>
                         </div>
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Gauge size={12} /> Engine Oil &amp; Temp:</span>
-                          <span className="acms-param-value font-monospace highlight-cyan">{hydrantItems.standbyPump?.engineOilTemp || '4.2 bar • 62 °C'}</span>
+                          <span className="acms-param-label"><Activity size={12} /> Phase Balance:</span>
+                          <span className="acms-param-value font-monospace highlight-green">{hydrantItems.powerMainPump?.phaseBalance || 'R: 415V | Y: 414V | B: 415V'}</span>
                         </div>
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Layers size={12} /> Power Feed:</span>
-                          <span className="acms-param-value highlight-green">{hydrantItems.standbyPump?.powerStatus || 'POWER ON'}</span>
+                          <span className="acms-param-label"><Shield size={12} /> Breaker State:</span>
+                          <span className="acms-param-value highlight-green">{hydrantItems.powerMainPump?.breakerState || 'CLOSED / ENERGIZED'}</span>
                         </div>
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Shield size={12} /> Fuel Solenoid:</span>
-                          <span className="acms-param-value highlight-cyan">ARMED / AUTO</span>
+                          <span className="acms-param-label"><Cpu size={12} /> Line Frequency:</span>
+                          <span className="acms-param-value font-monospace highlight-cyan">50.02 Hz Balanced</span>
                         </div>
                       </div>
 
                       <div className="d-flex justify-content-end">
                         <button
                           type="button"
-                          className={`acms-station-btn ${hydrantItems.standbyPump?.runStatus === 'RUNNING' ? 'active-running' : ''}`}
+                          className={`acms-station-btn ${hydrantItems.powerMainPump?.powerStatus === 'POWER ON' ? 'active-running' : ''}`}
                           onClick={() => setHydrantItems(prev => ({
                             ...prev,
-                            standbyPump: { ...prev.standbyPump, runStatus: prev.standbyPump?.runStatus === 'RUNNING' ? 'STANDBY AUTO' : 'RUNNING' }
+                            powerMainPump: { ...prev.powerMainPump, powerStatus: prev.powerMainPump?.powerStatus === 'POWER ON' ? 'POWER OFF' : 'POWER ON' }
                           }))}
                         >
-                          <Power size={11} /> Toggle Standby Pump
+                          <Power size={11} /> Toggle Main Power
                         </button>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="acms-footer-pill red mt-2">
-                    <CheckCircle2 size={13} /> Dual Redundant Main &amp; Standby Hydrant Pumping Supervised
                   </div>
                 </div>
               </div>
 
               {/* ══════════════════════════════════════════════════════════════
-                  STATION 2: Diesel Tank Level & Power to Main Pump
+                  STATION 2: Diesel Tank Level & Standby Pump
                   ══════════════════════════════════════════════════════════════ */}
               <div className="col-lg-6">
                 <div className="acms-station-card border-cyan-glow h-100">
@@ -1918,9 +1999,6 @@ const FireOverview = () => {
                           <div className="text-muted" style={{ fontSize: '10.5px' }}>Fuel Reserve Enclosure &amp; Main Plant Feed</div>
                         </div>
                       </div>
-                      <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{ fontSize: '10px' }}>
-                        Clause (iii) &amp; (iv)
-                      </span>
                     </div>
 
                     {/* Sub-Item 1: Diesel Tank Level (Clause iii) */}
@@ -1931,12 +2009,10 @@ const FireOverview = () => {
                           <DieselTankIcon percentage={hydrantItems.dieselTank?.percentage ?? 88} />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge cyan">{hydrantItems.dieselTank?.clause || 'Clause (iii)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {hydrantItems.dieselTank?.title || 'Diesel tank level Monitoring'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">TK-DSL-01 • Fire Day Tank (500 L Capacity)</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${(hydrantItems.dieselTank?.percentage ?? 88) > 30 ? 'green' : 'amber'}`}>
@@ -2023,64 +2099,59 @@ const FireOverview = () => {
                       </div>
                     </div>
 
-                    {/* Sub-Item 2: Power to Main Pump (Clause iv) */}
+                    {/* Sub-Item 2: Standby Diesel/Elec Pump */}
                     <div className="acms-station-subitem">
                       <div className="acms-subitem-top">
                         <div className="acms-subitem-title-group">
                           <span className="acms-hydrant-item-num" style={{ background: '#00D4FF', color: '#000' }}>4</span>
-                          <PowerPanelIcon />
+                          <DieselEngineIcon isRunning={hydrantItems.standbyPump?.runStatus === 'RUNNING'} />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge cyan">{hydrantItems.powerMainPump?.clause || 'Clause (iv)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
-                                {hydrantItems.powerMainPump?.title || 'Power to Main Hydrant Pump (On / Off)'}
+                                {hydrantItems.standbyPump?.title || 'Standby Diesel/Electrical Pump run status'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">SWG-HYD-01 • Primary 415V Switchgear Feeder</span>
                           </div>
                         </div>
-                        <span className={`acms-status-chip ${hydrantItems.powerMainPump?.powerStatus === 'POWER ON' ? 'green' : 'red'}`}>
-                          <Zap size={12} /> {hydrantItems.powerMainPump?.powerStatus || 'POWER ON'}
+                        <span className={`acms-status-chip ${hydrantItems.standbyPump?.runStatus === 'RUNNING' ? 'green' : 'amber'}`}>
+                          <Activity size={12} className={hydrantItems.standbyPump?.runStatus === 'RUNNING' ? 'acms-spin-slow' : ''} />
+                          {hydrantItems.standbyPump?.runStatus || 'STANDBY AUTO'}
                         </span>
                       </div>
 
                       {/* Telemetry 2x2 Grid */}
                       <div className="acms-telemetry-pill-grid">
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Zap size={12} /> Grid Feed:</span>
-                          <span className="acms-param-value highlight-cyan">{hydrantItems.powerMainPump?.gridFeed || 'Primary Grid Feeder #1'}</span>
+                          <span className="acms-param-label"><Battery size={12} /> Cranking Battery:</span>
+                          <span className="acms-param-value font-monospace highlight-green">{hydrantItems.standbyPump?.crankingBattery || '24.8 V DC (Dual Bank)'}</span>
                         </div>
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Activity size={12} /> Phase Balance:</span>
-                          <span className="acms-param-value font-monospace highlight-green">{hydrantItems.powerMainPump?.phaseBalance || 'R: 415V | Y: 414V | B: 415V'}</span>
+                          <span className="acms-param-label"><Gauge size={12} /> Engine Oil &amp; Temp:</span>
+                          <span className="acms-param-value font-monospace highlight-cyan">{hydrantItems.standbyPump?.engineOilTemp || '4.2 bar • 62 °C'}</span>
                         </div>
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Shield size={12} /> Breaker State:</span>
-                          <span className="acms-param-value highlight-green">{hydrantItems.powerMainPump?.breakerState || 'CLOSED / ENERGIZED'}</span>
+                          <span className="acms-param-label"><Layers size={12} /> Power Feed:</span>
+                          <span className="acms-param-value highlight-green">{hydrantItems.standbyPump?.powerStatus || 'POWER ON'}</span>
                         </div>
                         <div className="acms-telemetry-pill-row">
-                          <span className="acms-param-label"><Cpu size={12} /> Line Frequency:</span>
-                          <span className="acms-param-value font-monospace highlight-cyan">50.02 Hz Balanced</span>
+                          <span className="acms-param-label"><Shield size={12} /> Fuel Solenoid:</span>
+                          <span className="acms-param-value highlight-cyan">ARMED / AUTO</span>
                         </div>
                       </div>
 
                       <div className="d-flex justify-content-end">
                         <button
                           type="button"
-                          className={`acms-station-btn ${hydrantItems.powerMainPump?.powerStatus === 'POWER ON' ? 'active-running' : ''}`}
+                          className={`acms-station-btn ${hydrantItems.standbyPump?.runStatus === 'RUNNING' ? 'active-running' : ''}`}
                           onClick={() => setHydrantItems(prev => ({
                             ...prev,
-                            powerMainPump: { ...prev.powerMainPump, powerStatus: prev.powerMainPump?.powerStatus === 'POWER ON' ? 'POWER OFF' : 'POWER ON' }
+                            standbyPump: { ...prev.standbyPump, runStatus: prev.standbyPump?.runStatus === 'RUNNING' ? 'STANDBY AUTO' : 'RUNNING' }
                           }))}
                         >
-                          <Power size={11} /> Toggle Main Power
+                          <Power size={11} /> Toggle Standby Pump
                         </button>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="acms-footer-pill cyan mt-2">
-                    <CheckCircle2 size={13} /> Diesel Reserve Level &amp; Main Pump Power Feed Monitored
                   </div>
                 </div>
               </div>
@@ -2096,13 +2167,10 @@ const FireOverview = () => {
                       <div className="d-flex align-items-center gap-2">
                         <RefreshCw size={16} style={{ color: '#BD00FF' }} />
                         <div>
-                          <div className="fw-bold text-white" style={{ fontSize: '13.5px' }}>Jockey Pressure Station &amp; Dedicated Power</div>
+                          <div className="fw-bold text-white" style={{ fontSize: '13.5px' }}>Jockey </div>
                           <div className="text-muted" style={{ fontSize: '10.5px' }}>Continuous Ring Header Pressure Maintenance</div>
                         </div>
                       </div>
-                      <span className="badge bg-opacity-10" style={{ background: 'rgba(189,0,255,0.1)', color: '#BD00FF', border: '1px solid rgba(189,0,255,0.25)', fontSize: '10px' }}>
-                        Clause (vi) &amp; (vii)
-                      </span>
                     </div>
 
                     {/* Sub-Item 1: Jockey Pump (Clause vi) */}
@@ -2113,12 +2181,10 @@ const FireOverview = () => {
                           <BlueJockeyIcon isRunning={hydrantItems.jockeyPump?.runStatus === 'RUNNING'} />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge purple">{hydrantItems.jockeyPump?.clause || 'Clause (vi)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {hydrantItems.jockeyPump?.title || 'Jockey Pump run status'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">FP-JKY-01 • Vertical Multi-Stage 7.5 kW Pump</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${hydrantItems.jockeyPump?.runStatus === 'RUNNING' ? 'green' : 'amber'}`}>
@@ -2169,12 +2235,10 @@ const FireOverview = () => {
                           <McbPanelIcon />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge purple">{hydrantItems.powerJockeyPump?.clause || 'Clause (vii)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {hydrantItems.powerJockeyPump?.title || 'Power to Jockey Pump (On / Off)'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">MCB-JKY-01 • Dedicated 32A MCB Feeder</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${hydrantItems.powerJockeyPump?.powerStatus === 'POWER ON' ? 'green' : 'red'}`}>
@@ -2216,10 +2280,6 @@ const FireOverview = () => {
                       </div>
                     </div>
                   </div>
-
-                  <div className="acms-footer-pill purple mt-2">
-                    <CheckCircle2 size={13} /> Jockey Pressure Maintenance Pump &amp; Dedicated Power Feed Supervised
-                  </div>
                 </div>
               </div>
 
@@ -2234,13 +2294,9 @@ const FireOverview = () => {
                       <div className="d-flex align-items-center gap-2">
                         <Wind size={16} className="text-success" />
                         <div>
-                          <div className="fw-bold text-white" style={{ fontSize: '13.5px' }}>Rooftop Terrace Booster Station &amp; Power</div>
-                          <div className="text-muted" style={{ fontSize: '10.5px' }}>Terrace Overhead Tank Pressure Booster Enclosure</div>
+                          <div className="fw-bold text-white" style={{ fontSize: '13.5px' }}> Booster Pump</div>
                         </div>
                       </div>
-                      <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style={{ fontSize: '10px' }}>
-                        Clause (viii) &amp; (ix)
-                      </span>
                     </div>
 
                     {/* Sub-Item 1: Booster Pump (Clause viii) */}
@@ -2251,12 +2307,10 @@ const FireOverview = () => {
                           <BoosterPumpIcon isRunning={hydrantItems.boosterPump?.runStatus === 'RUNNING'} />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge green">{hydrantItems.boosterPump?.clause || 'Clause (viii)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {hydrantItems.boosterPump?.title || 'Booster pump run status'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">FP-BST-01 • Rooftop Terrace Booster 11.0 kW</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${hydrantItems.boosterPump?.runStatus === 'RUNNING' ? 'green' : 'amber'}`}>
@@ -2307,12 +2361,10 @@ const FireOverview = () => {
                           <RoofDbIcon />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge green">{hydrantItems.powerBoosterPump?.clause || 'Clause (ix)'}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {hydrantItems.powerBoosterPump?.title || 'Power to Main Booster Pump (On / Off)'}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">DB-RF-02 • Roof Feeder Distribution Board</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${hydrantItems.powerBoosterPump?.powerStatus === 'POWER ON' ? 'green' : 'red'}`}>
@@ -2353,10 +2405,6 @@ const FireOverview = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="acms-footer-pill green mt-2">
-                    <CheckCircle2 size={13} /> Rooftop Terrace Booster Pump &amp; Dedicated Power Feed Supervised
                   </div>
                 </div>
               </div>
@@ -2795,9 +2843,6 @@ const FireOverview = () => {
                 <h5 className="fw-black text-white mb-0" style={{ fontSize: '15px', letterSpacing: '0.02em' }}>
                   Dedicated Fire Water Reservoirs & Sump Supervisory
                 </h5>
-                <span className="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 ms-2">
-                  Clause 3.c - Underground & Above Ground Storage
-                </span>
               </div>
               <span className="text-muted small" style={{ fontSize: '11px' }}>
                 Continuous Hydrostatic & Ultrasonic Level Tracking
@@ -2806,208 +2851,210 @@ const FireOverview = () => {
 
             <div className="row g-3 mb-4">
               {/* ────────────────────────────────────────────────────────
-                  LEFT COLUMN: Clause (i) Underground Fire Tank (UG Reservoir)
+                  LEFT COLUMN: Underground Fire Tank (UG Reservoir)
                   ──────────────────────────────────────────────────────── */}
               <div className="col-lg-6">
-                <div className="acms-scada-card border-blue-glow d-flex flex-column justify-content-between h-100">
-                  <div>
-                    <div className="acms-card-top-row mb-2">
-                      <div className="d-flex align-items-center gap-2">
-                        <span className="acms-hydrant-item-num" style={{ background: '#00D4FF', color: '#000' }}>1</span>
-                        <span className="acms-clause-badge cyan">{tankItems.ugTank?.clause || 'Clause (i)'}</span>
-                      </div>
-                      <span className={`acms-status-chip ${(tankItems.ugTank?.lowLevelAlarm || '').includes('NORMAL') ? 'green' : 'red'}`}>
-                        <CheckCircle2 size={12} /> {(tankItems.ugTank?.lowLevelAlarm || '').includes('NORMAL') ? 'NORMAL' : 'ALARM'}
-                      </span>
-                    </div>
-
-                    <div className="acms-card-title-group mb-2">
+                <div className="acms-scada-card border-blue-glow h-100 p-3">
+                  {/* Card Header */}
+                  <div className="acms-card-top-row mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                    <div className="d-flex align-items-center gap-2">
+                      <span className="acms-hydrant-item-num" style={{ background: '#00D4FF', color: '#000' }}>1</span>
                       <h5 className="acms-card-title mb-0">{tankItems.ugTank?.title || 'Underground Fire Tank Level Monitoring'}</h5>
-                      <span className="acms-card-desc">{tankItems.ugTank?.tankType || 'Underground (UG) Concrete Fire Sump (300 kL)'}</span>
                     </div>
-
-                    <div className="d-flex align-items-baseline justify-content-between mt-2 mb-1">
-                      <span className="text-secondary small fw-medium">Tank Level:</span>
-                      <div className="d-flex align-items-baseline gap-2">
-                        <span className="fs-5 fw-bold font-monospace text-cyan">
-                          {tankItems.ugTank?.currentKl || '265.5 kL'} / {tankItems.ugTank?.capacityKl || '300.0 kL'}
-                        </span>
-                        <span className="text-cyan small fw-bold">({tankItems.ugTank?.percentage ?? 88.5}%)</span>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="progress mb-3" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                      <div 
-                        className="progress-bar" 
-                        role="progressbar" 
-                        style={{ 
-                          width: `${tankItems.ugTank?.percentage ?? 88.5}%`,
-                          background: 'linear-gradient(90deg, #00D4FF, #00E5FF)'
-                        }} 
-                      ></div>
-                    </div>
-
-                    {/* Tank 3D Visual */}
-                    <div className="my-3 d-flex justify-content-center">
-                      <TankCylinderVisual 
-                        level={tankItems.ugTank?.percentage ?? 88.5} 
-                        capacity={300} 
-                        currentVolume={parseFloat(tankItems.ugTank?.currentKl || '265.5')} 
-                        isWarning={(tankItems.ugTank?.percentage ?? 88.5) < 40}
-                      />
-                    </div>
-
-                    <div className="acms-param-list mt-2">
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><Layers size={13} /> Dedicated Sump:</span>
-                        <span className="acms-param-value font-monospace">{tankItems.ugTank?.currentKl || '265.5 kL'} ({tankItems.ugTank?.percentage ?? 88.5}%)</span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><Activity size={13} /> Water Depth:</span>
-                        <span className="acms-param-value font-monospace">{tankItems.ugTank?.waterDepth || '3.54 m (Max: 4.0 m)'}</span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><Shield size={13} /> Minimum Reserve:</span>
-                        <span className="acms-param-value highlight-green">{tankItems.ugTank?.minReserve || '200 kL Required'}</span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><AlertTriangle size={13} /> Low Level Alarm:</span>
-                        <span className={`acms-param-value ${(tankItems.ugTank?.lowLevelAlarm || '').includes('NORMAL') ? 'highlight-green' : 'highlight-red'}`}>
-                          {tankItems.ugTank?.lowLevelAlarm || 'NORMAL (No Alarm)'}
-                        </span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><RefreshCw size={13} /> Auto Makeup Valve:</span>
-                        <span className="acms-param-value highlight-cyan">{tankItems.ugTank?.autoMakeUp || 'AUTO-READY (Closed)'}</span>
-                      </div>
-                    </div>
+                    <span className={`acms-status-chip ${(tankItems.ugTank?.lowLevelAlarm || '').includes('NORMAL') ? 'green' : 'red'}`}>
+                      <CheckCircle2 size={12} /> {(tankItems.ugTank?.lowLevelAlarm || '').includes('NORMAL') ? 'NORMAL' : 'ALARM'}
+                    </span>
                   </div>
 
-                  <div>
-                    <div className="acms-footer-pill green mt-3">
-                      <CheckCircle2 size={14} /> Dedicated UG Fire Sump Level Supervised & Normal
+                  {/* 2-Column Split: Tank Visual on Left, Information & Level on Right */}
+                  <div className="row g-3 align-items-center">
+                    {/* Left: 3D Tank Visual & Real-time Level */}
+                    <div className="col-sm-5 d-flex flex-column align-items-center justify-content-center p-3 rounded" style={{ background: 'rgba(0, 212, 255, 0.03)', border: '1px solid rgba(0, 212, 255, 0.15)' }}>
+                      <TankCylinderVisual 
+                        percentage={tankItems.ugTank?.percentage ?? 88.5} 
+                        capacity={300} 
+                        maxVal={300}
+                        color={(tankItems.ugTank?.percentage ?? 88.5) < 40 ? '#EF4444' : '#00D4FF'} 
+                      />
+                      <div className="mt-2 text-center w-100">
+                        <div className="fw-bold font-monospace" style={{ fontSize: '15px', color: (tankItems.ugTank?.percentage ?? 88.5) < 40 ? '#EF4444' : '#00D4FF' }}>
+                          {tankItems.ugTank?.currentKl || '265.5 kL'}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: '11px' }}>
+                          Total: {tankItems.ugTank?.capacityKl || '300.0 kL'} ({tankItems.ugTank?.percentage ?? 88.5}%)
+                        </div>
+                      </div>
                     </div>
-                    <div className="d-flex justify-content-end mt-2">
-                      <button
-                        type="button"
-                        className="acms-micro-toggle-btn"
-                        onClick={() => setTankItems(prev => ({
-                          ...prev,
-                          ugTank: {
-                            ...prev.ugTank,
-                            percentage: prev.ugTank?.percentage === 88.5 ? 35 : 88.5,
-                            currentKl: prev.ugTank?.percentage === 88.5 ? '105.0 kL' : '265.5 kL',
-                            lowLevelAlarm: prev.ugTank?.percentage === 88.5 ? 'CRITICAL LOW LEVEL ALARM' : 'NORMAL (No Alarm)'
-                          }
-                        }))}
-                      >
-                        Toggle UG Alarm
-                      </button>
+
+                    {/* Right: Information, Level Fill Bar & Parameters */}
+                    <div className="col-sm-7 d-flex flex-column justify-content-between">
+                      {/* Tank Level Fill Progress Bar */}
+                      <div className="p-2 mb-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                        <div className="d-flex align-items-baseline justify-content-between mb-1">
+                          <span className="text-secondary small fw-medium">Tank Level Fill:</span>
+                          <span className="fw-bold font-monospace" style={{ fontSize: '13px', color: (tankItems.ugTank?.percentage ?? 88.5) < 40 ? '#EF4444' : '#00D4FF' }}>
+                            {tankItems.ugTank?.percentage ?? 88.5}%
+                          </span>
+                        </div>
+                        <div className="progress" style={{ height: '7px', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '999px' }}>
+                          <div 
+                            className="progress-bar" 
+                            role="progressbar" 
+                            style={{ 
+                              width: `${tankItems.ugTank?.percentage ?? 88.5}%`,
+                              background: (tankItems.ugTank?.percentage ?? 88.5) < 40 
+                                ? 'linear-gradient(90deg, #EF4444, #F59E0B)' 
+                                : 'linear-gradient(90deg, #00D4FF, #00E5FF)'
+                            }} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Parameters List */}
+                      <div className="acms-param-list">
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><Activity size={13} /> Water Depth:</span>
+                          <span className="acms-param-value font-monospace">{tankItems.ugTank?.waterDepth || '3.54 m (Max: 4.0 m)'}</span>
+                        </div>
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><Shield size={13} /> Minimum Reserve:</span>
+                          <span className="acms-param-value highlight-green">{tankItems.ugTank?.minReserve || '200 kL Required'}</span>
+                        </div>
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><AlertTriangle size={13} /> Low Level Alarm:</span>
+                          <span className={`acms-param-value ${(tankItems.ugTank?.lowLevelAlarm || '').includes('NORMAL') ? 'highlight-green' : 'highlight-red'}`}>
+                            {tankItems.ugTank?.lowLevelAlarm || 'NORMAL (No Alarm)'}
+                          </span>
+                        </div>
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><RefreshCw size={13} /> Auto Makeup Valve:</span>
+                          <span className="acms-param-value highlight-cyan">{tankItems.ugTank?.autoMakeUp || 'AUTO-READY (Closed)'}</span>
+                        </div>
+                      </div>
+
+                      <div className="d-flex justify-content-end mt-2 pt-1">
+                        <button
+                          type="button"
+                          className="acms-station-btn"
+                          onClick={() => setTankItems(prev => ({
+                            ...prev,
+                            ugTank: {
+                              ...prev.ugTank,
+                              percentage: prev.ugTank?.percentage === 88.5 ? 35 : 88.5,
+                              currentKl: prev.ugTank?.percentage === 88.5 ? '105.0 kL' : '265.5 kL',
+                              waterDepth: prev.ugTank?.percentage === 88.5 ? '1.40 m (Low)' : '3.54 m (Max: 4.0 m)',
+                              lowLevelAlarm: prev.ugTank?.percentage === 88.5 ? 'CRITICAL LOW LEVEL ALARM' : 'NORMAL (No Alarm)'
+                            }
+                          }))}
+                        >
+                          <RefreshCw size={11} /> Toggle UG Tank Level
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* ────────────────────────────────────────────────────────
-                  RIGHT COLUMN: Clause (ii) Overhead / Above Ground Fire Tank
+                  RIGHT COLUMN: Overhead / Above Ground Fire Tank
                   ──────────────────────────────────────────────────────── */}
               <div className="col-lg-6">
-                <div className="acms-scada-card border-blue-glow d-flex flex-column justify-content-between h-100">
-                  <div>
-                    <div className="acms-card-top-row mb-2">
-                      <div className="d-flex align-items-center gap-2">
-                        <span className="acms-hydrant-item-num" style={{ background: '#06C7F5', color: '#000' }}>2</span>
-                        <span className="acms-clause-badge cyan">{tankItems.ohtTank?.clause || 'Clause (ii)'}</span>
-                      </div>
-                      <span className={`acms-status-chip ${(tankItems.ohtTank?.lowLevelAlarm || '').includes('NORMAL') ? 'green' : 'red'}`}>
-                        <CheckCircle2 size={12} /> {(tankItems.ohtTank?.lowLevelAlarm || '').includes('NORMAL') ? 'NORMAL' : 'ALARM'}
-                      </span>
-                    </div>
-
-                    <div className="acms-card-title-group mb-2">
+                <div className="acms-scada-card border-blue-glow h-100 p-3">
+                  {/* Card Header */}
+                  <div className="acms-card-top-row mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                    <div className="d-flex align-items-center gap-2">
+                      <span className="acms-hydrant-item-num" style={{ background: '#06C7F5', color: '#000' }}>2</span>
                       <h5 className="acms-card-title mb-0">{tankItems.ohtTank?.title || 'Overhead Tank Low Level Monitoring'}</h5>
-                      <span className="acms-card-desc">{tankItems.ohtTank?.tankType || 'Overhead (OHT) Rooftop Fire Tank (50 kL)'}</span>
                     </div>
-
-                    <div className="d-flex align-items-baseline justify-content-between mt-2 mb-1">
-                      <span className="text-secondary small fw-medium">Tank Level:</span>
-                      <div className="d-flex align-items-baseline gap-2">
-                        <span className="fs-5 fw-bold font-monospace text-cyan">
-                          {tankItems.ohtTank?.currentKl || '46.0 kL'} / {tankItems.ohtTank?.capacityKl || '50.0 kL'}
-                        </span>
-                        <span className="text-cyan small fw-bold">({tankItems.ohtTank?.percentage ?? 92.0}%)</span>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="progress mb-3" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                      <div 
-                        className="progress-bar" 
-                        role="progressbar" 
-                        style={{ 
-                          width: `${tankItems.ohtTank?.percentage ?? 92.0}%`,
-                          background: 'linear-gradient(90deg, #06C7F5, #38EF7D)'
-                        }} 
-                      ></div>
-                    </div>
-
-                    {/* Tank 3D Visual */}
-                    <div className="my-3 d-flex justify-content-center">
-                      <TankCylinderVisual 
-                        level={tankItems.ohtTank?.percentage ?? 92.0} 
-                        capacity={50} 
-                        currentVolume={parseFloat(tankItems.ohtTank?.currentKl || '46.0')} 
-                        isWarning={(tankItems.ohtTank?.percentage ?? 92.0) < 40}
-                      />
-                    </div>
-
-                    <div className="acms-param-list mt-2">
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><Layers size={13} /> Overhead Sump:</span>
-                        <span className="acms-param-value font-monospace">{tankItems.ohtTank?.currentKl || '46.0 kL'} ({tankItems.ohtTank?.percentage ?? 92.0}%)</span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><Activity size={13} /> Water Depth:</span>
-                        <span className="acms-param-value font-monospace">{tankItems.ohtTank?.waterDepth || '2.30 m (Max: 2.5 m)'}</span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><Shield size={13} /> Minimum Reserve:</span>
-                        <span className="acms-param-value highlight-green">{tankItems.ohtTank?.minReserve || '35 kL Required'}</span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><AlertTriangle size={13} /> Low Level Alarm:</span>
-                        <span className={`acms-param-value ${(tankItems.ohtTank?.lowLevelAlarm || '').includes('NORMAL') ? 'highlight-green' : 'highlight-red'}`}>
-                          {tankItems.ohtTank?.lowLevelAlarm || 'NORMAL (No Alarm)'}
-                        </span>
-                      </div>
-                      <div className="acms-param-row">
-                        <span className="acms-param-label"><Gauge size={13} /> Static Head:</span>
-                        <span className="acms-param-value highlight-cyan">{tankItems.ohtTank?.staticHead || '3.85 kg/cm² (Gravity)'}</span>
-                      </div>
-                    </div>
+                    <span className={`acms-status-chip ${(tankItems.ohtTank?.lowLevelAlarm || '').includes('NORMAL') ? 'green' : 'red'}`}>
+                      <CheckCircle2 size={12} /> {(tankItems.ohtTank?.lowLevelAlarm || '').includes('NORMAL') ? 'NORMAL' : 'ALARM'}
+                    </span>
                   </div>
 
-                  <div>
-                    <div className="acms-footer-pill green mt-3">
-                      <CheckCircle2 size={14} /> Overhead Gravity Fire Water Tank Supervised & Normal
+                  {/* 2-Column Split: Tank Visual on Left, Information & Level on Right */}
+                  <div className="row g-3 align-items-center">
+                    {/* Left: 3D Tank Visual & Real-time Level */}
+                    <div className="col-sm-5 d-flex flex-column align-items-center justify-content-center p-3 rounded" style={{ background: 'rgba(6, 199, 245, 0.03)', border: '1px solid rgba(6, 199, 245, 0.15)' }}>
+                      <TankCylinderVisual 
+                        percentage={tankItems.ohtTank?.percentage ?? 92.0} 
+                        capacity={50} 
+                        maxVal={50}
+                        color={(tankItems.ohtTank?.percentage ?? 92.0) < 40 ? '#EF4444' : '#06C7F5'} 
+                      />
+                      <div className="mt-2 text-center w-100">
+                        <div className="fw-bold font-monospace" style={{ fontSize: '15px', color: (tankItems.ohtTank?.percentage ?? 92.0) < 40 ? '#EF4444' : '#06C7F5' }}>
+                          {tankItems.ohtTank?.currentKl || '46.0 kL'}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: '11px' }}>
+                          Total: {tankItems.ohtTank?.capacityKl || '50.0 kL'} ({tankItems.ohtTank?.percentage ?? 92.0}%)
+                        </div>
+                      </div>
                     </div>
-                    <div className="d-flex justify-content-end mt-2">
-                      <button
-                        type="button"
-                        className="acms-micro-toggle-btn"
-                        onClick={() => setTankItems(prev => ({
-                          ...prev,
-                          ohtTank: {
-                            ...prev.ohtTank,
-                            percentage: prev.ohtTank?.percentage === 92.0 ? 28 : 92.0,
-                            currentKl: prev.ohtTank?.percentage === 92.0 ? '14.0 kL' : '46.0 kL',
-                            lowLevelAlarm: prev.ohtTank?.percentage === 92.0 ? 'CRITICAL LOW LEVEL ALARM' : 'NORMAL (No Alarm)'
-                          }
-                        }))}
-                      >
-                        Toggle OHT Alarm
-                      </button>
+
+                    {/* Right: Information, Level Fill Bar & Parameters */}
+                    <div className="col-sm-7 d-flex flex-column justify-content-between">
+                      {/* Tank Level Fill Progress Bar */}
+                      <div className="p-2 mb-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                        <div className="d-flex align-items-baseline justify-content-between mb-1">
+                          <span className="text-secondary small fw-medium">Tank Level Fill:</span>
+                          <span className="fw-bold font-monospace" style={{ fontSize: '13px', color: (tankItems.ohtTank?.percentage ?? 92.0) < 40 ? '#EF4444' : '#06C7F5' }}>
+                            {tankItems.ohtTank?.percentage ?? 92.0}%
+                          </span>
+                        </div>
+                        <div className="progress" style={{ height: '7px', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '999px' }}>
+                          <div 
+                            className="progress-bar" 
+                            role="progressbar" 
+                            style={{ 
+                              width: `${tankItems.ohtTank?.percentage ?? 92.0}%`,
+                              background: (tankItems.ohtTank?.percentage ?? 92.0) < 40 
+                                ? 'linear-gradient(90deg, #EF4444, #F59E0B)' 
+                                : 'linear-gradient(90deg, #06C7F5, #38EF7D)'
+                            }} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Parameters List */}
+                      <div className="acms-param-list">
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><Activity size={13} /> Water Depth:</span>
+                          <span className="acms-param-value font-monospace">{tankItems.ohtTank?.waterDepth || '2.30 m (Max: 2.5 m)'}</span>
+                        </div>
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><Shield size={13} /> Minimum Reserve:</span>
+                          <span className="acms-param-value highlight-green">{tankItems.ohtTank?.minReserve || '35 kL Required'}</span>
+                        </div>
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><AlertTriangle size={13} /> Low Level Alarm:</span>
+                          <span className={`acms-param-value ${(tankItems.ohtTank?.lowLevelAlarm || '').includes('NORMAL') ? 'highlight-green' : 'highlight-red'}`}>
+                            {tankItems.ohtTank?.lowLevelAlarm || 'NORMAL (No Alarm)'}
+                          </span>
+                        </div>
+                        <div className="acms-param-row py-1">
+                          <span className="acms-param-label"><Gauge size={13} /> Static Head:</span>
+                          <span className="acms-param-value highlight-cyan">{tankItems.ohtTank?.staticHead || '3.85 kg/cm² (Gravity)'}</span>
+                        </div>
+                      </div>
+
+                      <div className="d-flex justify-content-end mt-2 pt-1">
+                        <button
+                          type="button"
+                          className="acms-station-btn"
+                          onClick={() => setTankItems(prev => ({
+                            ...prev,
+                            ohtTank: {
+                              ...prev.ohtTank,
+                              percentage: prev.ohtTank?.percentage === 92.0 ? 28 : 92.0,
+                              currentKl: prev.ohtTank?.percentage === 92.0 ? '14.0 kL' : '46.0 kL',
+                              waterDepth: prev.ohtTank?.percentage === 92.0 ? '0.70 m (Low)' : '2.30 m (Max: 2.5 m)',
+                              lowLevelAlarm: prev.ohtTank?.percentage === 92.0 ? 'CRITICAL LOW LEVEL ALARM' : 'NORMAL (No Alarm)'
+                            }
+                          }))}
+                        >
+                          <RefreshCw size={11} /> Toggle OHT Tank Level
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3030,7 +3077,7 @@ const FireOverview = () => {
                   </div>
                   <div>
                     <h5 className="fw-black text-white mb-0" style={{ letterSpacing: '-0.01em' }}>
-                      Clause 3 (c) Fire Water Tanks — Fullscreen SCADA Architecture & Diagnostics
+                       Fire Water Tanks — Fullscreen SCADA Architecture & Diagnostics
                     </h5>
                     <div className="text-muted" style={{ fontSize: '11.5px' }}>
                       Dual reservoir real-time hydrostatic depth telemetry, suction cross-connect manifolds, and NBC Part 4 minimum reserve supervision.
@@ -3364,31 +3411,19 @@ const FireOverview = () => {
                 </div>
                 <div>
                   <h6 className="fw-black text-white mb-0" style={{ fontSize: '13.5px', letterSpacing: '0.01em' }}>
-                    Clause 3 (d) Automatic Sprinkler System — IS 15105 / NBC 2016 Part 4
+                    Automatic Sprinkler System
                   </h6>
-                  <span className="text-muted small" style={{ fontSize: '11px' }}>
-                    Main Wet-Pipe Riser • Primary Sprinkler Pump • 415V Dedicated Feeder • Supervised Alarm Check Valves
-                  </span>
                 </div>
               </div>
             </div>
 
-            {/* ── Clause (iii) Sprinkler Riser Low Pressure Hero Telemetry Deck ── */}
+            {/* ── Sprinkler Riser Low Pressure Hero Telemetry Deck ── */}
             <div className="acms-hydrant-hero-deck mb-3">
               <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom border-secondary border-opacity-25">
                 <div className="d-flex align-items-center gap-2">
                   <span className="acms-hydrant-item-num" style={{ background: '#06C7F5', color: '#000' }}>3</span>
-                  <span className="acms-clause-badge cyan">{sprinklerItems.riserLowPressure?.clause || 'Clause 3(d)(iii)'}</span>
                   <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                     {sprinklerItems.riserLowPressure?.title || 'Sprinkler Riser Low Pressure Monitoring'}
-                  </span>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-success bg-opacity-25 text-success font-monospace" style={{ fontSize: '10.5px' }}>
-                    ● CUT-IN THRESHOLD: 6.00 kg/cm²
-                  </span>
-                  <span className="acms-status-chip green">
-                    <CheckCircle2 size={11} /> RISER CHARGED &amp; HEALTHY
                   </span>
                 </div>
               </div>
@@ -3411,8 +3446,7 @@ const FireOverview = () => {
 
                 <div className="col-lg-6 col-md-8">
                   <div className="d-flex flex-column gap-2">
-                    <div className="d-flex align-items-center justify-content-between text-muted" style={{ fontSize: '11px' }}>
-                      <span>Pressure Scale: 0 to 14.0 kg/cm²</span>
+                    <div className="d-flex align-items-center justify-content-end text-muted" style={{ fontSize: '11px' }}>
                       <span className="text-cyan font-monospace fw-bold">Live: {sprinklerItems.riserLowPressure?.pressure || '7.20'} kg/cm² (~7.06 bar)</span>
                     </div>
 
@@ -3463,7 +3497,6 @@ const FireOverview = () => {
                       <span className="acms-station-badge cyan">STATION 01</span>
                       <span className="acms-station-title">Centrifugal Wet Sprinkler Pump</span>
                     </div>
-                    <span className="acms-station-subtag">FP-SPK-01 • Ground Floor Pump Room</span>
                   </div>
 
                   <div className="acms-station-body">
@@ -3474,12 +3507,10 @@ const FireOverview = () => {
                           <SprinklerPumpIcon isRunning={sprinklerItems.mainPump.runStatus === 'RUNNING'} />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge red">{sprinklerItems.mainPump.clause}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {sprinklerItems.mainPump.title}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">Centrifugal Wet-Pipe • 2280 LPM @ 7.5 kg/cm²</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${sprinklerItems.mainPump.runStatus === 'RUNNING' ? 'green' : 'amber'}`}>
@@ -3523,9 +3554,7 @@ const FireOverview = () => {
                     </div>
                   </div>
 
-                  <div className="acms-footer-pill green mt-2">
-                    <CheckCircle2 size={13} /> Main Wet Sprinkler Pump Online &amp; Auto-Cutin Supervised
-                  </div>
+
                 </div>
               </div>
 
@@ -3537,7 +3566,6 @@ const FireOverview = () => {
                       <span className="acms-station-badge purple">STATION 02</span>
                       <span className="acms-station-title">Dedicated Sprinkler Electrical Substation</span>
                     </div>
-                    <span className="acms-station-subtag">MCC-SPK-01 • Fire Pump Feeder Panel</span>
                   </div>
 
                   <div className="acms-station-body">
@@ -3548,12 +3576,10 @@ const FireOverview = () => {
                           <PowerPanelIcon />
                           <div className="acms-subitem-meta">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="acms-clause-badge cyan">{sprinklerItems.powerMainPump.clause}</span>
                               <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                                 {sprinklerItems.powerMainPump.title}
                               </span>
                             </div>
-                            <span className="acms-subitem-tag">415V 3-Phase • Fire-Rated Dedicated Feeder</span>
                           </div>
                         </div>
                         <span className={`acms-status-chip ${sprinklerItems.powerMainPump.powerStatus === 'POWER ON' ? 'green' : 'red'}`}>
@@ -3596,9 +3622,7 @@ const FireOverview = () => {
                     </div>
                   </div>
 
-                  <div className="acms-footer-pill green mt-2">
-                    <CheckCircle2 size={13} /> Dedicated Fire Pump MCC Feeder Supervised to IS 15105
-                  </div>
+
                 </div>
               </div>
             </div>
@@ -3884,11 +3908,8 @@ const FireOverview = () => {
                 </div>
                 <div>
                   <h6 className="fw-black text-white mb-0" style={{ fontSize: '13.5px', letterSpacing: '0.01em' }}>
-                    Clause 3 (e) Fire Detection &amp; Alarm System — IS 2189 / NFPA 72
+                    Fire Detection &amp; Alarm System
                   </h6>
-                  <span className="text-muted small" style={{ fontSize: '11px' }}>
-                    Master Addressable FACP Console • Floor Repeaters • Standby 24V DC Battery Telemetry
-                  </span>
                 </div>
               </div>
             </div>
@@ -3897,19 +3918,16 @@ const FireOverview = () => {
             <div className="acms-console-deck mb-3 border-red-glow">
               <div className="acms-console-top-strip">
                 <div className="d-flex align-items-center gap-2.5 flex-wrap">
-                  <span className="acms-station-badge danger">FACP MASTER CONSOLE</span>
+                  <span className="acms-station-badge danger">STATION 01</span>
                   <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
-                    Morley-IAS / ZX5e Addressable Fire Alarm Control Panel
-                  </span>
-                  <span className="badge bg-secondary bg-opacity-25 text-white font-monospace" style={{ fontSize: '10px' }}>
-                    Clause 3.e (i)
+                    {detectionItems.panelOperation.title || 'Detection operation status (Fire panel status)'}
                   </span>
                 </div>
 
                 <div className="d-flex align-items-center gap-2 flex-wrap">
                   <span className={`acms-status-chip ${detectionItems.panelOperation.operationStatus === 'ON' ? 'green' : 'red'}`}>
                     <Activity size={11} className={detectionItems.panelOperation.operationStatus === 'ON' ? 'acms-spin-slow' : ''} />
-                    {detectionItems.panelOperation.operationStatus === 'ON' ? '● SYSTEM NORMAL / ACTIVE' : '■ FACP OFFLINE'}
+                    {detectionItems.panelOperation.operationStatus === 'ON' ? 'NORMAL' : 'OFFLINE'}
                   </span>
                   <button
                     type="button"
@@ -4034,7 +4052,7 @@ const FireOverview = () => {
                       <div className="d-flex align-items-center gap-2">
                         <span className="acms-station-badge purple">STATION 02</span>
                         <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
-                          Floor Repeater Mimic Panels (Clause 3.e.ii)
+                          Floor Repeater Mimic Panels
                         </span>
                       </div>
                       <span className="badge bg-success bg-opacity-25 text-success font-monospace" style={{ fontSize: '10.5px' }}>
@@ -4061,34 +4079,9 @@ const FireOverview = () => {
                         </div>
                       ))}
                     </div>
-
-                    {/* Telemetry Summary */}
-                    <div className="p-2.5 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-20">
-                      <div className="row g-2" style={{ fontSize: '11px' }}>
-                        <div className="col-6">
-                          <span className="text-muted">Bus Protocol:</span>
-                          <div className="text-cyan fw-bold font-monospace">RS-485 Class-A Dual Ring</div>
-                        </div>
-                        <div className="col-6">
-                          <span className="text-muted">Polling Latency:</span>
-                          <div className="text-success fw-bold font-monospace">&lt; 0.40 Seconds</div>
-                        </div>
-                        <div className="col-6">
-                          <span className="text-muted">Cable Supervision:</span>
-                          <div className="text-success fw-bold font-monospace">0 Open / 0 Short</div>
-                        </div>
-                        <div className="col-6">
-                          <span className="text-muted">Display Sync:</span>
-                          <div className="text-cyan fw-bold font-monospace">100% Synchronized</div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
-                  <div className="mt-3 pt-2 border-top border-secondary border-opacity-20 d-flex align-items-center justify-content-between">
-                    <span className="text-muted small" style={{ fontSize: '10.5px' }}>
-                      Supervised to IS 2189 Clause 3.e.ii
-                    </span>
+                  <div className="mt-3 pt-2 border-top border-secondary border-opacity-20 d-flex align-items-center justify-content-end">
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-info py-1 px-3"
@@ -4109,7 +4102,7 @@ const FireOverview = () => {
                       <div className="d-flex align-items-center gap-2">
                         <span className="acms-station-badge cyan">STATION 03</span>
                         <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
-                          24V DC Standby Battery Power Plant (Clause 3.e.iii)
+                          24V DC Standby Battery Power Plant
                         </span>
                       </div>
                       <span className="badge bg-success bg-opacity-25 text-success font-monospace" style={{ fontSize: '10.5px' }}>
@@ -4134,34 +4127,9 @@ const FireOverview = () => {
                         <span className="text-success">Float: 27.4V - 27.6V</span>
                       </div>
                     </div>
-
-                    {/* 4 Electrical Telemetry Metrics */}
-                    <div className="p-2.5 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-20">
-                      <div className="row g-2" style={{ fontSize: '11px' }}>
-                        <div className="col-6">
-                          <span className="text-muted">Float Voltage:</span>
-                          <div className="text-success fw-bold font-monospace">{detectionItems.batteryStatus.floatVoltage}</div>
-                        </div>
-                        <div className="col-6">
-                          <span className="text-muted">AC Mains Supply:</span>
-                          <div className="text-success fw-bold font-monospace">{detectionItems.batteryStatus.mainsAcStatus}</div>
-                        </div>
-                        <div className="col-6">
-                          <span className="text-muted">Standby Autonomy:</span>
-                          <div className="text-cyan fw-bold font-monospace">{detectionItems.batteryStatus.autonomy}</div>
-                        </div>
-                        <div className="col-6">
-                          <span className="text-muted">Internal Resistance:</span>
-                          <div className="text-success fw-bold font-monospace">4.2 mΩ (Optimal)</div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
-                  <div className="mt-3 pt-2 border-top border-secondary border-opacity-20 d-flex align-items-center justify-content-between">
-                    <span className="text-muted small" style={{ fontSize: '10.5px' }}>
-                      Float Charger CC/CV Microprocessor Regulated
-                    </span>
+                  <div className="mt-3 pt-2 border-top border-secondary border-opacity-20 d-flex align-items-center justify-content-end">
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-success py-1 px-3"
@@ -4489,11 +4457,8 @@ const FireOverview = () => {
                 </div>
                 <div>
                   <h6 className="fw-black text-white mb-0" style={{ fontSize: '13.5px', letterSpacing: '0.01em' }}>
-                    Clause 3 (f) Manual Call Points (MCP) — IS 2189 / NFPA 72
+                    Manual Call Points (MCP)
                   </h6>
-                  <span className="text-muted small" style={{ fontSize: '11px' }}>
-                    Supervised Break Glass Network • Class-A Dual Return Loop • 42 Addressable Manual Call Points
-                  </span>
                 </div>
               </div>
             </div>
@@ -4503,18 +4468,8 @@ const FireOverview = () => {
               <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom border-secondary border-opacity-25">
                 <div className="d-flex align-items-center gap-2">
                   <span className="acms-hydrant-item-num" style={{ background: '#EF4444', color: '#FFF' }}>1</span>
-                  <span className="acms-clause-badge red">Clause 3(f)</span>
                   <span className="fw-bold text-white" style={{ fontSize: '13px' }}>
                     Addressable Manual Call Point Supervised Network (Class-A Dual Return)
-                  </span>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-success bg-opacity-25 text-success font-monospace" style={{ fontSize: '10.5px' }}>
-                    ● 24.2 V DC SUPERVISED
-                  </span>
-                  <span className="acms-status-chip green">
-                    <CheckCircle2 size={11} />
-                    {mcpList.some(m => m.status === 'TRIGGERED') ? 'ALARM ACTIVE' : 'LOOP ALL HEALTHY'}
                   </span>
                 </div>
               </div>
@@ -4537,10 +4492,7 @@ const FireOverview = () => {
 
                 <div className="col-lg-5 col-md-8">
                   <div className="d-flex flex-column gap-2">
-                    <div className="d-flex align-items-center justify-content-between text-muted" style={{ fontSize: '11px' }}>
-                      <span>Class-A Loop Circuit Diagnostics:</span>
-                      <span className="text-cyan font-monospace fw-bold">Latency: &lt; 1.2s</span>
-                    </div>
+
 
                     <div className="row g-2">
                       <div className="col-6">
@@ -4618,10 +4570,7 @@ const FireOverview = () => {
             {/* ── Addressable Break Glass Stations Grid ── */}
             <div className="mb-4">
               <div className="d-flex align-items-center justify-content-between px-2 py-1 border-bottom border-secondary border-opacity-25 mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="acms-station-badge danger">STATIONS</span>
-                  <span className="text-white fw-bold small">Clause 3(f) Supervised Break Glass Devices (On / Off)</span>
-                </div>
+                <span className="text-white fw-bold small">Break Glass Devices (On / Off)</span>
                 <span className="badge bg-danger bg-opacity-25 text-danger font-monospace" style={{ fontSize: '10px' }}>
                   {mcpList.filter(m => mcpFilter === 'all' || m.zone === mcpFilter).length} Station(s) in Zone
                 </span>
@@ -4651,37 +4600,12 @@ const FireOverview = () => {
                             </div>
                           </div>
 
-                          <div className="d-flex align-items-center gap-2 mb-2">
+                          <div className="d-flex align-items-center gap-2">
                             <McpIcon status={mcp.status} />
                             <div>
                               <div className="fw-bold text-white" style={{ fontSize: '12px' }}>{mcp.location}</div>
                               <div className="text-muted" style={{ fontSize: '10px' }}>Last Tested: {mcp.lastTest}</div>
                             </div>
-                          </div>
-
-                          <div className="pt-2 border-top border-secondary border-opacity-25 d-flex gap-1.5">
-                            <button
-                              type="button"
-                              className={`btn btn-sm flex-grow-1 ${isAlarm ? 'btn-success' : 'btn-outline-danger'}`}
-                              style={{ fontSize: '10.5px', fontWeight: '700', padding: '4px 6px' }}
-                              onClick={() => {
-                                const nextState = mcp.status === 'NORMAL' ? 'TRIGGERED' : 'NORMAL';
-                                setMcpList(prev => prev.map(item => item.id === mcp.id ? { ...item, status: nextState } : item));
-                                if (nextState === 'TRIGGERED') {
-                                  triggerVoiceAnnouncement(`Warning: Emergency Manual Call Point ${mcp.id} at ${mcp.location} has been pulled! Evacuation protocol active.`, 'alarm');
-                                }
-                              }}
-                            >
-                              {isAlarm ? 'Reset Alarm' : 'Simulate Pull'}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              style={{ fontSize: '10.5px', padding: '4px 6px' }}
-                              onClick={() => setMcpList(prev => prev.map(item => item.id === mcp.id ? { ...item, operationStatus: item.operationStatus === 'ON' ? 'OFF' : 'ON' } : item))}
-                            >
-                              {mcp.operationStatus === 'ON' ? 'Turn Off' : 'Turn On'}
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -4959,17 +4883,10 @@ const FireOverview = () => {
                 <Volume2 size={18} className="text-purple" />
                 <div>
                   <h6 className="fw-black text-white mb-0" style={{ fontSize: '13.5px', letterSpacing: '0.01em' }}>
-                    Clause 3 (g) Public Address System (PA) — Voice Evacuation Console
+                    Public Address System (PA)
                   </h6>
-                  <span className="text-muted small" style={{ fontSize: '11px' }}>
-                    500W Redundant Class-D Amplifiers • 4 Monitored Audio Broadcast Zones • Hot-Standby Auto-Swap
-                  </span>
                 </div>
               </div>
-              <span className="acms-supervision-pill purple">
-                <span className="acms-dot-pulse-green"></span>
-                4 ZONES & 4 AMPS MONITORED
-              </span>
             </div>
 
             {/* 2-Column SCADA Layout: Amplifiers & Broadcast Zones */}
@@ -4983,16 +4900,12 @@ const FireOverview = () => {
                   <div className="acms-card-top-row mb-2">
                     <div className="d-flex align-items-center gap-2">
                       <span className="acms-hydrant-item-num" style={{ background: '#8B5CF6', color: '#FFF' }}>1</span>
-                      <span className="acms-clause-badge purple">Clause 3(g) Amplifiers</span>
                     </div>
                     <span className="acms-status-chip running">
                       <Check size={11} /> 4 / 4 WORKING
                     </span>
                   </div>
                   <div className="acms-card-title mb-1">500W Class-D Voice Evac Amplifiers</div>
-                  <div className="text-muted small mb-2" style={{ fontSize: '11.5px' }}>
-                    Supervised multi-channel audio amplification and emergency mic console.
-                  </div>
 
                   {/* Amplifier 3D Rack Icon Box */}
                   <div className="d-flex justify-content-center my-2">
@@ -5031,9 +4944,7 @@ const FireOverview = () => {
                   </div>
                 </div>
 
-                <div className="acms-footer-pill mt-3">
-                  <CheckCircle2 size={13} /> Hot-Standby Amplifier Ready for Auto-Swap
-                </div>
+
               </div>
 
               </div>
@@ -5047,16 +4958,12 @@ const FireOverview = () => {
                   <div className="acms-card-top-row mb-2">
                     <div className="d-flex align-items-center gap-2">
                       <span className="acms-hydrant-item-num" style={{ background: '#06C7F5', color: '#000' }}>2</span>
-                      <span className="acms-clause-badge cyan">Clause 3(g) Broadcast Zones</span>
                     </div>
                     <span className="acms-status-chip running">
                       <Check size={11} /> 4 / 4 WORKING
                     </span>
                   </div>
                   <div className="acms-card-title mb-1">Monitored Speaker Broadcast Zones</div>
-                  <div className="text-muted small mb-2" style={{ fontSize: '11.5px' }}>
-                    Supervised line return impedance and volume control per zone.
-                  </div>
 
                   {/* Broadcast Zones List */}
                   <div className="acms-param-list mt-2">
@@ -5399,17 +5306,8 @@ const FireOverview = () => {
             {/* ── Clause 3(h) Air Pressurization Live SCADA Header ── */}
             <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-secondary border-opacity-25 flex-wrap gap-2">
               <div className="d-flex align-items-center gap-2.5">
-                <div className="acms-banner-icon-badge info" style={{ width: '36px', height: '36px' }}>
-                  <Wind size={18} />
-                </div>
-                <div>
-                  <h6 className="fw-black text-white mb-0" style={{ fontSize: '13.5px', letterSpacing: '0.01em' }}>
-                    Clause 3 (h) Air Pressurization System — NBC 2016 Part 4 / IS 1644
-                  </h6>
-                  <span className="text-muted small" style={{ fontSize: '11px' }}>
-                    Staircase Shafts (+50 Pa) • Lift Lobbies (+25-30 Pa) • Hoistway Smoke Barrier Supervision
-                  </span>
-                </div>
+            
+            
               </div>
             </div>
 
@@ -5422,14 +5320,12 @@ const FireOverview = () => {
                     Emergency Egress Differential Pressure (ΔP) Core Monitoring
                   </span>
                   <span className="badge bg-secondary bg-opacity-25 text-white font-monospace" style={{ fontSize: '10px' }}>
-                    Clause 3.h
+                    
                   </span>
                 </div>
 
                 <div className="d-flex align-items-center gap-2 flex-wrap">
-                  <span className="badge bg-success bg-opacity-25 text-success font-monospace" style={{ fontSize: '10.5px' }}>
-                    ● 5 / 5 FANS ONLINE
-                  </span>
+              
                   <button
                     type="button"
                     className={`btn btn-sm d-flex align-items-center gap-1.5 py-1 px-3 ${isEmergencyPressurizing ? 'btn-danger' : 'btn-outline-warning'}`}
@@ -5637,9 +5533,7 @@ const FireOverview = () => {
                     <Wind size={20} />
                   </div>
                   <div>
-                    <h5 className="fw-black text-white mb-0" style={{ letterSpacing: '-0.01em' }}>
-                      Clause 3 (h) Air Pressurization Subsystem — Fullscreen SCADA Architecture & Differential Diagnostics
-                    </h5>
+            
                     <div className="text-muted" style={{ fontSize: '11.5px' }}>
                       Multi-shaft positive pressure envelope (+50 Pa Staircase / +28 Pa Lobby), barometric relief modulation, and 5-fan run status telemetry.
                     </div>
@@ -5935,14 +5829,7 @@ const FireOverview = () => {
 
                     {/* Clause 3 (h) 5 Fans Monitored Checklist */}
                     <div className="acms-modal-inspector-card">
-                      <div className="d-flex align-items-center justify-content-between border-bottom border-secondary border-opacity-25 pb-2">
-                        <span className="fw-bold text-white small d-flex align-items-center gap-1.5">
-                          <CheckCircle2 size={14} className="text-success" /> Clause 3 (h) 5 Monitored Fans Status
-                        </span>
-                        <span className="text-muted small" style={{ fontSize: '10.5px' }}>
-                          5 / 5 Supervised
-                        </span>
-                      </div>
+                      
 
                       <div className="d-flex flex-column gap-2">
                         {[
