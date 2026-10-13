@@ -38,59 +38,59 @@ body.light-mode,
 :root[data-theme="light"] {
   color-scheme: light;
 
-  /* ── Ultra Eye-Comfort Soft-Matte Light Mode Palette ── */
-  --background: #E8EDF3;
-  --surface: #FFFFFF;
-  --surface-secondary: #F0F4F8;
+  /* ── User-Specified Ultra Eye-Comfort #F2F2F2 Soft-Matte Light Mode Palette ── */
+  --background: #F2F2F2;
+  --surface: #ececec;
+  --surface-secondary: #e2e2e2;
 
-  --primary: #0284C7;
-  --primary-hover: #0369A1;
-  --accent-cyan: #0891B2;
-  --heading: #0F3A66;
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --accent-cyan: #0284c7;
+  --heading: #111827;
 
-  --text-primary: #1E293B;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #4b5563;
 
-  --border: #C8D3DE;
-  --divider: #DFE5EB;
+  --border: #bebebe;
+  --divider: #cccccc;
 
-  --success: #10B981;
-  --warning: #D97706;
-  --danger: #DC2626;
-  --purple: #6D5CE7;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --purple: #6d5ce7;
 
-  /* Pastel KPI Card Tokens - Soothing & Eye-Comfort */
-  --card-blue: #E2EFF9;
-  --card-green: #E0F5EB;
-  --card-purple: #EDE7FA;
-  --card-yellow: #FCF3DC;
-  --card-cyan: #DEF3F7;
-  --card-red: #FCE8E8;
+  /* Pastel KPI Card Tokens - Soothing & Eye-Comfort against #F2F2F2 */
+  --card-blue: #dbeafe;
+  --card-green: #dcfce7;
+  --card-purple: #ede9fe;
+  --card-yellow: #fef3c7;
+  --card-cyan: #cffafe;
+  --card-red: #fee2e2;
 
-  /* Table Tokens */
-  --table-header: #0F3A66;
-  --table-header-text: #FFFFFF;
-  --table-row-hover: #E8EDF3;
+  /* Table Tokens - Soft Matte, Zero Visual Shock */
+  --table-header: #e0e0e0;
+  --table-header-text: #111827;
+  --table-row-hover: #e5e5e5;
 
   /* ── Application SCADA Tokens Mapping ── */
   --scada-bg: var(--background);
-  --scada-sidebar: var(--surface);
+  --scada-sidebar: #e0e0e0;
   --scada-card: var(--surface);
-  --scada-card-hover: var(--table-row-hover);
-  --scada-header: var(--surface);
+  --scada-card-hover: #f0f0f0;
+  --scada-header: #e0e0e0;
   --scada-border: var(--border);
-  --scada-border-strong: #94A3B8;
+  --scada-border-strong: #9e9e9e;
   --scada-text: var(--text-primary);
   --scada-text-muted: var(--text-secondary);
   --scada-text-subtle: var(--text-muted);
   --scada-accent: var(--primary);
-  --scada-accent-bg: rgba(2, 132, 199, 0.08);
-  --scada-input-bg: var(--surface);
-  --scada-input-border: var(--border);
+  --scada-accent-bg: rgba(2, 132, 199, 0.1);
+  --scada-input-bg: #ececec;
+  --scada-input-border: #bebebe;
   --scada-table-head-bg: var(--table-header);
-  --scada-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
-  --scada-glass-bg: rgba(255, 255, 255, 0.96);
+  --scada-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  --scada-glass-bg: rgba(236, 236, 236, 0.98);
 
   --status-running: var(--success);
   --status-running-bg: var(--card-green);
@@ -102,29 +102,171 @@ body.light-mode,
   --status-stopped-bg: var(--divider);
 }
 
-*, *::before, *::after,
-html, body, #root, button, input, select, textarea, table, th, td, h1, h2, h3, h4, h5, h6, .font-monospace, .sub-text, .form-label, .badge, .card, .dropdown-menu, .modal, .btn, .nav-link, .form-control, .form-select {
+/* ── Universal Typography: Strict Global Font-Family & Subpixel Crispness ── */
+*,
+*::before,
+*::after {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
+html,
+body,
+#root {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* ── Universal Font Size Normalizers for High-DPI Sharpness ── */
+.fs-9 {
+  font-size: 0.70rem !important;
+}
+
+.fs-10 {
+  font-size: 0.76rem !important;
+}
+
+.fs-11 {
+  font-size: 0.82rem !important;
+}
+
 /* ── Custom Flex Gap & Spacing Utilities (Fixing Bootstrap 5 gaps & fractional padding) ── */
-.gap-0\.5 { gap: 0.25rem !important; }
-.gap-1\.5 { gap: 0.5rem !important; }
-.gap-2\.5 { gap: 0.75rem !important; }
-.p-0\.5 { padding: 0.25rem !important; }
-.p-1\.5 { padding: 0.5rem !important; }
-.p-2\.5 { padding: 0.85rem !important; }
-.px-1\.5 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-.px-2\.5 { padding-left: 0.85rem !important; padding-right: 0.85rem !important; }
-.py-1\.5 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
-.py-2\.5 { padding-top: 0.85rem !important; padding-bottom: 0.85rem !important; }
-.m-1\.5 { margin: 0.5rem !important; }
-.mb-1\.5 { margin-bottom: 0.5rem !important; }
-.mt-1\.5 { margin-top: 0.5rem !important; }
-.my-1\.5 { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
-.pt-1\.5 { padding-top: 0.5rem !important; }
-.pb-1\.5 { padding-bottom: 0.5rem !important; }
-.g-1\.5 { --bs-gutter-x: 0.5rem; --bs-gutter-y: 0.5rem; }
+.gap-0\.5 {
+  gap: 0.25rem !important;
+}
+
+.gap-1\.5 {
+  gap: 0.5rem !important;
+}
+
+.gap-2\.5 {
+  gap: 0.75rem !important;
+}
+
+.p-0\.5 {
+  padding: 0.25rem !important;
+}
+
+.p-1\.5 {
+  padding: 0.5rem !important;
+}
+
+/* ── Global High-Contrast Badge & Opacity Utilities ── */
+.bg-opacity-10 {
+  --bs-bg-opacity: 0.1 !important;
+}
+
+.bg-opacity-15 {
+  --bs-bg-opacity: 0.15 !important;
+}
+
+.bg-opacity-20 {
+  --bs-bg-opacity: 0.2 !important;
+}
+
+.bg-opacity-25 {
+  --bs-bg-opacity: 0.25 !important;
+}
+
+.bg-opacity-30 {
+  --bs-bg-opacity: 0.3 !important;
+}
+
+/* Prevent monochromatic badge invisibility across dark SCADA dashboards */
+.badge.bg-warning.text-warning,
+.badge.bg-warning.bg-opacity-10,
+.badge.bg-warning.bg-opacity-15,
+.badge.bg-warning.bg-opacity-20,
+.badge.bg-warning.bg-opacity-25 {
+  background-color: rgba(245, 158, 11, 0.16) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+.badge.bg-info.text-info,
+.badge.bg-info.bg-opacity-10,
+.badge.bg-info.bg-opacity-15,
+.badge.bg-info.bg-opacity-20,
+.badge.bg-info.bg-opacity-25 {
+  background-color: rgba(56, 189, 248, 0.16) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+}
+
+.badge.bg-success.text-success,
+.badge.bg-success.bg-opacity-10,
+.badge.bg-success.bg-opacity-15,
+.badge.bg-success.bg-opacity-20,
+.badge.bg-success.bg-opacity-25 {
+  background-color: rgba(16, 185, 129, 0.16) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+.badge.bg-danger.text-danger,
+.badge.bg-danger.bg-opacity-10,
+.badge.bg-danger.bg-opacity-15,
+.badge.bg-danger.bg-opacity-20,
+.badge.bg-danger.bg-opacity-25 {
+  background-color: rgba(239, 68, 68, 0.16) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+.p-2\.5 {
+  padding: 0.85rem !important;
+}
+
+.px-1\.5 {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+.px-2\.5 {
+  padding-left: 0.85rem !important;
+  padding-right: 0.85rem !important;
+}
+
+.py-1\.5 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+.py-2\.5 {
+  padding-top: 0.85rem !important;
+  padding-bottom: 0.85rem !important;
+}
+
+.m-1\.5 {
+  margin: 0.5rem !important;
+}
+
+.mb-1\.5 {
+  margin-bottom: 0.5rem !important;
+}
+
+.mt-1\.5 {
+  margin-top: 0.5rem !important;
+}
+
+.my-1\.5 {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.pt-1\.5 {
+  padding-top: 0.5rem !important;
+}
+
+.pb-1\.5 {
+  padding-bottom: 0.5rem !important;
+}
+
+.g-1\.5 {
+  --bs-gutter-x: 0.5rem;
+  --bs-gutter-y: 0.5rem;
+}
 
 /* ── Universal Status Pill Badge ── */
 .status-pill {
@@ -164,35 +306,61 @@ body {
 }
 
 /* Global Eye-Comfort Smooth Theme Transition */
-.scada-header, 
-.scada-sidebar, 
-.scada-card, 
-.card, 
-.modal-content, 
-.offcanvas, 
-.table, 
-.form-control, 
-.form-select, 
+.scada-header,
+.scada-sidebar,
+.scada-card,
+.card,
+.modal-content,
+.offcanvas,
+.table,
+.form-control,
+.form-select,
 .dropdown-menu {
   transition: background-color 0.25s ease-out, color 0.25s ease-out, border-color 0.25s ease-out, box-shadow 0.25s ease-out !important;
 }
 
 /* Base Typography Colors */
-h1, h2, h3, h4, h5, h6,
-.h1, .h2, .h3, .h4, .h5, .h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
   color: var(--scada-text) !important;
 }
 
-p, label, th, td, legend, .form-label, .card-title {
+p,
+label,
+th,
+td,
+legend,
+.form-label,
+.card-title {
   color: var(--scada-text);
 }
 
-.text-muted, .sub-text, small.text-muted {
+.text-muted,
+.sub-text,
+small.text-muted {
   color: var(--scada-text-muted) !important;
 }
 
 /* Protection for Filled Buttons & Badges (Do not force dark text on colored buttons!) */
-.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info, .badge-primary, .badge-danger, .badge-success {
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info,
+.badge-primary,
+.badge-danger,
+.badge-success {
   color: #ffffff !important;
 }
 
@@ -250,22 +418,35 @@ body.light-mode .theme-toggle-btn {
   color: #ffffff !important;
   border: 1px solid #0f172a !important;
 }
-body.light-mode .theme-toggle-btn span { color: #ffffff !important; }
-body.light-mode .theme-toggle-btn svg { color: #38bdf8 !important; stroke: #38bdf8 !important; }
+
+body.light-mode .theme-toggle-btn span {
+  color: #ffffff !important;
+}
+
+body.light-mode .theme-toggle-btn svg {
+  color: #38bdf8 !important;
+  stroke: #38bdf8 !important;
+}
 
 body:not(.light-mode) .theme-toggle-btn {
   background-color: #1e293b !important;
   color: #f8fafc !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
-body:not(.light-mode) .theme-toggle-btn span { color: #f8fafc !important; }
-body:not(.light-mode) .theme-toggle-btn svg { color: #f59e0b !important; stroke: #f59e0b !important; }
 
-/* Universal Card & Panel Light Mode Overrides */
+body:not(.light-mode) .theme-toggle-btn span {
+  color: #f8fafc !important;
+}
+
+body:not(.light-mode) .theme-toggle-btn svg {
+  color: #f59e0b !important;
+  stroke: #f59e0b !important;
+}
+
+/* Universal Card & Panel Light Mode Overrides (Clay / Soft Matte Clean Contrast) */
 body.light-mode .card,
 body.light-mode .scada-card,
 body.light-mode .modal-content,
-body.light-mode .dropdown-menu,
 body.light-mode .offcanvas,
 body.light-mode .accordion-item,
 body.light-mode [class*="card"],
@@ -275,9 +456,11 @@ body.light-mode [style*="background-color: #1e293b"],
 body.light-mode [style*="background: #1e293b"],
 body.light-mode [style*="background-color: #0f172a"],
 body.light-mode [style*="background: #0f172a"] {
-  background-color: var(--scada-card) !important;
-  color: var(--scada-text) !important;
-  border-color: var(--scada-border) !important;
+  background-color: #ffffff !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02) !important;
+  border-radius: 14px !important;
 }
 
 /* Light Mode Form Overrides */
@@ -286,9 +469,20 @@ body.light-mode input,
 body.light-mode textarea,
 body.light-mode .form-control,
 body.light-mode .form-select {
-  background-color: var(--scada-input-bg) !important;
-  color: var(--scada-text) !important;
-  border-color: var(--scada-input-border) !important;
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+}
+
+body.light-mode select:focus,
+body.light-mode input:focus,
+body.light-mode textarea:focus,
+body.light-mode .form-control:focus,
+body.light-mode .form-select:focus {
+  background-color: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
 }
 
 body.light-mode select option,
@@ -311,7 +505,7 @@ body.light-mode table thead th {
   background-color: var(--table-header) !important;
   color: var(--table-header-text) !important;
   font-weight: 700 !important;
-  border-bottom: 2px solid var(--border) !important;
+  border-bottom: 1px solid var(--border) !important;
   letter-spacing: 0.02em;
 }
 
@@ -327,7 +521,7 @@ body.light-mode table tbody td {
   border-bottom: 1px solid var(--divider) !important;
   color: var(--text-primary) !important;
   font-weight: 500 !important;
-  background-color: var(--surface) !important;
+  background-color: #ffffff !important;
 }
 
 body.light-mode .scada-table tbody tr:hover td,
@@ -337,14 +531,28 @@ body.light-mode table tbody tr:hover td {
   color: var(--text-primary) !important;
 }
 
+/* Light Mode Skeletons */
+body.light-mode .ag-skeleton-card {
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--scada-shadow) !important;
+}
+
+body.light-mode .ag-skeleton-card [style*="rgba(255, 255, 255"] {
+  background: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
 /* Light Mode Recharts Overrides */
 body.light-mode .recharts-cartesian-grid line {
   stroke: rgba(0, 0, 0, 0.08) !important;
 }
+
 body.light-mode .recharts-text,
 body.light-mode .recharts-legend-item-text {
   fill: #475569 !important;
 }
+
 body.light-mode .recharts-default-tooltip {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
@@ -359,9 +567,11 @@ body.light-mode .dropdown-menu {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #e2e8f0 !important;
 }
+
 body.light-mode .dropdown-item {
   color: #0f172a !important;
 }
+
 body.light-mode .dropdown-item:hover {
   background-color: rgba(2, 132, 199, 0.08) !important;
   color: #0284c7 !important;
@@ -459,11 +669,37 @@ body.light-mode .dropdown-item:hover {
   letter-spacing: 0.025em;
 }
 
-.status-running { background-color: rgba(34, 197, 94, 0.1); color: var(--status-running); border: 1px solid rgba(34, 197, 94, 0.2); }
-.status-fault { background-color: rgba(239, 68, 68, 0.1); color: var(--status-fault); border: 1px solid rgba(239, 68, 68, 0.2); }
-.status-warning { background-color: rgba(245, 158, 11, 0.1); color: var(--status-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
-.status-stopped { background-color: rgba(148, 163, 184, 0.1); color: var(--status-stopped); border: 1px solid rgba(148, 163, 184, 0.2); }
-.status-not-mapped { background-color: rgba(100, 116, 139, 0.08); color: #475569; border: 1px solid rgba(100, 116, 139, 0.15); font-style: italic; opacity: 0.7; }
+.status-running {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: var(--status-running);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.status-fault {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--status-fault);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--status-warning);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-stopped {
+  background-color: rgba(148, 163, 184, 0.1);
+  color: var(--status-stopped);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.status-not-mapped {
+  background-color: rgba(100, 116, 139, 0.08);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.15);
+  font-style: italic;
+  opacity: 0.7;
+}
 
 /* Table Styles */
 .scada-table {
@@ -508,14 +744,29 @@ body.light-mode .dropdown-item:hover {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Utility */
-.text-muted { color: var(--scada-text-muted) !important; }
-.text-white { color: var(--scada-text) !important; }
-.accent-glow { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+.text-muted {
+  color: var(--scada-text-muted) !important;
+}
+
+.text-white {
+  color: var(--scada-text) !important;
+}
+
+.accent-glow {
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
 
 /* Bootstrap Override */
 .accordion-button:not(.collapsed) {
@@ -527,7 +778,8 @@ body.light-mode .dropdown-item:hover {
   filter: invert(1);
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   background-color: rgba(255, 255, 255, 0.05) !important;
   color: white !important;
   border-color: var(--scada-accent) !important;
@@ -535,13 +787,17 @@ body.light-mode .dropdown-item:hover {
 }
 
 /* Global Native Dropdown Styles for consistent Dark Theme */
-select, .form-select, select.form-control, input.form-control {
+select,
+.form-select,
+select.form-control,
+input.form-control {
   background-color: #1e293b !important;
   color: #f8fafc !important;
   border: 1px solid var(--scada-border) !important;
 }
 
-select option, option {
+select option,
+option {
   background-color: #1e293b !important;
   color: #0f172a !important;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
@@ -554,9 +810,11 @@ body.light-mode .dropdown-menu {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #e2e8f0 !important;
 }
+
 body.light-mode .dropdown-item {
   color: #0f172a !important;
 }
+
 body.light-mode .dropdown-item:hover {
   background-color: rgba(2, 132, 199, 0.08) !important;
   color: #0284c7 !important;
@@ -654,11 +912,37 @@ body.light-mode .dropdown-item:hover {
   letter-spacing: 0.025em;
 }
 
-.status-running { background-color: rgba(34, 197, 94, 0.1); color: var(--status-running); border: 1px solid rgba(34, 197, 94, 0.2); }
-.status-fault { background-color: rgba(239, 68, 68, 0.1); color: var(--status-fault); border: 1px solid rgba(239, 68, 68, 0.2); }
-.status-warning { background-color: rgba(245, 158, 11, 0.1); color: var(--status-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
-.status-stopped { background-color: rgba(148, 163, 184, 0.1); color: var(--status-stopped); border: 1px solid rgba(148, 163, 184, 0.2); }
-.status-not-mapped { background-color: rgba(100, 116, 139, 0.08); color: #475569; border: 1px solid rgba(100, 116, 139, 0.15); font-style: italic; opacity: 0.7; }
+.status-running {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: var(--status-running);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.status-fault {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--status-fault);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--status-warning);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-stopped {
+  background-color: rgba(148, 163, 184, 0.1);
+  color: var(--status-stopped);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.status-not-mapped {
+  background-color: rgba(100, 116, 139, 0.08);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.15);
+  font-style: italic;
+  opacity: 0.7;
+}
 
 /* Table Styles */
 .scada-table {
@@ -703,14 +987,29 @@ body.light-mode .dropdown-item:hover {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Utility */
-.text-muted { color: var(--scada-text-muted) !important; }
-.text-white { color: var(--scada-text) !important; }
-.accent-glow { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+.text-muted {
+  color: var(--scada-text-muted) !important;
+}
+
+.text-white {
+  color: var(--scada-text) !important;
+}
+
+.accent-glow {
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
 
 /* Bootstrap Override */
 .accordion-button:not(.collapsed) {
@@ -722,7 +1021,8 @@ body.light-mode .dropdown-item:hover {
   filter: invert(1);
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   background-color: rgba(255, 255, 255, 0.05) !important;
   color: white !important;
   border-color: var(--scada-accent) !important;
@@ -730,13 +1030,17 @@ body.light-mode .dropdown-item:hover {
 }
 
 /* Global Native Dropdown Styles for consistent Dark Theme */
-select, .form-select, select.form-control, input.form-control {
+select,
+.form-select,
+select.form-control,
+input.form-control {
   background-color: #1e293b !important;
   color: #f8fafc !important;
   border: 1px solid var(--scada-border) !important;
 }
 
-select option, option {
+select option,
+option {
   background-color: #1e293b !important;
   color: #f8fafc !important;
   padding: 10px !important;
@@ -748,9 +1052,11 @@ body.light-mode .dropdown-menu {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #e2e8f0 !important;
 }
+
 body.light-mode .dropdown-item {
   color: #0f172a !important;
 }
+
 body.light-mode .dropdown-item:hover {
   background-color: rgba(2, 132, 199, 0.08) !important;
   color: #0284c7 !important;
@@ -848,11 +1154,37 @@ body.light-mode .dropdown-item:hover {
   letter-spacing: 0.025em;
 }
 
-.status-running { background-color: rgba(34, 197, 94, 0.1); color: var(--status-running); border: 1px solid rgba(34, 197, 94, 0.2); }
-.status-fault { background-color: rgba(239, 68, 68, 0.1); color: var(--status-fault); border: 1px solid rgba(239, 68, 68, 0.2); }
-.status-warning { background-color: rgba(245, 158, 11, 0.1); color: var(--status-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
-.status-stopped { background-color: rgba(148, 163, 184, 0.1); color: var(--status-stopped); border: 1px solid rgba(148, 163, 184, 0.2); }
-.status-not-mapped { background-color: rgba(100, 116, 139, 0.08); color: #475569; border: 1px solid rgba(100, 116, 139, 0.15); font-style: italic; opacity: 0.7; }
+.status-running {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: var(--status-running);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.status-fault {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--status-fault);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--status-warning);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-stopped {
+  background-color: rgba(148, 163, 184, 0.1);
+  color: var(--status-stopped);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.status-not-mapped {
+  background-color: rgba(100, 116, 139, 0.08);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.15);
+  font-style: italic;
+  opacity: 0.7;
+}
 
 /* Table Styles */
 .scada-table {
@@ -897,14 +1229,29 @@ body.light-mode .dropdown-item:hover {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Utility */
-.text-muted { color: var(--scada-text-muted) !important; }
-.text-white { color: var(--scada-text) !important; }
-.accent-glow { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+.text-muted {
+  color: var(--scada-text-muted) !important;
+}
+
+.text-white {
+  color: var(--scada-text) !important;
+}
+
+.accent-glow {
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
 
 /* Bootstrap Override */
 .accordion-button:not(.collapsed) {
@@ -916,7 +1263,8 @@ body.light-mode .dropdown-item:hover {
   filter: invert(1);
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   background-color: rgba(255, 255, 255, 0.05) !important;
   color: white !important;
   border-color: var(--scada-accent) !important;
@@ -924,20 +1272,26 @@ body.light-mode .dropdown-item:hover {
 }
 
 /* Global Native Dropdown Styles for consistent Dark Theme */
-select, .form-select, select.form-control, input.form-control {
+select,
+.form-select,
+select.form-control,
+input.form-control {
   background-color: #1e293b !important;
   color: #f8fafc !important;
   border: 1px solid var(--scada-border) !important;
 }
 
-select option, option {
+select option,
+option {
   background-color: #1e293b !important;
   color: #f8fafc !important;
   padding: 10px !important;
 }
 
 /* Fix browser autocomplete / datalist list options */
-datalist, select:focus, .form-select:focus {
+datalist,
+select:focus,
+.form-select:focus {
   background-color: #1e293b !important;
   color: #f8fafc !important;
 }
@@ -961,23 +1315,23 @@ body.light-mode .table thead th {
   border-bottom: 1px solid var(--scada-border) !important;
 }
 
-body.light-mode select, 
-body.light-mode .form-select, 
-body.light-mode select.form-control, 
+body.light-mode select,
+body.light-mode .form-select,
+body.light-mode select.form-control,
 body.light-mode input.form-control {
   background-color: var(--scada-input-bg) !important;
   color: var(--scada-text) !important;
   border-color: var(--scada-input-border) !important;
 }
 
-body.light-mode select option, 
+body.light-mode select option,
 body.light-mode option {
   background-color: #ffffff !important;
   color: #0f172a !important;
 }
 
-body.light-mode datalist, 
-body.light-mode select:focus, 
+body.light-mode datalist,
+body.light-mode select:focus,
 body.light-mode .form-select:focus {
   background-color: #ffffff !important;
   color: #0f172a !important;
@@ -989,9 +1343,11 @@ body.light-mode .dropdown-menu {
   border: 1px solid var(--scada-border) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08) !important;
 }
+
 body.light-mode .dropdown-menu .dropdown-item {
   color: #0f172a !important;
 }
+
 body.light-mode .dropdown-menu .dropdown-item:hover {
   background-color: rgba(2, 132, 199, 0.08) !important;
   color: #0284c7 !important;
@@ -1137,16 +1493,16 @@ body.light-mode .text-info {
 
 /* HERO CAROUSEL LIGHT MODE STYLING */
 .hero-gradient-overlay {
-  background: linear-gradient(135deg, rgba(2,6,18,0.88) 0%, rgba(2,6,18,0.45) 50%, rgba(2,6,18,0.65) 100%);
+  background: linear-gradient(135deg, rgba(2, 6, 18, 0.88) 0%, rgba(2, 6, 18, 0.45) 50%, rgba(2, 6, 18, 0.65) 100%);
 }
 
 body.light-mode .hero-gradient-overlay {
-  background: linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.15) 75%, transparent 100%) !important;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.72) 45%, rgba(255, 255, 255, 0.15) 75%, transparent 100%) !important;
 }
 
 body.light-mode .hero-carousel-wrapper {
   border-color: #cbd5e1 !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
 }
 
 body.light-mode .hero-carousel-wrapper .text-white,
@@ -1163,7 +1519,7 @@ body.light-mode .hero-carousel-wrapper p {
 body.light-mode .hero-carousel-wrapper .hero-stat-card {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
 
 body.light-mode .hero-carousel-wrapper .hero-stat-card span {
@@ -1178,7 +1534,7 @@ body.light-mode .hero-carousel-wrapper .carousel-nav-btn {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #e2e8f0 !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
 }
 
 body.light-mode .selected-premium-card {
@@ -1248,17 +1604,21 @@ body.light-mode .modern-toggle {
   background: #cbd5e1 !important;
   border-color: #94a3b8 !important;
 }
+
 body.light-mode .modern-toggle.on {
   background: rgba(2, 132, 199, 0.15) !important;
   border-color: rgba(2, 132, 199, 0.4) !important;
 }
+
 body.light-mode .toggle-slider {
   background: #ffffff !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
+
 body.light-mode .on .toggle-slider {
   background: var(--scada-accent) !important;
 }
+
 body.light-mode .toggle-label {
   color: var(--scada-text-muted) !important;
 }
@@ -1528,7 +1888,8 @@ body.light-mode [style*="minHeight: 100vh"],
 body.light-mode [style*="height: 100vh"] {
   background: var(--scada-bg) !important;
   background-color: var(--scada-bg) !important;
-  background-image: none !important; /* Removes inline dark gradients */
+  background-image: none !important;
+  /* Removes inline dark gradients */
 }
 
 /* Ensure CARDS remain card-colored even if they have fade-in */
@@ -1632,7 +1993,8 @@ body.light-mode svg circle[fill="#1e293b"] {
 body.light-mode svg text[fill="#fff"],
 body.light-mode svg text[fill="#ffffff"] {
   fill: var(--scada-text) !important;
-  text-shadow: none !important; /* Remove any glowing shadow if present */
+  text-shadow: none !important;
+  /* Remove any glowing shadow if present */
 }
 
 /* Also fix the line ticks in the gauge if they became invisible */
@@ -1646,16 +2008,17 @@ body.light-mode svg line[stroke="#1e293b"] {
    ========================================================= */
 
 body.light-mode .annunciator-cell {
-    background-color: var(--scada-card) !important;
-    border-color: #cbd5e1 !important;
-    color: #94a3b8 !important; /* Inactive text color */
+  background-color: var(--scada-card) !important;
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  /* Inactive text color */
 }
 
 body.light-mode .annunciator-cell.active {
-    background-color: #ef4444 !important;
-    color: #fff !important;
-    border-color: #f87171 !important;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5) !important;
+  background-color: #ef4444 !important;
+  color: #fff !important;
+  border-color: #f87171 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5) !important;
 }
 
 
@@ -1664,26 +2027,26 @@ body.light-mode .annunciator-cell.active {
    ========================================================= */
 
 body.light-mode .dashboard-wrapper {
-    background: var(--scada-bg) !important;
+  background: var(--scada-bg) !important;
 }
 
 body.light-mode .bg-panel {
-    background-color: var(--scada-card) !important;
-    border-color: #e2e8f0 !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+  background-color: var(--scada-card) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
 }
 
 body.light-mode .dash-card {
-    background: var(--scada-card) !important;
-    border: 1px solid #e2e8f0 !important;
+  background: var(--scada-card) !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 body.light-mode .dash-card:hover {
-    border-color: #0ea5e9 !important;
+  border-color: #0ea5e9 !important;
 }
 
 body.light-mode .dashboard-wrapper .text-white {
-    color: var(--scada-text) !important;
+  color: var(--scada-text) !important;
 }
 
 /* Specific text color fixes for Dashboard */
@@ -1691,23 +2054,23 @@ body.light-mode .dashboard-wrapper h1,
 body.light-mode .dashboard-wrapper h3,
 body.light-mode .dashboard-wrapper h4,
 body.light-mode .dashboard-wrapper h6 {
-    color: var(--scada-text) !important;
+  color: var(--scada-text) !important;
 }
 
 /* Fix table text colors */
 body.light-mode .scada-table tbody td {
-    color: var(--scada-text) !important;
-    border-bottom-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--scada-text) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.05) !important;
 }
 
 body.light-mode .scada-table thead th {
-    background: rgba(0, 0, 0, 0.05) !important;
-    color: #64748b !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #64748b !important;
 }
 
 /* Ensure background of inline style linear gradients is overwritten */
 body.light-mode [style*="linear-gradient(145deg, #0f172a"] {
-    background: var(--scada-card) !important;
+  background: var(--scada-card) !important;
 }
 
 
@@ -1720,62 +2083,62 @@ body.light-mode .table,
 body.light-mode .table-dark,
 body.light-mode .table-hover,
 body.light-mode .table-dark.table-hover {
-    --bs-table-bg: #ffffff !important;
-    --bs-table-hover-bg: #e2e8f0 !important;
-    --bs-table-color: #0f172a !important;
-    --bs-table-hover-color: #0f172a !important;
-    --bs-table-accent-bg: transparent !important;
-    color: #0f172a !important;
+  --bs-table-bg: #ffffff !important;
+  --bs-table-hover-bg: #e2e8f0 !important;
+  --bs-table-color: #0f172a !important;
+  --bs-table-hover-color: #0f172a !important;
+  --bs-table-accent-bg: transparent !important;
+  color: #0f172a !important;
 }
 
 body.light-mode .table-dark th,
 body.light-mode .table-dark td,
 body.light-mode .table th,
 body.light-mode .table td {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border-color: #e2e8f0 !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
 }
 
 body.light-mode .table-dark thead,
 body.light-mode .table-dark thead th,
 body.light-mode .table thead,
 body.light-mode .table thead th {
-    background-color: #f8fafc !important;
-    background: #f8fafc !important;
-    color: #475569 !important;
+  background-color: #f8fafc !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
 }
 
-body.light-mode .table-dark.table-hover > tbody > tr:hover,
-body.light-mode .table-dark.table-hover > tbody > tr:hover > *,
-body.light-mode .table.table-hover > tbody > tr:hover,
-body.light-mode .table.table-hover > tbody > tr:hover > *,
-body.light-mode .table-hover > tbody > tr:hover,
-body.light-mode .table-hover > tbody > tr:hover > td,
-body.light-mode .table-hover > tbody > tr:hover > th,
+body.light-mode .table-dark.table-hover>tbody>tr:hover,
+body.light-mode .table-dark.table-hover>tbody>tr:hover>*,
+body.light-mode .table.table-hover>tbody>tr:hover,
+body.light-mode .table.table-hover>tbody>tr:hover>*,
+body.light-mode .table-hover>tbody>tr:hover,
+body.light-mode .table-hover>tbody>tr:hover>td,
+body.light-mode .table-hover>tbody>tr:hover>th,
 body.light-mode .scada-table tbody tr:hover,
 body.light-mode .scada-table tbody tr:hover td {
-    background-color: #e2e8f0 !important;
-    background: #e2e8f0 !important;
-    color: #0f172a !important;
-    box-shadow: none !important;
+  background-color: #e2e8f0 !important;
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
 }
 
 /* Also ensure text inside hover state remains readable dark text */
-body.light-mode .table-hover > tbody > tr:hover td .text-white,
-body.light-mode .table-hover > tbody > tr:hover td .text-secondary,
-body.light-mode .table-hover > tbody > tr:hover td .text-slate-300,
-body.light-mode .table-hover > tbody > tr:hover td .text-slate-400,
-body.light-mode .table-hover > tbody > tr:hover td div,
-body.light-mode .table-hover > tbody > tr:hover td span {
-    color: #0f172a !important;
+body.light-mode .table-hover>tbody>tr:hover td .text-white,
+body.light-mode .table-hover>tbody>tr:hover td .text-secondary,
+body.light-mode .table-hover>tbody>tr:hover td .text-slate-300,
+body.light-mode .table-hover>tbody>tr:hover td .text-slate-400,
+body.light-mode .table-hover>tbody>tr:hover td div,
+body.light-mode .table-hover>tbody>tr:hover td span {
+  color: #0f172a !important;
 }
 
 /* Ensure all text inside light mode table rows is high-contrast, crystal-clear, and perfectly readable */
 body.light-mode table td,
 body.light-mode .table td,
 body.light-mode .table-dark td {
-    color: #1e293b !important;
+  color: #1e293b !important;
 }
 
 body.light-mode table td .text-white,
@@ -1783,21 +2146,22 @@ body.light-mode .table td .text-white,
 body.light-mode .table-dark td .text-white,
 body.light-mode table td .text-slate-100,
 body.light-mode table td .text-slate-200 {
-    color: #0f172a !important;
+  color: #0f172a !important;
 }
 
 body.light-mode table td .text-slate-300,
 body.light-mode table td .text-slate-400 {
-    color: #475569 !important;
+  color: #475569 !important;
 }
 
 body.light-mode table td .text-info {
-    color: #0284c7 !important;
+  color: #0284c7 !important;
 }
 
 /* Fix specific custom hover classes */
 body.light-mode .hover-bg-blue:hover {
-    background: #e0f2fe !important; /* light blue for light mode */
+  background: #e0f2fe !important;
+  /* light blue for light mode */
 }
 
 
@@ -1807,114 +2171,100 @@ body.light-mode .hover-bg-blue:hover {
    HVAC DIAGRAMS FULL LIGHT MODE (Chiller, AHU, Cooling Tower)
    ========================================================= */
 
-/* Light mode diagram containers - Pure white/light canvas with zero dark blue */
+/* Light mode diagram containers - Pure white/light canvas for Chiller and AHU */
 body.light-mode .chiller-diagram-container,
-body.light-mode .ahu-diagram-container,
-body.light-mode .cooling-diagram-container {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05) !important;
+body.light-mode .ahu-diagram-container {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Revert images to clean normal rendering */
 body.light-mode .chiller-diagram-container img,
-body.light-mode .ahu-diagram-container img,
-body.light-mode .cooling-diagram-container img {
-    filter: contrast(1.05) brightness(1.0) !important;
-    mix-blend-mode: normal !important;
+body.light-mode .ahu-diagram-container img {
+  filter: contrast(1.05) brightness(1.0) !important;
+  mix-blend-mode: normal !important;
 }
 
 /* Light mode telemetry tiles */
 body.light-mode .chiller-diagram-container .scada-tile,
 body.light-mode .ahu-diagram-container .scada-tile,
-body.light-mode .cooling-diagram-container .scada-tile,
-body.light-mode .ahu-diagram-container .ahu-telemetry-label-card,
-body.light-mode .cooling-diagram-container .cooling-telemetry-card {
-    background: #ffffff !important;
-    border-color: #e2e8f0 !important;
-    color: #0f172a !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+body.light-mode .ahu-diagram-container .ahu-telemetry-label-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* Light mode tile headers and text */
 body.light-mode .ahu-diagram-container .ahu-telemetry-label-card .fs-11,
-body.light-mode .cooling-diagram-container .cooling-card-title,
 body.light-mode .chiller-diagram-container .chiller-metric-label {
-    color: #1e293b !important;
-    border-bottom-color: #e2e8f0 !important;
-    font-weight: 700 !important;
+  color: #1e293b !important;
+  border-bottom-color: #e2e8f0 !important;
+  font-weight: 700 !important;
 }
 
 body.light-mode .ahu-diagram-container .fw-black,
-body.light-mode .cooling-diagram-container .fw-black,
 body.light-mode .chiller-diagram-container .chiller-metric-value {
-    color: #0f172a !important;
+  color: #0f172a !important;
 }
 
 /* Accents in light mode */
-body.light-mode .ahu-diagram-container .text-info,
-body.light-mode .cooling-diagram-container .text-info,
-body.light-mode .cooling-diagram-container .cooling-card-label {
-    color: #0284c7 !important;
+body.light-mode .ahu-diagram-container .text-info {
+  color: #0284c7 !important;
 }
-body.light-mode .ahu-diagram-container .text-success,
-body.light-mode .cooling-diagram-container .text-success,
-body.light-mode .cooling-diagram-container .cooling-status-on {
-    color: #059669 !important;
+
+body.light-mode .ahu-diagram-container .text-success {
+  color: #059669 !important;
 }
-body.light-mode .ahu-diagram-container .text-danger,
-body.light-mode .cooling-diagram-container .text-danger,
-body.light-mode .cooling-diagram-container .cooling-status-off {
-    color: #dc2626 !important;
+
+body.light-mode .ahu-diagram-container .text-danger {
+  color: #dc2626 !important;
 }
-body.light-mode .ahu-diagram-container .text-muted,
-body.light-mode .cooling-diagram-container .text-muted {
-    color: #64748b !important;
+
+body.light-mode .ahu-diagram-container .text-muted {
+  color: #64748b !important;
 }
 
 /* Light mode overlay badges */
-body.light-mode .ahu-diagram-container .rounded-pill,
-body.light-mode .cooling-diagram-container .cooling-last-sync-badge {
-    background: #f8fafc !important;
-    border-color: #cbd5e1 !important;
-    color: #334155 !important;
+body.light-mode .ahu-diagram-container .rounded-pill {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
 }
 
-body.light-mode .ahu-diagram-container .start-50,
-body.light-mode .cooling-diagram-container .cooling-kpi-overlay {
-    background: #ffffff !important;
-    border-color: #cbd5e1 !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
-    color: #0f172a !important;
+body.light-mode .ahu-diagram-container .start-50 {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
 }
 
 /* SVG Flow lines text in light mode */
 body.light-mode .chiller-diagram-container svg text,
-body.light-mode .ahu-diagram-container svg text,
-body.light-mode .cooling-diagram-container svg text {
-    text-shadow: 1px 1px 2px #fff, -1px -1px 2px #fff, 0px 0px 6px #fff !important;
+body.light-mode .ahu-diagram-container svg text {
+  text-shadow: 1px 1px 2px #fff, -1px -1px 2px #fff, 0px 0px 6px #fff !important;
 }
 
 /* Fix specific center badge in Chiller */
 body.light-mode .chiller-diagram-container .rounded-3.px-4.py-3.text-center {
-    background-color: #a855f7 !important;
-    border: 2px solid #d8b4fe !important;
+  background-color: #a855f7 !important;
+  border: 2px solid #d8b4fe !important;
 }
+
 body.light-mode .chiller-diagram-container .rounded-3.px-4.py-3.text-center h3 {
-    color: #fff !important;
+  color: #fff !important;
 }
 
 /* Revert text shadows for SVG overlays */
 body.light-mode .chiller-diagram-container svg text,
-body.light-mode .ahu-diagram-container svg text,
-body.light-mode .cooling-diagram-container svg text {
-    text-shadow: 2px 2px 4px #000, -1px -1px 4px #000 !important;
+body.light-mode .ahu-diagram-container svg text {
+  text-shadow: 2px 2px 4px #000, -1px -1px 4px #000 !important;
 }
 
 /* Ensure small muted texts stay visible in the dark island */
-body.light-mode .ahu-diagram-container .text-muted,
-body.light-mode .cooling-diagram-container .text-muted {
-    color: rgba(255, 255, 255, 0.6) !important;
+body.light-mode .ahu-diagram-container .text-muted {
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
 
@@ -1923,98 +2273,221 @@ body.light-mode .cooling-diagram-container .text-muted {
    ========================================================= */
 
 body.light-mode .data-box-label {
-    /* If the label background is a dark color, we want the text to remain white, 
+  /* If the label background is a dark color, we want the text to remain white, 
        so we don't force var(--scada-text) like we did for .text-white */
-    color: #ffffff !important;
+  color: #ffffff !important;
 }
 
 body.light-mode .data-box-value {
-    background-color: var(--scada-card) !important;
-    /* Force text to be dark since background is now light */
-    color: var(--scada-text) !important;
+  background-color: var(--scada-card) !important;
+  /* Force text to be dark since background is now light */
+  color: var(--scada-text) !important;
 }
 
 
 /* =========================================================
-   LIGHT MODE BEAUTIFICATION (PREMIUM LOOK)
+   LIGHT MODE BEAUTIFICATION (PREMIUM EYE-COMFORT & CRISP SYSTEM)
    ========================================================= */
 
-/* 1. Subtle Premium Background */
+/* Vector & Icon Clarity Optimization (Anti-Blur) */
+svg {
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+}
+
+body.light-mode svg {
+  filter: none !important;
+}
+
+body.light-mode .lucide,
+[data-theme="light"] .lucide {
+  filter: none !important;
+}
+
+/* 1. Soothing #F2F2F2 Soft-Matte Background - Zero Glare */
 body.light-mode {
-    --scada-bg: #f4f7f9 !important; 
-    --scada-text: #0f172a !important; 
+  --scada-bg: #F2F2F2 !important;
+  --scada-text: #111827 !important;
 }
 
-body.light-mode #root > div,
+body.light-mode #root>div,
 body.light-mode .min-vh-100,
-body.light-mode .dashboard-wrapper {
-    background: linear-gradient(135deg, #f8fafc 0%, #eef2f6 100%) !important;
+body.light-mode .dashboard-wrapper,
+body.light-mode .scada-container,
+body.light-mode .scada-main-content {
+  background: #F2F2F2 !important;
 }
 
-/* 2. Beautiful Soft Shadows & Borders for Cards */
+/* 2. Soft-Matte Surfaces & Defined Borders for Cards */
 body.light-mode .scada-card,
 body.light-mode .premium-figma-card,
 body.light-mode .bg-panel,
-body.light-mode .dash-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(226, 232, 240, 0.9) !important;
-    box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.06), 0 4px 10px -2px rgba(15, 23, 42, 0.03) !important;
-    border-radius: 16px !important;
-    backdrop-filter: none !important; /* Remove blur to keep it sharp and clean */
+body.light-mode .dash-card,
+body.light-mode .card,
+body.light-mode .dg-glass-card {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 14px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-/* 3. Deep Text Gradient for Main Headings */
-body.light-mode h2, 
-body.light-mode h3, 
+/* 3. Deep Razor-Sharp Text for Main Headings */
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3,
+body.light-mode h4,
+body.light-mode h5,
 body.light-mode .page-header h2 {
-    color: #0f172a !important;
-    text-shadow: none !important;
-    letter-spacing: -0.5px !important;
+  color: #111827 !important;
+  text-shadow: none !important;
+  letter-spacing: -0.3px !important;
+  font-weight: 800 !important;
 }
 
 body.light-mode h6 {
-    color: #475569 !important;
-    font-weight: 800 !important;
+  color: #1f2937 !important;
+  font-weight: 700 !important;
 }
 
-/* 4. Elegant Inputs and Search boxes */
+/* 4. High-Contrast Base Typography Overrides */
+body.light-mode *,
+[data-theme="light"] * {
+  text-shadow: none !important;
+}
+
+body.light-mode .text-muted,
+[data-theme="light"] .text-muted {
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+
+body.light-mode .text-dim,
+[data-theme="light"] .text-dim {
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+
+body.light-mode .text-main,
+[data-theme="light"] .text-main {
+  color: #111827 !important;
+  font-weight: 700 !important;
+}
+
+/* 5. Water Management Ribbons & Tiles */
+.wm-telemetry-ribbon {
+  background: rgba(11, 19, 36, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wm-stat-tile {
+  background: rgba(11, 19, 36, 0.95);
+}
+
+.wm-stat-val {
+  color: #ffffff;
+}
+
+body.light-mode .wm-telemetry-ribbon,
+[data-theme="light"] .wm-telemetry-ribbon {
+  background: #e2e2e2 !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .wm-telemetry-ribbon span,
+[data-theme="light"] .wm-telemetry-ribbon span {
+  color: #111827 !important;
+}
+
+body.light-mode .wm-telemetry-ribbon [class*="col"] {
+  border-left-color: #bebebe !important;
+}
+
+body.light-mode .wm-stat-tile,
+[data-theme="light"] .wm-stat-tile {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .wm-stat-val,
+[data-theme="light"] .wm-stat-val {
+  color: #111827 !important;
+}
+
+/* 6. AC Module Empty State Theme Styling */
+.ac-empty-state-card {
+  background: linear-gradient(135deg, rgba(14, 22, 42, 0.85) 0%, rgba(10, 18, 35, 0.92) 100%);
+  border: 1.5px dashed rgba(56, 189, 248, 0.28);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.ac-empty-title {
+  color: #ffffff;
+}
+
+.ac-empty-desc {
+  color: #94a3b8;
+}
+
+body.light-mode .ac-empty-state-card,
+[data-theme="light"] .ac-empty-state-card {
+  background: #ffffff !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-mode .ac-empty-title,
+[data-theme="light"] .ac-empty-title {
+  color: #0f172a !important;
+}
+
+body.light-mode .ac-empty-desc,
+[data-theme="light"] .ac-empty-desc {
+  color: #334155 !important;
+}
+
+/* 7. Elegant Inputs and Search boxes */
 body.light-mode .premium-input,
 body.light-mode .form-control {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #0f172a !important;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02) !important;
 }
+
 body.light-mode .premium-input:focus,
 body.light-mode .form-control:focus {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15) !important;
 }
 
 /* 5. Fix internal dark boxes (like the ones in panels) to look like soft inner cards */
 body.light-mode .bg-dark.bg-opacity-50,
 body.light-mode .bg-dark.bg-opacity-20,
 body.light-mode .bg-black.bg-opacity-30 {
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 /* 6. Fix bright borders (border-secondary etc) to be soft gray */
 body.light-mode .border-secondary.border-opacity-10,
 body.light-mode .border-white.border-opacity-5 {
-    border-color: #e2e8f0 !important;
+  border-color: #e2e8f0 !important;
 }
 
 /* 7. Enhance DataBox labels (make them pop slightly in light mode) */
 body.light-mode .data-box-label {
-    background: #334155 !important;
-    border-radius: 4px 0 0 4px !important;
+  background: #334155 !important;
+  border-radius: 4px 0 0 4px !important;
 }
+
 body.light-mode .data-box-value {
-    border-radius: 0 4px 4px 0 !important;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
-    border: 1px solid #e2e8f0 !important;
-    border-left: none !important;
+  border-radius: 0 4px 4px 0 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: none !important;
 }
 
 
@@ -2024,11 +2497,11 @@ body.light-mode .data-box-value {
 
 /* Remove dark text-shadows from colored text/arcs that look dirty on white backgrounds */
 body.light-mode .current-temp {
-    text-shadow: none !important;
+  text-shadow: none !important;
 }
 
 body.light-mode .VRV-dial-svg {
-    filter: none !important;
+  filter: none !important;
 }
 
 /* Fix any generic text-glows that use dark shadows */
@@ -2041,14 +2514,15 @@ body.light-mode .glow-text-info,
 body.light-mode .glow-text-warning,
 body.light-mode .glow-text-success,
 body.light-mode .glow-text-danger {
-    text-shadow: none !important;
-    filter: none !important;
+  text-shadow: none !important;
+  filter: none !important;
 }
 
 /* For SVG filters causing dirty shadows in light mode (e.g. TempHumidity gauge) */
 body.light-mode svg filter#shadow feDropShadow,
 body.light-mode svg filter#glow feDropShadow {
-    flood-opacity: 0.1 !important; /* Make shadows very faint in light mode if they can't be removed */
+  flood-opacity: 0.1 !important;
+  /* Make shadows very faint in light mode if they can't be removed */
 }
 
 
@@ -2057,8 +2531,8 @@ body.light-mode svg filter#glow feDropShadow {
    ========================================================= */
 
 /* Core layout elements transition smoothly */
-body, 
-#root > div,
+body,
+#root>div,
 .min-vh-100,
 .vh-100,
 .dashboard-wrapper,
@@ -2074,28 +2548,40 @@ body,
 .table-responsive,
 .data-box-label,
 .data-box-value {
-    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
-                background 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
-                box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Typography transitions smoothly */
-body h1, body h2, body h3, body h4, body h5, body h6, body p, body th, body td {
-    transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.4s ease !important;
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6,
+body p,
+body th,
+body td {
+  transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.4s ease !important;
 }
 
 /* Specific background utilities used for cards/panels */
-.bg-black, .bg-dark, .bg-white, .bg-transparent {
-    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.bg-black,
+.bg-dark,
+.bg-white,
+.bg-transparent {
+  transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Theme Toggle Button smooth spin animation */
 .theme-toggle-btn svg {
-    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease !important;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease !important;
 }
+
 .theme-toggle-btn:active svg {
-    transform: rotate(180deg) scale(0.8) !important;
+  transform: rotate(180deg) scale(0.8) !important;
 }
 
 
@@ -2108,7 +2594,7 @@ body h1, body h2, body h3, body h4, body h5, body h6, body p, body th, body td {
 body.light-mode .sidebar-brand img,
 body.light-mode img[alt="Sochiot"],
 body.light-mode img[alt="Company Logo"] {
-    filter: invert(1) hue-rotate(180deg) brightness(1.2) contrast(1.2) !important;
+  filter: invert(1) hue-rotate(180deg) brightness(1.2) contrast(1.2) !important;
 }
 
 
@@ -2118,15 +2604,15 @@ body.light-mode img[alt="Company Logo"] {
 
 /* Place the white/blue dark-mode logo inside a beautiful premium dark badge */
 body.light-mode img[src*="logo.png"] {
-    background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%) !important;
-    padding: 10px 20px !important;
-    border-radius: 14px !important;
-    box-shadow: 0 8px 25px -5px rgba(15, 23, 42, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(10px) !important;
-    
-    /* Ensure the image scales correctly within its new padding */
-    object-fit: contain !important;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%) !important;
+  padding: 10px 20px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 25px -5px rgba(15, 23, 42, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
+
+  /* Ensure the image scales correctly within its new padding */
+  object-fit: contain !important;
 }
 
 
@@ -2142,16 +2628,16 @@ body.light-mode .bg-panel,
 body.light-mode .VRV-room-card,
 body.light-mode .login-form-container,
 body.light-mode .scada-data-box {
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
-    border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 /* On hover, soft soothing lift for interactive elements */
 body.light-mode .card:hover,
 body.light-mode .scada-card:hover,
 body.light-mode .VRV-room-card:hover {
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
-    transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+  transform: translateY(-2px);
 }
 
 /* =========================================================
@@ -2163,6 +2649,7 @@ body.light-mode .VRV-room-card:hover {
     opacity: 0;
     transform: translateY(-20px) scale(0.92);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -2228,7 +2715,7 @@ body.light-mode .toast-popup-danger .toast-text {
 }
 
 .device-action-btn:hover {
-  background: var(--_hover-bg, rgba(148,163,184,0.12));
+  background: var(--_hover-bg, rgba(148, 163, 184, 0.12));
   color: var(--_icon-color, #94a3b8);
   transform: translateY(-1px);
 }
@@ -2250,8 +2737,9 @@ body.light-mode .toast-popup-danger .toast-text {
 body.light-mode .device-action-btn {
   color: var(--_icon-color, #64748b);
 }
+
 body.light-mode .device-action-btn:hover {
-  background: var(--_hover-bg, rgba(100,116,139,0.1));
+  background: var(--_hover-bg, rgba(100, 116, 139, 0.1));
 }
 
 /* ── Global Dark Mode Modals, Cards & Components ─────────────────────────── */
@@ -2558,19 +3046,24 @@ body.light-mode .offcanvas-body {
   0% {
     box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 8px rgba(52, 211, 153, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
   }
 }
 
 @keyframes pulseAlarm {
-  0%, 100% {
+
+  0%,
+  100% {
     border-color: rgba(239, 68, 68, 0.4);
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
   }
+
   50% {
     border-color: rgba(239, 68, 68, 0.85);
     box-shadow: 0 0 25px rgba(239, 68, 68, 0.45);
@@ -2602,11 +3095,25 @@ body.light-mode .offcanvas-body {
   transition: all 0.3s ease;
 }
 
-.site-kpi-card-compact.kpi-total::before { background: linear-gradient(90deg, #38bdf8, #818cf8); }
-.site-kpi-card-compact.kpi-operational::before { background: linear-gradient(90deg, #10b981, #34d399); }
-.site-kpi-card-compact.kpi-alarm::before { background: linear-gradient(90deg, #ef4444, #f87171); }
-.site-kpi-card-compact.kpi-devices::before { background: linear-gradient(90deg, #0284c7, #38bdf8); }
-.site-kpi-card-compact.kpi-energy::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.site-kpi-card-compact.kpi-total::before {
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+}
+
+.site-kpi-card-compact.kpi-operational::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.site-kpi-card-compact.kpi-alarm::before {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.site-kpi-card-compact.kpi-devices::before {
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+}
+
+.site-kpi-card-compact.kpi-energy::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
 
 .site-kpi-card-compact:hover {
   transform: translateY(-3px);
@@ -3012,6 +3519,7 @@ body.light-mode .offcanvas-body {
     opacity: 0;
     transform: translateY(-2px) scale(0.98);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -3563,6 +4071,7 @@ body.light-mode .scada-schematic-bg text,
   -webkit-appearance: none !important;
   margin: 0 !important;
 }
+
 .scada-limit-input[type=number] {
   -moz-appearance: textfield !important;
 }
@@ -3673,60 +4182,141 @@ body.light-mode .table td .text-heading {
    ======================================================== */
 
 /* --- Subtle Backgrounds (Dark Mode) --- */
-body:not(.light-mode) .bg-primary-subtle   { background-color: rgba(59, 130, 246, 0.15) !important; }
-body:not(.light-mode) .bg-success-subtle   { background-color: rgba(34, 197, 94, 0.15) !important; }
-body:not(.light-mode) .bg-danger-subtle    { background-color: rgba(239, 68, 68, 0.15) !important; }
-body:not(.light-mode) .bg-warning-subtle   { background-color: rgba(245, 158, 11, 0.15) !important; }
-body:not(.light-mode) .bg-secondary-subtle { background-color: rgba(148, 163, 184, 0.15) !important; }
-body:not(.light-mode) .bg-info-subtle      { background-color: rgba(56, 189, 248, 0.15) !important; }
+body:not(.light-mode) .bg-primary-subtle {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+body:not(.light-mode) .bg-success-subtle {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+body:not(.light-mode) .bg-danger-subtle {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+body:not(.light-mode) .bg-warning-subtle {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+body:not(.light-mode) .bg-secondary-subtle {
+  background-color: rgba(148, 163, 184, 0.15) !important;
+}
+
+body:not(.light-mode) .bg-info-subtle {
+  background-color: rgba(56, 189, 248, 0.15) !important;
+}
 
 /* --- Contextual Text Colors (Dark Mode - High Specificity) --- */
-body:not(.light-mode) .text-primary   { color: #60a5fa !important; }
-body:not(.light-mode) .text-success   { color: #4ade80 !important; }
-body:not(.light-mode) .text-danger    { color: #f87171 !important; }
-body:not(.light-mode) .text-warning   { color: #fbbf24 !important; }
-body:not(.light-mode) .text-secondary { color: #94a3b8 !important; }
-body:not(.light-mode) .text-info      { color: #38bdf8 !important; }
-body:not(.light-mode) .text-warning-emphasis { color: #fbbf24 !important; }
+body:not(.light-mode) .text-primary {
+  color: #60a5fa !important;
+}
+
+body:not(.light-mode) .text-success {
+  color: #4ade80 !important;
+}
+
+body:not(.light-mode) .text-danger {
+  color: #f87171 !important;
+}
+
+body:not(.light-mode) .text-warning {
+  color: #fbbf24 !important;
+}
+
+body:not(.light-mode) .text-secondary {
+  color: #94a3b8 !important;
+}
+
+body:not(.light-mode) .text-info {
+  color: #38bdf8 !important;
+}
+
+body:not(.light-mode) .text-warning-emphasis {
+  color: #fbbf24 !important;
+}
 
 /* --- Inside table td specifically (even higher specificity) --- */
 body:not(.light-mode) .table td .text-primary,
-body:not(.light-mode) .table-custom td .text-primary   { color: #60a5fa !important; }
+body:not(.light-mode) .table-custom td .text-primary {
+  color: #60a5fa !important;
+}
+
 body:not(.light-mode) .table td .text-success,
-body:not(.light-mode) .table-custom td .text-success   { color: #4ade80 !important; }
+body:not(.light-mode) .table-custom td .text-success {
+  color: #4ade80 !important;
+}
+
 body:not(.light-mode) .table td .text-danger,
-body:not(.light-mode) .table-custom td .text-danger    { color: #f87171 !important; }
+body:not(.light-mode) .table-custom td .text-danger {
+  color: #f87171 !important;
+}
+
 body:not(.light-mode) .table td .text-warning,
-body:not(.light-mode) .table-custom td .text-warning   { color: #fbbf24 !important; }
+body:not(.light-mode) .table-custom td .text-warning {
+  color: #fbbf24 !important;
+}
+
 body:not(.light-mode) .table td .text-secondary,
-body:not(.light-mode) .table-custom td .text-secondary { color: #94a3b8 !important; }
+body:not(.light-mode) .table-custom td .text-secondary {
+  color: #94a3b8 !important;
+}
+
 body:not(.light-mode) .table td .text-info,
-body:not(.light-mode) .table-custom td .text-info      { color: #38bdf8 !important; }
+body:not(.light-mode) .table-custom td .text-info {
+  color: #38bdf8 !important;
+}
+
 body:not(.light-mode) .table td .text-warning-emphasis,
-body:not(.light-mode) .table-custom td .text-warning-emphasis { color: #fbbf24 !important; }
+body:not(.light-mode) .table-custom td .text-warning-emphasis {
+  color: #fbbf24 !important;
+}
 
 /* --- Inside table th specifically (header icons) --- */
 body:not(.light-mode) .table th .text-primary,
-body:not(.light-mode) .table-custom th .text-primary   { color: #60a5fa !important; }
+body:not(.light-mode) .table-custom th .text-primary {
+  color: #60a5fa !important;
+}
 
 /* --- LIGHT MODE: Contextual colors in tables --- */
 body.light-mode .table td .text-primary,
-body.light-mode .table-custom td .text-primary   { color: #2563eb !important; }
+body.light-mode .table-custom td .text-primary {
+  color: #2563eb !important;
+}
+
 body.light-mode .table td .text-success,
-body.light-mode .table-custom td .text-success   { color: #16a34a !important; }
+body.light-mode .table-custom td .text-success {
+  color: #16a34a !important;
+}
+
 body.light-mode .table td .text-danger,
-body.light-mode .table-custom td .text-danger    { color: #dc2626 !important; }
+body.light-mode .table-custom td .text-danger {
+  color: #dc2626 !important;
+}
+
 body.light-mode .table td .text-warning,
-body.light-mode .table-custom td .text-warning   { color: #d97706 !important; }
+body.light-mode .table-custom td .text-warning {
+  color: #d97706 !important;
+}
+
 body.light-mode .table td .text-secondary,
-body.light-mode .table-custom td .text-secondary { color: #64748b !important; }
+body.light-mode .table-custom td .text-secondary {
+  color: #64748b !important;
+}
+
 body.light-mode .table td .text-info,
-body.light-mode .table-custom td .text-info      { color: #0284c7 !important; }
+body.light-mode .table-custom td .text-info {
+  color: #0284c7 !important;
+}
+
 body.light-mode .table td .text-warning-emphasis,
-body.light-mode .table-custom td .text-warning-emphasis { color: #92400e !important; }
+body.light-mode .table-custom td .text-warning-emphasis {
+  color: #92400e !important;
+}
 
 body.light-mode .table th .text-primary,
-body.light-mode .table-custom th .text-primary   { color: #2563eb !important; }
+body.light-mode .table-custom th .text-primary {
+  color: #2563eb !important;
+}
 
 /* ========================================================
    Protect header-icon-box and cell-icon-badge elements
@@ -3754,6 +4344,7 @@ body:not(.light-mode) .table td .status-pill.text-success,
 body:not(.light-mode) .table-custom td .status-pill.text-success {
   color: #4ade80 !important;
 }
+
 body:not(.light-mode) .table td .status-pill.text-secondary,
 body:not(.light-mode) .table-custom td .status-pill.text-secondary {
   color: #94a3b8 !important;
@@ -3763,6 +4354,7 @@ body.light-mode .table td .status-pill.text-success,
 body.light-mode .table-custom td .status-pill.text-success {
   color: #16a34a !important;
 }
+
 body.light-mode .table td .status-pill.text-secondary,
 body.light-mode .table-custom td .status-pill.text-secondary {
   color: #64748b !important;
@@ -3781,10 +4373,21 @@ body.light-mode .table-custom td .badge.bg-warning-subtle {
 }
 
 /* Status dot circles - ensure their bg color is preserved */
-.table td .rounded-circle.bg-success { background-color: #22c55e !important; }
-.table td .rounded-circle.bg-secondary { background-color: #94a3b8 !important; }
-.table-custom td .rounded-circle.bg-success { background-color: #22c55e !important; }
-.table-custom td .rounded-circle.bg-secondary { background-color: #94a3b8 !important; }
+.table td .rounded-circle.bg-success {
+  background-color: #22c55e !important;
+}
+
+.table td .rounded-circle.bg-secondary {
+  background-color: #94a3b8 !important;
+}
+
+.table-custom td .rounded-circle.bg-success {
+  background-color: #22c55e !important;
+}
+
+.table-custom td .rounded-circle.bg-secondary {
+  background-color: #94a3b8 !important;
+}
 
 body.light-mode .scada-modal-title,
 [data-theme="light"] .scada-modal-title {
@@ -4067,11 +4670,11 @@ body.light-mode .scada-policy-footer span,
    Universal Light Mode Enhancements for Crisp Text & Icons
    ======================================================== */
 
-body.light-mode h1, 
-body.light-mode h2, 
-body.light-mode h3, 
-body.light-mode h4, 
-body.light-mode h5, 
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3,
+body.light-mode h4,
+body.light-mode h5,
 body.light-mode h6,
 body.light-mode .card-title,
 body.light-mode .page-title,
@@ -4088,6 +4691,7 @@ body.light-mode .text-secondary {
 body.light-mode a {
   color: var(--primary);
 }
+
 body.light-mode a:hover {
   color: var(--primary-hover);
 }
@@ -4097,6 +4701,7 @@ body.light-mode .btn-primary {
   border-color: var(--primary) !important;
   color: #ffffff !important;
 }
+
 body.light-mode .btn-primary:hover,
 body.light-mode .btn-primary:focus,
 body.light-mode .btn-primary:active {
@@ -4111,6 +4716,7 @@ body.light-mode .form-select {
   color: var(--text-primary) !important;
   border-color: var(--border) !important;
 }
+
 body.light-mode .form-control:focus,
 body.light-mode .form-select:focus {
   border-color: var(--primary) !important;
@@ -4141,26 +4747,31 @@ body.light-mode .kpi-card-blue {
   background-color: var(--card-blue) !important;
   border-color: rgba(6, 159, 240, 0.25) !important;
 }
+
 body.light-mode .card-pastel-green,
 body.light-mode .kpi-card-green {
   background-color: var(--card-green) !important;
   border-color: rgba(22, 185, 120, 0.25) !important;
 }
+
 body.light-mode .card-pastel-purple,
 body.light-mode .kpi-card-purple {
   background-color: var(--card-purple) !important;
   border-color: rgba(109, 92, 231, 0.25) !important;
 }
+
 body.light-mode .card-pastel-yellow,
 body.light-mode .kpi-card-yellow {
   background-color: var(--card-yellow) !important;
   border-color: rgba(245, 158, 11, 0.25) !important;
 }
+
 body.light-mode .card-pastel-cyan,
 body.light-mode .kpi-card-cyan {
   background-color: var(--card-cyan) !important;
   border-color: rgba(6, 199, 245, 0.25) !important;
 }
+
 body.light-mode .card-pastel-red,
 body.light-mode .kpi-card-red {
   background-color: var(--card-red) !important;
@@ -4174,7 +4785,7 @@ body.light-mode thead th * {
 }
 
 /* Override hardcoded text-white in light mode unless inside filled badges/buttons/table headers */
-body.light-mode :not(.btn):not(.badge):not(thead):not(th):not([class*="bg-primary"]):not([class*="bg-danger"]):not([class*="bg-success"]):not([class*="bg-dark"]):not([class*="bg-secondary"]) > .text-white,
+body.light-mode :not(.btn):not(.badge):not(thead):not(th):not([class*="bg-primary"]):not([class*="bg-danger"]):not([class*="bg-success"]):not([class*="bg-dark"]):not([class*="bg-secondary"])>.text-white,
 body.light-mode h1.text-white,
 body.light-mode h2.text-white,
 body.light-mode h3.text-white,
@@ -4185,5 +4796,3 @@ body.light-mode p.text-white,
 body.light-mode td .text-white {
   color: var(--text-primary) !important;
 }
-
-

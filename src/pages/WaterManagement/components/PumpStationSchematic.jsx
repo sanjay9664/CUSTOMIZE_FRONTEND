@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Droplets } from 'lucide-react';
+import { useTheme } from '../../../hooks/useTheme';
 
 /**
  * PumpStationSchematic - SVG SCADA Digital Twin Visualization
@@ -20,6 +21,7 @@ const PumpStationSchematic = ({
   onOpenPumpSettings,
   onOpenLimitSettings
 }) => {
+  const { isDark } = useTheme();
   const masterPressureNum = typeof masterPressure === 'number' ? masterPressure : parseFloat(masterPressure) || 0.0;
 
   // 1. FILTER ONLY MAPPED RESERVOIRS
@@ -172,16 +174,16 @@ const PumpStationSchematic = ({
         </defs>
 
         {/* Canvas Background Grid */}
-        <rect width="100%" height="100%" fill="url(#scadaGrid)" />
+        <rect width="100%" height="100%" fill={isDark ? "url(#scadaGrid)" : "transparent"} />
 
         {/* Top Header Labels */}
-        <text x="60" y="26" fill="#f59e0b" fontSize="12" fontWeight="900" letterSpacing="0.8">
+        <text x="60" y="26" fill={isDark ? "#f59e0b" : "#b45309"} fontSize="12" fontWeight="900" letterSpacing="0.8">
           INLET RESERVOIRS ({mappedTanks.length})
         </text>
-        <text x="560" y="26" fill="#94a3b8" fontSize="12" fontWeight="900" letterSpacing="0.8">
+        <text x="560" y="26" fill={isDark ? "#94a3b8" : "#475569"} fontSize="12" fontWeight="900" letterSpacing="0.8">
           MAIN MANIFOLD SYSTEM ({mappedPumps.length} PUMPS)
         </text>
-        <text x="950" y="26" fill="#38bdf8" fontSize="12" fontWeight="900" letterSpacing="0.8">
+        <text x="950" y="26" fill={isDark ? "#38bdf8" : "#0284c7"} fontSize="12" fontWeight="900" letterSpacing="0.8">
           PUMP PRESSURE GAUGES
         </text>
 
@@ -202,10 +204,10 @@ const PumpStationSchematic = ({
                 width="168"
                 height="86"
                 rx="8"
-                fill="#07111e"
-                stroke={hasLevel ? "#0284c7" : "#1e293b"}
+                fill={isDark ? "#07111e" : "#f8fafc"}
+                stroke={hasLevel ? "#0284c7" : (isDark ? "#1e293b" : "#cbd5e1")}
                 strokeWidth="2.5"
-                style={{ filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))' }}
+                style={{ filter: isDark ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.1))' }}
               />
 
               {/* Metallic Top Lip */}
@@ -238,10 +240,10 @@ const PumpStationSchematic = ({
                     x="84"
                     y="52"
                     textAnchor="middle"
-                    fill="#ffffff"
+                    fill={isDark ? "#ffffff" : "#0f172a"}
                     fontSize="28"
                     fontWeight="900"
-                    filter="url(#liquidGlow)"
+                    filter={isDark ? "url(#liquidGlow)" : undefined}
                   >
                     {levelVal}%
                   </text>
@@ -251,7 +253,7 @@ const PumpStationSchematic = ({
                       x="84"
                       y="45"
                       textAnchor="middle"
-                      fill="#475569"
+                      fill={isDark ? "#475569" : "#64748b"}
                       fontSize="11"
                       fontWeight="800"
                       letterSpacing="1.5"
@@ -262,7 +264,7 @@ const PumpStationSchematic = ({
                       x="84"
                       y="62"
                       textAnchor="middle"
-                      fill="#334155"
+                      fill={isDark ? "#334155" : "#94a3b8"}
                       fontSize="9"
                       fontWeight="700"
                     >
@@ -277,7 +279,7 @@ const PumpStationSchematic = ({
                 x="84"
                 y="104"
                 textAnchor="middle"
-                fill="#cbd5e1"
+                fill={isDark ? "#cbd5e1" : "#1e293b"}
                 fontSize="10"
                 fontWeight="800"
                 letterSpacing="0.5"
@@ -389,7 +391,7 @@ const PumpStationSchematic = ({
                 style={{ cursor: 'pointer' }}
                 title={`Click to inspect ${p.name || `PUMP P${i + 1}`}`}
               >
-                <circle r="24" fill="#0b1322" stroke={active ? "#22c55e" : "#334155"} strokeWidth="3" />
+                <circle r="24" fill={isDark ? "#0b1322" : "#f8fafc"} stroke={active ? "#22c55e" : (isDark ? "#334155" : "#cbd5e1")} strokeWidth="3" />
                 {active && (
                   <circle r="29" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="8,6" opacity="0.9">
                     <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="3s" repeatCount="indefinite" />
@@ -400,7 +402,7 @@ const PumpStationSchematic = ({
                   x="-10"
                   y="-10"
                   className={active ? "text-success" : "text-secondary"}
-                  style={{ color: active ? '#4ade80' : '#64748b' }}
+                  style={{ color: active ? '#16a34a' : '#64748b' }}
                 />
               </g>
 
@@ -419,25 +421,25 @@ const PumpStationSchematic = ({
                   width="196"
                   height="54"
                   rx="7"
-                  fill="#0c1527"
-                  stroke={active ? "#22c55e" : "#1e293b"}
+                  fill={isDark ? "#0c1527" : "#f8fafc"}
+                  stroke={active ? "#22c55e" : (isDark ? "#1e293b" : "#cbd5e1")}
                   strokeWidth="1.8"
-                  style={{ filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.5))' }}
+                  style={{ filter: isDark ? 'drop-shadow(0 3px 8px rgba(0,0,0,0.5))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.08))' }}
                 />
 
                 {/* Floating Online/Offline Pill */}
                 <g transform="translate(10, -7)">
-                  <rect width="46" height="14" rx="4" fill="#0f172a" stroke={p.isOnline ? "#22c55e" : "#ef4444"} strokeWidth="1" />
+                  <rect width="46" height="14" rx="4" fill={isDark ? "#0f172a" : (p.isOnline ? "#ecfdf5" : "#fef2f2")} stroke={p.isOnline ? "#22c55e" : "#ef4444"} strokeWidth="1" />
                   <circle cx="7" cy="7" r="2.5" fill={p.isOnline ? "#22c55e" : "#ef4444"} />
-                  <text x="14" y="10" fill={p.isOnline ? "#22c55e" : "#ef4444"} fontSize="7.5" fontWeight="900" letterSpacing="0.3">
+                  <text x="14" y="10" fill={p.isOnline ? (isDark ? "#22c55e" : "#15803d") : (isDark ? "#ef4444" : "#b91c1c")} fontSize="7.5" fontWeight="900" letterSpacing="0.3">
                     {p.isOnline ? "ONLINE" : "OFFLINE"}
                   </text>
                 </g>
 
                 {/* Pump Label & Amps */}
-                <text x="12" y="22" fill="#ffffff" fontSize="12" fontWeight="bold">
+                <text x="12" y="22" fill={isDark ? "#ffffff" : "#0f172a"} fontSize="12" fontWeight="bold">
                   {p.name || `PUMP P${i + 1}`}
-                  <tspan fill="#f59e0b" fontSize="12.5" fontWeight="900" dx="6">
+                  <tspan fill={isDark ? "#f59e0b" : "#b45309"} fontSize="12.5" fontWeight="900" dx="6">
                     | {ampVal} A
                   </tspan>
                 </text>
@@ -446,13 +448,13 @@ const PumpStationSchematic = ({
                 <text
                   x="12"
                   y="42"
-                  fill={active ? "#22c55e" : "#64748b"}
+                  fill={active ? (isDark ? "#22c55e" : "#16a34a") : (isDark ? "#64748b" : "#64748b")}
                   fontSize={active ? "13.5" : "12.5"}
                   fontWeight="900"
-                  filter={active ? "url(#liquidGlow)" : "none"}
+                  filter={isDark && active ? "url(#liquidGlow)" : "none"}
                 >
                   {active ? "RUNNING" : "STOPPED"}
-                  <tspan fill="#38bdf8" fontSize="10.5" fontWeight="800" dx="6">
+                  <tspan fill={isDark ? "#38bdf8" : "#0284c7"} fontSize="10.5" fontWeight="800" dx="6">
                     | {p.mode || 'AUTO'}
                   </tspan>
                 </text>
@@ -558,10 +560,10 @@ const PumpStationSchematic = ({
                 <text
                   x="0"
                   y="-5"
-                  fill="#ffffff"
+                  fill={isDark ? "#ffffff" : "#0f172a"}
                   fontSize={mappedPumps.length <= 3 ? "18" : "15"}
                   fontWeight="900"
-                  filter="url(#liquidGlow)"
+                  filter={isDark ? "url(#liquidGlow)" : undefined}
                 >
                   {pumpPressure.toFixed(1)} BAR
                 </text>
@@ -570,7 +572,7 @@ const PumpStationSchematic = ({
                 <text
                   x="0"
                   y="12"
-                  fill="#38bdf8"
+                  fill={isDark ? "#38bdf8" : "#0284c7"}
                   fontSize={mappedPumps.length <= 3 ? "11" : "9.5"}
                   fontWeight="800"
                   letterSpacing="0.4"
@@ -582,7 +584,7 @@ const PumpStationSchematic = ({
                 <text
                   x="0"
                   y="26"
-                  fill={active ? "#4ade80" : "#64748b"}
+                  fill={active ? (isDark ? "#4ade80" : "#16a34a") : (isDark ? "#64748b" : "#64748b")}
                   fontSize="9"
                   fontWeight="800"
                 >
@@ -616,7 +618,7 @@ const PumpStationSchematic = ({
             stroke="#38bdf8"
             strokeWidth="9"
             strokeDasharray="30,20"
-            filter="url(#liquidGlow)"
+            filter={isDark ? "url(#liquidGlow)" : undefined}
           >
             <animate attributeName="stroke-dashoffset" from="50" to="0" dur="1s" repeatCount="indefinite" />
           </path>
@@ -624,10 +626,10 @@ const PumpStationSchematic = ({
 
         {/* ── 5. SYSTEM HEADER PRESSURE SUMMARY BADGE & ROOFTOP NETWORK BANNER ── */}
         <g transform="translate(770, 468)">
-          <rect width="170" height="24" rx="5" fill="#0f172a" stroke="#0284c7" strokeWidth="1.2" opacity="0.9" />
-          <text x="10" y="16" fill="#94a3b8" fontSize="10" fontWeight="800">
+          <rect width="170" height="24" rx="5" fill={isDark ? "#0f172a" : "#f8fafc"} stroke={isDark ? "#0284c7" : "#38bdf8"} strokeWidth="1.2" opacity="0.95" />
+          <text x="10" y="16" fill={isDark ? "#94a3b8" : "#475569"} fontSize="10" fontWeight="800">
             MAIN HEADER:
-            <tspan fill="#38bdf8" fontSize="12" fontWeight="900" dx="6">
+            <tspan fill={isDark ? "#38bdf8" : "#0284c7"} fontSize="12" fontWeight="900" dx="6">
               {masterPressureNum.toFixed(1)} BAR
             </tspan>
           </text>
@@ -637,10 +639,10 @@ const PumpStationSchematic = ({
           x="1128"
           y="468"
           textAnchor="end"
-          fill="#38bdf8"
+          fill={isDark ? "#38bdf8" : "#0284c7"}
           fontSize="16"
           fontWeight="900"
-          filter="url(#liquidGlow)"
+          filter={isDark ? "url(#liquidGlow)" : undefined}
           letterSpacing="0.6"
         >
           ➤ DIRECT TO ROOFTOP NETWORK

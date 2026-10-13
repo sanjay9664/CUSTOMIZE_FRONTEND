@@ -262,20 +262,20 @@ const SolarDashboard = ({
       progressGrad: 'linear-gradient(90deg, #a855f7, #d946ef)'
     }
     : {
-      bg: '#E8EDF3',
-      panelBg: '#FFFFFF',
-      cardBg: '#FFFFFF',
-      border: '#C8D3DE',
-      text: '#1E293B',
-      heading: '#0F3A66',
-      muted: '#475569',
+      bg: '#F2F2F2',
+      panelBg: '#E5E5E5',
+      cardBg: '#ECECEC',
+      border: '#BEBEBE',
+      text: '#111827',
+      heading: '#111827',
+      muted: '#374151',
       accent: '#0284C7',
-      green: '#10B981',
+      green: '#15803D',
       blue: '#0284C7',
       red: '#DC2626',
       purple: '#6D5CE7',
-      yellow: '#D97706',
-      shadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+      yellow: '#B45309',
+      shadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
       progressGrad: 'linear-gradient(90deg, #0284C7, #0891B2)'
     };
 

@@ -23,6 +23,27 @@
   --acms-text-dim: #64748B;
 }
 
+body.light-mode,
+[data-theme="light"] {
+  --acms-bg-base: #F2F2F2;
+  --acms-bg-surface: #e5e5e5;
+  --acms-bg-card: #ececec;
+  --acms-bg-card-hover: #f0f0f0;
+  --acms-border: #bebebe;
+  --acms-border-focus: rgba(239, 51, 64, 0.5);
+  --acms-red: #dc2626;
+  --acms-red-bright: #ef4444;
+  --acms-red-glow: rgba(220, 38, 38, 0.15);
+  --acms-cyan: #0284c7;
+  --acms-blue: #0284c7;
+  --acms-green: #15803d;
+  --acms-amber: #b45309;
+  --acms-purple: #6d5ce7;
+  --acms-text-main: #111827;
+  --acms-text-muted: #374151;
+  --acms-text-dim: #4b5563;
+}
+
 .acms-main {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--acms-bg-base);
@@ -75,26 +96,36 @@
   background: #0B1220;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
-  padding: 5px;
+  padding: 4px 6px;
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.acms-tabs-bar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .acms-tab-btn {
   background: transparent;
   border: 1px solid transparent;
   color: var(--acms-text-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 8px 14px;
+  padding: 6px 10px;
   border-radius: 8px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
+  gap: 6px;
   white-space: nowrap;
+  flex: 1 1 auto;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   text-decoration: none;
@@ -133,11 +164,12 @@
 .acms-tab-btn .item-count-badge {
   background: rgba(255, 255, 255, 0.08);
   color: var(--acms-text-muted);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 1.5px 6px;
   border-radius: 999px;
-  margin-left: 2px;
+  margin-left: 4px;
+  letter-spacing: 0.02em;
 }
 
 .acms-tab-btn.active .item-count-badge {
@@ -280,13 +312,31 @@
 }
 
 @keyframes acmsPulseGreen {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
 }
 
 @keyframes acmsPulseRed {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
 }
 
 /* ── Main Dashboard 3-Column Cards Grid ── */
@@ -309,6 +359,7 @@
 }
 
 @media (max-width: 1200px) {
+
   .acms-grid-container,
   .acms-grid-container-4col {
     grid-template-columns: repeat(2, 1fr);
@@ -316,6 +367,7 @@
 }
 
 @media (max-width: 768px) {
+
   .acms-grid-container,
   .acms-grid-container-2col,
   .acms-grid-container-4col {
@@ -350,15 +402,19 @@
 .acms-scada-card.border-red-glow {
   border-color: rgba(239, 51, 64, 0.3);
 }
+
 .acms-scada-card.border-amber-glow {
   border-color: rgba(245, 158, 11, 0.3);
 }
+
 .acms-scada-card.border-cyan-glow {
   border-color: rgba(6, 199, 245, 0.3);
 }
+
 .acms-scada-card.border-purple-glow {
   border-color: rgba(109, 92, 231, 0.3);
 }
+
 .acms-scada-card.border-blue-glow {
   border-color: rgba(22, 140, 224, 0.3);
 }
@@ -396,6 +452,7 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
+  margin-right: 6px;
 }
 
 .acms-clause-badge.red {
@@ -745,6 +802,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -758,8 +816,17 @@
 }
 
 @keyframes scadaBlink {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0; transform: scale(1.8); }
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
 }
 
 .scada-blink {
@@ -878,6 +945,7 @@
   from {
     stroke-dashoffset: 48;
   }
+
   to {
     stroke-dashoffset: 0;
   }
@@ -927,8 +995,15 @@
 }
 
 @keyframes fadeInPop {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Horizontal Pressure Gauge */
@@ -988,6 +1063,7 @@
 }
 
 @media (max-width: 600px) {
+
   .acms-hydrant-status-grid,
   .acms-hydrant-status-grid-3col {
     grid-template-columns: 1fr;
@@ -1126,8 +1202,17 @@
 }
 
 @keyframes pulseDotRed {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.8); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
 }
 
 /* Fullscreen / Expanded SCADA Modal */
@@ -1309,9 +1394,20 @@
 
 /* Keyframe Animations */
 @keyframes scadaMistSpray {
-  0% { opacity: 0.3; transform: scaleY(0.7); }
-  50% { opacity: 0.95; transform: scaleY(1.05); }
-  100% { opacity: 0.3; transform: scaleY(0.7); }
+  0% {
+    opacity: 0.3;
+    transform: scaleY(0.7);
+  }
+
+  50% {
+    opacity: 0.95;
+    transform: scaleY(1.05);
+  }
+
+  100% {
+    opacity: 0.3;
+    transform: scaleY(0.7);
+  }
 }
 
 .scada-spray-mist {
@@ -1320,8 +1416,15 @@
 }
 
 @keyframes scadaSoundwave {
-  0% { r: 6; opacity: 0.9; }
-  100% { r: 24; opacity: 0; }
+  0% {
+    r: 6;
+    opacity: 0.9;
+  }
+
+  100% {
+    r: 24;
+    opacity: 0;
+  }
 }
 
 .scada-soundwave-ring {
@@ -1329,8 +1432,13 @@
 }
 
 @keyframes scadaAirflow {
-  0% { stroke-dashoffset: 24; }
-  100% { stroke-dashoffset: 0; }
+  0% {
+    stroke-dashoffset: 24;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
 }
 
 .scada-airflow-flow {
@@ -1339,13 +1447,2091 @@
 }
 
 @keyframes scadaMcpStrobe {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 1; fill: #EF4444; }
+
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 1;
+    fill: #EF4444;
+  }
 }
 
 .scada-mcp-alarm-strobe {
   animation: scadaMcpStrobe 0.6s infinite ease-in-out;
 }
 
+/* =========================================================
+   LIGHT MODE OVERRIDES FOR ACMS (ENTERPRISE SCADA FINISH)
+   ========================================================= */
 
+body.light-mode .acms-main,
+[data-theme="light"] .acms-main {
+  background: #F2F2F2 !important;
+  color: var(--acms-text-main) !important;
+}
 
+body.light-mode .acms-nav-container,
+[data-theme="light"] .acms-nav-container {
+  background: #F2F2F2 !important;
+  border-bottom: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-tabs-bar,
+[data-theme="light"] .acms-tabs-bar {
+  background: #e5e5e5 !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .acms-tab-btn,
+[data-theme="light"] .acms-tab-btn {
+  color: #1f2937 !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .acms-tab-btn:hover,
+[data-theme="light"] .acms-tab-btn:hover {
+  background: #F2F2F2 !important;
+  color: #111827 !important;
+}
+
+body.light-mode .acms-tab-btn.active,
+[data-theme="light"] .acms-tab-btn.active {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2) !important;
+}
+
+body.light-mode .acms-tab-btn.active.blue,
+[data-theme="light"] .acms-tab-btn.active.blue {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2) !important;
+}
+
+body.light-mode .acms-tab-btn.active.cyan,
+[data-theme="light"] .acms-tab-btn.active.cyan {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2) !important;
+}
+
+body.light-mode .acms-tab-btn.active.purple,
+[data-theme="light"] .acms-tab-btn.active.purple {
+  background: #ede9fe !important;
+  color: #6d28d9 !important;
+  border-color: #7c3aed !important;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2) !important;
+}
+
+body.light-mode .acms-kpi-chip,
+[data-theme="light"] .acms-kpi-chip {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  color: #374151 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  backdrop-filter: none !important;
+}
+
+body.light-mode .acms-kpi-chip strong,
+[data-theme="light"] .acms-kpi-chip strong {
+  color: #111827 !important;
+}
+
+body.light-mode .acms-clause-banner,
+[data-theme="light"] .acms-clause-banner {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .acms-clause-banner h5,
+body.light-mode .acms-clause-banner h6,
+[data-theme="light"] .acms-clause-banner h5,
+[data-theme="light"] .acms-clause-banner h6 {
+  color: #111827 !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .acms-clause-banner p,
+[data-theme="light"] .acms-clause-banner p {
+  color: #374151 !important;
+}
+
+body.light-mode .acms-scada-card,
+[data-theme="light"] .acms-scada-card {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: none !important;
+}
+
+body.light-mode .acms-scada-card:hover,
+[data-theme="light"] .acms-scada-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08) !important;
+  border-color: #888888 !important;
+}
+
+body.light-mode .acms-card-top-row h6,
+[data-theme="light"] .acms-card-top-row h6 {
+  color: #111827 !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .acms-clause-badge,
+[data-theme="light"] .acms-clause-badge {
+  background: #dedede !important;
+  color: #1f2937 !important;
+  border: 1px solid #bebebe !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .acms-clause-badge.red,
+[data-theme="light"] .acms-clause-badge.red {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+}
+
+body.light-mode .acms-equip-icon-box,
+[data-theme="light"] .acms-equip-icon-box {
+  background: #dedede !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-water-backdrop,
+[data-theme="light"] .acms-water-backdrop {
+  opacity: 0.1 !important;
+}
+
+body.light-mode .acms-supervision-pill,
+[data-theme="light"] .acms-supervision-pill {
+  background: #dedede !important;
+  color: #1f2937 !important;
+  border: 1px solid #bebebe !important;
+  font-weight: 700 !important;
+}
+
+body.light-mode .acms-telemetry-row,
+[data-theme="light"] .acms-telemetry-row {
+  background: #e2e2e2 !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-telemetry-label,
+[data-theme="light"] .acms-telemetry-label {
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+
+body.light-mode .acms-telemetry-value,
+[data-theme="light"] .acms-telemetry-value {
+  color: #111827 !important;
+  font-weight: 800 !important;
+}
+
+/* ── Light Mode Clause 3(b) Navigation Card & Items ── */
+body.light-mode .acms-hydrant-nav-card,
+[data-theme="light"] .acms-hydrant-nav-card {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .acms-hydrant-nav-item,
+[data-theme="light"] .acms-hydrant-nav-item {
+  background: #dedede !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-hydrant-nav-item .text-white,
+[data-theme="light"] .acms-hydrant-nav-item .text-white {
+  color: #111827 !important;
+}
+
+body.light-mode .acms-hydrant-nav-item:hover,
+[data-theme="light"] .acms-hydrant-nav-item:hover {
+  background: #d6d6d6 !important;
+  border-color: #999999 !important;
+}
+
+body.light-mode .acms-hydrant-nav-item.active,
+[data-theme="light"] .acms-hydrant-nav-item.active {
+  background: linear-gradient(90deg, rgba(239, 51, 64, 0.15) 0%, #dedede 100%) !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.2) !important;
+}
+
+body.light-mode .acms-hydrant-item-num,
+[data-theme="light"] .acms-hydrant-item-num {
+  background: #cfcfcf !important;
+  color: #111827 !important;
+}
+
+body.light-mode .acms-hydrant-nav-item.active .acms-hydrant-item-num,
+[data-theme="light"] .acms-hydrant-nav-item.active .acms-hydrant-item-num {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+/* ── Light Mode Building & SCADA Canvas Cards ── */
+body.light-mode .acms-building-card,
+[data-theme="light"] .acms-building-card {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .acms-building-canvas-card,
+[data-theme="light"] .acms-building-canvas-card {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .acms-card-title,
+[data-theme="light"] .acms-card-title {
+  color: #111827 !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .acms-param-row,
+[data-theme="light"] .acms-param-row {
+  border-bottom-color: #bebebe !important;
+}
+
+body.light-mode .acms-param-label,
+[data-theme="light"] .acms-param-label {
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+
+body.light-mode .acms-param-label svg,
+[data-theme="light"] .acms-param-label svg {
+  color: #4b5563 !important;
+}
+
+body.light-mode .acms-param-value,
+[data-theme="light"] .acms-param-value {
+  color: #111827 !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .acms-param-value.highlight-blue,
+[data-theme="light"] .acms-param-value.highlight-blue,
+body.light-mode .acms-param-value.highlight-cyan,
+[data-theme="light"] .acms-param-value.highlight-cyan {
+  color: #0284c7 !important;
+}
+
+body.light-mode .acms-param-value.highlight-green,
+[data-theme="light"] .acms-param-value.highlight-green {
+  color: #15803d !important;
+}
+
+body.light-mode .acms-param-value.highlight-amber,
+[data-theme="light"] .acms-param-value.highlight-amber {
+  color: #b45309 !important;
+}
+
+body.light-mode .acms-param-value.highlight-red,
+[data-theme="light"] .acms-param-value.highlight-red {
+  color: #dc2626 !important;
+}
+
+/* ── Light Mode Visual Previews (Tanks, Batteries, Panels) ── */
+body.light-mode .acms-tank-preview-box,
+[data-theme="light"] .acms-tank-preview-box {
+  background: #dedede !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .acms-compact-status-card,
+[data-theme="light"] .acms-compact-status-card {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-telemetry-item .label,
+[data-theme="light"] .acms-telemetry-item .label {
+  color: #4b5563 !important;
+}
+
+body.light-mode .acms-telemetry-item .value,
+[data-theme="light"] .acms-telemetry-item .value {
+  color: #111827 !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .acms-pressure-horizontal-gauge,
+[data-theme="light"] .acms-pressure-horizontal-gauge,
+body.light-mode .acms-pressure-range-wrapper,
+[data-theme="light"] .acms-pressure-range-wrapper {
+  background: #dedede !important;
+  border: 1px solid #bebebe !important;
+}
+
+/* =========================================================
+   OVERVIEW COCKPIT: 6 KPI TILES & ACMS MONITORING CONSOLE
+   (Matches User's Reference Mockup with Dual-Theme Support)
+   ========================================================= */
+
+/* ── 8 KPI Tiles Row ── */
+.acms-overview-tiles-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1300px) {
+  .acms-overview-tiles-row {
+    grid-template-columns: repeat(8, minmax(115px, 1fr));
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 6px;
+  }
+}
+
+.acms-ov-tile {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  min-width: 0;
+}
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.acms-ov-tile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(6, 199, 245, 0.4);
+}
+
+.acms-ov-tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.acms-ov-tile-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94A3B8;
+  letter-spacing: 0.02em;
+}
+
+.acms-ov-tile-icon {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.acms-ov-tile-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.acms-ov-tile-val {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: 'Inter', monospace, sans-serif;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+}
+
+.acms-ov-tile-unit {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  margin-left: 4px;
+}
+
+.acms-ov-tile-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 5px;
+  text-transform: uppercase;
+}
+
+.acms-ov-tile-badge.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.acms-ov-tile-badge.cyan {
+  background: rgba(6, 199, 245, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(6, 199, 245, 0.35);
+}
+
+.acms-ov-tile-badge.dark {
+  background: rgba(255, 255, 255, 0.06);
+  color: #94A3B8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* ── ACMS Monitoring Console Card ── */
+.acms-console-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  margin-bottom: 24px;
+}
+
+.acms-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 20px;
+}
+
+.acms-console-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.acms-console-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(239, 51, 64, 0.15);
+  border: 1px solid rgba(239, 51, 64, 0.4);
+  color: #EF3340;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.acms-console-title-wrap h4 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acms-console-title-wrap .sub {
+  font-size: 11.5px;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.acms-console-top-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.acms-console-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94A3B8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── 2-Column Console Panels Grid ── */
+.acms-console-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 992px) {
+  .acms-console-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-console-panel {
+  background: #111A2B;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transition: all 0.2s ease;
+}
+
+.acms-console-panel:hover {
+  border-color: rgba(6, 199, 245, 0.3);
+}
+
+.acms-console-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 2px;
+}
+
+.acms-console-panel-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acms-console-panel-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+
+.acms-console-panel-badge.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.acms-console-panel-badge.cyan {
+  background: rgba(6, 199, 245, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(6, 199, 245, 0.35);
+}
+
+.acms-console-panel-badge.blue {
+  background: rgba(22, 140, 224, 0.15);
+  color: #60A5FA;
+  border: 1px solid rgba(22, 140, 224, 0.35);
+}
+
+/* Rows inside Panels */
+.acms-console-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  gap: 12px;
+}
+
+.acms-console-row .label {
+  color: #CBD5E1;
+  font-weight: 500;
+}
+
+.acms-console-row .val-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acms-console-row .val-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.acms-console-row .val-pill.running {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+}
+
+.acms-console-row .val-pill.stopped {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+}
+
+.acms-console-row .val-pill.standby {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+}
+
+.acms-console-row .val-pill.power-on {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.acms-console-row .val-pill.working {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+}
+
+/* Light Mode Overrides for Overview Cockpit */
+body.light-mode .acms-ov-tile,
+[data-theme="light"] .acms-ov-tile {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .acms-ov-tile-label,
+[data-theme="light"] .acms-ov-tile-label {
+  color: #4b5563 !important;
+}
+
+body.light-mode .acms-ov-tile-val,
+[data-theme="light"] .acms-ov-tile-val {
+  color: #111827 !important;
+}
+
+body.light-mode .acms-ov-tile-unit,
+[data-theme="light"] .acms-ov-tile-unit {
+  color: #6b7280 !important;
+}
+
+body.light-mode .acms-ov-tile-badge.dark,
+[data-theme="light"] .acms-ov-tile-badge.dark {
+  background: #dedede !important;
+  color: #374151 !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-console-card,
+[data-theme="light"] .acms-console-card {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .acms-console-header,
+[data-theme="light"] .acms-console-header {
+  border-bottom: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-console-title-wrap h4,
+[data-theme="light"] .acms-console-title-wrap h4 {
+  color: #111827 !important;
+}
+
+body.light-mode .acms-console-title-wrap .sub,
+[data-theme="light"] .acms-console-title-wrap .sub {
+  color: #4b5563 !important;
+}
+
+body.light-mode .acms-console-pill,
+[data-theme="light"] .acms-console-pill {
+  background: #dedede !important;
+  border: 1px solid #bebebe !important;
+  color: #374151 !important;
+}
+
+body.light-mode .acms-console-panel,
+[data-theme="light"] .acms-console-panel {
+  background: #dedede !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-console-panel-header,
+[data-theme="light"] .acms-console-panel-header {
+  border-bottom: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-console-panel-title,
+[data-theme="light"] .acms-console-panel-title {
+  color: #111827 !important;
+}
+
+body.light-mode .acms-console-row,
+[data-theme="light"] .acms-console-row {
+  background: #ececec !important;
+  border: 1px solid #bebebe !important;
+}
+
+body.light-mode .acms-console-row .label,
+[data-theme="light"] .acms-console-row .label {
+  color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+/* =========================================================
+   HYDRANT SYSTEM PROFESSIONAL SCADA REDESIGN
+   ========================================================= */
+
+/* Hero Banner for Hydrant Riser Low Pressure (Clause v) */
+.acms-hydrant-hero-deck {
+  position: relative;
+  background: linear-gradient(135deg, rgba(13, 22, 41, 0.95) 0%, rgba(20, 16, 38, 0.95) 50%, rgba(13, 22, 41, 0.95) 100%);
+  border: 1px solid rgba(138, 43, 226, 0.35);
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 0 20px rgba(138, 43, 226, 0.12);
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.acms-hydrant-hero-deck.alert-active {
+  border-color: rgba(239, 51, 64, 0.6);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), 0 0 25px rgba(239, 51, 64, 0.25);
+}
+
+.acms-hydrant-hero-deck:hover {
+  border-color: rgba(138, 43, 226, 0.55);
+}
+
+.acms-riser-gauge-box {
+  background: rgba(11, 18, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 290px;
+}
+
+.acms-riser-bar-track {
+  height: 9px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #EF4444 0%, #EF4444 60%, #10B981 60%, #10B981 85%, #06C7F5 85%, #06C7F5 100%);
+  position: relative;
+  overflow: visible;
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.acms-riser-bar-pin {
+  position: absolute;
+  top: -5px;
+  width: 10px;
+  height: 19px;
+  border-radius: 3px;
+  background: #FFFFFF;
+  border: 2px solid #06C7F5;
+  box-shadow: 0 0 10px #06C7F5;
+  transform: translateX(-50%);
+  transition: left 0.4s ease;
+}
+
+.acms-station-card {
+  position: relative;
+  background: var(--acms-bg-card);
+  border: 1px solid var(--acms-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+}
+
+.acms-station-card:hover {
+  background: var(--acms-bg-card-hover);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  transform: translateY(-2px);
+}
+
+.acms-station-card.border-red-glow {
+  border-color: rgba(239, 51, 64, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(239, 51, 64, 0.08);
+}
+.acms-station-card.border-cyan-glow {
+  border-color: rgba(6, 199, 245, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(6, 199, 245, 0.08);
+}
+.acms-station-card.border-purple-glow {
+  border-color: rgba(138, 43, 226, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(138, 43, 226, 0.08);
+}
+.acms-station-card.border-green-glow {
+  border-color: rgba(22, 185, 120, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(22, 185, 120, 0.08);
+}
+
+.acms-station-subitem {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.acms-station-subitem:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.acms-subitem-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.acms-subitem-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.acms-subitem-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.acms-subitem-tag {
+  font-size: 10.5px;
+  color: #94A3B8;
+  font-family: monospace;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Fractional Spacing Utilities */
+.gap-1\.5 { gap: 8px !important; }
+.gap-2\.5 { gap: 12px !important; }
+.me-1\.5 { margin-right: 8px !important; }
+.ms-1\.5 { margin-left: 8px !important; }
+.mb-1\.5 { margin-bottom: 8px !important; }
+.mt-1\.5 { margin-top: 8px !important; }
+.mt-2\.5 { margin-top: 10px !important; }
+.pt-2\.5 { padding-top: 10px !important; }
+.pb-1\.5 { padding-bottom: 8px !important; }
+.p-1\.5 { padding: 8px !important; }
+.py-1\.5 { padding-top: 6px !important; padding-bottom: 6px !important; }
+.px-1\.5 { padding-left: 8px !important; padding-right: 8px !important; }
+.px-2\.5 { padding-left: 12px !important; padding-right: 12px !important; }
+
+.acms-card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.acms-card-desc {
+  font-size: 11.5px;
+  color: #94A3B8;
+  line-height: 1.4;
+  display: block;
+}
+
+.acms-telemetry-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 12px;
+  background: rgba(11, 18, 32, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+@media (max-width: 576px) {
+  .acms-telemetry-pill-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-telemetry-pill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  gap: 6px;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.acms-telemetry-pill-row:last-child {
+  border-bottom: none;
+}
+
+.acms-station-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #E2E8F0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.acms-station-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.acms-station-btn.active-running {
+  border-color: rgba(22, 185, 120, 0.4);
+  color: #34D399;
+  background: rgba(22, 185, 120, 0.08);
+}
+
+.acms-station-btn.active-running:hover {
+  background: rgba(22, 185, 120, 0.2);
+  border-color: #10B981;
+  color: #FFFFFF;
+}
+
+.acms-inline-scheme-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* Light Mode Overrides for Hydrant System */
+body.light-mode .acms-hydrant-hero-deck,
+[data-theme="light"] .acms-hydrant-hero-deck {
+  background: #ececec !important;
+  border-color: #bebebe !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.light-mode .acms-riser-gauge-box,
+[data-theme="light"] .acms-riser-gauge-box {
+  background: #dedede !important;
+  border-color: #bebebe !important;
+}
+
+body.light-mode .acms-station-card,
+[data-theme="light"] .acms-station-card {
+  background: #ececec !important;
+  border-color: #bebebe !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode .acms-station-subitem,
+[data-theme="light"] .acms-station-subitem {
+  background: #dedede !important;
+  border-color: #bebebe !important;
+}
+
+body.light-mode .acms-telemetry-pill-grid,
+[data-theme="light"] .acms-telemetry-pill-grid {
+  background: #ececec !important;
+  border-color: #bebebe !important;
+}
+
+.acms-mcp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .acms-mcp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-station-card.border-red-glow {
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(239, 68, 68, 0.12);
+}
+
+.acms-station-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acms-station-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.acms-station-badge.cyan {
+  background: rgba(6, 199, 245, 0.15);
+  color: #06C7F5;
+  border: 1px solid rgba(6, 199, 245, 0.3);
+}
+
+.acms-station-badge.purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: #C084FC;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.acms-station-badge.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.acms-station-badge.info {
+  background: rgba(2, 132, 199, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(2, 132, 199, 0.3);
+}
+
+.acms-station-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.acms-station-subtag {
+  font-size: 10.5px;
+  color: #94A3B8;
+  font-family: monospace;
+}
+
+.acms-station-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Ultra-Clean SCADA Console & Panel Layouts ── */
+.acms-console-deck {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+}
+
+.acms-console-top-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.acms-metric-ribbon {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 992px) {
+  .acms-metric-ribbon {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .acms-metric-ribbon {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-metric-tile {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+}
+
+.acms-metric-tile:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.acms-clean-repeater-row {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+}
+
+.acms-clean-repeater-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.acms-fan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .acms-fan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-fan-unit-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.acms-fan-unit-card:hover {
+  border-color: rgba(6, 199, 245, 0.3);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 12px rgba(6, 199, 245, 0.08);
+}
+
+/* =========================================================
+   EXECUTIVE SCADA OVERVIEW COCKPIT & FLOW ARCHITECTURE
+   ========================================================= */
+
+/* ── Top Executive KPI Command Row (4 High-Impact Metric Cards) ── */
+.acms-ov-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1200px) {
+  .acms-ov-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .acms-ov-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-ov-kpi-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.acms-ov-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(6, 199, 245, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), 0 0 16px rgba(6, 199, 245, 0.12);
+}
+
+.acms-ov-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #10B981, #06C7F5);
+  opacity: 0.8;
+}
+
+.acms-ov-kpi-card.red::before {
+  background: linear-gradient(90deg, #EF4444, #F97316);
+}
+
+.acms-ov-kpi-card.blue::before {
+  background: linear-gradient(90deg, #0284C7, #38BDF8);
+}
+
+.acms-ov-kpi-card.purple::before {
+  background: linear-gradient(90deg, #8B5CF6, #06C7F5);
+}
+
+.acms-ov-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.acms-ov-kpi-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94A3B8;
+}
+
+.acms-ov-kpi-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.acms-ov-kpi-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.acms-ov-kpi-val {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.acms-ov-kpi-val .unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94A3B8;
+  margin-left: 4px;
+}
+
+.acms-ov-kpi-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.acms-ov-kpi-badge.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.acms-ov-kpi-badge.cyan {
+  background: rgba(6, 199, 245, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(6, 199, 245, 0.3);
+}
+
+.acms-ov-kpi-sub {
+  font-size: 11px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Central Architecture Flow Schematic Banner ── */
+.acms-ov-flow-banner {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.acms-ov-flow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 16px;
+}
+
+.acms-ov-flow-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.acms-ov-flow-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(239, 51, 64, 0.15);
+  border: 1px solid rgba(239, 51, 64, 0.35);
+  color: #EF4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.acms-ov-flow-title h5 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acms-ov-flow-title p {
+  font-size: 11px;
+  color: #94A3B8;
+  margin: 2px 0 0 0;
+}
+
+/* Interactive SCADA Flow Diagram Container */
+.acms-flow-diagram {
+  display: grid;
+  grid-template-columns: 1fr 40px 1.2fr 40px 1fr 40px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px;
+  background: rgba(17, 26, 43, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+@media (max-width: 1024px) {
+  .acms-flow-diagram {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .acms-flow-arrow {
+    transform: rotate(90deg);
+    margin: 4px auto;
+  }
+}
+
+.acms-flow-node {
+  background: #111A2B;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acms-flow-node:hover {
+  border-color: rgba(6, 199, 245, 0.45);
+  background: #152238;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.acms-flow-node-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.acms-flow-node-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.acms-flow-node-stat {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: #38BDF8;
+}
+
+.acms-flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #06C7F5;
+  opacity: 0.7;
+  animation: pulseArrow 2s infinite ease-in-out;
+}
+
+@keyframes pulseArrow {
+  0%, 100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ── 7 Subsystems Executive Cockpit Bento Grid ── */
+.acms-ov-cockpit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1280px) {
+  .acms-ov-cockpit-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .acms-ov-cockpit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acms-ov-cockpit-card {
+  background: #0B1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.acms-ov-cockpit-card:hover {
+  border-color: rgba(6, 199, 245, 0.35);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 0 18px rgba(6, 199, 245, 0.08);
+  transform: translateY(-2px);
+}
+
+.acms-ov-cockpit-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 14px;
+}
+
+.acms-ov-cockpit-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acms-ov-cockpit-card-title h6 {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.acms-ov-cockpit-clause {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #94A3B8;
+  letter-spacing: 0.03em;
+}
+
+.acms-ov-cockpit-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+
+.acms-ov-cockpit-badge.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.acms-ov-cockpit-badge.cyan {
+  background: rgba(6, 199, 245, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(6, 199, 245, 0.35);
+}
+
+.acms-ov-cockpit-badge.blue {
+  background: rgba(22, 140, 224, 0.15);
+  color: #60A5FA;
+  border: 1px solid rgba(22, 140, 224, 0.35);
+}
+
+.acms-ov-cockpit-badge.purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: #A78BFA;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+/* Equipment Visual Banner inside Cockpit Card */
+.acms-ov-equip-deck {
+  background: #111A2B;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+
+.acms-ov-equip-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.acms-ov-equip-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.acms-ov-equip-status {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.acms-ov-equip-status.run {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+}
+
+.acms-ov-equip-status.standby {
+  background: rgba(245, 158, 11, 0.2);
+  color: #F59E0B;
+}
+
+.acms-ov-equip-status.ready {
+  background: rgba(6, 199, 245, 0.2);
+  color: #06C7F5;
+}
+
+/* Metrics Mini Grid inside Card */
+.acms-ov-metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.acms-ov-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  font-size: 11.5px;
+}
+
+.acms-ov-metric-row .m-label {
+  color: #94A3B8;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.acms-ov-metric-row .m-val {
+  font-weight: 700;
+  color: #FFFFFF;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+}
+
+/* Card Action Footer */
+.acms-ov-card-footer {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.acms-ov-footer-btn {
+  background: transparent;
+  border: none;
+  color: #06C7F5;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.acms-ov-footer-btn:hover {
+  background: rgba(6, 199, 245, 0.1);
+  color: #38BDF8;
+}
+
+/* Visual Tank Widget in Overview */
+.acms-ov-tank-box {
+  background: #111A2B;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.acms-ov-tank-level-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.acms-ov-tank-level-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.acms-ov-tank-level-fill.blue {
+  background: linear-gradient(90deg, #1D4ED8, #38BDF8);
+}
+
+.acms-ov-tank-level-fill.teal {
+  background: linear-gradient(90deg, #0D9488, #2DD4BF);
+}
+
+.acms-ov-tank-level-fill.amber {
+  background: linear-gradient(90deg, #D97706, #FBBF24);
+}
+
+/* Light Mode Overrides for Executive Overview */
+body.light-mode .acms-ov-kpi-card,
+[data-theme="light"] .acms-ov-kpi-card,
+body.light-mode .acms-ov-flow-banner,
+[data-theme="light"] .acms-ov-flow-banner,
+body.light-mode .acms-ov-cockpit-card,
+[data-theme="light"] .acms-ov-cockpit-card {
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+body.light-mode .acms-ov-kpi-val,
+[data-theme="light"] .acms-ov-kpi-val,
+body.light-mode .acms-ov-flow-title h5,
+[data-theme="light"] .acms-ov-flow-title h5,
+body.light-mode .acms-ov-cockpit-card-title h6,
+[data-theme="light"] .acms-ov-cockpit-card-title h6,
+body.light-mode .acms-flow-node-name,
+[data-theme="light"] .acms-flow-node-name,
+body.light-mode .acms-ov-metric-row .m-val,
+[data-theme="light"] .acms-ov-metric-row .m-val {
+  color: #0F172A;
+}
+
+body.light-mode .acms-flow-diagram,
+[data-theme="light"] .acms-flow-diagram,
+body.light-mode .acms-flow-node,
+[data-theme="light"] .acms-flow-node,
+body.light-mode .acms-ov-equip-deck,
+[data-theme="light"] .acms-ov-equip-deck,
+body.light-mode .acms-ov-tank-box,
+[data-theme="light"] .acms-ov-tank-box,
+body.light-mode .acms-ov-metric-row,
+[data-theme="light"] .acms-ov-metric-row {
+  background: #F8FAFC;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* =========================================================
+   COMPREHENSIVE PROFESSIONAL LIGHT MODE SYSTEM FOR ACMS
+   ========================================================= */
+body.light-mode .acms-main,
+[data-theme="light"] .acms-main {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+/* 1. All Station Cards & Console Decks in Light Mode */
+body.light-mode .acms-station-card,
+[data-theme="light"] .acms-station-card,
+body.light-mode .acms-console-deck,
+[data-theme="light"] .acms-console-deck,
+body.light-mode .acms-scada-card,
+[data-theme="light"] .acms-scada-card,
+body.light-mode .acms-hero-deck,
+[data-theme="light"] .acms-hero-deck,
+body.light-mode .acms-hydrant-hero-deck,
+[data-theme="light"] .acms-hydrant-hero-deck,
+body.light-mode .acms-sprinkler-hero-deck,
+[data-theme="light"] .acms-sprinkler-hero-deck,
+body.light-mode .acms-fan-unit-card,
+[data-theme="light"] .acms-fan-unit-card,
+body.light-mode .acms-riser-hero-card,
+[data-theme="light"] .acms-riser-hero-card,
+body.light-mode .acms-ov-cockpit-card,
+[data-theme="light"] .acms-ov-cockpit-card {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+  color: #0F172A !important;
+}
+
+/* Glow Borders in Light Mode */
+body.light-mode .border-red-glow,
+[data-theme="light"] .border-red-glow {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.08) !important;
+}
+body.light-mode .border-cyan-glow,
+[data-theme="light"] .border-cyan-glow {
+  border-color: rgba(2, 132, 199, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(2, 132, 199, 0.08) !important;
+}
+body.light-mode .border-purple-glow,
+[data-theme="light"] .border-purple-glow {
+  border-color: rgba(124, 58, 237, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.08) !important;
+}
+
+/* 2. Text Colors inside Cards in Light Mode */
+body.light-mode .acms-main .text-white,
+[data-theme="light"] .acms-main .text-white,
+body.light-mode .acms-main h4.text-white,
+body.light-mode .acms-main h5.text-white,
+body.light-mode .acms-main h6.text-white,
+body.light-mode .acms-main span.text-white,
+body.light-mode .acms-main strong.text-white,
+body.light-mode .acms-main div.text-white,
+[data-theme="light"] .acms-main h4.text-white,
+[data-theme="light"] .acms-main h5.text-white,
+[data-theme="light"] .acms-main h6.text-white,
+[data-theme="light"] .acms-main span.text-white,
+[data-theme="light"] .acms-main strong.text-white,
+[data-theme="light"] .acms-main div.text-white,
+body.light-mode .acms-console-deck .text-white,
+[data-theme="light"] .acms-console-deck .text-white,
+body.light-mode .acms-station-card .text-white,
+[data-theme="light"] .acms-station-card .text-white,
+body.light-mode .acms-hero-deck .text-white,
+[data-theme="light"] .acms-hero-deck .text-white,
+body.light-mode .acms-card-title,
+[data-theme="light"] .acms-card-title,
+body.light-mode .acms-station-card-title,
+[data-theme="light"] .acms-station-card-title {
+  color: #0F172A !important;
+}
+
+body.light-mode .acms-main .text-muted,
+[data-theme="light"] .acms-main .text-muted {
+  color: #64748B !important;
+}
+
+body.light-mode .acms-console-top-strip,
+[data-theme="light"] .acms-console-top-strip,
+body.light-mode .acms-station-header,
+[data-theme="light"] .acms-station-header {
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+/* 3. Inner Telemetry Tiles & Sub-items */
+body.light-mode .acms-metric-tile,
+[data-theme="light"] .acms-metric-tile,
+body.light-mode .acms-clean-repeater-row,
+[data-theme="light"] .acms-clean-repeater-row,
+body.light-mode .acms-station-subitem,
+[data-theme="light"] .acms-station-subitem,
+body.light-mode .acms-equip-deck,
+[data-theme="light"] .acms-equip-deck,
+body.light-mode .acms-ov-equip-deck,
+[data-theme="light"] .acms-ov-equip-deck,
+body.light-mode .acms-ov-metric-row,
+[data-theme="light"] .acms-ov-metric-row,
+body.light-mode .acms-telemetry-pill-grid,
+[data-theme="light"] .acms-telemetry-pill-grid,
+body.light-mode .acms-riser-gauge-box,
+[data-theme="light"] .acms-riser-gauge-box {
+  background: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+body.light-mode .acms-metric-tile:hover,
+[data-theme="light"] .acms-metric-tile:hover,
+body.light-mode .acms-clean-repeater-row:hover,
+[data-theme="light"] .acms-clean-repeater-row:hover,
+body.light-mode .acms-station-subitem:hover,
+[data-theme="light"] .acms-station-subitem:hover {
+  background: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+}
+
+/* 4. Telemetry Containers with bg-dark in Light Mode */
+body.light-mode .acms-main .bg-dark,
+[data-theme="light"] .acms-main .bg-dark,
+body.light-mode .acms-console-deck .bg-dark,
+[data-theme="light"] .acms-console-deck .bg-dark,
+body.light-mode .acms-station-card .bg-dark,
+[data-theme="light"] .acms-station-card .bg-dark {
+  background: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+body.light-mode .acms-main .bg-dark .text-muted,
+[data-theme="light"] .acms-main .bg-dark .text-muted {
+  color: #64748B !important;
+}
+
+/* 5. Station Badges in Light Mode */
+body.light-mode .acms-station-badge.danger,
+[data-theme="light"] .acms-station-badge.danger {
+  background: #FEE2E2 !important;
+  color: #DC2626 !important;
+  border: 1px solid #FCA5A5 !important;
+}
+
+body.light-mode .acms-station-badge.cyan,
+[data-theme="light"] .acms-station-badge.cyan,
+body.light-mode .acms-station-badge.info,
+[data-theme="light"] .acms-station-badge.info {
+  background: #E0F2FE !important;
+  color: #0284C7 !important;
+  border: 1px solid #BAE6FD !important;
+}
+
+body.light-mode .acms-station-badge.purple,
+[data-theme="light"] .acms-station-badge.purple {
+  background: #EDE9FE !important;
+  color: #7C3AED !important;
+  border: 1px solid #DDD6FE !important;
+}
+
+body.light-mode .acms-station-badge.green,
+[data-theme="light"] .acms-station-badge.green,
+body.light-mode .acms-station-badge.success,
+[data-theme="light"] .acms-station-badge.success {
+  background: #DCFCE7 !important;
+  color: #16A34A !important;
+  border: 1px solid #BBF7D0 !important;
+}
+
+body.light-mode .acms-station-badge.amber,
+[data-theme="light"] .acms-station-badge.amber,
+body.light-mode .acms-station-badge.warning,
+[data-theme="light"] .acms-station-badge.warning {
+  background: #FEF3C7 !important;
+  color: #D97706 !important;
+  border: 1px solid #FDE68A !important;
+}
+
+/* Status Chips in Light Mode */
+body.light-mode .acms-status-chip.green,
+[data-theme="light"] .acms-status-chip.green {
+  background: #DCFCE7 !important;
+  color: #15803D !important;
+  border: 1px solid #86EFAC !important;
+}
+
+body.light-mode .acms-status-chip.red,
+[data-theme="light"] .acms-status-chip.red {
+  background: #FEE2E2 !important;
+  color: #B91C1C !important;
+  border: 1px solid #FCA5A5 !important;
+}
+
+/* Buttons in Light Mode */
+body.light-mode .acms-main .btn-outline-secondary,
+[data-theme="light"] .acms-main .btn-outline-secondary {
+  background: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #334155 !important;
+}
+body.light-mode .acms-main .btn-outline-secondary:hover,
+[data-theme="light"] .acms-main .btn-outline-secondary:hover {
+  background: #F1F5F9 !important;
+  color: #0F172A !important;
+}
+
+body.light-mode .acms-main .btn-outline-warning,
+[data-theme="light"] .acms-main .btn-outline-warning {
+  background: #FEF3C7 !important;
+  border-color: #F59E0B !important;
+  color: #B45309 !important;
+}
+body.light-mode .acms-main .btn-outline-warning:hover,
+[data-theme="light"] .acms-main .btn-outline-warning:hover {
+  background: #FDE68A !important;
+  color: #92400E !important;
+}
+
+body.light-mode .acms-main .btn-outline-info,
+[data-theme="light"] .acms-main .btn-outline-info {
+  background: #E0F2FE !important;
+  border-color: #0284C7 !important;
+  color: #0369A1 !important;
+}
+body.light-mode .acms-main .btn-outline-info:hover,
+[data-theme="light"] .acms-main .btn-outline-info:hover {
+  background: #BAE6FD !important;
+  color: #0284C7 !important;
+}
+
+/* Secondary Badges in Light Mode */
+body.light-mode .acms-main .badge.bg-secondary,
+[data-theme="light"] .acms-main .badge.bg-secondary {
+  background: #E2E8F0 !important;
+  color: #334155 !important;
+  border: 1px solid #CBD5E1 !important;
+}
+
+/* Top Navigation Bar in Light Mode */
+body.light-mode .acms-nav-container,
+[data-theme="light"] .acms-nav-container {
+  background: rgba(241, 245, 249, 0.95) !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+body.light-mode .acms-tabs-bar,
+[data-theme="light"] .acms-tabs-bar {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .acms-tab-btn,
+[data-theme="light"] .acms-tab-btn {
+  color: #64748B !important;
+}
+
+body.light-mode .acms-tab-btn:hover,
+[data-theme="light"] .acms-tab-btn:hover {
+  color: #0F172A !important;
+  background: #F1F5F9 !important;
+}
+
+body.light-mode .acms-tab-btn.active,
+[data-theme="light"] .acms-tab-btn.active {
+  background: #FFFFFF !important;
+  color: #DC2626 !important;
+  border: 1px solid #DC2626 !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15) !important;
+}
+
+/* KPI Chips Bar in Light Mode */
+body.light-mode .acms-kpi-chip,
+[data-theme="light"] .acms-kpi-chip {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #64748B !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.light-mode .acms-kpi-chip strong,
+[data-theme="light"] .acms-kpi-chip strong {
+  color: #0F172A !important;
+}
+
+/* Equipment icon box in Light Mode */
+body.light-mode .acms-equip-icon-box,
+[data-theme="light"] .acms-equip-icon-box {
+  background: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+}
+
+/* Clean text colors in light mode */
+body.light-mode .text-cyan,
+[data-theme="light"] .text-cyan {
+  color: #0284C7 !important;
+}
+
+body.light-mode .text-muted,
+[data-theme="light"] .text-muted {
+  color: #64748B !important;
+}
+
+body.light-mode .border-secondary,
+[data-theme="light"] .border-secondary {
+  border-color: #E2E8F0 !important;
+}
+
+body.light-mode .acms-station-card-title h6,
+[data-theme="light"] .acms-station-card-title h6 {
+  color: #0F172A !important;
+}
+
