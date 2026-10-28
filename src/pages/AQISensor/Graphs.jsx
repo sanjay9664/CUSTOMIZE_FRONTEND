@@ -111,10 +111,44 @@ const AQIGraphs = () => {
 
   // Synchronize site with SiteContext if changed from outside
   useEffect(() => {
-    if (selectedSite?.id && String(selectedSite.id) !== String(selectedSiteId)) {
-      setSelectedSiteId(String(selectedSite.id));
+    const sId = String(selectedSite?.id ?? selectedSite?.siteId ?? selectedSite?._id ?? '');
+    if (sId && sId !== String(selectedSiteId)) {
+      setSelectedSiteId(sId);
     }
-  }, [selectedSite?.id]);
+  }, [selectedSite]);
+
+  // Synchronize when site or device is selected via top Header cascading dropdown
+  useEffect(() => {
+    const handleDeviceChange = (e) => {
+      const detail = e.detail;
+      if (!detail) return;
+      const cat = detail.category || detail.device?.category;
+      if (cat && cat !== 'AQI_SENSOR') return;
+
+      if (detail.siteId && String(detail.siteId) !== String(selectedSiteId)) {
+        setSelectedSiteId(String(detail.siteId));
+      }
+      if (detail.deviceId !== undefined) {
+        setSelectedDeviceId(String(detail.deviceId));
+      }
+    };
+
+    const handleSiteChange = (e) => {
+      const sId = String(e.detail?.siteId ?? e.detail?.id ?? e.detail?.site?.id ?? '');
+      if (sId && sId !== String(selectedSiteId)) {
+        setSelectedSiteId(sId);
+      }
+    };
+
+    window.addEventListener('scada_device_changed', handleDeviceChange);
+    window.addEventListener('site_changed', handleSiteChange);
+    window.addEventListener('bms_site_changed', handleSiteChange);
+    return () => {
+      window.removeEventListener('scada_device_changed', handleDeviceChange);
+      window.removeEventListener('site_changed', handleSiteChange);
+      window.removeEventListener('bms_site_changed', handleSiteChange);
+    };
+  }, [selectedSiteId]);
 
   // 1. Lifecycle: Fetch AQI devices whenever selectedSiteId changes
   useEffect(() => {
@@ -139,6 +173,7 @@ const AQIGraphs = () => {
     const fetchAqiDevices = async () => {
       try {
         let items = [];
+        let isPrimarySiteEndpoint = false;
 
         // Primary: site-scoped devices endpoint for category=AQI_SENSOR
         try {
@@ -147,12 +182,16 @@ const AQIGraphs = () => {
             include: 'settings,rules,profile',
             limit: 100
           });
-          items = normalizeList(res, 'devices');
+          const list = normalizeList(res, 'devices');
+          if (Array.isArray(list) && list.length > 0) {
+            items = list;
+            isPrimarySiteEndpoint = true;
+          }
         } catch (err) {
           console.warn('[AQIGraphs] getSiteDevices notice:', err);
         }
 
-        // Fallback: cross-site /devices with category & siteId filter
+        // Fallback: cross-site /devices with category & siteId filter ONLY if primary returned none
         if (!items || items.length === 0) {
           try {
             const params = new URLSearchParams({
@@ -174,22 +213,37 @@ const AQIGraphs = () => {
 
         if (!isMounted || requestIdRef.current !== currentRequestId) return;
 
-        // Strictly keep devices with category AQI_SENSOR
+        // Strictly keep devices with category AQI_SENSOR that match selectedSiteId
         const aqiDevices = items.filter(d => {
+          if (!d) return false;
           const cat = String(d.category || '').toUpperCase();
-          return cat === 'AQI_SENSOR' || cat.includes('AQI');
+          const isAqi = cat === 'AQI_SENSOR' || cat.includes('AQI');
+          if (!isAqi) return false;
+
+          const devSiteId = d.siteId !== undefined && d.siteId !== null
+            ? String(d.siteId)
+            : (d.site_id !== undefined && d.site_id !== null
+                ? String(d.site_id)
+                : (d.site?.id != null ? String(d.site.id) : (d.site?.siteId != null ? String(d.site.siteId) : (d.site?._id != null ? String(d.site._id) : (d.facilityId != null ? String(d.facilityId) : null)))));
+
+          if (devSiteId) {
+            return String(devSiteId).trim().toLowerCase() === String(selectedSiteId).trim().toLowerCase();
+          }
+          return isPrimarySiteEndpoint;
         });
 
         setDevices(aqiDevices);
 
         if (aqiDevices.length > 0) {
           // Validate persisted or query device ID against returned list
-          const persistedId = queryDeviceId || localStorage.getItem(`selected_aqi_device_id_${selectedSiteId}`);
-          const matched = aqiDevices.find(d => String(d.id || d._id) === String(persistedId));
-          const targetId = matched ? String(matched.id || matched._id) : String(aqiDevices[0].id || aqiDevices[0]._id);
+          const persistedId = queryDeviceId || localStorage.getItem(`selected_aqi_device_id_${selectedSiteId}`) || localStorage.getItem('selected_aqi_sensor_id');
+          const matched = aqiDevices.find(d => String(d.id || d._id || d.deviceId) === String(persistedId));
+          const targetId = matched ? String(matched.id || matched._id || matched.deviceId) : String(aqiDevices[0].id || aqiDevices[0]._id || aqiDevices[0].deviceId);
 
           setSelectedDeviceId(targetId);
           localStorage.setItem(`selected_aqi_device_id_${selectedSiteId}`, targetId);
+          localStorage.setItem('selected_aqi_sensor_id', targetId);
+          localStorage.setItem('selected_device_id', targetId);
         } else {
           setSelectedDeviceId('');
           localStorage.removeItem(`selected_aqi_device_id_${selectedSiteId}`);
@@ -216,12 +270,23 @@ const AQIGraphs = () => {
   // Selected device object
   const selectedDevice = useMemo(() => {
     if (!selectedDeviceId || !devices || devices.length === 0) return null;
-    return devices.find(d => String(d.id || d._id) === String(selectedDeviceId)) || null;
+    return devices.find(d => String(d.id || d._id || d.deviceId) === String(selectedDeviceId)) || null;
   }, [devices, selectedDeviceId]);
 
   // 2. Fetch Telemetry Snapshots
   const fetchTelemetrySnapshots = useCallback(async () => {
-    if (!selectedSiteId || !selectedDeviceId) {
+    if (!selectedSiteId || !selectedDeviceId || devicesLoading) {
+      return;
+    }
+
+    // Safety guard: ensure selectedDeviceId actually belongs to the loaded devices of selectedSiteId
+    if (devices.length > 0) {
+      const belongs = devices.some(d => String(d.id || d._id || d.deviceId) === String(selectedDeviceId));
+      if (!belongs) {
+        console.warn(`[AQIGraphs] Device ${selectedDeviceId} does not belong to site ${selectedSiteId}`);
+        return;
+      }
+    } else {
       setTelemetryData(null);
       setTelemetryLoading(false);
       setTelemetryError(null);
@@ -265,7 +330,7 @@ const AQIGraphs = () => {
         setTelemetryLoading(false);
       }
     }
-  }, [selectedSiteId, selectedDeviceId, activeInterval, rangePreset, appliedStartDate, appliedEndDate]);
+  }, [selectedSiteId, selectedDeviceId, devices, devicesLoading, activeInterval, rangePreset, appliedStartDate, appliedEndDate]);
 
   // Trigger telemetry fetch on dependencies change
   useEffect(() => {
@@ -375,6 +440,10 @@ const AQIGraphs = () => {
       onChange: (newId) => {
         if (!newId || newId === selectedSiteId) return;
         setSelectedSiteId(newId);
+        setSelectedDeviceId('');
+        setDevices([]);
+        setTelemetryData(null);
+        setDevicesLoading(true);
         const match = sites?.find(s => String(s.id || s._id || s.siteId) === String(newId));
         if (match && setSelectedSite) setSelectedSite(match);
       },
@@ -402,7 +471,7 @@ const AQIGraphs = () => {
     }
 
     const deviceOptions = devices.map(d => ({
-      value: String(d.id || d._id),
+      value: String(d.id || d._id || d.deviceId),
       label: d.name || d.deviceName || `Sensor #${d.id}`
     }));
 
@@ -413,6 +482,18 @@ const AQIGraphs = () => {
         if (!newDevId || newDevId === selectedDeviceId) return;
         setSelectedDeviceId(newDevId);
         localStorage.setItem(`selected_aqi_device_id_${selectedSiteId}`, newDevId);
+        localStorage.setItem('selected_aqi_sensor_id', newDevId);
+        localStorage.setItem('selected_device_id', newDevId);
+        const devObj = devices.find(d => String(d.id || d._id || d.deviceId) === String(newDevId));
+        window.dispatchEvent(new CustomEvent('scada_device_changed', {
+          detail: {
+            deviceId: newDevId,
+            device: devObj,
+            siteId: selectedSiteId,
+            module: 'AQI Sensor',
+            category: 'AQI_SENSOR'
+          }
+        }));
       },
       ariaLabel: 'Select AQI Sensor'
     };

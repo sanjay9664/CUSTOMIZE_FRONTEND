@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Row, Col, Card, Badge, ProgressBar, Toast, ToastContainer, Table, Form, Button, InputGroup, Spinner } from 'react-bootstrap';
 import { 
   ShieldAlert, Zap, Activity, Gauge, Fuel, History, 
@@ -214,21 +214,27 @@ const SiemensStyleDG = () => {
     return clean && !invalidNames.has(clean);
   };
 
-  // 1. Sync & Load Real Sites
+  // 1. Sync & Load Real Sites with storeSites and selectedSite
   useEffect(() => {
     if (Array.isArray(storeSites) && storeSites.length > 0) {
       setSites(storeSites);
-      const globalSiteId = selectedSite?.id || selectedSite?.siteId || selectedSite?._id;
-      const globalSite = storeSites.find(site => String(site.id || site.siteId || site._id) === String(globalSiteId));
-      const savedSite = storeSites.find(site => String(site.id || site.siteId || site._id) === String(selectedSiteId));
-      const initialSite = globalSite || savedSite || storeSites[0];
-      const initialId = String(initialSite.id || initialSite.siteId || initialSite._id);
-      if (String(selectedSiteId) !== initialId) {
-        setSelectedSiteId(initialId);
-        localStorage.setItem('selected_dg_site_id', initialId);
-      }
-      if (setSelectedSite && String(globalSiteId || '') !== initialId) {
-        setSelectedSite(initialSite);
+      const globalSiteId = selectedSite ? String(selectedSite.id ?? selectedSite.siteId ?? selectedSite._id ?? '') : '';
+      if (globalSiteId) {
+        if (String(selectedSiteId) !== globalSiteId) {
+          setSelectedSiteId(globalSiteId);
+          localStorage.setItem('selected_dg_site_id', globalSiteId);
+        }
+      } else {
+        const savedSite = storeSites.find(s => String(s.id ?? s.siteId ?? s._id ?? '') === String(selectedSiteId));
+        const initialSite = savedSite || storeSites[0];
+        const initialId = String(initialSite.id ?? initialSite.siteId ?? initialSite._id ?? '');
+        if (String(selectedSiteId) !== initialId) {
+          setSelectedSiteId(initialId);
+          localStorage.setItem('selected_dg_site_id', initialId);
+        }
+        if (setSelectedSite) {
+          setSelectedSite(initialSite);
+        }
       }
       return;
     }
@@ -273,27 +279,17 @@ const SiemensStyleDG = () => {
         const initialId = sitesList.some(site => String(site.id) === String(globalSiteId))
           ? String(globalSiteId)
           : (selectedSiteId && sitesList.some(site => String(site.id) === String(selectedSiteId)) ? selectedSiteId : sitesList[0].id);
-        setSelectedSiteId(initialId);
-        localStorage.setItem('selected_dg_site_id', initialId);
-        if (setSelectedSite) {
+        if (String(selectedSiteId) !== String(initialId)) {
+          setSelectedSiteId(String(initialId));
+          localStorage.setItem('selected_dg_site_id', String(initialId));
+        }
+        if (setSelectedSite && (!globalSiteId || String(globalSiteId) !== String(initialId))) {
           setSelectedSite(sitesList.find(s => String(s.id) === String(initialId)) || sitesList[0]);
         }
       }
     };
     loadSites();
   }, [storeSites, selectedSite, selectedSiteId, setSelectedSite]);
-
-  // The site selector lives in the shared app header; keep the DG data filter in sync with it.
-  useEffect(() => {
-    const globalSiteId = selectedSite?.id || selectedSite?.siteId || selectedSite?._id;
-    if (!globalSiteId || !sites.length) return;
-    const siteId = String(globalSiteId);
-    if (!sites.some(site => String(site.id || site.siteId || site._id) === siteId)) return;
-    if (String(selectedSiteId) !== siteId) {
-      setSelectedSiteId(siteId);
-      localStorage.setItem('selected_dg_site_id', siteId);
-    }
-  }, [selectedSite?.id, selectedSite?.siteId, selectedSite?._id, sites, selectedSiteId]);
 
   // 2. Load Generator Devices for selectedSiteId (Aggregate API & LocalStorage for multi-DG support)
   useEffect(() => {
@@ -345,7 +341,7 @@ const SiemensStyleDG = () => {
           }
         };
 
-        // 1. Fetch from /devices?siteId=...&category=GENERATOR
+        // 1. Primary API: Fetch from /devices?siteId=...&category=GENERATOR&include=settings,rules,profile
         try {
           const queryParams = new URLSearchParams({
             siteId: String(selectedSiteId),
@@ -364,27 +360,16 @@ const SiemensStyleDG = () => {
           }
         } catch (e) {}
 
-        // 2. Fetch via bmsService.getSiteDevices
-        try {
-          const siteDevRes = await bmsService.getSiteDevices(selectedSiteId, { category: 'GENERATOR' }).catch(() => null);
-          const siteDevList = normalizeList(siteDevRes, 'devices');
-          if (Array.isArray(siteDevList)) {
-            siteDevList.forEach(addDevice);
-          }
-        } catch (e) {}
-
-        // 3. Fallback via apiClient
-        try {
-          const fallbackRes = await apiClient.get('/devices', { 
-            siteId: String(selectedSiteId), 
-            category: 'GENERATOR', 
-            include: 'settings,rules,profile' 
-          }).catch(() => null);
-          const list = normalizeList(fallbackRes, 'devices');
-          if (Array.isArray(list) && list.length > 0) {
-            list.forEach(addDevice);
-          }
-        } catch (e) {}
+        // 2. Fallback ONLY if primary returned no devices
+        if (discovered.length === 0) {
+          try {
+            const siteDevRes = await bmsService.getSiteDevices(selectedSiteId, { category: 'GENERATOR' }).catch(() => null);
+            const siteDevList = normalizeList(siteDevRes, 'devices');
+            if (Array.isArray(siteDevList)) {
+              siteDevList.forEach(addDevice);
+            }
+          } catch (e) {}
+        }
 
         // 4. Merge cached & registered devices from localStorage
         const localKeys = [
@@ -493,9 +478,12 @@ const SiemensStyleDG = () => {
   }, [isManualRunning, data]);
 
   // 3. Live Telemetry Parser & 30s Polling Effect
+  const isFetchingTelemetryRef = useRef(false);
+
   const fetchDeviceTelemetry = useCallback(async (devId = selectedDeviceId) => {
     const targetId = devId || selectedDeviceId;
-    if (!targetId) return;
+    if (!targetId || isFetchingTelemetryRef.current) return;
+    isFetchingTelemetryRef.current = true;
     setIsFetchingTelemetry(true);
     try {
       const eventsRes = await bmsService.getDeviceEventsLatest(targetId, selectedSiteId).catch(() => null);
@@ -673,51 +661,28 @@ const SiemensStyleDG = () => {
     } catch (err) {
       console.warn('Error fetching DG telemetry:', err);
     } finally {
+      isFetchingTelemetryRef.current = false;
       setIsFetchingTelemetry(false);
     }
   }, [selectedDeviceId, selectedSiteId]);
 
-  // Fetch telemetry whenever selectedDeviceId or devices change, and poll every 30s
+  // Fetch telemetry whenever selectedDeviceId or selectedSiteId changes, and poll every 30s
   useEffect(() => {
     if (!selectedDeviceId) return;
+    let isMounted = true;
+
     fetchDeviceTelemetry(selectedDeviceId);
     const interval = setInterval(() => {
-      fetchDeviceTelemetry(selectedDeviceId);
+      if (isMounted) {
+        fetchDeviceTelemetry(selectedDeviceId);
+      }
     }, 30000);
-    return () => clearInterval(interval);
-  }, [selectedDeviceId, selectedSiteId, devices, fetchDeviceTelemetry]);
 
-  // Enrich selected device settings from API if not pre-populated in summary
-  useEffect(() => {
-    if (!selectedDeviceId) return;
-    const current = devices.find(d => String(d.id || d.deviceId) === String(selectedDeviceId));
-    const hasSettings = Boolean(
-      (Array.isArray(current?.settings) && current.settings.length > 0) ||
-      (Array.isArray(current?.template_settings) && current.template_settings.length > 0) ||
-      (Array.isArray(current?.deviceSettings) && current.deviceSettings.length > 0)
-    );
-
-    if (!hasSettings) {
-      let isMounted = true;
-      const fetchFullSettings = async () => {
-        try {
-          const detailUrl = selectedSiteId
-            ? getApiUrl(`/sites/${selectedSiteId}/devices/${selectedDeviceId}`)
-            : getApiUrl(`/devices/${selectedDeviceId}`);
-          const res = await fetch(detailUrl, { headers: getAuthHeaders() }).catch(() => null);
-          if (res && res.ok) {
-            const json = await res.json();
-            const detail = json?.data || json;
-            if (isMounted && detail && (detail.settings || detail.template_settings || detail.deviceSettings)) {
-              setDevices(prev => prev.map(d => String(d.id || d.deviceId) === String(selectedDeviceId) ? { ...d, ...detail } : d));
-            }
-          }
-        } catch (e) {}
-      };
-      fetchFullSettings();
-      return () => { isMounted = false; };
-    }
-  }, [selectedDeviceId, selectedSiteId, devices]);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [selectedDeviceId, selectedSiteId, fetchDeviceTelemetry]);
 
   // Site selector configuration for PageContextBanner
   const siteSelector = useMemo(() => {
@@ -762,17 +727,31 @@ const SiemensStyleDG = () => {
     triggerToast(`🎯 Active Target: ${devName}`);
 
     // Fetch telemetry for newly selected DG
+    isFetchingTelemetryRef.current = false;
     fetchDeviceTelemetry(targetId);
     window.dispatchEvent(new CustomEvent('scada_device_changed', {
-      detail: { deviceId: targetId, siteId: selectedSiteId, module: 'DG Set' }
+      detail: { deviceId: targetId, siteId: selectedSiteId, module: 'DG Set', category: 'GENERATOR' }
     }));
   }, [devices, selectedDeviceId, selectedSiteId, fetchDeviceTelemetry]);
 
   // Synchronize when active device is selected from the top Header cascading dropdown
   useEffect(() => {
     const handleGlobalDeviceChange = (e) => {
-      if (e.detail?.deviceId && String(e.detail.deviceId) !== String(selectedDeviceId)) {
-        handleDeviceChange(String(e.detail.deviceId));
+      const detail = e.detail;
+      if (!detail?.deviceId) return;
+
+      // Strict category filter: ignore events from other modules (e.g. main meter, water, motors)
+      const cat = String(detail.category || detail.device?.category || '').toUpperCase();
+      const mod = String(detail.module || '').toUpperCase();
+      if (cat && !cat.includes('GEN') && !cat.includes('DG')) {
+        return;
+      }
+      if (mod && !mod.includes('DG') && !mod.includes('GEN')) {
+        return;
+      }
+
+      if (String(detail.deviceId) !== String(selectedDeviceId)) {
+        handleDeviceChange(String(detail.deviceId));
       }
     };
     window.addEventListener('scada_device_changed', handleGlobalDeviceChange);

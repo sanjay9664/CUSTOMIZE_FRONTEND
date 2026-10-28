@@ -214,6 +214,7 @@ export const GlobalSiteAssetDropdown = ({
   const [isOpen, setIsOpen] = useState(false);
   const [activePanelSiteId, setActivePanelSiteId] = useState(null);
   const [devicesBySiteCategory, setDevicesBySiteCategory] = useState({});
+  const devicesCacheRef = useRef({});
   const [loadingSitesMap, setLoadingSitesMap] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -261,6 +262,25 @@ export const GlobalSiteAssetDropdown = ({
     return <Cpu size={size} className="text-info" />;
   }, [currentCategory]);
 
+  // Effective sites list with persistent fallback to selectedSite / cache
+  const effectiveSites = useMemo(() => {
+    if (activeSites && activeSites.length > 0) return activeSites;
+    if (selectedSite) return [selectedSite];
+    try {
+      const stored = localStorage.getItem('scada_selected_site');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.id ?? parsed.siteId ?? parsed._id)) return [parsed];
+      }
+      const storedDb = localStorage.getItem('scada_sites_db');
+      if (storedDb) {
+        const parsedDb = JSON.parse(storedDb);
+        if (Array.isArray(parsedDb) && parsedDb.length > 0) return parsedDb;
+      }
+    } catch (e) {}
+    return [];
+  }, [activeSites, selectedSite]);
+
   // Fetch devices for a specific site scoped strictly to currentCategory
   const fetchDevicesForSite = useCallback(async (siteId, forceRefresh = false) => {
     if (!siteId || isSiteOnlyMode) return;
@@ -268,7 +288,7 @@ export const GlobalSiteAssetDropdown = ({
     const cacheKey = getCacheKey(sId, currentCategory);
 
     // Skip if already cached in memory for this module category
-    if (!forceRefresh && devicesBySiteCategory[cacheKey] !== undefined) {
+    if (!forceRefresh && devicesCacheRef.current[cacheKey] !== undefined) {
       return;
     }
 
@@ -277,23 +297,38 @@ export const GlobalSiteAssetDropdown = ({
     const siteDeviceList = [];
     const seenIds = new Set();
 
-    const addDevice = (d) => {
+    // Resolve target site object and its exact allowed identifiers
+    const targetSiteObj = effectiveSites.find(s => String(getSiteId(s)) === sId);
+    const validTargetSiteIds = [
+      sId,
+      targetSiteObj?.id != null ? String(targetSiteObj.id).trim().toLowerCase() : null,
+      targetSiteObj?.siteId != null ? String(targetSiteObj.siteId).trim().toLowerCase() : null,
+      targetSiteObj?._id != null ? String(targetSiteObj._id).trim().toLowerCase() : null,
+      targetSiteObj?.name != null ? String(targetSiteObj.name).trim().toLowerCase() : null,
+      targetSiteObj?.siteName != null ? String(targetSiteObj.siteName).trim().toLowerCase() : null,
+    ].filter(Boolean);
+
+    const addDevice = (d, isDirectSiteEndpoint = false) => {
       if (!d) return;
       const devId = String(d.id || d.deviceId || d._id || '').trim();
       if (!devId || seenIds.has(devId)) return;
 
-      const devSiteId = d.siteId !== undefined && d.siteId !== null ? String(d.siteId) : (d.site_id !== undefined && d.site_id !== null ? String(d.site_id) : null);
-      if (devSiteId) {
-        const validSiteIds = [
-          sId,
-          selectedSite?.id,
-          selectedSite?.siteId,
-          selectedSite?._id,
-          selectedSite?.name,
-          selectedSite?.siteName
-        ].filter(Boolean).map(s => String(s).toLowerCase().trim());
+      const devSiteId = d.siteId !== undefined && d.siteId !== null
+        ? String(d.siteId)
+        : (d.site_id !== undefined && d.site_id !== null
+            ? String(d.site_id)
+            : (d.site?.id != null ? String(d.site.id) : (d.site?.siteId != null ? String(d.site.siteId) : (d.site?._id != null ? String(d.site._id) : (d.facilityId != null ? String(d.facilityId) : null)))));
 
-        if (!validSiteIds.includes(devSiteId.toLowerCase().trim())) {
+      if (devSiteId) {
+        if (!validTargetSiteIds.includes(String(devSiteId).trim().toLowerCase())) {
+          return;
+        }
+      } else if (!isDirectSiteEndpoint) {
+        // Fallback /devices or localStorage item with NO siteId:
+        // Must match target site name, otherwise reject to prevent cross-site contamination
+        const devSiteName = d.siteName || d.site_name || d.site?.name;
+        const targetName = targetSiteObj?.name || targetSiteObj?.siteName;
+        if (!devSiteName || !targetName || String(devSiteName).trim().toLowerCase() !== String(targetName).trim().toLowerCase()) {
           return;
         }
       }
@@ -307,6 +342,7 @@ export const GlobalSiteAssetDropdown = ({
       siteDeviceList.push({
         ...d,
         id: devId,
+        siteId: d.siteId || sId,
         name: d.name || d.deviceName || d.label || d.title || `${assetLabel.slice(0, -1)} ${siteDeviceList.length + 1}`,
         category: d.category || currentCategory || 'DEVICE'
       });
@@ -325,41 +361,46 @@ export const GlobalSiteAssetDropdown = ({
 
       const res = await bmsService.getSiteDevices(sId, queryParams).catch(() => null);
       const list = normalizeList(res, 'devices');
-      if (Array.isArray(list)) list.forEach(addDevice);
+      if (Array.isArray(list)) list.forEach(d => addDevice(d, true));
     } catch (e) { }
 
-    try {
-      // 2. Fallback /devices endpoint via apiClient (benefits from auto 401 retry)
-      const params = { siteId: sId };
-      if (currentCategory === 'MAIN_ENERGY_METER') {
-        params.category = 'MAIN_ENERGY_METER';
-      } else if (currentCategory === 'SUB_ENERGY_METER') {
-        params.category = 'SUB_ENERGY_METER';
-      } else if (currentCategory) {
-        params.category = currentCategory;
-      }
-
-      const res = await bmsService.getDevices(params).catch(() => null);
-      const list = normalizeList(res, 'devices');
-      if (Array.isArray(list)) list.forEach(addDevice);
-    } catch (e) {}
-
-    // 3. Fallback check local storage items
-    const localKeys = ['dg_generator_devices', 'scada_devices_db', 'bms_registered_devices', 'scada_device_mappings', 'tb_devices'];
-    localKeys.forEach((k) => {
+    // 2. Fallback /devices endpoint via apiClient ONLY if primary returned no devices
+    if (siteDeviceList.length === 0) {
       try {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          const arr = Array.isArray(parsed) ? parsed : [parsed];
-          arr.forEach(addDevice);
+        const params = { siteId: sId };
+        if (currentCategory === 'MAIN_ENERGY_METER') {
+          params.category = 'MAIN_ENERGY_METER';
+        } else if (currentCategory === 'SUB_ENERGY_METER') {
+          params.category = 'SUB_ENERGY_METER';
+        } else if (currentCategory) {
+          params.category = currentCategory;
         }
-      } catch (e) { }
-    });
 
+        const res = await bmsService.getDevices(params).catch(() => null);
+        const list = normalizeList(res, 'devices');
+        if (Array.isArray(list)) list.forEach(d => addDevice(d, false));
+      } catch (e) {}
+    }
+
+    // 3. Fallback check local storage items ONLY if both network endpoints returned 0 devices
+    if (siteDeviceList.length === 0) {
+      const localKeys = ['dg_generator_devices', 'scada_devices_db', 'bms_registered_devices', 'scada_device_mappings', 'tb_devices'];
+      localKeys.forEach((k) => {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const arr = Array.isArray(parsed) ? parsed : [parsed];
+            arr.forEach(d => addDevice(d, false));
+          }
+        } catch (e) { }
+      });
+    }
+
+    devicesCacheRef.current[cacheKey] = siteDeviceList;
     setDevicesBySiteCategory((prev) => ({ ...prev, [cacheKey]: siteDeviceList }));
     setLoadingSitesMap((prev) => ({ ...prev, [cacheKey]: false }));
-  }, [currentCategory, assetLabel, devicesBySiteCategory, getCacheKey]);
+  }, [currentCategory, assetLabel, isSiteOnlyMode, getCacheKey, effectiveSites]);
 
   // Initial fetch for the active selected site when site or category changes
   useEffect(() => {
@@ -446,24 +487,53 @@ export const GlobalSiteAssetDropdown = ({
 
   // Device selection handler
   const handleSelectDevice = (site, device) => {
-    if (site && setSelectedSite) setSelectedSite(site);
+    if (!site || !device) return;
+    const sId = String(getSiteId(site));
+    const devId = String(device.id || device.deviceId || device._id || '');
 
-    const devId = String(device.id || device.deviceId || '');
+    if (setSelectedSite) setSelectedSite(site);
     setSelectedDeviceId(devId);
 
     const storageKey = getDeviceStorageKey(currentCategory);
     localStorage.setItem(storageKey, devId);
     localStorage.setItem('selected_device_id', devId);
+    localStorage.setItem('selected_site_id', sId);
+    try {
+      localStorage.setItem('selected_site', JSON.stringify(site));
+      localStorage.setItem('scada_selected_site', JSON.stringify(site));
+    } catch (e) { }
+
+    // Module & site scoped keys
+    if (currentCategory === 'AQI_SENSOR') {
+      localStorage.setItem(`selected_aqi_device_id_${sId}`, devId);
+      localStorage.setItem('selected_aqi_device_id', devId);
+      localStorage.setItem('selected_aqi_sensor_id', devId);
+    } else if (currentCategory === 'MAIN_ENERGY_METER') {
+      localStorage.setItem(`selected_main_meter_id_${sId}`, devId);
+      localStorage.setItem('selected_main_meter_id', devId);
+    } else if (currentCategory === 'SUB_ENERGY_METER') {
+      localStorage.setItem(`selected_sub_meter_id_${sId}`, devId);
+      localStorage.setItem('selected_sub_meter_id', devId);
+    } else if (currentCategory === 'GENERATOR') {
+      localStorage.setItem(`selected_dg_device_id_${sId}`, devId);
+      localStorage.setItem('selected_dg_device_id', devId);
+    }
 
     window.dispatchEvent(new CustomEvent('scada_device_changed', {
       detail: {
         deviceId: devId,
         device,
-        siteId: String(getSiteId(site)),
+        siteId: sId,
+        site,
         module: moduleHeader?.title,
         category: currentCategory
       }
     }));
+
+    window.dispatchEvent(new CustomEvent('site_changed', {
+      detail: { siteId: sId, site }
+    }));
+    window.dispatchEvent(new CustomEvent('bms_site_changed', { detail: site }));
 
     if (onDeviceSelect) onDeviceSelect(device, site);
     setIsOpen(false);
@@ -472,12 +542,13 @@ export const GlobalSiteAssetDropdown = ({
   // Site-only selection handler (used in Sub Meters tab or direct site clicks)
   const handleSelectSiteOnly = (site) => {
     if (!site) return;
+    const sId = String(getSiteId(site));
     if (setSelectedSite) setSelectedSite(site);
 
-    const sId = String(getSiteId(site));
     try {
       localStorage.setItem('selected_site_id', sId);
       localStorage.setItem('selected_site', JSON.stringify(site));
+      localStorage.setItem('scada_selected_site', JSON.stringify(site));
     } catch (e) { }
 
     if (isSiteOnlyMode) {
@@ -500,6 +571,7 @@ export const GlobalSiteAssetDropdown = ({
       window.dispatchEvent(new CustomEvent('site_changed', {
         detail: { siteId: sId, site }
       }));
+      window.dispatchEvent(new CustomEvent('bms_site_changed', { detail: site }));
       setIsOpen(false);
       return;
     }
@@ -515,6 +587,10 @@ export const GlobalSiteAssetDropdown = ({
       const storageKey = getDeviceStorageKey(currentCategory);
       localStorage.removeItem(storageKey);
       localStorage.removeItem('selected_device_id');
+      if (currentCategory === 'AQI_SENSOR') {
+        localStorage.removeItem(`selected_aqi_device_id_${sId}`);
+        localStorage.removeItem('selected_aqi_device_id');
+      }
       window.dispatchEvent(new CustomEvent('scada_device_changed', {
         detail: {
           deviceId: '',
@@ -528,28 +604,10 @@ export const GlobalSiteAssetDropdown = ({
       window.dispatchEvent(new CustomEvent('site_changed', {
         detail: { siteId: sId, site }
       }));
+      window.dispatchEvent(new CustomEvent('bms_site_changed', { detail: site }));
       setIsOpen(false);
     }
   };
-
-  // Effective sites list with persistent fallback to selectedSite / cache
-  const effectiveSites = useMemo(() => {
-    if (activeSites && activeSites.length > 0) return activeSites;
-    if (selectedSite) return [selectedSite];
-    try {
-      const stored = localStorage.getItem('scada_selected_site');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && (parsed.id ?? parsed.siteId ?? parsed._id)) return [parsed];
-      }
-      const storedDb = localStorage.getItem('scada_sites_db');
-      if (storedDb) {
-        const parsedDb = JSON.parse(storedDb);
-        if (Array.isArray(parsedDb) && parsedDb.length > 0) return parsedDb;
-      }
-    } catch (e) {}
-    return [];
-  }, [activeSites, selectedSite]);
 
   // Computed state for active panel site & its devices
   const activePanelSiteObj = useMemo(() => {
@@ -595,11 +653,45 @@ export const GlobalSiteAssetDropdown = ({
   const currentActiveDeviceObj = useMemo(() => {
     if (isSiteOnlyMode || !currentSiteDevices || currentSiteDevices.length === 0) return null;
     if (selectedDeviceId) {
-      const found = currentSiteDevices.find((d) => String(d.id || d.deviceId) === String(selectedDeviceId));
+      const found = currentSiteDevices.find((d) => String(d.id || d.deviceId || d._id) === String(selectedDeviceId));
       if (found) return found;
     }
     return currentSiteDevices[0];
   }, [selectedDeviceId, currentSiteDevices, isSiteOnlyMode]);
+
+  // Auto-reconcile selectedDeviceId whenever active site devices load or site changes
+  useEffect(() => {
+    if (isSiteOnlyMode || !currentSelectedSiteId) return;
+    const cacheKey = getCacheKey(currentSelectedSiteId, currentCategory);
+    const devs = devicesBySiteCategory[cacheKey];
+    if (!devs) return; // not loaded yet
+
+    if (devs.length > 0) {
+      const currentMatch = devs.find((d) => String(d.id || d.deviceId || d._id) === String(selectedDeviceId));
+      if (!currentMatch) {
+        // Device mismatch! Auto-align with first valid device of this site
+        const firstDevId = String(devs[0].id || devs[0].deviceId || devs[0]._id);
+        setSelectedDeviceId(firstDevId);
+        const storageKey = getDeviceStorageKey(currentCategory);
+        localStorage.setItem(storageKey, firstDevId);
+        localStorage.setItem('selected_device_id', firstDevId);
+        if (currentCategory === 'AQI_SENSOR') {
+          localStorage.setItem(`selected_aqi_device_id_${currentSelectedSiteId}`, firstDevId);
+          localStorage.setItem('selected_aqi_device_id', firstDevId);
+        }
+      }
+    } else {
+      if (selectedDeviceId) {
+        setSelectedDeviceId('');
+        const storageKey = getDeviceStorageKey(currentCategory);
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem('selected_device_id');
+        if (currentCategory === 'AQI_SENSOR') {
+          localStorage.removeItem(`selected_aqi_device_id_${currentSelectedSiteId}`);
+        }
+      }
+    }
+  }, [currentSelectedSiteId, currentCategory, devicesBySiteCategory, selectedDeviceId, isSiteOnlyMode, getCacheKey, getDeviceStorageKey]);
 
   if (!effectiveSites || effectiveSites.length === 0) return null;
 
