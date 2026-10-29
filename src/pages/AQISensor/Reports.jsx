@@ -15,6 +15,7 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
+import PdfButton from '../../components/PdfButton';
 import { useSiteStore } from '../../hooks/useSiteStore';
 import { useDeviceStatus } from '../../hooks/useDeviceStatus';
 import { bmsService } from '../../services/bmsService';
@@ -351,14 +352,23 @@ const AQIReports = () => {
       {!devicesLoading && selectedDevice && (
         <Row className="g-3 mb-4">
           <Col xs={12} lg={4}>
-            <Card className="scada-graph-card h-100 p-4">
+            <Card className="scada-graph-card h-100 p-4 border border-secondary border-opacity-20 shadow-sm">
               <div className="d-flex align-items-center justify-content-between mb-3">
                 <span className="text-secondary fs-8 text-uppercase fw-bold tracking-wider">
                   Target Sensor
                 </span>
-                <Badge bg="info" className="bg-opacity-15 text-info border border-info border-opacity-25 px-2 py-1 fs-9">
-                  {selectedDevice.status || 'ACTIVE'}
-                </Badge>
+                <span
+                  className="badge d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill fs-9 fw-bold"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    letterSpacing: '0.4px'
+                  }}
+                >
+                  <span className="rounded-circle" style={{ width: '6px', height: '6px', background: '#34d399' }} />
+                  {String(selectedDevice.status || 'ACTIVE').toUpperCase()}
+                </span>
               </div>
 
               <h4 className="text-light fs-5 fw-bold mb-1">
@@ -371,11 +381,11 @@ const AQIReports = () => {
               <div className="border-top border-secondary border-opacity-20 pt-3">
                 <div className="d-flex justify-content-between text-secondary fs-8 mb-1.5">
                   <span>Device ID:</span>
-                  <span className="font-monospace text-light">#{selectedDevice.id || selectedDevice._id}</span>
+                  <span className="font-monospace text-light fw-semibold">#{selectedDevice.id || selectedDevice._id}</span>
                 </div>
                 <div className="d-flex justify-content-between text-secondary fs-8 mb-1.5">
                   <span>Device Category:</span>
-                  <span className="font-monospace text-info">{selectedDevice.category || 'AQI_SENSOR'}</span>
+                  <span className="font-monospace text-info fw-semibold">{selectedDevice.category || 'AQI_SENSOR'}</span>
                 </div>
                 <div className="d-flex justify-content-between text-secondary fs-8">
                   <span>Reporting Protocol:</span>
@@ -386,12 +396,12 @@ const AQIReports = () => {
           </Col>
 
           <Col xs={12} lg={8}>
-            <Card className="scada-graph-card h-100 p-4">
+            <Card className="scada-graph-card h-100 p-4 border border-secondary border-opacity-20 shadow-sm">
               <div className="d-flex align-items-center justify-content-between mb-3">
                 <span className="text-secondary fs-8 text-uppercase fw-bold tracking-wider">
                   Configured Telemetry Registers
                 </span>
-                <span className="text-secondary fs-8">
+                <span className="badge bg-dark text-info border border-info border-opacity-25 px-2.5 py-1 fs-8">
                   {configuredParameters.length} Active Parameter{configuredParameters.length === 1 ? '' : 's'}
                 </span>
               </div>
@@ -401,8 +411,15 @@ const AQIReports = () => {
                   configuredParameters.map((param, idx) => (
                     <span
                       key={idx}
-                      className="badge bg-dark text-light border border-secondary border-opacity-30 py-1.5 px-2.5 fs-8 fw-medium"
+                      className="badge d-inline-flex align-items-center gap-1.5 py-1.5 px-3 fs-8 fw-semibold"
+                      style={{
+                        background: 'rgba(30, 41, 59, 0.75)',
+                        color: '#f1f5f9',
+                        border: '1px solid rgba(148, 163, 184, 0.25)',
+                        borderRadius: '6px'
+                      }}
                     >
+                      <Activity size={12} className="text-info" />
                       {param}
                     </span>
                   ))
@@ -419,7 +436,7 @@ const AQIReports = () => {
                 <Button
                   variant="outline-info"
                   size="sm"
-                  className="d-flex align-items-center gap-1.5 fs-8 py-1 px-3"
+                  className="d-flex align-items-center gap-1.5 fs-8 py-1.5 px-3 fw-semibold"
                   onClick={() => navigate(`/aqi-sensor/graphs?deviceId=${selectedDevice.id || selectedDevice._id}`)}
                 >
                   <span>Open Parameter Graphs</span>
@@ -433,31 +450,47 @@ const AQIReports = () => {
 
       {/* ── 5. Honest Status & Empty State (No Fake Records) ── */}
       {!devicesLoading && selectedDevice && (
-        <Card className="scada-graph-card text-center p-5">
-          <div className="py-4 max-w-xl mx-auto">
+        <Card className="scada-graph-card text-center p-4 p-md-5 border border-secondary border-opacity-20 shadow-sm">
+          <div className="py-2 max-w-xl mx-auto">
             <div
-              className="d-inline-flex align-items-center justify-content-center mb-3 rounded-circle p-3"
-              style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)' }}
+              className="d-inline-flex align-items-center justify-content-center mb-3 rounded-circle p-3.5"
+              style={{
+                background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(15, 23, 42, 0.4) 100%)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                boxShadow: '0 0 25px rgba(56, 189, 248, 0.12)'
+              }}
             >
-              <FileText size={42} className="text-info opacity-75" />
+              <FileText size={40} className="text-info" />
             </div>
 
             <h5 className="text-light fs-5 fw-bold mb-2">
               Automated Compliance & Periodic Reports
             </h5>
 
-            <Badge bg="warning" className="bg-opacity-15 text-warning border border-warning border-opacity-25 px-2.5 py-1 fs-8 mb-3">
-              Automated Schedule Configuration Pending
-            </Badge>
+            <div className="d-flex justify-content-center mb-3">
+              <span
+                className="badge d-inline-flex align-items-center gap-2 px-3.5 py-1.5 rounded-pill fs-8 fw-bold"
+                style={{
+                  background: 'rgba(245, 158, 11, 0.16)',
+                  color: '#fbbf24',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  boxShadow: '0 0 16px rgba(245, 158, 11, 0.12)',
+                  letterSpacing: '0.2px'
+                }}
+              >
+                <Clock size={14} className="text-warning flex-shrink-0" />
+                <span>Automated Schedule Configuration Pending</span>
+              </span>
+            </div>
 
-            <p className="text-secondary fs-7 leading-relaxed mb-4">
+            <p className="text-secondary fs-7 leading-relaxed mb-4" style={{ maxWidth: '640px', margin: '0 auto 1.5rem' }}>
               Automated PDF and CSV compliance report generation is currently being provisioned for AQI sensors at this facility.
               Scheduled daily, weekly, and monthly air quality summaries will be available once the backend reporting cron is activated for this site.
             </p>
 
             <div
-              className="p-3 rounded-3 text-start mb-4 border border-secondary border-opacity-20"
-              style={{ background: 'rgba(15, 23, 42, 0.6)' }}
+              className="p-3.5 rounded-3 text-start mb-4 border border-secondary border-opacity-20"
+              style={{ background: 'rgba(15, 23, 42, 0.65)' }}
             >
               <div className="d-flex align-items-center gap-2 text-info fs-8 fw-semibold mb-1">
                 <ShieldCheck size={16} />
@@ -469,16 +502,23 @@ const AQIReports = () => {
               </p>
             </div>
 
-            <div className="d-flex justify-content-center gap-2">
+            <div className="d-flex justify-content-center align-items-center gap-3 flex-wrap">
               <Button
                 variant="info"
                 size="sm"
-                className="px-4 py-2 fs-8 fw-semibold d-flex align-items-center gap-2"
+                className="px-4 py-2 fs-8 fw-semibold d-flex align-items-center gap-2 shadow-sm text-dark"
                 onClick={() => navigate(`/aqi-sensor/graphs?deviceId=${selectedDevice.id || selectedDevice._id}`)}
               >
-                <Activity size={16} />
+                <Activity size={15} />
                 <span>View Live Graphs & Telemetry</span>
               </Button>
+              <PdfButton
+                label="Download Custom PDF"
+                variant="outline-info"
+                className="px-3.5 py-2 fs-8"
+                sites={sites}
+                title="Download Custom Operational Report"
+              />
             </div>
           </div>
         </Card>

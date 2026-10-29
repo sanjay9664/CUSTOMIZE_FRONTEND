@@ -4,6 +4,7 @@ import { RefreshCw, Layers, Cpu } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';
 import { useSiteStore } from '../../hooks/useSiteStore';
+import { useTheme } from '../../hooks/useTheme';
 import bmsService from '../../services/bmsService';
 import { apiClient, normalizeList } from '../../services/apiClient';
 import { isCategoryMatch } from '../../constants/deviceTemplates';
@@ -19,6 +20,7 @@ import PumpLimitModal from './components/PumpLimitModal';
 import UgPumpSkeleton from './components/UgPumpSkeleton';
 
 const UgTank = () => {
+  const { isDark } = useTheme();
   const pageRef = useRef(null);
   const activeRequestIdRef = useRef(0);
 
@@ -566,9 +568,10 @@ const UgTank = () => {
           <Col lg={9}>
             <Card className="bg-transparent border-0 mb-4 overflow-hidden shadow-2xl h-100">
               <div
-                className="scada-schematic-bg rounded-4 border border-secondary border-opacity-10 overflow-auto"
+                className="scada-schematic-bg rounded-4 overflow-auto"
                 style={{
-                  backgroundColor: '#020408',
+                  backgroundColor: isDark ? '#020408' : '#ececec',
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #bebebe',
                   position: 'relative',
                   height: isFullscreen ? 'auto' : 'auto',
                   minHeight: isFullscreen ? '850px' : 'auto'

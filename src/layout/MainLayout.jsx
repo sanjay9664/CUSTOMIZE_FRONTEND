@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { useSiteStore } from '../hooks/useSiteStore';
 
 const MODULE_HEADER_CONFIG = [
@@ -152,7 +153,9 @@ const MainLayout = ({ children }) => {
           </div>
         )}
         <main className={`px-2 px-md-3 pb-4 ${moduleHeader ? 'single-module-header-page' : ''}`}>
-          {children}
+          <ErrorBoundary resetKey={pathname}>
+            {children}
+          </ErrorBoundary>
         </main>
       </div>
 

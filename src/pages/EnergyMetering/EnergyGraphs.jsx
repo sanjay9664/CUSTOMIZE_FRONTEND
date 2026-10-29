@@ -5,7 +5,11 @@ import {
   Activity,
   Clock,
   RefreshCw,
-  Search
+  Sliders,
+  Cpu,
+  AlertTriangle,
+  Search,
+  Calendar
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';

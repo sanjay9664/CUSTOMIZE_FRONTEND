@@ -2,6 +2,7 @@ import React from 'react';
 import { Badge } from 'react-bootstrap';
 import { Droplets, Waves, Zap } from 'lucide-react';
 import { formatWaterTelemetryValue } from '../utils/waterTelemetry';
+import { useTheme } from '../../../hooks/useTheme';
 
 /**
  * AgTankCard - SCADA Props-Driven Tank Visual Unit
@@ -13,6 +14,7 @@ import { formatWaterTelemetryValue } from '../utils/waterTelemetry';
  * @param {boolean} [props.isFullscreen=false] - Fullscreen mode flag
  */
 const AgTankCard = ({ tank, onClick, isSelected = false, isFullscreen = false }) => {
+  const { isDark } = useTheme();
   if (!tank) return null;
 
   const isOnline = Boolean(tank.isOnline);
@@ -56,18 +58,18 @@ const AgTankCard = ({ tank, onClick, isSelected = false, isFullscreen = false })
       onClick={() => onClick && onClick(tank)}
       style={{
         cursor: 'pointer',
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(30, 41, 59, 0.45) 100%)',
-        border: isSelected ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(12px)',
+        background: isDark ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(30, 41, 59, 0.45) 100%)' : '#ececec',
+        border: isSelected ? '1px solid #38bdf8' : (isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #bebebe'),
+        backdropFilter: isDark ? 'blur(12px)' : 'none',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: isSelected ? '0 0 20px rgba(56, 189, 248, 0.25)' : '0 4px 20px rgba(0, 0, 0, 0.3)'
+        boxShadow: isSelected ? '0 0 20px rgba(56, 189, 248, 0.25)' : (isDark ? '0 4px 20px rgba(0, 0, 0, 0.3)' : '0 2px 10px rgba(0, 0, 0, 0.05)')
       }}
       title={`Click to view telemetry & controls for ${tank.name}`}
     >
       {/* Top Header Strip: Name & Sector Tag */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div className="text-start pe-2 text-truncate" style={{ maxWidth: '65%' }}>
-          <div className="fw-bold text-white fs-13 text-truncate" title={tank.name}>
+          <div className={`fw-bold ${isDark ? 'text-white' : 'text-dark'} fs-13 text-truncate`} title={tank.name}>
             {tank.name}
           </div>
           <div className="text-secondary fs-10 text-truncate" title={tank.buildingName || 'AG Water Tank'}>
@@ -184,7 +186,7 @@ const AgTankCard = ({ tank, onClick, isSelected = false, isFullscreen = false })
           {/* Water Level Percentage Display */}
           <div className="d-flex align-items-baseline justify-content-end mb-1">
             <span
-              className="fw-black fs-2 text-white"
+              className={`fw-black fs-2 ${isDark ? 'text-white' : 'text-dark'}`}
               style={{ lineHeight: 1, letterSpacing: '-0.5px' }}
             >
               {levelValue !== null ? levelValue : '--'}
@@ -198,7 +200,7 @@ const AgTankCard = ({ tank, onClick, isSelected = false, isFullscreen = false })
           </div>
 
           {/* Reserve / Capacity Stat */}
-          <div className="fs-11 fw-bold text-white text-truncate mb-1">
+          <div className={`fs-11 fw-bold ${isDark ? 'text-white' : 'text-dark'} text-truncate mb-1`}>
             {currentVolume !== null ? (
               <span>{currentVolume.toLocaleString()} <span className="text-secondary fs-10">/ {Number(tank.capacity).toLocaleString()} L</span></span>
             ) : tank.capacity ? (

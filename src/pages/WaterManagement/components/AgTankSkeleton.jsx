@@ -19,10 +19,8 @@ const AgTankSkeleton = ({ count = 4, isFullscreen = false }) => {
           xl={isFullscreen ? 3 : 3}
         >
           <div
-            className="p-3 rounded-4 position-relative"
+            className="p-3 rounded-4 position-relative scada-card ag-skeleton-card"
             style={{
-              background: 'rgba(15, 23, 42, 0.4)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
               minHeight: '210px'
             }}
           >
