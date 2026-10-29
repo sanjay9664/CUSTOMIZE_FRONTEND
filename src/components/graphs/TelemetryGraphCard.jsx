@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Card, Button } from 'react-bootstrap';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { Card, Button, Spinner } from 'react-bootstrap';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -79,7 +79,10 @@ export const TelemetryGraphCard = React.memo(({
   onExpand,
   initialChartType = null,
   isExpanded = false,
-  height = 250
+  height = 250,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore = null
 }) => {
   const isCumulative = useMemo(() => isCumulativeSetting(setting), [setting]);
   const defaultChartType = isCumulative ? 'bar' : 'area';
@@ -163,16 +166,43 @@ export const TelemetryGraphCard = React.memo(({
     return { chartData: data, stats: computedStats };
   }, [setting?.snapshots, interval, rangePreset, isCumulative]);
 
-  // For Bar Chart, adaptively downsample if data exceeds maximum bar density for card/modal
+  // In expanded modal mode, if horizontal scroll is enabled, allow full density up to 3500 points
   const barChartData = useMemo(() => {
     if (activeChartType !== 'bar' || !chartData || chartData.length === 0) return null;
-    const maxBars = isExpanded ? 120 : 60;
+    if (isExpanded) {
+      return chartData.length > 3500 ? downsampleForBarChart(chartData, 1500) : chartData;
+    }
+    const maxBars = 60;
     return downsampleForBarChart(chartData, maxBars);
   }, [chartData, activeChartType, isExpanded]);
 
   const activeData = activeChartType === 'bar' ? (barChartData || chartData) : chartData;
   const hasData = activeData.length > 0;
   const gradientId = `grad_${(setting?.settingId || setting?.fieldKey || 'card').toString().replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+  const scrollContainerRef = useRef(null);
+
+  // In expanded mode, calculate dynamic width so bars and points have comfortable spacing
+  // and user can scroll smoothly across the entire month without squishing!
+  const minPointWidth = activeChartType === 'bar' ? 18 : 12;
+  const isScrollable = isExpanded && activeData.length > 35;
+  const contentWidth = isScrollable ? Math.max(activeData.length * minPointWidth, 900) : '100%';
+
+  const handleScroll = useCallback((e) => {
+    if (!hasMore || isLoadingMore || !onLoadMore) return;
+    const { scrollLeft, scrollWidth, clientWidth } = e.target;
+    // When within 350px of the right edge, fetch next page
+    if (scrollWidth - (scrollLeft + clientWidth) < 350) {
+      onLoadMore();
+    }
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
+  const handleWheel = useCallback((e) => {
+    if (!isScrollable || !scrollContainerRef.current) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      scrollContainerRef.current.scrollLeft += e.deltaY;
+    }
+  }, [isScrollable]);
 
   const renderChart = (chartHeight) => {
     if (!hasData) {
@@ -190,80 +220,117 @@ export const TelemetryGraphCard = React.memo(({
     const ChartComp = activeChartType === 'bar' ? BarChart : (activeChartType === 'line' ? LineChart : AreaChart);
 
     return (
-      <ResponsiveContainer width="100%" height={chartHeight} debounce={150}>
-        <ChartComp data={activeData} margin={{ top: 12, right: 16, left: -10, bottom: 4 }}>
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={colorScheme.stroke} stopOpacity={0.65} />
-              <stop offset="95%" stopColor={colorScheme.stroke} stopOpacity={0.04} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
-          <XAxis
-            dataKey="time"
-            stroke="#94a3b8"
-            fontSize={11}
-            tickLine={{ stroke: '#475569' }}
-            axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
-            tick={{ fill: '#94a3b8' }}
-            dy={6}
-            minTickGap={25}
-          />
-          <YAxis
-            stroke="#94a3b8"
-            fontSize={11}
-            tickLine={{ stroke: '#475569' }}
-            axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
-            tick={{ fill: '#94a3b8' }}
-            dx={-4}
-            width={55}
-            domain={['auto', 'auto']}
-          />
-          <Tooltip
-            content={<ScadaTooltip unit={setting?.unit} isCumulative={isCumulative} color={colorScheme.stroke} />}
-            cursor={activeChartType === 'bar' ? { fill: 'rgba(255, 255, 255, 0.04)' } : { stroke: colorScheme.stroke, strokeWidth: 1, strokeDasharray: '3 3' }}
-          />
-          {activeChartType === 'bar' && (
-            <Bar
-              dataKey="plotValue"
-              name={setting?.displayName}
-              fill={colorScheme.stroke}
-              radius={activeData.length <= 60 ? [3, 3, 0, 0] : 0}
-              maxBarSize={40}
-              isAnimationActive={activeData.length <= 50}
-              animationDuration={activeData.length <= 30 ? 250 : 150}
-            />
-          )}
-          {activeChartType === 'line' && (
-            <Line
-              type="monotone"
-              dataKey="plotValue"
-              name={setting?.displayName}
-              stroke={colorScheme.stroke}
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
-              isAnimationActive={true}
-              animationDuration={350}
-            />
-          )}
-          {activeChartType === 'area' && (
-            <Area
-              type="monotone"
-              dataKey="plotValue"
-              name={setting?.displayName}
-              stroke={colorScheme.stroke}
-              strokeWidth={2}
-              fill={`url(#${gradientId})`}
-              fillOpacity={1}
-              dot={false}
-              activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
-              isAnimationActive={true}
-              animationDuration={350}
-            />
-          )}
-        </ChartComp>
-      </ResponsiveContainer>
+      <div className="position-relative h-100">
+        {isLoadingMore && (
+          <div style={{
+            position: 'absolute',
+            top: 8,
+            right: 16,
+            zIndex: 10,
+            background: 'rgba(8, 13, 25, 0.85)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
+            borderRadius: '16px',
+            padding: '3px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '0.72rem',
+            color: '#38bdf8'
+          }}>
+            <span className="spinner-border spinner-border-sm" style={{ width: '10px', height: '10px' }} />
+            <span>Loading more...</span>
+          </div>
+        )}
+        <div
+          ref={scrollContainerRef}
+          className="scada-graph-scroll-viewport position-relative h-100"
+          style={{
+            width: '100%',
+            overflowX: isScrollable ? 'auto' : 'hidden',
+            overflowY: 'hidden',
+            borderRadius: '6px'
+          }}
+          onScroll={handleScroll}
+          onWheel={handleWheel}
+        >
+          <div style={{ width: isScrollable ? `${contentWidth}px` : '100%', minWidth: '100%', height: chartHeight }}>
+            <ResponsiveContainer width="100%" height={chartHeight} debounce={isScrollable ? 0 : 150}>
+              <ChartComp data={activeData} margin={{ top: 12, right: 16, left: -10, bottom: 4 }}>
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={colorScheme.stroke} stopOpacity={0.65} />
+                    <stop offset="95%" stopColor={colorScheme.stroke} stopOpacity={0.04} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
+                <XAxis
+                  dataKey="time"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={{ stroke: '#475569' }}
+                  axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
+                  tick={{ fill: '#94a3b8' }}
+                  dy={6}
+                  minTickGap={25}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={{ stroke: '#475569' }}
+                  axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
+                  tick={{ fill: '#94a3b8' }}
+                  dx={-4}
+                  width={55}
+                  domain={['auto', 'auto']}
+                />
+                <Tooltip
+                  content={<ScadaTooltip unit={setting?.unit} isCumulative={isCumulative} color={colorScheme.stroke} />}
+                  cursor={activeChartType === 'bar' ? { fill: 'rgba(255, 255, 255, 0.04)' } : { stroke: colorScheme.stroke, strokeWidth: 1, strokeDasharray: '3 3' }}
+                />
+                {activeChartType === 'bar' && (
+                  <Bar
+                    dataKey="plotValue"
+                    name={setting?.displayName}
+                    fill={colorScheme.stroke}
+                    radius={activeData.length <= 60 ? [3, 3, 0, 0] : 0}
+                    maxBarSize={40}
+                    isAnimationActive={activeData.length <= 50}
+                    animationDuration={activeData.length <= 30 ? 250 : 150}
+                  />
+                )}
+                {activeChartType === 'line' && (
+                  <Line
+                    type="monotone"
+                    dataKey="plotValue"
+                    name={setting?.displayName}
+                    stroke={colorScheme.stroke}
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
+                    isAnimationActive={true}
+                    animationDuration={350}
+                  />
+                )}
+                {activeChartType === 'area' && (
+                  <Area
+                    type="monotone"
+                    dataKey="plotValue"
+                    name={setting?.displayName}
+                    stroke={colorScheme.stroke}
+                    strokeWidth={2}
+                    fill={`url(#${gradientId})`}
+                    fillOpacity={1}
+                    dot={false}
+                    activeDot={{ r: 5, fill: colorScheme.stroke, stroke: '#ffffff', strokeWidth: 2 }}
+                    isAnimationActive={true}
+                    animationDuration={350}
+                  />
+                )}
+              </ChartComp>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
     );
   };
 

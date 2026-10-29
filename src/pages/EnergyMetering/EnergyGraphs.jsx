@@ -1,27 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Row, Col, Card, Button, Form, Modal, Spinner, InputGroup } from 'react-bootstrap';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip
-} from 'recharts';
+import { Row, Col, Button } from 'react-bootstrap';
 import {
   Zap,
   Activity,
   Clock,
-  X,
   RefreshCw,
-  Sliders,
-  Cpu,
-  AlertTriangle
+  Search
 } from 'lucide-react';
 import PageContextBanner from '../../components/PageContextBanner';
 import PdfButton from '../../components/PdfButton';
@@ -46,7 +30,8 @@ import {
   isCumulativeSetting,
   getTodayIstDateString
 } from '../../utils/scadaGraphUtils';
-import TelemetryGraphCard, { ScadaTooltip } from '../../components/graphs/TelemetryGraphCard';
+import TelemetryGraphCard from '../../components/graphs/TelemetryGraphCard';
+import TelemetryGraphModal from '../../components/graphs/TelemetryGraphModal';
 import ScadaToolbar from '../../components/graphs/ScadaToolbar';
 
 
@@ -98,25 +83,10 @@ const EnergyGraphs = () => {
   // Per-setting individual overrides (allows updating only selected event without whole-page refresh)
   const [settingOverrides, setSettingOverrides] = useState({});
 
-  // Modal Expand state: track setting object and setting key
+  // Modal Expand state: track setting object and style
   const [expandedSetting, setExpandedSetting] = useState(null);
-  const [expandedSettingKey, setExpandedSettingKey] = useState(null);
   const [expandedChartType, setExpandedChartType] = useState('area');
   const [expandedColorScheme, setExpandedColorScheme] = useState(GRAPH_PALETTES[0]);
-
-  // Dedicated modal controls state (independent of main page)
-  const [modalInterval, setModalInterval] = useState('HOURLY');
-  const [modalRangePreset, setModalRangePreset] = useState('last24h');
-  const [modalCustomStartDate, setModalCustomStartDate] = useState(() => {
-    const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  });
-  const [modalCustomEndDate, setModalCustomEndDate] = useState(() => {
-    return getTodayIstDateString();
-  });
-  const [modalSnapshots, setModalSnapshots] = useState([]);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalError, setModalError] = useState(null);
 
   // Stale request race condition prevention token
   const requestIdRef = useRef(0);
@@ -588,25 +558,6 @@ const EnergyGraphs = () => {
     return allSettings;
   }, [selectedDevice, telemetryData]);
 
-  // Derive active expanded setting dynamically from eligibleSettings
-  const activeExpandedSetting = useMemo(() => {
-    if (!expandedSettingKey) return expandedSetting;
-    return eligibleSettings.find(s => {
-      const key = s.settingId ? `id:${s.settingId}` : (s.fieldKey ? `key:${s.fieldKey}` : `name:${s.displayName}`);
-      return key === expandedSettingKey;
-    }) || expandedSetting;
-  }, [eligibleSettings, expandedSettingKey, expandedSetting]);
-
-  // Modal setting data combining active setting and latest modal snapshots
-  const modalSettingData = useMemo(() => {
-    if (!activeExpandedSetting) return null;
-    return {
-      ...activeExpandedSetting,
-      snapshots: modalSnapshots,
-      interval: modalInterval,
-      rangePreset: modalRangePreset
-    };
-  }, [activeExpandedSetting, modalSnapshots, modalInterval, modalRangePreset]);
 
   // Filter settings by user search input
   const filteredSettings = useMemo(() => {
@@ -725,51 +676,14 @@ const EnergyGraphs = () => {
 
   // Handle expand graph modal with stable callback reference
   const handleOpenExpandModal = useCallback((setting, type, color) => {
-    const key = setting.settingId ? `id:${setting.settingId}` : (setting.fieldKey ? `key:${setting.fieldKey}` : `name:${setting.displayName}`);
-    const override = settingOverrides[key];
-    const initialInterval = override?.interval || activeInterval;
-    const initialRange = override?.rangePreset || rangePreset;
-    const initialSnaps = override?.snapshots || setting.snapshots || [];
-
-    setExpandedSettingKey(key);
     setExpandedSetting(setting);
-    setExpandedChartType(type);
-    setExpandedColorScheme(color);
-    setModalInterval(initialInterval);
-    setModalRangePreset(initialRange);
-    setModalCustomStartDate(customStartDate);
-    setModalCustomEndDate(customEndDate);
-    setModalSnapshots(initialSnaps);
-    setModalError(null);
-  }, [settingOverrides, activeInterval, rangePreset, customStartDate, customEndDate]);
+    setExpandedChartType(type || 'area');
+    setExpandedColorScheme(color || GRAPH_PALETTES[0]);
+  }, []);
 
   const handleCloseExpandModal = useCallback(() => {
     setExpandedSetting(null);
-    setExpandedSettingKey(null);
-    setModalError(null);
   }, []);
-
-  // Modal Range Selector change: individual fetch by settingId
-  const handleModalRangeChange = (newPreset) => {
-    setModalRangePreset(newPreset);
-    const p = RANGE_PRESETS.find(x => x.id === newPreset);
-    const newInterval = p?.defaultInterval || modalInterval;
-    if (p?.defaultInterval) {
-      setModalInterval(newInterval);
-    }
-    // For 'custom', don't fetch immediately — wait for the Apply button click
-    if (newPreset !== 'custom' && activeExpandedSetting) {
-      fetchIndividualSettingSnapshots(activeExpandedSetting, newInterval, newPreset, modalCustomStartDate, modalCustomEndDate);
-    }
-  };
-
-  // Modal Interval Selector change: individual fetch by settingId
-  const handleModalIntervalChange = (newInterval) => {
-    setModalInterval(newInterval);
-    if (activeExpandedSetting) {
-      fetchIndividualSettingSnapshots(activeExpandedSetting, newInterval, modalRangePreset, modalCustomStartDate, modalCustomEndDate);
-    }
-  };
 
   return (
     <div className="fade-in energy-graphs-workspace">
@@ -953,214 +867,29 @@ const EnergyGraphs = () => {
         </>
       )}
 
-      {/* ── 4. Expand Graph Modal ── */}
-      {modalSettingData && (
-        <Modal
-          show={Boolean(modalSettingData)}
-          onHide={handleCloseExpandModal}
-          size="xl"
-          centered
-          dialogClassName="modal-95w scada-expanded-modal"
-        >
-          <Modal.Header
-            className="border-secondary border-opacity-25 p-3 px-4"
-            style={{ background: '#0b1120' }}
-          >
-            <Modal.Title className="text-white w-100 d-flex flex-wrap justify-content-between align-items-center gap-3">
-              {/* Left: Title & Identifiers */}
-              <div className="d-flex align-items-center gap-3">
-                <div style={{ width: '5px', height: '26px', background: expandedColorScheme.stroke, borderRadius: '3px', boxShadow: `0 0 10px ${expandedColorScheme.stroke}88` }} />
-                <div>
-                  <h5 className="mb-0 fw-bold text-white fs-5">
-                    {modalSettingData.displayName}
-                  </h5>
-                  <div className="d-flex align-items-center gap-2 mt-1">
-                    {modalSettingData.fieldKey && (
-                      <span className="scada-graph-tag">{modalSettingData.fieldKey}</span>
-                    )}
-                    {modalSettingData.unit && (
-                      <span className="scada-graph-unit">{modalSettingData.unit}</span>
-                    )}
-                    <span className="scada-graph-tag text-info border-info border-opacity-25" style={{ background: 'rgba(6, 182, 212, 0.1)' }}>
-                      IST (UTC+5:30)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Interactive Range & Interval Selectors (Individual Fetch by settingId), Chart Type Switcher, and Close Button */}
-              <div className="d-flex flex-wrap align-items-center gap-3">
-                {/* Interactive Range Selector for this individual event */}
-                <div className="d-flex align-items-center gap-1.5">
-                  <span className="text-secondary fs-8 fw-bold text-uppercase tracking-wider">Range:</span>
-                  <Form.Select
-                    size="sm"
-                    className="energy-modal-select"
-                    value={modalRangePreset}
-                    onChange={(e) => handleModalRangeChange(e.target.value)}
-                    disabled={modalLoading}
-                    style={{ width: '130px' }}
-                  >
-                    {RANGE_PRESETS.map(p => (
-                      <option key={p.id} value={p.id}>{p.label}</option>
-                    ))}
-                  </Form.Select>
-
-                  {/* Modal Custom Date Range Selector */}
-                  {modalRangePreset === 'custom' && (
-                    <div className="d-flex align-items-center gap-1.5 ms-2 px-2 py-0.5 rounded bg-dark border border-secondary border-opacity-50">
-                      <Calendar size={12} className="text-info flex-shrink-0" />
-                      <span className="text-secondary fs-8">From:</span>
-                      <Form.Control
-                        type="date"
-                        size="sm"
-                        value={modalCustomStartDate}
-                        max={modalCustomEndDate || getTodayIstDateString()}
-                        onChange={(e) => setModalCustomStartDate(e.target.value)}
-                        className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
-                        style={{ width: '120px', height: '22px' }}
-                      />
-                      <span className="text-secondary fs-8">To:</span>
-                      <Form.Control
-                        type="date"
-                        size="sm"
-                        value={modalCustomEndDate}
-                        min={modalCustomStartDate}
-                        max={getTodayIstDateString()}
-                        onChange={(e) => setModalCustomEndDate(e.target.value)}
-                        className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
-                        style={{ width: '120px', height: '22px' }}
-                      />
-                      <Button
-                        variant="info"
-                        size="sm"
-                        className="py-0 px-1.5 fs-8 text-white"
-                        style={{ height: '22px' }}
-                        onClick={() => {
-                          if (activeExpandedSetting) {
-                            fetchIndividualSettingSnapshots(activeExpandedSetting, modalInterval, 'custom', modalCustomStartDate, modalCustomEndDate);
-                          }
-                        }}
-                        disabled={modalLoading || !modalCustomStartDate || !modalCustomEndDate}
-                        title="Apply custom date range"
-                      >
-                        Apply
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Interactive Time-Interval Selector for this individual event */}
-                <div className="d-flex align-items-center gap-1.5">
-                  <span className="text-secondary fs-8 fw-bold text-uppercase tracking-wider">Interval:</span>
-                  <Form.Select
-                    size="sm"
-                    className="energy-modal-select"
-                    value={modalInterval}
-                    onChange={(e) => handleModalIntervalChange(e.target.value)}
-                    disabled={modalLoading}
-                    style={{ width: '105px' }}
-                  >
-                    {SAMPLING_INTERVALS.map(int => (
-                      <option key={int.value} value={int.value}>{int.label}</option>
-                    ))}
-                  </Form.Select>
-                </div>
-
-                {/* Chart Type Switcher */}
-                <div className="btn-group btn-group-sm" role="group" aria-label="Modal Chart Switcher">
-                  <Button
-                    variant={expandedChartType === 'area' ? 'info' : 'outline-secondary'}
-                    size="sm"
-                    className="py-1 px-2.5 fs-8"
-                    onClick={() => setExpandedChartType('area')}
-                  >
-                    Area
-                  </Button>
-                  <Button
-                    variant={expandedChartType === 'line' ? 'info' : 'outline-secondary'}
-                    size="sm"
-                    className="py-1 px-2.5 fs-8"
-                    onClick={() => setExpandedChartType('line')}
-                  >
-                    Line
-                  </Button>
-                  <Button
-                    variant={expandedChartType === 'bar' ? 'info' : 'outline-secondary'}
-                    size="sm"
-                    className="py-1 px-2.5 fs-8"
-                    onClick={() => setExpandedChartType('bar')}
-                  >
-                    Bar
-                  </Button>
-                </div>
-
-                {/* Modal Close Button */}
-                <Button
-                  variant="link"
-                  className="text-white p-0 opacity-75 hover-opacity-100 ms-1"
-                  onClick={handleCloseExpandModal}
-                  title="Close modal"
-                >
-                  <X size={24} />
-                </Button>
-              </div>
-            </Modal.Title>
-          </Modal.Header>
-
-          <Modal.Body style={{ background: '#080d19', minHeight: '520px', padding: '24px', position: 'relative' }}>
-            {/* Live Loading Overlay inside modal when re-fetching individual setting by settingId */}
-            {modalLoading && (
-              <div style={{
-                position: 'absolute',
-                top: 0, left: 0, right: 0, bottom: 0,
-                background: 'rgba(8, 13, 25, 0.75)',
-                backdropFilter: 'blur(3px)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10
-              }}>
-                <Spinner animation="border" variant="info" style={{ width: '2.5rem', height: '2.5rem' }} className="mb-2" />
-                <span className="text-info fs-8 fw-semibold tracking-wider text-uppercase">Updating Parameter Telemetry (IST)...</span>
-              </div>
-            )}
-
-            {modalError && (
-              <div className="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center justify-content-between fs-8">
-                <span>{modalError}</span>
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  className="py-0.5 px-2 fs-9 fw-bold"
-                  onClick={() => fetchIndividualSettingSnapshots(activeExpandedSetting, modalInterval, modalRangePreset)}
-                >
-                  Retry
-                </Button>
-              </div>
-            )}
-
-            <TelemetryGraphCard
-              setting={modalSettingData}
-              interval={modalInterval}
-              rangePreset={modalRangePreset}
-              colorScheme={expandedColorScheme}
-              onExpand={() => {}}
-              initialChartType={expandedChartType}
-              isExpanded={true}
-              height={460}
-            />
-          </Modal.Body>
-        </Modal>
-      )}
+      {/* ── 4. Expand Graph Modal (Common Reusable Component) ── */}
+      <TelemetryGraphModal
+        show={Boolean(expandedSetting)}
+        onHide={handleCloseExpandModal}
+        setting={expandedSetting}
+        siteId={selectedSiteId}
+        deviceId={selectedDeviceId}
+        initialInterval={activeInterval}
+        initialRangePreset={rangePreset}
+        initialCustomStartDate={customStartDate}
+        initialCustomEndDate={customEndDate}
+        initialChartType={expandedChartType}
+        colorScheme={expandedColorScheme}
+        intervals={SAMPLING_INTERVALS}
+        rangePresets={RANGE_PRESETS}
+      />
     </div>
   );
 };
 
 export {
   TelemetryGraphCard,
-  ScadaTooltip,
+  TelemetryGraphModal,
   SAMPLING_INTERVALS,
   RANGE_PRESETS,
   GRAPH_PALETTES,

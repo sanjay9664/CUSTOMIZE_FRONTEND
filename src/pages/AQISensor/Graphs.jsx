@@ -29,6 +29,7 @@ import {
   getTodayIstDateString
 } from '../../utils/scadaGraphUtils';
 import TelemetryGraphCard from '../../components/graphs/TelemetryGraphCard';
+import TelemetryGraphModal from '../../components/graphs/TelemetryGraphModal';
 import ScadaToolbar from '../../components/graphs/ScadaToolbar';
 import { resolveAqiGraphSettings, downsampleSnapsTo30Min } from './utils/aqiTelemetryAdapter';
 import '../EnergyMetering/EnergyGraphs.css';
@@ -93,18 +94,6 @@ const AQIGraphs = () => {
   const [expandedSetting, setExpandedSetting] = useState(null);
   const [expandedChartType, setExpandedChartType] = useState('area');
   const [expandedColorScheme, setExpandedColorScheme] = useState(GRAPH_PALETTES[0]);
-  const [modalInterval, setModalInterval] = useState('HOURLY');
-  const [modalRangePreset, setModalRangePreset] = useState('last24h');
-  const [modalCustomStartDate, setModalCustomStartDate] = useState(() => {
-    const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  });
-  const [modalCustomEndDate, setModalCustomEndDate] = useState(() => {
-    return getTodayIstDateString();
-  });
-  const [modalSnapshots, setModalSnapshots] = useState([]);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalError, setModalError] = useState(null);
 
   // Stale request race condition prevention token
   const requestIdRef = useRef(0);
@@ -353,77 +342,16 @@ const AQIGraphs = () => {
     );
   }, [graphSettings, searchTerm]);
 
-  // 4. Modal Individual Telemetry Fetch
+  // 4. Modal Expand handlers
   const handleOpenExpandModal = useCallback((setting, chartType, colorScheme) => {
     setExpandedSetting(setting);
     setExpandedChartType(chartType);
     setExpandedColorScheme(colorScheme);
-    setModalInterval(activeInterval);
-    setModalRangePreset(rangePreset);
-    setModalCustomStartDate(customStartDate);
-    setModalCustomEndDate(customEndDate);
-    setModalSnapshots(setting.snapshots || []);
-    setModalError(null);
-  }, [activeInterval, rangePreset, customStartDate, customEndDate]);
+  }, []);
 
   const handleCloseExpandModal = useCallback(() => {
     setExpandedSetting(null);
-    setModalSnapshots([]);
-    setModalError(null);
   }, []);
-
-  const fetchModalSnapshots = useCallback(async (targetInterval, targetRange, customStart, customEnd) => {
-    if (!selectedSiteId || !selectedDeviceId || !expandedSetting) return;
-
-    setModalLoading(true);
-    setModalError(null);
-
-    try {
-      const activeStart = customStart || modalCustomStartDate;
-      const activeEnd = customEnd || modalCustomEndDate;
-      const { from, to } = calculateDateRange(targetRange, activeStart, activeEnd);
-      const backendInterval = targetInterval === 'MIN_30' ? 'MIN_15' : targetInterval;
-
-      const params = {
-        interval: backendInterval,
-        from,
-        to,
-        limit: 1000
-      };
-
-      if (expandedSetting.settingId && !isNaN(Number(expandedSetting.settingId))) {
-        params.settingId = Number(expandedSetting.settingId);
-      } else if (expandedSetting.fieldKey) {
-        params.fieldKey = expandedSetting.fieldKey;
-      }
-
-      const res = await bmsService.getDeviceTelemetrySnapshots(selectedSiteId, selectedDeviceId, params);
-      const dataObj = res?.data || res || {};
-      let snaps = dataObj.snapshots || (Array.isArray(dataObj.settings) && dataObj.settings[0]?.snapshots) || [];
-
-      if (targetInterval === 'MIN_30' && Array.isArray(snaps)) {
-        snaps = downsampleSnapsTo30Min(snaps);
-      }
-
-      setModalSnapshots(snaps);
-    } catch (err) {
-      console.error('[AQIGraphs] Modal telemetry fetch error:', err);
-      setModalError(err?.message || 'Failed to update graph data.');
-    } finally {
-      setModalLoading(false);
-    }
-  }, [selectedSiteId, selectedDeviceId, expandedSetting, modalCustomStartDate, modalCustomEndDate]);
-
-  // Modal setting data combining active setting and latest modal snapshots
-  const modalSettingData = useMemo(() => {
-    if (!expandedSetting) return null;
-    return {
-      ...expandedSetting,
-      snapshots: modalSnapshots,
-      interval: modalInterval,
-      rangePreset: modalRangePreset
-    };
-  }, [expandedSetting, modalSnapshots, modalInterval, modalRangePreset]);
 
   // Context Banner Selectors
   const siteSelector = useMemo(() => {
@@ -699,164 +627,22 @@ const AQIGraphs = () => {
       )}
 
       {/* ── 4. Expand Graph Modal ── */}
-      {modalSettingData && (
-        <Modal
-          show={Boolean(modalSettingData)}
-          onHide={handleCloseExpandModal}
-          size="xl"
-          centered
-          dialogClassName="modal-95w scada-expanded-modal"
-        >
-          <Modal.Header closeButton closeVariant="white" className="border-secondary border-opacity-25" style={{ background: '#080d19' }}>
-            <Modal.Title className="d-flex align-items-center justify-content-between w-100 pe-3">
-              <div className="d-flex align-items-center gap-2">
-                <div
-                  style={{
-                    width: '4px',
-                    height: '24px',
-                    borderRadius: '2px',
-                    background: expandedColorScheme.stroke,
-                    boxShadow: `0 0 10px ${expandedColorScheme.stroke}aa`
-                  }}
-                />
-                <div>
-                  <h5 className="mb-0 fs-6 fw-bold text-light">
-                    {expandedSetting?.displayName || 'Telemetry Parameter'}
-                  </h5>
-                  <small className="text-secondary fs-8 font-monospace">
-                    {expandedSetting?.fieldKey ? `Key: ${expandedSetting.fieldKey}` : ''}
-                    {expandedSetting?.unit ? ` • Unit: ${expandedSetting.unit}` : ''}
-                  </small>
-                </div>
-              </div>
-
-              {/* Modal Interval & Range Presets */}
-              <div className="d-flex align-items-center gap-2 flex-wrap">
-                <div className="btn-group btn-group-sm" role="group" aria-label="Modal Time Range">
-                  {RANGE_PRESETS.map(p => (
-                    <Button
-                      key={p.id}
-                      variant={modalRangePreset === p.id ? 'info' : 'outline-secondary'}
-                      size="sm"
-                      className="py-0.5 px-2 fs-8"
-                      onClick={() => {
-                        setModalRangePreset(p.id);
-                        if (p.id !== 'custom') {
-                          fetchModalSnapshots(modalInterval, p.id, modalCustomStartDate, modalCustomEndDate);
-                        }
-                      }}
-                    >
-                      {p.label}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Modal Custom Date Range */}
-                {modalRangePreset === 'custom' && (
-                  <div className="d-flex align-items-center gap-1.5 px-2 py-0.5 rounded bg-dark border border-secondary border-opacity-50">
-                    <Calendar size={12} className="text-info flex-shrink-0" />
-                    <span className="text-secondary fs-8">From:</span>
-                    <Form.Control
-                      type="date"
-                      size="sm"
-                      value={modalCustomStartDate}
-                      max={modalCustomEndDate || getTodayIstDateString()}
-                      onChange={(e) => setModalCustomStartDate(e.target.value)}
-                      className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
-                      style={{ width: '120px', height: '22px' }}
-                    />
-                    <span className="text-secondary fs-8">To:</span>
-                    <Form.Control
-                      type="date"
-                      size="sm"
-                      value={modalCustomEndDate}
-                      min={modalCustomStartDate}
-                      max={getTodayIstDateString()}
-                      onChange={(e) => setModalCustomEndDate(e.target.value)}
-                      className="bg-black text-light border-secondary border-opacity-50 py-0 px-1 fs-8 font-monospace rounded"
-                      style={{ width: '120px', height: '22px' }}
-                    />
-                    <Button
-                      variant="info"
-                      size="sm"
-                      className="py-0 px-1.5 fs-8 text-white"
-                      style={{ height: '22px' }}
-                      onClick={() => fetchModalSnapshots(modalInterval, 'custom', modalCustomStartDate, modalCustomEndDate)}
-                      disabled={modalLoading || !modalCustomStartDate || !modalCustomEndDate}
-                      title="Apply custom date range"
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                )}
-
-                <div className="btn-group btn-group-sm" role="group" aria-label="Modal Interval">
-                  {AQI_SAMPLING_INTERVALS.map(intOpt => (
-                    <Button
-                      key={intOpt.value}
-                      variant={modalInterval === intOpt.value ? 'primary' : 'outline-secondary'}
-                      size="sm"
-                      className="py-0.5 px-2 fs-8"
-                      onClick={() => {
-                        setModalInterval(intOpt.value);
-                        fetchModalSnapshots(intOpt.value, modalRangePreset);
-                      }}
-                    >
-                      {intOpt.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </Modal.Title>
-          </Modal.Header>
-
-          <Modal.Body style={{ background: '#080d19', minHeight: '520px', padding: '24px', position: 'relative' }}>
-            {modalLoading && (
-              <div style={{
-                position: 'absolute',
-                top: 0, left: 0, right: 0, bottom: 0,
-                background: 'rgba(8, 13, 25, 0.75)',
-                backdropFilter: 'blur(3px)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10
-              }}>
-                <Spinner animation="border" variant="info" style={{ width: '2.5rem', height: '2.5rem' }} className="mb-2" />
-                <span className="text-info fs-8 fw-semibold tracking-wider text-uppercase">
-                  Updating Telemetry Snapshots (IST)...
-                </span>
-              </div>
-            )}
-
-            {modalError && (
-              <div className="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center justify-content-between fs-8">
-                <span>{modalError}</span>
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  className="py-0.5 px-2 fs-9 fw-bold"
-                  onClick={() => fetchModalSnapshots(modalInterval, modalRangePreset)}
-                >
-                  Retry
-                </Button>
-              </div>
-            )}
-
-            <TelemetryGraphCard
-              setting={modalSettingData}
-              interval={modalInterval}
-              rangePreset={modalRangePreset}
-              colorScheme={expandedColorScheme}
-              onExpand={() => {}}
-              initialChartType={expandedChartType}
-              isExpanded={true}
-              height={460}
-            />
-          </Modal.Body>
-        </Modal>
-      )}
+      {/* ── 4. Expand Graph Modal (Common Reusable Component) ── */}
+      <TelemetryGraphModal
+        show={Boolean(expandedSetting)}
+        onHide={handleCloseExpandModal}
+        setting={expandedSetting}
+        siteId={selectedSiteId}
+        deviceId={selectedDeviceId}
+        initialInterval={activeInterval}
+        initialRangePreset={rangePreset}
+        initialCustomStartDate={customStartDate}
+        initialCustomEndDate={customEndDate}
+        initialChartType={expandedChartType}
+        colorScheme={expandedColorScheme}
+        intervals={AQI_SAMPLING_INTERVALS}
+        rangePresets={RANGE_PRESETS}
+      />
     </div>
   );
 };
