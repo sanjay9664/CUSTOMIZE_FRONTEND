@@ -38,59 +38,66 @@ body.light-mode,
 :root[data-theme="light"] {
   color-scheme: light;
 
-  /* ── User-Specified Ultra Eye-Comfort #F2F2F2 Soft-Matte Light Mode Palette ── */
-  --background: #F2F2F2;
-  --surface: #ececec;
-  --surface-secondary: #e2e2e2;
+  /* ── Clean, Premium Slate Light Mode Palette ── */
+  --background: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-secondary: #F1F5F9;
 
-  --primary: #0284c7;
-  --primary-hover: #0369a1;
-  --accent-cyan: #0284c7;
-  --heading: #111827;
+  --primary: #0EA5E9;
+  --primary-hover: #0284C7;
+  --accent-cyan: #0EA5E9;
+  --heading: #0F172A;
 
-  --text-primary: #111827;
-  --text-secondary: #374151;
-  --text-muted: #4b5563;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
 
-  --border: #bebebe;
-  --divider: #cccccc;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --divider: #E2E8F0;
 
-  --success: #15803d;
-  --warning: #b45309;
-  --danger: #b91c1c;
-  --purple: #6d5ce7;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #F43F5E;
+  --purple: #7C3AED;
 
-  /* Pastel KPI Card Tokens - Soothing & Eye-Comfort against #F2F2F2 */
-  --card-blue: #dbeafe;
-  --card-green: #dcfce7;
-  --card-purple: #ede9fe;
-  --card-yellow: #fef3c7;
-  --card-cyan: #cffafe;
-  --card-red: #fee2e2;
+  /* Semantic Metric Colors */
+  --metric-temp: #0EA5E9;
+  --metric-hum: #10B981;
+  --metric-co2: #7C3AED;
+  --metric-tvoc: #F43F5E;
 
-  /* Table Tokens - Soft Matte, Zero Visual Shock */
-  --table-header: #e0e0e0;
-  --table-header-text: #111827;
-  --table-row-hover: #e5e5e5;
+  /* Pastel KPI Card Tokens */
+  --card-blue: #E0F2FE;
+  --card-green: #DCFCE7;
+  --card-purple: #F3E8FF;
+  --card-yellow: #FEF3C7;
+  --card-cyan: #E0F2FE;
+  --card-red: #FFE4E6;
+
+  /* Table Tokens */
+  --table-header: #F8FAFC;
+  --table-header-text: #0F172A;
+  --table-row-hover: #F1F5F9;
 
   /* ── Application SCADA Tokens Mapping ── */
   --scada-bg: var(--background);
-  --scada-sidebar: #e0e0e0;
-  --scada-card: var(--surface);
-  --scada-card-hover: #f0f0f0;
-  --scada-header: #e0e0e0;
+  --scada-sidebar: #FFFFFF;
+  --scada-card: #FFFFFF;
+  --scada-card-hover: #FFFFFF;
+  --scada-header: #FFFFFF;
   --scada-border: var(--border);
-  --scada-border-strong: #9e9e9e;
+  --scada-border-strong: var(--border-strong);
   --scada-text: var(--text-primary);
   --scada-text-muted: var(--text-secondary);
   --scada-text-subtle: var(--text-muted);
   --scada-accent: var(--primary);
-  --scada-accent-bg: rgba(2, 132, 199, 0.1);
-  --scada-input-bg: #ececec;
-  --scada-input-border: #bebebe;
+  --scada-accent-bg: rgba(14, 165, 233, 0.1);
+  --scada-input-bg: #FFFFFF;
+  --scada-input-border: var(--border);
   --scada-table-head-bg: var(--table-header);
-  --scada-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  --scada-glass-bg: rgba(236, 236, 236, 0.98);
+  --scada-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --scada-glass-bg: rgba(255, 255, 255, 0.95);
 
   --status-running: var(--success);
   --status-running-bg: var(--card-green);
@@ -2304,10 +2311,10 @@ body.light-mode .lucide,
   filter: none !important;
 }
 
-/* 1. Soothing #F2F2F2 Soft-Matte Background - Zero Glare */
+/* 1. Clean #F8FAFC Soft-Slate Background */
 body.light-mode {
-  --scada-bg: #F2F2F2 !important;
-  --scada-text: #111827 !important;
+  --scada-bg: #F8FAFC !important;
+  --scada-text: #0F172A !important;
 }
 
 body.light-mode #root>div,
@@ -2315,19 +2322,19 @@ body.light-mode .min-vh-100,
 body.light-mode .dashboard-wrapper,
 body.light-mode .scada-container,
 body.light-mode .scada-main-content {
-  background: #F2F2F2 !important;
+  background: #F8FAFC !important;
 }
 
-/* 2. Soft-Matte Surfaces & Defined Borders for Cards */
+/* 2. Pure White Surfaces & Clean Borders for Cards */
 body.light-mode .scada-card,
 body.light-mode .premium-figma-card,
 body.light-mode .bg-panel,
 body.light-mode .dash-card,
 body.light-mode .card,
 body.light-mode .dg-glass-card {
-  background: #ececec !important;
-  border: 1px solid #bebebe !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03) !important;
   border-radius: 14px !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -2340,14 +2347,14 @@ body.light-mode h3,
 body.light-mode h4,
 body.light-mode h5,
 body.light-mode .page-header h2 {
-  color: #111827 !important;
+  color: #0F172A !important;
   text-shadow: none !important;
   letter-spacing: -0.3px !important;
   font-weight: 800 !important;
 }
 
 body.light-mode h6 {
-  color: #1f2937 !important;
+  color: #0F172A !important;
   font-weight: 700 !important;
 }
 
@@ -2359,19 +2366,24 @@ body.light-mode *,
 
 body.light-mode .text-muted,
 [data-theme="light"] .text-muted {
-  color: #374151 !important;
-  font-weight: 600 !important;
+  color: #64748B !important;
+  font-weight: 500 !important;
+}
+
+body.light-mode .text-secondary,
+[data-theme="light"] .text-secondary {
+  color: #64748B !important;
 }
 
 body.light-mode .text-dim,
 [data-theme="light"] .text-dim {
-  color: #374151 !important;
-  font-weight: 600 !important;
+  color: #64748B !important;
+  font-weight: 500 !important;
 }
 
 body.light-mode .text-main,
 [data-theme="light"] .text-main {
-  color: #111827 !important;
+  color: #0F172A !important;
   font-weight: 700 !important;
 }
 

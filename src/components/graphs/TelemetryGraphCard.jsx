@@ -13,7 +13,8 @@ import {
   CartesianGrid,
   Tooltip
 } from 'recharts';
-import { Activity, Maximize2 } from 'lucide-react';
+import { Activity, Maximize2, Thermometer, Droplets, Wind, Leaf } from 'lucide-react';
+import { useTheme } from '../../hooks/useTheme';
 import {
   parseUtcDate,
   formatTimestampLabel,
@@ -22,6 +23,15 @@ import {
   isCumulativeSetting,
   downsampleForBarChart
 } from '../../utils/scadaGraphUtils';
+
+const getMetricIcon = (fieldKey = '', displayName = '') => {
+  const str = `${fieldKey} ${displayName}`.toLowerCase();
+  if (str.includes('temp')) return Thermometer;
+  if (str.includes('hum') || str.includes('rh')) return Droplets;
+  if (str.includes('co2')) return Wind;
+  if (str.includes('tvoc') || str.includes('voc')) return Leaf;
+  return Activity;
+};
 
 /**
  * Custom SCADA Glassmorphic Tooltip (with IST Time Window)
@@ -84,6 +94,9 @@ export const TelemetryGraphCard = React.memo(({
   isLoadingMore = false,
   onLoadMore = null
 }) => {
+  const { isDark } = useTheme();
+  const MetricIcon = useMemo(() => getMetricIcon(setting?.fieldKey, setting?.displayName), [setting?.fieldKey, setting?.displayName]);
+
   const isCumulative = useMemo(() => isCumulativeSetting(setting), [setting]);
   const defaultChartType = isCumulative ? 'bar' : 'area';
   const [chartType, setChartType] = useState(initialChartType || defaultChartType);
@@ -262,23 +275,27 @@ export const TelemetryGraphCard = React.memo(({
                     <stop offset="95%" stopColor={colorScheme.stroke} stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={isDark ? "rgba(148, 163, 184, 0.12)" : "#E2E8F0"}
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="time"
-                  stroke="#94a3b8"
+                  stroke={isDark ? "#94a3b8" : "#64748B"}
                   fontSize={11}
-                  tickLine={{ stroke: '#475569' }}
-                  axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
-                  tick={{ fill: '#94a3b8' }}
+                  tickLine={{ stroke: isDark ? '#475569' : '#CBD5E1' }}
+                  axisLine={{ stroke: isDark ? 'rgba(148, 163, 184, 0.2)' : '#E2E8F0' }}
+                  tick={{ fill: isDark ? '#94a3b8' : '#64748B' }}
                   dy={6}
                   minTickGap={25}
                 />
                 <YAxis
-                  stroke="#94a3b8"
+                  stroke={isDark ? "#94a3b8" : "#64748B"}
                   fontSize={11}
-                  tickLine={{ stroke: '#475569' }}
-                  axisLine={{ stroke: 'rgba(148, 163, 184, 0.2)' }}
-                  tick={{ fill: '#94a3b8' }}
+                  tickLine={{ stroke: isDark ? '#475569' : '#CBD5E1' }}
+                  axisLine={{ stroke: isDark ? 'rgba(148, 163, 184, 0.2)' : '#E2E8F0' }}
+                  tick={{ fill: isDark ? '#94a3b8' : '#64748B' }}
                   dx={-4}
                   width={55}
                   domain={['auto', 'auto']}
@@ -347,67 +364,134 @@ export const TelemetryGraphCard = React.memo(({
 
       {/* Card Header (only rendered in regular card mode; omitted in modal to eliminate duplicate heading bar) */}
       {!isExpanded && (
-        <div className="scada-graph-header">
-          <div className="scada-graph-title-group">
-            <div className="scada-graph-color-bar" style={{ background: colorScheme.stroke, boxShadow: `0 0 8px ${colorScheme.stroke}88` }} />
+        <div className="scada-graph-header d-flex align-items-center justify-content-between p-3">
+          <div className="scada-graph-title-group d-flex align-items-center gap-2.5">
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                backgroundColor: `${colorScheme.stroke}18`,
+                border: `1.5px solid ${colorScheme.stroke}30`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: colorScheme.stroke,
+                flexShrink: 0
+              }}
+            >
+              <MetricIcon size={20} strokeWidth={2.2} />
+            </div>
             <div className="d-flex flex-column">
-              <h5 className="scada-graph-title" title={setting?.displayName}>
+              <h5
+                className="scada-graph-title mb-0"
+                style={{
+                  color: isDark ? '#F8FAFC' : '#0F172A',
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  lineHeight: 1.2
+                }}
+                title={setting?.displayName}
+              >
                 {setting?.displayName || 'Telemetry Parameter'}
               </h5>
-              <div className="d-flex align-items-center gap-1.5 mt-0.5">
+              <div className="d-flex align-items-center gap-1.5 mt-1">
                 {setting?.fieldKey && (
-                  <span className="scada-graph-tag">{setting.fieldKey}</span>
+                  <span
+                    className="scada-graph-tag"
+                    style={{
+                      backgroundColor: `${colorScheme.stroke}14`,
+                      color: colorScheme.stroke,
+                      border: `1px solid ${colorScheme.stroke}28`,
+                      fontWeight: 600,
+                      fontSize: '0.72rem',
+                      padding: '1px 7px',
+                      borderRadius: '5px'
+                    }}
+                  >
+                    {setting.fieldKey}
+                  </span>
                 )}
                 {setting?.unit && (
-                  <span className="scada-graph-unit">{setting.unit}</span>
+                  <span
+                    className="scada-graph-unit"
+                    style={{
+                      backgroundColor: `${colorScheme.stroke}18`,
+                      color: colorScheme.stroke,
+                      border: `1px solid ${colorScheme.stroke}35`,
+                      fontWeight: 700,
+                      fontSize: '0.72rem',
+                      padding: '1px 7px',
+                      borderRadius: '5px'
+                    }}
+                  >
+                    {setting.unit}
+                  </span>
                 )}
               </div>
             </div>
           </div>
 
           {/* Action Controls */}
-          <div className="d-flex align-items-center gap-1.5">
-            <div className="btn-group btn-group-sm" role="group" aria-label="Chart Type Switcher">
-              <Button
-                variant={chartType === 'area' ? 'info' : 'outline-secondary'}
-                size="sm"
-                className="py-0.5 px-2 fs-8"
-                onClick={() => setChartType('area')}
-                title="Area Chart"
-              >
-                Area
-              </Button>
-              <Button
-                variant={chartType === 'line' ? 'info' : 'outline-secondary'}
-                size="sm"
-                className="py-0.5 px-2 fs-8"
-                onClick={() => setChartType('line')}
-                title="Line Chart"
-              >
-                Line
-              </Button>
-              <Button
-                variant={chartType === 'bar' ? 'info' : 'outline-secondary'}
-                size="sm"
-                className="py-0.5 px-2 fs-8"
-                onClick={() => setChartType('bar')}
-                title="Bar Chart"
-              >
-                Bar
-              </Button>
+          <div className="d-flex align-items-center gap-2">
+            <div
+              className="d-inline-flex align-items-center"
+              style={{
+                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : '#F1F5F9',
+                border: isDark ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid #E2E8F0',
+                borderRadius: '8px',
+                padding: '2px',
+                gap: '2px'
+              }}
+              role="group"
+              aria-label="Chart Type Switcher"
+            >
+              {['area', 'line', 'bar'].map((type) => {
+                const isActive = chartType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    style={{
+                      backgroundColor: isActive ? colorScheme.stroke : 'transparent',
+                      color: isActive ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B'),
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '3px 10px',
+                      fontSize: '0.75rem',
+                      fontWeight: isActive ? 600 : 500,
+                      boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onClick={() => setChartType(type)}
+                    title={`${type.charAt(0).toUpperCase() + type.slice(1)} Chart`}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                );
+              })}
             </div>
 
             {onExpand && (
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                className="p-1 border-0 text-info hover-glow ms-1"
+              <button
+                type="button"
+                className="btn btn-link p-1 border-0"
+                style={{
+                  color: isDark ? '#38bdf8' : '#64748B',
+                  opacity: hasData ? 1 : 0.4,
+                  cursor: hasData ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '6px'
+                }}
                 onClick={() => onExpand(setting, chartType, colorScheme)}
                 title="Expand Graph"
                 disabled={!hasData}
               >
-                <Maximize2 size={15} />
-              </Button>
+                <Maximize2 size={16} />
+              </button>
             )}
           </div>
         </div>
@@ -415,27 +499,43 @@ export const TelemetryGraphCard = React.memo(({
 
       {/* Stats Ribbon */}
       {stats && (
-        <div className="scada-graph-stats">
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Latest:</span>
-            <span className="scada-stat-value text-info">{formatVal(stats.latest)}</span>
+        <div
+          className="scada-graph-stats px-3 py-2 d-flex align-items-center gap-3"
+          style={{
+            borderBottom: isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #F1F5F9',
+            backgroundColor: isDark ? 'transparent' : '#FFFFFF'
+          }}
+        >
+          <div className="scada-stat-item d-flex align-items-center gap-1.5">
+            <span className="scada-stat-label" style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 600 }}>LATEST:</span>
+            <span className="scada-stat-value font-monospace" style={{ color: colorScheme.stroke, fontSize: '0.85rem', fontWeight: 700 }}>
+              {formatVal(stats.latest)}
+            </span>
           </div>
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Min:</span>
-            <span className="scada-stat-value">{formatVal(stats.min)}</span>
+          <div className="scada-stat-item d-flex align-items-center gap-1.5">
+            <span className="scada-stat-label" style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 600 }}>MIN:</span>
+            <span className="scada-stat-value font-monospace" style={{ color: isDark ? '#F8FAFC' : '#0F172A', fontSize: '0.85rem', fontWeight: 700 }}>
+              {formatVal(stats.min)}
+            </span>
           </div>
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Max:</span>
-            <span className="scada-stat-value">{formatVal(stats.max)}</span>
+          <div className="scada-stat-item d-flex align-items-center gap-1.5">
+            <span className="scada-stat-label" style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 600 }}>MAX:</span>
+            <span className="scada-stat-value font-monospace" style={{ color: isDark ? '#F8FAFC' : '#0F172A', fontSize: '0.85rem', fontWeight: 700 }}>
+              {formatVal(stats.max)}
+            </span>
           </div>
-          <div className="scada-stat-item">
-            <span className="scada-stat-label">Avg:</span>
-            <span className="scada-stat-value">{formatVal(stats.avg)}</span>
+          <div className="scada-stat-item d-flex align-items-center gap-1.5">
+            <span className="scada-stat-label" style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 600 }}>AVG:</span>
+            <span className="scada-stat-value font-monospace" style={{ color: isDark ? '#F8FAFC' : '#0F172A', fontSize: '0.85rem', fontWeight: 700 }}>
+              {formatVal(stats.avg)}
+            </span>
           </div>
           {isCumulative && stats.totalDelta !== null && (
-            <div className="scada-stat-item ms-auto">
-              <span className="scada-stat-label text-warning">Total Delta:</span>
-              <span className="scada-stat-value text-warning">{formatVal(stats.totalDelta)} {setting?.unit || ''}</span>
+            <div className="scada-stat-item ms-auto d-flex align-items-center gap-1.5">
+              <span className="scada-stat-label text-warning" style={{ fontSize: '0.75rem', fontWeight: 600 }}>TOTAL DELTA:</span>
+              <span className="scada-stat-value text-warning font-monospace" style={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                {formatVal(stats.totalDelta)} {setting?.unit || ''}
+              </span>
             </div>
           )}
         </div>

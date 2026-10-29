@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Modal, Button, Form, Spinner } from 'react-bootstrap';
 import { Calendar, Activity } from 'lucide-react';
 import { bmsService } from '../../services/bmsService';
+import { useTheme } from '../../hooks/useTheme';
 import {
   RANGE_PRESETS,
   SAMPLING_INTERVALS,
@@ -39,6 +40,7 @@ export const TelemetryGraphModal = ({
   intervals = DEFAULT_INTERVALS,
   rangePresets = RANGE_PRESETS
 }) => {
+  const { isDark } = useTheme();
   const [modalInterval, setModalInterval] = useState(initialInterval);
   const [modalRangePreset, setModalRangePreset] = useState(initialRangePreset);
   const [modalCustomStartDate, setModalCustomStartDate] = useState(initialCustomStartDate || getTodayIstDateString());
@@ -251,7 +253,15 @@ export const TelemetryGraphModal = ({
       centered
       dialogClassName="modal-95w scada-expanded-modal"
     >
-      <Modal.Header closeButton closeVariant="white" className="border-secondary border-opacity-25 px-4 py-3" style={{ background: '#080d19' }}>
+      <Modal.Header
+        closeButton
+        closeVariant={isDark ? "white" : undefined}
+        className="px-4 py-3"
+        style={{
+          background: isDark ? '#080d19' : '#FFFFFF',
+          borderBottom: isDark ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid #E2E8F0'
+        }}
+      >
         <div className="d-flex align-items-center justify-content-between w-100 pe-3 flex-wrap gap-3">
           {/* Left: Parameter Name & Unit Badge */}
           <div className="d-flex align-items-center gap-2.5 flex-shrink-0">
@@ -264,7 +274,7 @@ export const TelemetryGraphModal = ({
                 boxShadow: `0 0 10px ${activeColorScheme.stroke}aa`
               }}
             />
-            <h5 className="mb-0 fs-5 fw-bold text-light text-nowrap">
+            <h5 className="mb-0 fs-5 fw-bold text-nowrap" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
               {setting.displayName || 'Telemetry Parameter'}
             </h5>
             {setting.unit && (
@@ -296,19 +306,31 @@ export const TelemetryGraphModal = ({
 
             {/* Custom Date Range Picker */}
             {modalRangePreset === 'custom' && (
-              <div className="d-flex align-items-center gap-1.5 px-2 py-1 rounded bg-black border border-secondary border-opacity-50 flex-shrink-0">
+              <div
+                className="d-flex align-items-center gap-1.5 px-2 py-1 rounded flex-shrink-0"
+                style={{
+                  backgroundColor: isDark ? '#000000' : '#FFFFFF',
+                  border: isDark ? '1px solid rgba(148, 163, 184, 0.3)' : '1px solid #CBD5E1'
+                }}
+              >
                 <Calendar size={13} className="text-info flex-shrink-0" />
-                <span className="text-secondary fs-8 fw-semibold">From:</span>
+                <span className="fs-8 fw-semibold" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>From:</span>
                 <Form.Control
                   type="date"
                   size="sm"
                   value={modalCustomStartDate}
                   max={modalCustomEndDate || getTodayIstDateString()}
                   onChange={(e) => setModalCustomStartDate(e.target.value)}
-                  className="bg-black text-light border-secondary border-opacity-50 py-0 px-1.5 fs-8 font-monospace rounded"
-                  style={{ width: '125px', height: '24px' }}
+                  className="py-0 px-1.5 fs-8 font-monospace rounded"
+                  style={{
+                    width: '125px',
+                    height: '24px',
+                    backgroundColor: isDark ? '#000000' : '#FFFFFF',
+                    color: isDark ? '#F8FAFC' : '#0F172A',
+                    borderColor: isDark ? 'rgba(148, 163, 184, 0.3)' : '#CBD5E1'
+                  }}
                 />
-                <span className="text-secondary fs-8 fw-semibold">To:</span>
+                <span className="fs-8 fw-semibold" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>To:</span>
                 <Form.Control
                   type="date"
                   size="sm"
@@ -316,8 +338,14 @@ export const TelemetryGraphModal = ({
                   min={modalCustomStartDate}
                   max={getTodayIstDateString()}
                   onChange={(e) => setModalCustomEndDate(e.target.value)}
-                  className="bg-black text-light border-secondary border-opacity-50 py-0 px-1.5 fs-8 font-monospace rounded"
-                  style={{ width: '125px', height: '24px' }}
+                  className="py-0 px-1.5 fs-8 font-monospace rounded"
+                  style={{
+                    width: '125px',
+                    height: '24px',
+                    backgroundColor: isDark ? '#000000' : '#FFFFFF',
+                    color: isDark ? '#F8FAFC' : '#0F172A',
+                    borderColor: isDark ? 'rgba(148, 163, 184, 0.3)' : '#CBD5E1'
+                  }}
                 />
                 <Button
                   variant="info"
@@ -382,7 +410,7 @@ export const TelemetryGraphModal = ({
         </div>
       </Modal.Header>
 
-      <Modal.Body style={{ background: '#080d19', padding: '16px 20px', position: 'relative', flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
+      <Modal.Body style={{ background: isDark ? '#080d19' : '#F8FAFC', padding: '16px 20px', position: 'relative', flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
         {modalLoading && (
           <div style={{
             position: 'absolute',
