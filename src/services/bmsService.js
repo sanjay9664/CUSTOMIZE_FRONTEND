@@ -174,11 +174,11 @@ export const bmsService = {
   getCommands: (siteId, deviceId, params = {}) => apiClient.get(`/sites/${siteId}/devices/${deviceId}/commands`, params),
 
   // Reports & Telemetry Service
-  getDeviceTelemetrySnapshots: (siteId, deviceId, params = {}) => {
+  getDeviceTelemetrySnapshots: (siteId, deviceId, params = {}, options = {}) => {
     const cleanParams = Object.fromEntries(
       Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
     );
-    return apiClient.get(`/sites/${siteId}/devices/${deviceId}/telemetry/snapshots`, cleanParams);
+    return apiClient.get(`/sites/${siteId}/devices/${deviceId}/telemetry/snapshots`, cleanParams, options);
   },
   getEnergyReports: (params = {}) => apiClient.get('/reports/energy', params),
   getDgReports: (params = {}) => apiClient.get('/reports/dg', params),

@@ -268,6 +268,37 @@
 }
 
 /* ── Modal Expanded Card Overrides ── */
+.modal-dialog.scada-expanded-modal,
+.modal-dialog.modal-95w,
+.scada-expanded-modal.modal-dialog,
+.scada-expanded-modal,
+.modal-95w {
+  --bs-modal-width: 98vw !important;
+  max-width: 98vw !important;
+  width: 98vw !important;
+  min-width: 98vw !important;
+  margin: 1vh auto !important;
+}
+
+.scada-expanded-modal .modal-content {
+  background: #080d19 !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 45px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.15) !important;
+  min-height: 94vh !important;
+  height: 94vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.scada-expanded-modal .modal-body {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 16px 20px !important;
+  overflow: hidden !important;
+}
+
 .scada-graph-card-expanded {
   background: transparent !important;
   border: none !important;

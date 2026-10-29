@@ -53,6 +53,50 @@ export const normalizePaginatedResponse = (raw, key = 'assets') => {
   return { items, total, page, limit, totalPages };
 };
 
+// In-flight GET request deduplication map: Map<cacheKey, Promise<any>>
+const inFlightRequests = new Map();
+
+// In-memory response cache: Map<cacheKey, { data: any, expiresAt: number }>
+const responseCache = new Map();
+
+// Helper to determine cache TTL in milliseconds
+const getEffectiveTtl = (url, customTtl) => {
+  if (typeof customTtl === 'number') return customTtl;
+  // Snapshots cache for 15s (prevents rapid re-fetching when toggling views/intervals)
+  if (url.includes('/telemetry/snapshots')) return 15000;
+  // Metadata catalogs (sites, devices, rules, settings) cache for 60s
+  if (url.includes('/sites') || url.includes('/devices') || url.includes('/rules')) return 60000;
+  // Generic GET requests default to 5s
+  return 5000;
+};
+
+// Safe deep clone to prevent callers mutating cache entries in-place
+const cloneData = (data) => {
+  if (data === null || data === undefined || typeof data !== 'object') return data;
+  try {
+    if (typeof structuredClone === 'function') {
+      return structuredClone(data);
+    }
+    return JSON.parse(JSON.stringify(data));
+  } catch (e) {
+    return data;
+  }
+};
+
+// Invalidate cache entries matching a path or regex
+export const invalidateCache = (pattern) => {
+  if (!pattern) {
+    responseCache.clear();
+    return;
+  }
+  const needle = String(pattern).toLowerCase();
+  for (const key of responseCache.keys()) {
+    if (key.toLowerCase().includes(needle)) {
+      responseCache.delete(key);
+    }
+  }
+};
+
 async function executeRequest(endpoint, options = {}) {
   const url = getApiUrl(endpoint);
   const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
@@ -67,6 +111,9 @@ async function executeRequest(endpoint, options = {}) {
   try {
     res = await fetch(url, config);
   } catch (err) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
     throw new ApiError('Network error or backend service unreachable', 0, 'NETWORK_ERROR');
   }
 
@@ -140,18 +187,116 @@ async function handleResponse(res) {
 }
 
 export const apiClient = {
-  async get(endpoint, params = {}, customHeaders = {}) {
+  async get(endpoint, params = {}, options = {}) {
     let url = endpoint;
     if (params && Object.keys(params).length > 0) {
-      const queryStr = new URLSearchParams(params).toString();
-      url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryStr}`;
+      const sortedKeys = Object.keys(params).sort();
+      const searchParams = new URLSearchParams();
+      for (const k of sortedKeys) {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+          searchParams.append(k, params[k]);
+        }
+      }
+      const queryStr = searchParams.toString();
+      if (queryStr) {
+        url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryStr}`;
+      }
     }
 
-    const res = await executeRequest(url, {
-      method: 'GET',
-      headers: customHeaders
-    });
-    return handleResponse(res);
+    // Support both get(url, params, headers) and get(url, params, { headers, signal, skipCache, ttlMs })
+    const isOptionsObj = options && typeof options === 'object' && !Array.isArray(options);
+    const hasConfigKeys = isOptionsObj && (
+      'headers' in options || 
+      'signal' in options || 
+      'skipCache' in options || 
+      'forceRefresh' in options || 
+      'ttlMs' in options
+    );
+    const resolvedHeaders = hasConfigKeys ? (options.headers || {}) : (options || {});
+    const signal = isOptionsObj ? options.signal : undefined;
+    const skipCache = Boolean(isOptionsObj && (options.skipCache || options.forceRefresh));
+    const customTtl = isOptionsObj ? options.ttlMs : undefined;
+
+    if (signal?.aborted) {
+      const abortErr = new Error('The user aborted a request.');
+      abortErr.name = 'AbortError';
+      throw abortErr;
+    }
+
+    const cacheKey = url;
+    const now = Date.now();
+
+    // 1. Return from Memory Cache if still fresh
+    if (!skipCache && responseCache.has(cacheKey)) {
+      const cached = responseCache.get(cacheKey);
+      if (cached.expiresAt > now) {
+        return cloneData(cached.data);
+      }
+      responseCache.delete(cacheKey);
+    }
+
+    // 2. Return In-Flight Deduplication Promise if request is already pending
+    if (!skipCache && inFlightRequests.has(cacheKey)) {
+      const existingPromise = inFlightRequests.get(cacheKey);
+      if (signal) {
+        if (signal.aborted) {
+          const abortErr = new Error('The user aborted a request.');
+          abortErr.name = 'AbortError';
+          throw abortErr;
+        }
+        return new Promise((resolve, reject) => {
+          const onAbort = () => {
+            signal.removeEventListener('abort', onAbort);
+            const err = new Error('The user aborted a request.');
+            err.name = 'AbortError';
+            reject(err);
+          };
+          signal.addEventListener('abort', onAbort);
+          existingPromise.then(
+            res => {
+              signal.removeEventListener('abort', onAbort);
+              resolve(cloneData(res));
+            },
+            err => {
+              signal.removeEventListener('abort', onAbort);
+              reject(err);
+            }
+          );
+        });
+      }
+      return existingPromise.then(res => cloneData(res));
+    }
+
+    // 3. Fire actual HTTP request and share promise
+    const requestPromise = (async () => {
+      const res = await executeRequest(url, {
+        method: 'GET',
+        headers: resolvedHeaders,
+        signal
+      });
+      const data = await handleResponse(res);
+
+      if (!skipCache && data !== null && data !== undefined) {
+        const ttl = getEffectiveTtl(url, customTtl);
+        if (ttl > 0) {
+          responseCache.set(cacheKey, {
+            data,
+            expiresAt: Date.now() + ttl
+          });
+        }
+      }
+      return data;
+    })();
+
+    if (!skipCache) {
+      inFlightRequests.set(cacheKey, requestPromise);
+      requestPromise.finally(() => {
+        inFlightRequests.delete(cacheKey);
+      });
+    }
+
+    const result = await requestPromise;
+    return cloneData(result);
   },
 
   async post(endpoint, data = {}, customHeaders = {}) {
@@ -160,7 +305,9 @@ export const apiClient = {
       headers: customHeaders,
       body: typeof data === 'string' ? data : JSON.stringify(data)
     });
-    return handleResponse(res);
+    const result = await handleResponse(res);
+    invalidateCache(endpoint);
+    return result;
   },
 
   async put(endpoint, data = {}, customHeaders = {}) {
@@ -169,7 +316,9 @@ export const apiClient = {
       headers: customHeaders,
       body: typeof data === 'string' ? data : JSON.stringify(data)
     });
-    return handleResponse(res);
+    const result = await handleResponse(res);
+    invalidateCache(endpoint);
+    return result;
   },
 
   async patch(endpoint, data = {}, customHeaders = {}) {
@@ -178,7 +327,9 @@ export const apiClient = {
       headers: customHeaders,
       body: typeof data === 'string' ? data : JSON.stringify(data)
     });
-    return handleResponse(res);
+    const result = await handleResponse(res);
+    invalidateCache(endpoint);
+    return result;
   },
 
   async delete(endpoint, customHeaders = {}) {
@@ -186,8 +337,13 @@ export const apiClient = {
       method: 'DELETE',
       headers: customHeaders
     });
-    return handleResponse(res);
-  }
+    const result = await handleResponse(res);
+    invalidateCache(endpoint);
+    return result;
+  },
+
+  clearCache: (pattern) => invalidateCache(pattern),
+  invalidate: (pattern) => invalidateCache(pattern)
 };
 
 export default apiClient;

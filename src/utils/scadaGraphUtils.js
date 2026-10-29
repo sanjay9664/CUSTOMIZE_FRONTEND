@@ -84,8 +84,11 @@ export const parseUtcDate = (dateVal) => {
  * Considers Indian Standard Time (IST) calendar boundaries for "Today", "This Month", and "Custom"
  */
 export const calculateDateRange = (presetId, customStart, customEnd) => {
-  const now = new Date();
-  let from = new Date();
+  // Bucketing 'now' to the nearest minute boundary (:00.000Z) stabilizes URLs across rapid re-renders
+  // and enables browser & apiClient in-memory deduplication and caching.
+  const nowMs = Math.floor(Date.now() / 60000) * 60000;
+  const now = new Date(nowMs);
+  let from = new Date(nowMs);
   let to = now;
 
   if (presetId === 'custom') {
@@ -328,3 +331,66 @@ export const isCumulativeSetting = (setting) => {
   const name = String(setting.displayName || setting.name || '').toUpperCase();
   return name.includes('ENERGY') || name.includes('CONSUMPTION') || name.includes('CUMULATIVE') || name.includes('KWH') || name.includes('KVAH');
 };
+
+/**
+ * Downsamples raw 15-minute snapshots into 30-minute buckets
+ */
+export const downsampleSnapsTo30Min = (snaps) => {
+  if (!Array.isArray(snaps) || snaps.length === 0) return [];
+  const buckets = new Map();
+
+  snaps.forEach(snap => {
+    const t = new Date(snap.windowStart || snap.windowEnd || 0).getTime();
+    if (isNaN(t) || t <= 0) return;
+    const bucketKey = Math.floor(t / (30 * 60 * 1000)) * (30 * 60 * 1000);
+
+    if (!buckets.has(bucketKey)) {
+      buckets.set(bucketKey, {
+        ...snap,
+        windowStart: new Date(bucketKey).toISOString(),
+        windowEnd: new Date(bucketKey + 30 * 60 * 1000).toISOString(),
+        _values: [],
+        _minValues: [],
+        _maxValues: [],
+        _readingsCount: 0,
+        _lastPoint: snap
+      });
+    }
+
+    const b = buckets.get(bucketKey);
+    b._lastPoint = snap;
+    if (snap.readingCount) b._readingsCount += Number(snap.readingCount);
+
+    const v = snap.avgValue !== null && snap.avgValue !== undefined ? snap.avgValue : snap.lastValue;
+    if (v !== null && v !== undefined && !isNaN(Number(v))) {
+      b._values.push(Number(v));
+    }
+    if (snap.minValue !== null && snap.minValue !== undefined && !isNaN(Number(snap.minValue))) {
+      b._minValues.push(Number(snap.minValue));
+    }
+    if (snap.maxValue !== null && snap.maxValue !== undefined && !isNaN(Number(snap.maxValue))) {
+      b._maxValues.push(Number(snap.maxValue));
+    }
+  });
+
+  return Array.from(buckets.values()).map(b => {
+    const sum = b._values.reduce((acc, c) => acc + c, 0);
+    const avg = b._values.length > 0 ? +(sum / b._values.length).toFixed(2) : b.avgValue;
+    const min = b._minValues.length > 0 ? Math.min(...b._minValues) : (b._values.length > 0 ? Math.min(...b._values) : b.minValue);
+    const max = b._maxValues.length > 0 ? Math.max(...b._maxValues) : (b._values.length > 0 ? Math.max(...b._values) : b.maxValue);
+
+    return {
+      windowStart: b.windowStart,
+      windowEnd: b.windowEnd,
+      avgValue: avg,
+      minValue: min,
+      maxValue: max,
+      lastValue: b._lastPoint?.lastValue !== undefined ? b._lastPoint.lastValue : (b._values.length > 0 ? b._values[b._values.length - 1] : null),
+      firstValue: b._values.length > 0 ? b._values[0] : null,
+      readingCount: b._readingsCount,
+      alarmState: b.alarmState,
+      delta: null
+    };
+  });
+};
+
