@@ -813,15 +813,15 @@ export const resolveAqiGraphSettings = (device, telemetryData, activeInterval = 
     }
   });
 
-  // 3. Assign color palettes
+  // 3. Assign color palettes (Standardized semantic colors)
   const metricColorMap = {
-    aqi: { stroke: '#10b981', fill: '#059669', name: 'Emerald' },
-    tempC: { stroke: '#38bdf8', fill: '#0284c7', name: 'Sky' },
-    hum: { stroke: '#06b6d4', fill: '#0891b2', name: 'Cyan' },
-    co2: { stroke: '#8b5cf6', fill: '#7c3aed', name: 'Purple' },
-    tvoc: { stroke: '#ec4899', fill: '#db2777', name: 'Pink' },
-    pm25: { stroke: '#f59e0b', fill: '#d97706', name: 'Amber' },
-    pm10: { stroke: '#f97316', fill: '#ea580c', name: 'Orange' }
+    aqi: { stroke: '#10B981', fill: '#059669', name: 'Emerald' },
+    tempC: { stroke: '#0EA5E9', fill: '#0284C7', name: 'Sky' },
+    hum: { stroke: '#10B981', fill: '#059669', name: 'Emerald' },
+    co2: { stroke: '#7C3AED', fill: '#6D28D9', name: 'Purple' },
+    tvoc: { stroke: '#F43F5E', fill: '#E11D48', name: 'Rose' },
+    pm25: { stroke: '#F59E0B', fill: '#D97706', name: 'Amber' },
+    pm10: { stroke: '#F97316', fill: '#EA580C', name: 'Orange' }
   };
 
   const fallbackPalettes = [

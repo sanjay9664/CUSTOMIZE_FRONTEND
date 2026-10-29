@@ -282,24 +282,30 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
           color: white;
         }
         body.light-mode .scada-header .header-left .btn-link {
-          color: #111827 !important;
+          color: #0f172a !important;
         }
         body.light-mode .scada-header .input-group-text {
-          background-color: #dedede !important;
-          border-color: #bebebe !important;
-          color: #111827 !important;
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+          color: #64748b !important;
         }
         body.light-mode .scada-header .form-control {
-          background-color: #ececec !important;
-          border-color: #bebebe !important;
-          color: #111827 !important;
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          color: #0f172a !important;
+        }
+        body.light-mode .scada-header .form-control:focus {
+          background-color: #ffffff !important;
+          border-color: #0ea5e9 !important;
+          box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15) !important;
+          color: #0f172a !important;
         }
         body.light-mode .global-module-context {
-          background: #ececec !important;
-          border-color: #bebebe !important;
+          background: #f8fafc !important;
+          border-color: #e2e8f0 !important;
         }
         body.light-mode .global-module-title {
-          color: #111827 !important;
+          color: #0f172a !important;
         }
         .global-module-title {
           color: #f8fafc;
@@ -851,9 +857,9 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
         }
 
         body.light-mode .settings-dropdown-menu {
-          background: #ececec !important;
-          border: 1px solid #bebebe !important;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
         }
 
         .settings-user-header {
@@ -862,8 +868,8 @@ const Header = ({ collapsed, toggleSidebar, sidebarWidth = '64px', isImpersonati
         }
 
         body.light-mode .settings-user-header {
-          background: #e2e2e2;
-          border-color: #bebebe !important;
+          background: #f8fafc;
+          border-color: #e2e8f0 !important;
         }
 
         .settings-avatar-box {
