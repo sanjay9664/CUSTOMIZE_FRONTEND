@@ -408,39 +408,80 @@ const SubMeters = () => {
     const fetchSubEnergyMeters = async () => {
       setDevicesLoading(true);
       try {
-        const queryParams = new URLSearchParams({
-          siteId: String(selectedSiteId),
-          category: 'SUB_ENERGY_METER',
-          include: 'settings,rules,profile'
-        });
-
-        const url = getApiUrl(`/devices?${queryParams.toString()}`);
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: getAuthHeaders()
-        });
-
         let items = [];
-        if (res && res.ok) {
-          const json = await res.json();
-          if (Array.isArray(json?.data)) {
-            items = json.data;
-          } else if (Array.isArray(json)) {
-            items = json;
-          }
-        }
 
-        // Fallback: If 0 items with SUB_ENERGY_METER, check if devices were registered as ENERGY_METER
+        // 1. Primary: site-scoped devices via bmsService (includes SUB_ENERGY_METER, SOLAR_SYSTEM, INVERTER)
+        try {
+          const siteDevRes = await bmsService.getSiteDevices(selectedSiteId, {
+            include: 'settings,rules,profile'
+          }).catch(() => null);
+          const rawList = normalizeList(siteDevRes, 'devices');
+          if (Array.isArray(rawList) && rawList.length > 0) {
+            items = rawList.filter(d => {
+              if (!d) return false;
+              const cat = String(d.category || '').toUpperCase().trim();
+              const name = String(d.name || d.deviceName || '').toUpperCase().trim();
+              // Exclude main meters, generators, water tanks, aqi sensors
+              if (cat === 'MAIN_ENERGY_METER' || cat === 'MAIN_METER' || name.includes('MAIN METER') || name.includes('GRID INCOMER')) return false;
+              if (cat.includes('GEN') || name.includes('GENSET') || name.includes('DG-')) return false;
+              if (cat.includes('WATER') || cat.includes('TANK')) return false;
+              if (cat.includes('AQI') || cat.includes('AIR')) return false;
+
+              // Include sub energy meters, solar systems, inverters, and generic branch meters
+              return (
+                cat === 'SUB_ENERGY_METER' ||
+                cat === 'SUB_METER' ||
+                cat === 'SOLAR_SYSTEM' ||
+                cat === 'SOLAR' ||
+                cat === 'INVERTER' ||
+                cat.includes('SOLAR') ||
+                cat.includes('INVERTER') ||
+                cat.includes('METER') ||
+                name.includes('METER') ||
+                name.includes('SOLAR') ||
+                name.includes('INVERTER')
+              );
+            });
+          }
+        } catch (e) {}
+
+        // 2. Fallback: query /devices endpoint if primary returned 0 devices
         if (items.length === 0) {
           try {
-            const fbUrl = getApiUrl(`/devices?siteId=${selectedSiteId}&category=ENERGY_METER&include=settings,rules,profile`);
-            const fbRes = await fetch(fbUrl, { headers: getAuthHeaders() });
-            if (fbRes.ok) {
-              const fbJson = await fbRes.json();
-              const fbItems = Array.isArray(fbJson?.data) ? fbJson.data : (Array.isArray(fbJson) ? fbJson : []);
-              if (fbItems.length > 0) {
-                items = fbItems.filter(d => d.category !== 'MAIN_ENERGY_METER');
-              }
+            const queryParams = new URLSearchParams({
+              siteId: String(selectedSiteId),
+              include: 'settings,rules,profile'
+            });
+            const url = getApiUrl(`/devices?${queryParams.toString()}`);
+            const res = await fetch(url, {
+              method: 'GET',
+              headers: getAuthHeaders()
+            });
+            if (res && res.ok) {
+              const json = await res.json();
+              const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+              items = list.filter(d => {
+                if (!d) return false;
+                const cat = String(d.category || '').toUpperCase().trim();
+                const name = String(d.name || d.deviceName || '').toUpperCase().trim();
+                if (cat === 'MAIN_ENERGY_METER' || cat === 'MAIN_METER' || name.includes('MAIN METER') || name.includes('GRID INCOMER')) return false;
+                if (cat.includes('GEN') || name.includes('GENSET') || name.includes('DG-')) return false;
+                if (cat.includes('WATER') || cat.includes('TANK')) return false;
+                if (cat.includes('AQI') || cat.includes('AIR')) return false;
+                return (
+                  cat === 'SUB_ENERGY_METER' ||
+                  cat === 'SUB_METER' ||
+                  cat === 'SOLAR_SYSTEM' ||
+                  cat === 'SOLAR' ||
+                  cat === 'INVERTER' ||
+                  cat.includes('SOLAR') ||
+                  cat.includes('INVERTER') ||
+                  cat.includes('METER') ||
+                  name.includes('METER') ||
+                  name.includes('SOLAR') ||
+                  name.includes('INVERTER')
+                );
+              });
             }
           } catch (e) {}
         }

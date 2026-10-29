@@ -107,8 +107,10 @@ const EnergyPDFReport = () => {
             d.category === 'ENERGY_METER' ||
             d.category === 'MAIN_ENERGY_METER' ||
             d.category === 'SUB_ENERGY_METER' ||
+            d.category === 'SOLAR_SYSTEM' ||
+            d.category === 'INVERTER' ||
             d.category === 'LT_PANEL' ||
-            (d.name && /meter|energy/i.test(d.name))
+            (d.name && /meter|energy|solar|inverter/i.test(d.name))
           );
           const devicesToUse = energyMeters.length > 0
             ? energyMeters

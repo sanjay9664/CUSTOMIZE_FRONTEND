@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Row, Col, Button } from 'react-bootstrap';
+import { Row, Col, Card, Button, Spinner } from 'react-bootstrap';
 import {
   Zap,
   Activity,
@@ -257,13 +257,32 @@ const EnergyGraphs = () => {
             return true;
           });
 
-          // Filter for Energy Meter devices
-          const energyCategories = ['MAIN_ENERGY_METER', 'SUB_ENERGY_METER', 'ENERGY_METER', 'LT_PANEL', 'METER'];
+          // Filter for Energy Meter devices (Main Meter, Sub Meters, Solar System, Inverter)
+          const energyCategories = [
+            'MAIN_ENERGY_METER',
+            'SUB_ENERGY_METER',
+            'ENERGY_METER',
+            'SOLAR_SYSTEM',
+            'SOLAR',
+            'INVERTER',
+            'SOLAR_INVERTER',
+            'LT_PANEL',
+            'METER'
+          ];
           const filtered = siteFilteredItems.filter(d => {
             const cat = String(d.category || '').toUpperCase();
             const tmpl = String(d.templateName || '').toUpperCase();
             const name = String(d.name || '').toUpperCase();
-            return energyCategories.includes(cat) || tmpl.includes('METER') || name.includes('METER') || cat.includes('METER');
+            // Exclude water tanks and AQI sensors
+            if (cat.includes('WATER') || cat.includes('TANK')) return false;
+            if (cat.includes('AQI') || cat.includes('AIR')) return false;
+
+            return (
+              energyCategories.includes(cat) ||
+              cat.includes('METER') || cat.includes('SOLAR') || cat.includes('INVERTER') ||
+              tmpl.includes('METER') || tmpl.includes('SOLAR') || tmpl.includes('INVERTER') ||
+              name.includes('METER') || name.includes('SOLAR') || name.includes('INVERTER')
+            );
           });
 
           const finalDevices = filtered.length > 0 ? filtered : siteFilteredItems;
