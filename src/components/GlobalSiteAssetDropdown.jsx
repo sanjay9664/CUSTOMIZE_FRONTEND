@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import {
   Building2, ChevronDown, ChevronRight, Search, Check,
   Cpu, Zap, Droplets, Activity, Thermometer, Layers,
-  LayoutDashboard, Flame, Wind, Loader2
+  LayoutDashboard, Flame, Wind, Loader2, Sun
 } from 'lucide-react';
 import { bmsService } from '../services/bmsService';
 import { normalizeList, getAuthHeaders } from '../services/apiClient';
@@ -42,25 +42,38 @@ const isDeviceMatchingCategory = (device, category) => {
     return (isExplicitMain || isMainByName) && !isSub;
   }
 
-  // 2. SUB ENERGY METER (Strict: Sub meters and branch distribution meters)
+  // 2. SUB ENERGY METER (Sub meters, solar meters, inverters, and branch distribution meters)
   if (category === 'SUB_ENERGY_METER') {
     const isExplicitSub = cat === 'SUB_ENERGY_METER' || cat === 'SUB_METER';
+    const isSolarOrInverter =
+      cat === 'SOLAR_SYSTEM' || cat === 'SOLAR' || cat.includes('SOLAR') ||
+      cat === 'INVERTER' || cat.includes('INVERTER') ||
+      name.includes('SOLAR') || name.includes('INVERTER');
     const isGenericMeter = cat === 'ENERGY_METER' || cat === 'METER' || mod.includes('ENERGY') || name.includes('METER');
     const isMain = cat === 'MAIN_ENERGY_METER' || cat === 'MAIN_METER' || name.includes('MAIN METER') || name.includes('GRID INCOMER');
     const isDG = cat.includes('GEN') || name.includes('GENSET') || name.includes('DG-');
-    return (isExplicitSub || isGenericMeter) && !isMain && !isDG;
+    const isWater = cat.includes('WATER') || cat.includes('TANK');
+    const isAqi = cat.includes('AQI') || cat.includes('AIR');
+    return (isExplicitSub || isSolarOrInverter || isGenericMeter) && !isMain && !isDG && !isWater && !isAqi;
   }
 
-  // 3. ALL ENERGY METERS (Overview)
+  // 3. ALL ENERGY METERS (Overview / Graphs / Reports - includes Solar Systems, Inverters, Main & Sub Meters)
   if (category === 'ENERGY_METER') {
-    const isMeter =
-      cat.includes('ENERGY') ||
-      cat.includes('METER') ||
-      mod.includes('ENERGY') ||
-      name.includes('METER');
+    const isMainOrSub =
+      cat === 'MAIN_ENERGY_METER' || cat === 'MAIN_METER' || cat === 'MAIN_ENERGY_METERS' ||
+      cat === 'SUB_ENERGY_METER' || cat === 'SUB_METER' || cat === 'SUBMETER';
+    const isSolarOrInverter =
+      cat === 'SOLAR_SYSTEM' || cat === 'SOLAR' || cat.includes('SOLAR') ||
+      cat === 'INVERTER' || cat.includes('INVERTER') ||
+      name.includes('SOLAR') || name.includes('INVERTER');
+    const isGenericMeter =
+      cat === 'ENERGY_METER' || cat === 'METER' || cat === 'LT_PANEL' ||
+      cat.includes('ENERGY') || cat.includes('METER') ||
+      mod.includes('ENERGY') || name.includes('METER') || name.includes('ENERGY');
     const isDG = cat.includes('GEN') || name.includes('GENSET') || name.includes('DG-');
     const isWater = cat.includes('WATER') || cat.includes('TANK');
-    return isMeter && !isDG && !isWater;
+    const isAqi = cat.includes('AQI') || cat.includes('AIR');
+    return (isMainOrSub || isSolarOrInverter || isGenericMeter) && !isDG && !isWater && !isAqi;
   }
 
   // 4. GENERATOR / DG SET
@@ -222,6 +235,7 @@ export const GlobalSiteAssetDropdown = ({
   const getDeviceStorageKey = useCallback((category) => {
     if (category === 'MAIN_ENERGY_METER') return 'selected_main_meter_id';
     if (category === 'SUB_ENERGY_METER') return 'selected_sub_meter_id';
+    if (category === 'ENERGY_METER') return 'selected_main_meter_id';
     if (category === 'GENERATOR') return 'selected_dg_device_id';
     if (category === 'AQI_SENSOR') return 'selected_aqi_sensor_id';
     if (category) return `selected_${category.toLowerCase()}_device_id`;
@@ -247,7 +261,11 @@ export const GlobalSiteAssetDropdown = ({
   }, []);
 
   // Render category icon
-  const renderAssetIcon = useCallback((size = 14) => {
+  const renderAssetIcon = useCallback((size = 14, deviceCategory = '') => {
+    const devCat = String(deviceCategory || '').toUpperCase();
+    if (devCat.includes('SOLAR')) {
+      return <Sun size={size} className="text-warning" />;
+    }
     if (currentCategory === 'MAIN_ENERGY_METER' || currentCategory === 'SUB_ENERGY_METER' || currentCategory === 'ENERGY_METER') {
       return <Zap size={size} className="text-warning" />;
     }
@@ -350,18 +368,25 @@ export const GlobalSiteAssetDropdown = ({
 
     try {
       // 1. Primary API: bmsService.getSiteDevices(sId, { category })
+      // For ENERGY_METER and SUB_ENERGY_METER, do not restrict query to a single category on backend,
+      // because backend DB uses distinct categories (SOLAR_SYSTEM, SUB_ENERGY_METER, MAIN_ENERGY_METER, INVERTER).
       const queryParams = {};
       if (currentCategory === 'MAIN_ENERGY_METER') {
         queryParams.category = 'MAIN_ENERGY_METER';
-      } else if (currentCategory === 'SUB_ENERGY_METER') {
-        queryParams.category = 'SUB_ENERGY_METER';
-      } else if (currentCategory) {
+      } else if (currentCategory && currentCategory !== 'ENERGY_METER' && currentCategory !== 'SUB_ENERGY_METER') {
         queryParams.category = currentCategory;
       }
 
       const res = await bmsService.getSiteDevices(sId, queryParams).catch(() => null);
       const list = normalizeList(res, 'devices');
       if (Array.isArray(list)) list.forEach(d => addDevice(d, true));
+
+      // If category filter returned 0 devices for this site, try site devices without category filter
+      if (siteDeviceList.length === 0 && queryParams.category) {
+        const allSiteRes = await bmsService.getSiteDevices(sId).catch(() => null);
+        const allList = normalizeList(allSiteRes, 'devices');
+        if (Array.isArray(allList)) allList.forEach(d => addDevice(d, true));
+      }
     } catch (e) { }
 
     // 2. Fallback /devices endpoint via apiClient ONLY if primary returned no devices
@@ -370,15 +395,20 @@ export const GlobalSiteAssetDropdown = ({
         const params = { siteId: sId };
         if (currentCategory === 'MAIN_ENERGY_METER') {
           params.category = 'MAIN_ENERGY_METER';
-        } else if (currentCategory === 'SUB_ENERGY_METER') {
-          params.category = 'SUB_ENERGY_METER';
-        } else if (currentCategory) {
+        } else if (currentCategory && currentCategory !== 'ENERGY_METER' && currentCategory !== 'SUB_ENERGY_METER') {
           params.category = currentCategory;
         }
 
         const res = await bmsService.getDevices(params).catch(() => null);
         const list = normalizeList(res, 'devices');
         if (Array.isArray(list)) list.forEach(d => addDevice(d, false));
+
+        // If category filter was passed and returned 0, try unfiltered
+        if (siteDeviceList.length === 0 && params.category) {
+          const unfiltRes = await bmsService.getDevices({ siteId: sId }).catch(() => null);
+          const unfiltList = normalizeList(unfiltRes, 'devices');
+          if (Array.isArray(unfiltList)) unfiltList.forEach(d => addDevice(d, false));
+        }
       } catch (e) {}
     }
 
@@ -514,6 +544,10 @@ export const GlobalSiteAssetDropdown = ({
     } else if (currentCategory === 'SUB_ENERGY_METER') {
       localStorage.setItem(`selected_sub_meter_id_${sId}`, devId);
       localStorage.setItem('selected_sub_meter_id', devId);
+      localStorage.setItem('selected_main_meter_id', devId);
+    } else if (currentCategory === 'ENERGY_METER') {
+      localStorage.setItem(`selected_energy_meter_id_${sId}`, devId);
+      localStorage.setItem('selected_main_meter_id', devId);
     } else if (currentCategory === 'GENERATOR') {
       localStorage.setItem(`selected_dg_device_id_${sId}`, devId);
       localStorage.setItem('selected_dg_device_id', devId);
@@ -717,7 +751,7 @@ export const GlobalSiteAssetDropdown = ({
             <>
               <span className="global-site-divider opacity-50 px-0.5">›</span>
               <span className="global-device-current-name d-flex align-items-center gap-1 text-truncate">
-                {renderAssetIcon(13)}
+                {renderAssetIcon(13, currentActiveDeviceObj?.category)}
                 <span className="text-truncate">{currentActiveDeviceObj.name}</span>
               </span>
             </>
@@ -948,7 +982,7 @@ export const GlobalSiteAssetDropdown = ({
                           >
                             <div className="d-flex align-items-center gap-2.5 overflow-hidden me-2">
                               <div className={`global-cascading-asset-icon-box d-flex align-items-center justify-content-center rounded-2 ${isDevActive ? 'active' : ''}`}>
-                                {renderAssetIcon(14)}
+                                {renderAssetIcon(14, dev?.category)}
                               </div>
                               <div className="d-flex flex-column overflow-hidden">
                                 <span className="global-cascading-item-name text-truncate fs-12 fw-medium">
